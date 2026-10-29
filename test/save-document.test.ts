@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { createActions, type Actions } from '#/actions/index.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
@@ -44,6 +45,7 @@ async function detectOffres(...plannedRunList: Parameters<typeof createFakeAiSes
     dataDirectory,
     aiSession: createFakeAiSession(...plannedRunList),
     fetch: createRecordedFetch().fetch,
+    notificationChannel: createFakeNotificationChannel(),
   });
   await actions.detect();
   return actions;
