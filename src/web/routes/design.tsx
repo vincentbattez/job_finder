@@ -17,6 +17,8 @@ const SAMPLE_OFFRE = {
   applicationEmail: 'recrutement@example.org',
   contact1: 'Greffe du pôle civil, 03 00 00 00 00',
   contact2: null,
+  republicationOf: { reference: '2026-0000042' },
+  republicationList: [],
 } satisfies IOffreFiche['offre'];
 
 const SAMPLE_FICHE_DE_POSTE = [
@@ -31,7 +33,11 @@ const SAMPLE_FICHE_DE_POSTE = [
 ].join('\n');
 
 function sampleVersion(number: number, state: 'running' | 'ready' | 'failed') {
-  return { version: { number, state, isRetenue: number === 1, createdAt: new Date('2026-10-21') }, documentList: [] };
+  return {
+    version: { number, state, isRetenue: number === 1, createdAt: new Date('2026-10-21') },
+    isRetenable: false,
+    documentList: [],
+  };
 }
 
 // One Artefact in each état, that of its latest Version

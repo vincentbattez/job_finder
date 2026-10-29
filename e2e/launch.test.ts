@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 // Each test launches modules on an Offre of its own, which test/seed-front.ts prepares: the data
 // folder is shared by the whole run. The e2e worker runs the queued jobs with the fake Claude, whose
 // sessions last a second (test/e2e-actions.server.ts).
-const LETTRE_REFERENCE = '2026-2409178';
+const LETTRE_REFERENCE = '2026-2420931';
 const FAILED_RECHERCHE_REFERENCE = '2026-2412591';
 
 // The worker takes the job, then its session lasts a second, and the fiche reads the état again

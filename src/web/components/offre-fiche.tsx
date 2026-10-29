@@ -1,10 +1,11 @@
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import { EtatBadge, StatutBadge, type Etat } from './badge.tsx';
 import { DateText } from './date.tsx';
 import { Markdown } from './markdown.tsx';
 import type { IOffreRow } from './offre-list.tsx';
 import { Recipients, type IRecipients } from './recipients.tsx';
+import { RepublicationFacts, type IRepublication } from './republication.tsx';
 
 type Artefact = 'recherche' | 'lettre' | 'fiche_entretien' | 'visualisation';
 
@@ -30,7 +31,8 @@ export interface IArtefactVersions {
   module: { refusal: string | null } | null;
   versionList: {
     version: { number: number; state: VersionState; isRetenue: boolean; createdAt: Date };
-    documentList: { fileName: string; markdown: string }[];
+    isRetenable: boolean;
+    documentList: { fileName: string; markdown: string; isModifiable: boolean }[];
   }[];
 }
 
@@ -41,6 +43,8 @@ export interface IOffreFiche {
     applicationEmail: string | null;
     contact1: string | null;
     contact2: string | null;
+    republicationOf: IRepublication['republicationOf'];
+    republicationList: IRepublication['republicationList'];
   };
   ficheDePoste: string;
   artefactList: IArtefactVersions[];
@@ -54,8 +58,12 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 
 // The fiche is a page of its own, or one sample among others on /design. The label and its
 // Artefacts on one side; on the other, to whom to write and the Fiche de poste, folded since it is
-// long as published.
-export function OffreFiche({ fiche, isPage = false }: Readonly<{ fiche: IOffreFiche; isPage?: boolean }>) {
+// long as published. The children go at the foot of the label, below its statut.
+export function OffreFiche({
+  fiche,
+  isPage = false,
+  children,
+}: Readonly<{ fiche: IOffreFiche; isPage?: boolean; children?: ReactNode }>) {
   const { offre, ficheDePoste, artefactList, recipients } = fiche;
   const TITLE_TAG = isPage ? 'h1' : 'h3';
   const PART_TAG = isPage ? 'h2' : 'h4';
@@ -91,7 +99,9 @@ export function OffreFiche({ fiche, isPage = false }: Readonly<{ fiche: IOffreFi
                 <DateText date={offre.dateLimite} />
               </dd>
             </div>
+            <RepublicationFacts offre={offre} />
           </dl>
+          {children}
         </header>
         <section className="fiche__part" aria-labelledby={artefactsId}>
           <PART_TAG id={artefactsId}>Artefacts</PART_TAG>

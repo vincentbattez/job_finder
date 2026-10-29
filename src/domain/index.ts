@@ -46,6 +46,9 @@ export const FICHE_DE_POSTE_SCHEMA = z
 
 export type FicheDePoste = z.infer<typeof FICHE_DE_POSTE_SCHEMA>;
 
+// Another Offre of the Candidat, named by its reference
+const LINKED_OFFRE_SCHEMA = z.object({ reference: z.string() });
+
 export const OFFRE_SCHEMA = z
   .object({
     id: z.int(),
@@ -63,6 +66,9 @@ export const OFFRE_SCHEMA = z
     status: z.enum(['a_traiter', 'postulee', 'archivee']),
     isInZone: z.boolean(),
     isExpiree: z.boolean(),
+    // The Offre it publishes again, and the Offres that publish it again (spec « Republication »)
+    republicationOf: LINKED_OFFRE_SCHEMA.nullable(),
+    republicationList: z.array(LINKED_OFFRE_SCHEMA),
   })
   .brand<'Domain'>();
 
@@ -152,10 +158,16 @@ export const RECIPIENTS_SCHEMA = z
 
 export type Recipients = z.infer<typeof RECIPIENTS_SCHEMA>;
 
-// A Markdown file of a Version, such as the Brouillon or the Lettre of a Lettre Version
-const DOCUMENT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string() });
+// A Markdown file of a Version, such as the Brouillon or the Lettre of a Lettre Version, and whether
+// the Candidat may correct it by hand
+const DOCUMENT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string(), isModifiable: z.boolean() });
 
-const VERSION_DOCUMENTS_SCHEMA = z.object({ version: VERSION_SCHEMA, documentList: z.array(DOCUMENT_SCHEMA) });
+// isRetenable: whether the Candidat may make it the Version retenue
+const VERSION_DOCUMENTS_SCHEMA = z.object({
+  version: VERSION_SCHEMA,
+  isRetenable: z.boolean(),
+  documentList: z.array(DOCUMENT_SCHEMA),
+});
 
 // What the front shows of an Artefact at a glance (spec « Front »)
 const ETAT_SCHEMA = z.enum(['absent', 'en_cours', 'pret', 'en_echec']);

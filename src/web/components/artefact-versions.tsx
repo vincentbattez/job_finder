@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { EtatBadge } from './badge.tsx';
 import { CopyCommand } from './copy-command.tsx';
 import { DateText } from './date.tsx';
-import { Markdown } from './markdown.tsx';
+import { ArtefactDocument, RetenirButton } from './edition.tsx';
 import { ModuleLaunch } from './module-launch.tsx';
 import { ARTEFACT_LABEL_BY_ARTEFACT, ETAT_BY_VERSION_STATE, type IArtefactVersions } from './offre-fiche.tsx';
 
@@ -28,7 +28,7 @@ export function ArtefactVersions({
         <p className="missing">Aucune Version pour l’instant.</p>
       ) : (
         <ol className="version-list">
-          {versionList.map(({ version, documentList }) => (
+          {versionList.map(({ version, isRetenable, documentList }) => (
             <li key={version.number}>
               <details open={version.isRetenue}>
                 <summary>
@@ -43,14 +43,12 @@ export function ArtefactVersions({
                     <DateText date={version.createdAt} />
                   </span>
                 </summary>
+                {isRetenable && <RetenirButton reference={reference} artefact={artefact} number={version.number} />}
                 {documentList.length === 0 ? (
                   <p className="missing">Aucun fichier dans cette Version.</p>
                 ) : (
-                  documentList.map(({ fileName, markdown }) => (
-                    <figure key={fileName} className="document">
-                      <figcaption className="reference">{fileName}</figcaption>
-                      <Markdown markdown={markdown} />
-                    </figure>
+                  documentList.map((document) => (
+                    <ArtefactDocument key={document.fileName} reference={reference} artefact={artefact} {...document} />
                   ))
                 )}
               </details>
