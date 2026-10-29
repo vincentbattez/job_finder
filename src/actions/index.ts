@@ -44,11 +44,15 @@ import { VISUALISATION_MODULE } from '#/modules/visualisation/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
 import { findRepublishedOffre } from '#/republication/index.ts';
 import { assertLettreModifiable } from '#/statut/index.ts';
+import { messageOf } from '#/text/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
 import { createJobRunner, describeModule, findInputs, listDefaultConsignes, parseModule } from './run-job.ts';
 
 export type Actions = Awaited<ReturnType<typeof createActions>>;
+
+// The CLI, the front and the worker reach nothing but the actions (ADR-0003)
+export { messageOf } from '#/text/index.ts';
 
 const CANDIDAT_INPUT_SCHEMA = z.object({ candidatId: z.string() });
 const IMPORT_INPUT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string() });
@@ -222,7 +226,7 @@ export async function createActions({
       await notificationChannel.send(workspace.notificationTargetOf(offre.candidatId), notification);
       return undefined;
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
+      const reason = messageOf(error);
       return `Notification « ${notification.title} » de l'Offre ${offre.reference} non envoyée : ${reason}`;
     }
   }
@@ -532,7 +536,7 @@ export async function createActions({
           }
         } catch (error) {
           // An error fails this job only, the one running, and the worker goes on with the queue
-          jobList.push(...(await workspace.failRunningJobs(error instanceof Error ? error.message : String(error))));
+          jobList.push(...(await workspace.failRunningJobs(messageOf(error))));
         }
       }
       return jobList;

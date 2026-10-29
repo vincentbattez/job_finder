@@ -16,6 +16,7 @@ import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import { RECHERCHE_MODULE } from '#/modules/recherche/index.ts';
 import { VISUALISATION_MODULE } from '#/modules/visualisation/index.ts';
 import { assertLettreModifiable } from '#/statut/index.ts';
+import { messageOf } from '#/text/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
 interface IReadVersion {
@@ -176,7 +177,7 @@ export async function describeModule(workspace: Workspace, offre: Offre, artefac
     await findInputs(workspace, offre, artefact);
     return { refusal: null };
   } catch (error) {
-    return { refusal: error instanceof Error ? error.message : String(error) };
+    return { refusal: messageOf(error) };
   }
 }
 

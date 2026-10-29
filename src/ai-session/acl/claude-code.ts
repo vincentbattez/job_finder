@@ -2,6 +2,8 @@ import { spawn, spawnSync } from 'node:child_process';
 
 import { z } from 'zod/v4';
 
+import { messageOf } from '#/text/index.ts';
+
 export interface IInteractiveSession {
   prompt: string;
   directory: string;
@@ -155,7 +157,7 @@ export const CLAUDE_CODE: IAiSession = {
       });
       return readResult(output, exitCode);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = messageOf(error);
       const log = `Impossible de lancer Claude Code (${message}). Installer « claude » et s'y connecter.`;
       return { isSuccess: false, sessionId: null, log };
     }

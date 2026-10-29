@@ -1,5 +1,6 @@
 import type { ActionFunctionArgs } from 'react-router';
 
+import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 
 // The launch buttons of the fiche of an Offre post here, like jf run: the job of the module is
@@ -10,6 +11,6 @@ export async function action({ request }: ActionFunctionArgs) {
     await ACTIONS.runModule(Object.fromEntries(await request.formData()));
     return { error: null };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : String(error) };
+    return { error: messageOf(error) };
   }
 }

@@ -10,3 +10,8 @@ export function wordListOf(text: string): string[] {
     .split(/[^a-z0-9]+/)
     .filter((word) => word !== '');
 }
+
+// What anything thrown says: JavaScript lets code throw values that are not Errors
+export function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}

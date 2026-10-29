@@ -2,7 +2,7 @@ import path from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 
-import { createActions, type Actions } from '#/actions/index.ts';
+import { createActions, messageOf, type Actions } from '#/actions/index.ts';
 
 import { readTextFile } from './acl/files.ts';
 
@@ -457,6 +457,6 @@ async function run(): Promise<void> {
 try {
   await run();
 } catch (error) {
-  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  process.stderr.write(`${messageOf(error)}\n`);
   process.exitCode = 1;
 }

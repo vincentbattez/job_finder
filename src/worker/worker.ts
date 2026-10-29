@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { setTimeout } from 'node:timers/promises';
 
-import { createActions, type Actions } from '#/actions/index.ts';
+import { createActions, messageOf, type Actions } from '#/actions/index.ts';
 
 const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
 
@@ -39,6 +39,6 @@ async function work(): Promise<never> {
 try {
   await work();
 } catch (error) {
-  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  process.stderr.write(`${messageOf(error)}\n`);
   process.exitCode = 1;
 }

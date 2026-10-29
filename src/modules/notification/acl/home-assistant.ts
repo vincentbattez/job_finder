@@ -1,5 +1,7 @@
 import { z } from 'zod/v4';
 
+import { messageOf } from '#/text/index.ts';
+
 // Set in .env, which jf and the worker load at launch; never in the tests (vitest.config.ts)
 const ENVIRONMENT_SCHEMA = z.object({
   HOME_ASSISTANT_URL: z.url(),
@@ -25,7 +27,7 @@ export async function callNotifyService(service: string, { title, message }: { t
       body: JSON.stringify({ title, message }),
     });
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
+    const reason = messageOf(error);
     throw new Error(`Home Assistant injoignable à ${baseUrl} (${reason}) : vérifier HOME_ASSISTANT_URL dans .env.`, {
       cause: error,
     });
