@@ -15,6 +15,7 @@ import {
   type Candidat,
   type FicheDePoste,
   type Job,
+  type Lieu,
   type ListedOffre,
   type Offre,
   type Veille,
@@ -39,6 +40,7 @@ export interface INewOffre {
   listedOffre: ListedOffre;
   fiche: FicheDePoste;
   isInZone: boolean;
+  lieu: Lieu;
 }
 
 // Applies the pending migrations of prisma/migrations first, so the schema exists from the
@@ -203,16 +205,24 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       return z.array(OFFRE_SCHEMA).parse(await prisma.offre.findMany({ where: { reference } }));
     },
 
+    async listUnlocatedOffres(): Promise<Offre[]> {
+      return z.array(OFFRE_SCHEMA).parse(await prisma.offre.findMany({ where: { latitude: null } }));
+    },
+
+    async setLieu({ id }: Offre, lieu: Lieu): Promise<void> {
+      await prisma.offre.update({ where: { id }, data: lieu });
+    },
+
     async setStatus(reference: string, status: Offre['status']): Promise<void> {
       await prisma.offre.updateMany({ where: { reference }, data: { status } });
     },
 
-    async createOffre({ candidatId, source, listedOffre, fiche, isInZone }: INewOffre): Promise<Offre> {
+    async createOffre({ candidatId, source, listedOffre, fiche, isInZone, lieu }: INewOffre): Promise<Offre> {
       const { reference, title, url, publishedAt } = listedOffre;
       const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = fiche;
       const data = { candidatId, source, reference, title, url, publishedAt, dateLimite, employer, workplace };
       return OFFRE_SCHEMA.parse(
-        await prisma.offre.create({ data: { ...data, applicationEmail, contact1, contact2, isInZone } }),
+        await prisma.offre.create({ data: { ...data, ...lieu, applicationEmail, contact1, contact2, isInZone } }),
       );
     },
 

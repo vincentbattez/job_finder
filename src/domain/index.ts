@@ -46,8 +46,22 @@ export const FICHE_DE_POSTE_SCHEMA = z
 
 export type FicheDePoste = z.infer<typeof FICHE_DE_POSTE_SCHEMA>;
 
+// Where an Offre is: its ville, and the région and coordinates API Géo gives its commune. The ville
+// stays as read, without région nor coordinates, while API Géo knows no commune by that name.
+const LIEU_SHAPE = {
+  city: z.string().nullable(),
+  region: z.string().nullable(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
+};
+
+export const LIEU_SCHEMA = z.object(LIEU_SHAPE).brand<'Domain'>();
+
+export type Lieu = z.infer<typeof LIEU_SCHEMA>;
+
 export const OFFRE_SCHEMA = z
   .object({
+    ...LIEU_SHAPE,
     id: z.int(),
     candidatId: z.string(),
     reference: z.string(),

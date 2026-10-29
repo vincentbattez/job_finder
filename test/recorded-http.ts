@@ -1,7 +1,14 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
+import { z } from 'zod/v4';
+
 const FIXTURE_DIRECTORY = path.join(import.meta.dirname, 'fixtures', 'pep');
+
+// API Géo's answer to each ville the recorded Offres name, by URL
+const API_GEO_FILE = readFileSync(path.join(import.meta.dirname, 'fixtures', 'api-geo', 'communes.json'), 'utf8');
+const apiGeoBodyByUrl = z.record(z.string(), z.unknown()).parse(JSON.parse(API_GEO_FILE));
+const API_GEO_BODY_BY_URL = new Map(Object.entries(apiGeoBodyByUrl));
 
 export const DSJ_FEED_URL =
   'https://place-ep-recrute.talent-soft.com/handlers/offerRss.ashx?LCID=1036&Rss_Entity=1123&top=1000';
@@ -22,6 +29,10 @@ function findRecordedResponse(url: string): IRecordedResponse | undefined {
   if (url === DSJ_FEED_URL) {
     return { body: readRecordedFile('flux-dsj.xml') };
   }
+  const apiGeoBody = API_GEO_BODY_BY_URL.get(url);
+  if (apiGeoBody !== undefined) {
+    return { body: JSON.stringify(apiGeoBody) };
+  }
   const id = DETAIL_PAGE_URL_PATTERN.exec(url)?.[1];
   const fileName = readdirSync(FIXTURE_DIRECTORY).find((name) => name.endsWith(`-${String(id)}.html`));
   return fileName === undefined ? undefined : { body: readRecordedFile(fileName) };
@@ -29,7 +40,8 @@ function findRecordedResponse(url: string): IRecordedResponse | undefined {
 
 // The HTTP of the PEP Source, answered with the responses recorded on the real site on 2026-10-29:
 // the DSJ feed, the detail page of each attaché de justice Offre, and the failures in
-// test/fixtures/pep. A test swaps one response through responseByUrl; any other URL fails.
+// test/fixtures/pep; and API Géo's answer for the ville of each of these Offres. A test swaps one
+// response through responseByUrl; any other URL fails.
 export function createRecordedFetch(responseByUrl: Record<string, IRecordedResponse> = {}) {
   const requestedUrlList: string[] = [];
   const fetch: typeof globalThis.fetch = (input) => {
