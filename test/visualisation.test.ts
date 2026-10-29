@@ -119,7 +119,7 @@ describe('visualisation', () => {
     const launch = actions.runModule({ module: 'visualisation', reference: REFERENCE });
 
     await expect(launch).rejects.toThrow(
-      "L'Offre 2026-2445600 n'a pas de Fiche d'entretien retenue, sur laquelle s'appuie la Visualisation. La produire d'abord : jf run fiche_entretien 2026-2445600.",
+      "L'Offre 2026-2445600 n'a pas de Fiche d’entretien retenue, sur laquelle s'appuie la Visualisation. La produire d'abord : jf run fiche_entretien 2026-2445600.",
     );
     expect(await actions.runQueuedJobs()).toEqual([]);
   });

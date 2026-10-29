@@ -3,6 +3,7 @@ import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 
 import { createActions, messageOf, type Actions } from '#/actions/index.ts';
+import { ARTEFACT_LABEL_BY_ARTEFACT, STATUT_LABEL_BY_STATUT } from '#/actions/labels.ts';
 
 import { readTextFile } from './acl/files.ts';
 
@@ -18,12 +19,6 @@ interface ICommand {
   description: string;
   run: (actions: Actions, argumentList: string[], option: { isWaiting: boolean }) => Promise<void>;
 }
-
-const STATUT_LABEL_BY_STATUS: Record<Offre['status'], string> = {
-  a_traiter: 'À traiter',
-  postulee: 'Postulée',
-  archivee: 'Archivée',
-};
 
 const VERSION_STATE_LABEL_BY_STATE: Record<Version['state'], string> = {
   running: 'en cours',
@@ -48,20 +43,13 @@ function formatOffre(offre: Offre): string {
     offre.title,
     offre.workplace ?? '—',
     offre.dateLimite?.toLocaleDateString('fr-FR', { timeZone: 'UTC' }) ?? '—',
-    offre.isExpiree ? `${STATUT_LABEL_BY_STATUS[offre.status]}, Expirée` : STATUT_LABEL_BY_STATUS[offre.status],
+    offre.isExpiree ? `${STATUT_LABEL_BY_STATUT[offre.status]}, Expirée` : STATUT_LABEL_BY_STATUT[offre.status],
     offre.isInZone ? 'Zone' : 'hors Zone',
     // The link of a Republication, both ways, only on the Offres that have one
     ...(republicationOf === null ? [] : [`Republication de ${republicationOf.reference}`]),
     ...republicationList.map(({ reference }) => `Republiée en ${reference}`),
   ].join('\t');
 }
-
-const ARTEFACT_LABEL_BY_ARTEFACT: Record<Version['artefact'], string> = {
-  recherche: 'Recherche',
-  lettre: 'Lettre',
-  fiche_entretien: "Fiche d'entretien",
-  visualisation: 'Visualisation',
-};
 
 // The terminal where the Candidat answers, one line per question. Ctrl-C or Ctrl-D closes it,
 // which ends the answers instead of leaving a question pending forever.
@@ -214,7 +202,7 @@ function changeStatusCommand(status: Offre['status'], name: string, description:
         throw new Error(`Usage : jf ${name} <offre>. « jf list <candidat> » liste les Offres.`);
       }
       await actions.changeStatus({ reference, status });
-      process.stdout.write(`${reference} : ${STATUT_LABEL_BY_STATUS[status]}\n`);
+      process.stdout.write(`${reference} : ${STATUT_LABEL_BY_STATUT[status]}\n`);
     },
   };
 }

@@ -1,12 +1,6 @@
 import { FICHE_DE_POSTE_FILE_NAME, type Artefact, type Candidat, type Offre } from '#/domain/index.ts';
+import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/domain/labels.ts';
 import { BROUILLON_FILE_NAME, LETTRE_MODULE } from '#/modules/lettre/index.ts';
-
-const ARTEFACT_NAME_BY_ARTEFACT: Record<Artefact, string> = {
-  recherche: 'la Recherche',
-  lettre: 'la Lettre',
-  fiche_entretien: "la Fiche d'entretien",
-  visualisation: 'la Visualisation',
-};
 
 interface IEditedArtefact {
   candidat: Candidat;
@@ -19,7 +13,8 @@ interface IEditedArtefact {
 // The prompt of jf edit stays fixed: no Consignes replace it (spec #1, Modules IA). The session
 // runs in the Offre folder, so "le dossier courant" is the Offre.
 export function composeEditPrompt({ candidat: { name }, offre, artefact, versionPath }: IEditedArtefact): string {
-  const artefactName = ARTEFACT_NAME_BY_ARTEFACT[artefact];
+  // Every Artefact is feminine
+  const artefactName = `la ${ARTEFACT_LABEL_BY_ARTEFACT[artefact]}`;
   const lettreFiles =
     artefact === 'lettre'
       ? ` La Lettre à corriger est \`${versionPath}/${LETTRE_MODULE.fileName}\`, et \`${versionPath}/${BROUILLON_FILE_NAME}\` est son Brouillon, ce que l'IA avait écrit.`

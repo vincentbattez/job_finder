@@ -72,11 +72,11 @@ describe('the modules the fiche of an Offre offers', () => {
       },
       fiche_entretien: {
         refusal:
-          "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Fiche d'entretien : lancez d'abord la Recherche.",
+          "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Fiche d’entretien : lancez d'abord la Recherche.",
       },
       visualisation: {
         refusal:
-          "L'Offre 2026-2445600 n'a pas de Fiche d'entretien retenue, sur laquelle s'appuie la Visualisation : lancez d'abord la Fiche d'entretien.",
+          "L'Offre 2026-2445600 n'a pas de Fiche d’entretien retenue, sur laquelle s'appuie la Visualisation : lancez d'abord la Fiche d’entretien.",
       },
     });
     expect(await readModuleByArtefact(actions)).toMatchObject({

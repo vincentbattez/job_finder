@@ -1,5 +1,7 @@
 import { useId, type ReactNode } from 'react';
 
+import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/actions/labels.ts';
+
 import { EtatBadge, StatutBadge, type Etat } from './badge.tsx';
 import { DateText } from './date.tsx';
 import { Markdown } from './markdown.tsx';
@@ -8,13 +10,6 @@ import { Recipients, type IRecipients } from './recipients.tsx';
 import { RepublicationFacts, type IRepublication } from './republication.tsx';
 
 type Artefact = 'recherche' | 'lettre' | 'fiche_entretien' | 'visualisation';
-
-export const ARTEFACT_LABEL_BY_ARTEFACT: Record<Artefact, string> = {
-  recherche: 'Recherche',
-  lettre: 'Lettre',
-  fiche_entretien: 'Fiche d’entretien',
-  visualisation: 'Visualisation',
-};
 
 type VersionState = 'running' | 'ready' | 'failed';
 

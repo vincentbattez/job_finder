@@ -97,7 +97,7 @@ describe("fiche d'entretien", () => {
     const launch = actions.runModule({ module: 'fiche', reference: REFERENCE });
 
     await expect(launch).rejects.toThrow(
-      "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Fiche d'entretien. La produire d'abord : jf run recherche 2026-2445600.",
+      "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Fiche d’entretien. La produire d'abord : jf run recherche 2026-2445600.",
     );
     expect(await actions.runQueuedJobs()).toEqual([]);
   });
@@ -244,7 +244,7 @@ describe("correcting the Fiche d'entretien", () => {
 
     const [session] = aiSession.interactiveSessionList;
     expect(session?.directory).toBe(offreDirectory);
-    expect(session?.prompt).toContain("Tu aides Léa à modifier la Fiche d'entretien de l'Offre 2026-2445600");
+    expect(session?.prompt).toContain("Tu aides Léa à modifier la Fiche d’entretien de l'Offre 2026-2445600");
     expect(session?.prompt).toContain('`fiche_entretien/v1/`');
     expect(session?.prompt).not.toContain('fiche_entretien/v2');
   });

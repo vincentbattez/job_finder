@@ -1,9 +1,11 @@
 import { useId, useState } from 'react';
 import { Form } from 'react-router';
 
+import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/actions/labels.ts';
+
 import { MarkdownEditor } from './markdown-editor.tsx';
 import { Markdown } from './markdown.tsx';
-import { ARTEFACT_LABEL_BY_ARTEFACT, type IArtefactVersions } from './offre-fiche.tsx';
+import type { IArtefactVersions } from './offre-fiche.tsx';
 
 // The shape of the listConsignes action, so the route passes its result as is
 export interface IModuleConsignes {

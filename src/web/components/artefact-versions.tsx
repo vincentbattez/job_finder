@@ -1,5 +1,7 @@
 import { useId } from 'react';
 
+import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/actions/labels.ts';
+
 import { EtatBadge } from './badge.tsx';
 import { CopyCommand } from './copy-command.tsx';
 import { DateText } from './date.tsx';
@@ -7,7 +9,7 @@ import { ArtefactDocument, RetenirButton } from './edition.tsx';
 import { Markdown } from './markdown.tsx';
 import { ConsignesOrigin } from './module-consignes.tsx';
 import { ModuleLaunch } from './module-launch.tsx';
-import { ARTEFACT_LABEL_BY_ARTEFACT, ETAT_BY_VERSION_STATE, type IArtefactVersions } from './offre-fiche.tsx';
+import { ETAT_BY_VERSION_STATE, type IArtefactVersions } from './offre-fiche.tsx';
 
 type VersionDocuments = IArtefactVersions['versionList'][number];
 

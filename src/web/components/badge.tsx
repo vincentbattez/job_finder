@@ -1,10 +1,10 @@
+import { STATUT_LABEL_BY_STATUT } from '#/actions/labels.ts';
+
 export type Statut = 'a_traiter' | 'postulee' | 'archivee';
 
-const STATUT_LABEL_BY_STATUT: Record<Statut | 'expiree', string> = {
-  a_traiter: 'À traiter',
-  postulee: 'Postulée',
+const SHOWN_STATUT_LABEL_BY_STATUT: Record<Statut | 'expiree', string> = {
+  ...STATUT_LABEL_BY_STATUT,
   expiree: 'Expirée',
-  archivee: 'Archivée',
 };
 
 // Expirée comes from the Date limite, whatever the statut (GLOSSARY.md). The badge and the map
@@ -17,7 +17,7 @@ export function StatutBadge({ statut, isExpiree }: Readonly<{ statut: Statut; is
   const shownStatut = showStatut(statut, isExpiree);
   return (
     <span className="badge" data-statut={shownStatut}>
-      {STATUT_LABEL_BY_STATUT[shownStatut]}
+      {SHOWN_STATUT_LABEL_BY_STATUT[shownStatut]}
     </span>
   );
 }

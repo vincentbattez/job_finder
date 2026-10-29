@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { IAiModule } from '#/ai-module/index.ts';
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
 import { ARTEFACT_SCHEMA, type Artefact, type Job, type Offre, type Version } from '#/domain/index.ts';
+import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/domain/labels.ts';
 import { FICHE_ENTRETIEN_MODULE } from '#/modules/fiche-entretien/index.ts';
 import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import { RECHERCHE_MODULE } from '#/modules/recherche/index.ts';
@@ -21,13 +22,6 @@ export async function findVersionRetenue(workspace: Workspace, offre: Offre, art
   const versionList = await workspace.listVersions(offre, artefact);
   return versionList.find(({ isRetenue }) => isRetenue);
 }
-
-const ARTEFACT_LABEL_BY_ARTEFACT: Record<Artefact, string> = {
-  recherche: 'Recherche',
-  lettre: 'Lettre',
-  fiche_entretien: "Fiche d'entretien",
-  visualisation: 'Visualisation',
-};
 
 const AI_MODULE_BY_ARTEFACT: Record<Artefact, IAiModule> = {
   recherche: RECHERCHE_MODULE,
