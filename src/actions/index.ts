@@ -22,12 +22,14 @@ import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import {
   composeNouvelleOffreNotification,
   composeRecherchePreteNotification,
+  composeRepublicationNotification,
   HOME_ASSISTANT,
   type INotification,
   type INotificationChannel,
 } from '#/modules/notification/index.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
+import { findRepublishedOffre } from '#/republication/index.ts';
 import { assertLettreModifiable } from '#/statut/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
@@ -103,6 +105,17 @@ export async function createActions({
     }
   }
 
+  // What a new Offre in the Zone starts: its Recherche, and the notification to send once the
+  // Détection is over (ADR-0003). The Republication of an Offre Postulée starts nothing: the
+  // Candidat decides whether to apply again (spec « Republication »).
+  async function startNewOffre(offre: Offre, republicationOf: Offre | undefined): Promise<INotification> {
+    if (republicationOf?.status === 'postulee') {
+      return composeRepublicationNotification(offre, republicationOf);
+    }
+    await workspace.createJob(offre, 'recherche');
+    return composeNouvelleOffreNotification(offre);
+  }
+
   // Those of the Lettre retenue, none before the Offre has one
   async function findRecipients(offre: Offre): Promise<Recipients | null> {
     const versionList = await workspace.listVersions(offre, 'lettre');
@@ -121,27 +134,37 @@ export async function createActions({
     async detect(): Promise<Detection[]> {
       const veilleList = await workspace.listVeilles();
       const detectionList: Detection[] = [];
-      const notifiedOffreList: Offre[] = [];
+      const notificationList: { offre: Offre; notification: INotification }[] = [];
       for (const veille of veilleList) {
         const { candidatId, source } = veille;
         const knownReferenceList = await workspace.listReferences(candidatId, source);
         const isFirstLaunch = knownReferenceList.length === 0;
         const { matchingList, nearMissList } = await pepSource.search(veille.criteria);
+        const offreList = await workspace.listOffres(candidatId);
         const newOffreList: Offre[] = [];
-        for (const listedOffre of matchingList) {
+        // Oldest first, as published: a Republication found by the same Détection as the Offre it
+        // publishes again, as on the first launch, is saved after it
+        const oldestFirstList = matchingList.toSorted((left, right) => left.reference.localeCompare(right.reference));
+        for (const listedOffre of oldestFirstList) {
           if (knownReferenceList.includes(listedOffre.reference)) {
             continue;
           }
           const { fiche, isInZone } = await pepSource.readFiche(listedOffre.reference, veille.zone);
-          const offre = await workspace.saveOffre({ candidatId, source, listedOffre, fiche, isInZone });
+          const republicationOf = findRepublishedOffre({ ...listedOffre, ...fiche }, offreList);
+          const offre = await workspace.saveOffre({
+            candidatId,
+            source,
+            listedOffre,
+            fiche,
+            isInZone,
+            republicationOf,
+          });
+          offreList.push(offre);
           newOffreList.push(offre);
-          // A new Offre in the Zone starts its Recherche and is notified, except the ones already
-          // online at the first launch (ADR-0003)
-          if (!isInZone || isFirstLaunch) {
-            continue;
+          // The Offres already online at the first launch start nothing (ADR-0003)
+          if (isInZone && !isFirstLaunch) {
+            notificationList.push({ offre, notification: await startNewOffre(offre, republicationOf) });
           }
-          await workspace.createJob(offre, 'recherche');
-          notifiedOffreList.push(offre);
         }
         detectionList.push(
           DETECTION_SCHEMA.parse({
@@ -156,8 +179,8 @@ export async function createActions({
       // Notified last, once every Offre is saved and its Recherche queued; a failure then fails the
       // Détection, visibly in lpm, after every notification was tried
       const failureList: string[] = [];
-      for (const offre of notifiedOffreList) {
-        const failure = await notify(offre, composeNouvelleOffreNotification(offre));
+      for (const { offre, notification } of notificationList) {
+        const failure = await notify(offre, notification);
         if (failure !== undefined) {
           failureList.push(failure);
         }

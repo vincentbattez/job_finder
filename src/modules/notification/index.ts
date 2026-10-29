@@ -26,15 +26,27 @@ function juridictionOf({ workplace }: Offre): string {
   return workplace ?? 'Juridiction non précisée';
 }
 
+function dateLimiteOf({ dateLimite }: Offre): string {
+  return `Date limite : ${dateLimite === null ? 'non précisée' : DATE_LIMITE_FORMAT.format(dateLimite)}`;
+}
+
 // One composer per notified event (spec « Notification »)
 export function composeNouvelleOffreNotification(offre: Offre): INotification {
-  const { title, dateLimite } = offre;
   return {
     title: 'Nouvelle Offre dans la Zone',
+    message: [offre.title, juridictionOf(offre), dateLimiteOf(offre)].join('\n'),
+  };
+}
+
+// The Candidat already applied to the Offre published again: they decide whether to apply again
+export function composeRepublicationNotification(offre: Offre, republishedOffre: Offre): INotification {
+  return {
+    title: "Republication d'une Offre Postulée",
     message: [
-      title,
+      offre.title,
       juridictionOf(offre),
-      `Date limite : ${dateLimite === null ? 'non précisée' : DATE_LIMITE_FORMAT.format(dateLimite)}`,
+      `Republication de l'Offre ${republishedOffre.reference}, Postulée : aucune Recherche lancée`,
+      dateLimiteOf(offre),
     ].join('\n'),
   };
 }
