@@ -57,10 +57,18 @@ test.describe('Consignes of a Candidat', () => {
     await expect(lettre.getByRole('textbox')).toHaveValue(/^Écris une lettre de motivation d'une page/);
   });
 
-  test('tells which Consignes produced each Version', async ({ page }) => {
+  test('tells which Consignes produced each Version, and shows them folded to compare', async ({ page }) => {
     await page.goto('/offres/2026-2409247');
 
     const recherche = page.getByRole('region', { name: 'Recherche' });
-    await expect(recherche.locator('summary')).toHaveText([/^v1.*Consignes par défaut/, /^v2.*Consignes du Candidat/]);
+    await expect(recherche.locator('li > details > summary')).toHaveText([
+      /^v1.*Consignes par défaut/,
+      /^v2.*Consignes du Candidat/,
+    ]);
+    // v2, the Version retenue, is open; its Consignes stay folded until asked
+    const v2 = recherche.locator('li').filter({ has: page.locator('summary', { hasText: /^v2/ }) });
+    await expect(recherche.getByText('Creuse la ville.')).toBeHidden();
+    await v2.getByText('Consignes de cette Version').click();
+    await expect(v2.getByText('Creuse la ville.')).toBeVisible();
   });
 });

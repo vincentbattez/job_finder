@@ -4,6 +4,7 @@ import { EtatBadge } from './badge.tsx';
 import { CopyCommand } from './copy-command.tsx';
 import { DateText } from './date.tsx';
 import { ArtefactDocument, RetenirButton } from './edition.tsx';
+import { Markdown } from './markdown.tsx';
 import { ConsignesOrigin } from './module-consignes.tsx';
 import { ModuleLaunch } from './module-launch.tsx';
 import { ARTEFACT_LABEL_BY_ARTEFACT, ETAT_BY_VERSION_STATE, type IArtefactVersions } from './offre-fiche.tsx';
@@ -41,7 +42,8 @@ function VersionFiles({
   );
 }
 
-// Every Version of an Artefact, oldest first: the Version retenue opens, the others stay folded
+// Every Version of an Artefact, oldest first: the Version retenue opens, the others stay folded,
+// and so do the Consignes each was produced with, to compare two Versions
 export function ArtefactVersions({
   reference,
   artefact,
@@ -77,6 +79,10 @@ export function ArtefactVersions({
                   </span>
                 </summary>
                 {isRetenable && <RetenirButton reference={reference} artefact={artefact} number={version.number} />}
+                <details className="version-consignes">
+                  <summary>Consignes de cette Version</summary>
+                  <Markdown markdown={version.consignes} />
+                </details>
                 <VersionFiles reference={reference} artefact={artefact} version={version} documentList={documentList} />
               </details>
             </li>

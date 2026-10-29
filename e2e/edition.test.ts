@@ -46,16 +46,16 @@ test('corrects a Lettre, saves it, marks the Offre Postulée and finds the Lettr
 test('changes the Version retenue of an Artefact', async ({ page }) => {
   await page.goto(`/offres/${VERSAILLES_REFERENCE}`);
   const recherche = page.getByRole('region', { name: 'Recherche' });
-  await expect(recherche.locator('summary')).toHaveText([
+  await expect(recherche.locator('li > details > summary')).toHaveText([
     /^v1\s*Prêt\s*Consignes par défaut\s*\d/,
     /^v2\s*Prêt\s*Retenue/,
   ]);
   await expect(recherche.getByRole('textbox', { name: 'Markdown' })).toHaveValue(/^# Recherche relancée/);
 
-  await recherche.locator('summary', { hasText: 'v1' }).click();
+  await recherche.locator('li > details > summary', { hasText: 'v1' }).click();
   await recherche.getByRole('button', { name: 'Retenir cette Version' }).click();
 
-  await expect(recherche.locator('summary')).toHaveText([
+  await expect(recherche.locator('li > details > summary')).toHaveText([
     /^v1\s*Prêt\s*Retenue/,
     /^v2\s*Prêt\s*Consignes par défaut\s*\d/,
   ]);

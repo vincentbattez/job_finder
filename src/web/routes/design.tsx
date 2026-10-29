@@ -39,6 +39,7 @@ function sampleVersion(number: number, state: 'running' | 'ready' | 'failed') {
       state,
       isRetenue: number === 1,
       hasCandidatConsignes: number === 2,
+      consignes: 'Établis ce que les recruteurs attendent pour cette Offre.',
       createdAt: new Date('2026-10-21'),
     },
     isRetenable: false,

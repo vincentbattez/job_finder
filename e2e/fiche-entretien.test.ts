@@ -41,7 +41,7 @@ test('launches the Fiche d’entretien once the Offre has a Recherche retenue, t
   await fiche.getByRole('button', { name: 'Lancer la Fiche d’entretien' }).click();
 
   await expect(fiche.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
-  await expect(fiche.locator('summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
+  await expect(fiche.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
   await expect(fiche.getByText(`jf edit ${REFERENCE} fiche_entretien`)).toBeVisible();
   const document = fiche.getByRole('figure', { name: 'fiche-entretien.md' });
   const editor = document.getByRole('textbox', { name: 'Markdown' });
@@ -52,5 +52,5 @@ test('launches the Fiche d’entretien once the Offre has a Recherche retenue, t
   await expect(document.getByText('Modifications non enregistrées')).toBeHidden();
   await page.reload();
   await expect(editor).toHaveValue(CORRECTED_FICHE);
-  await expect(fiche.locator('summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
+  await expect(fiche.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
 });

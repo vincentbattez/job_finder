@@ -862,15 +862,20 @@ a:active {
   --badge-ink: var(--color-accent-ink);
   --badge-soft: var(--color-accent);
 }
-.consignes__default summary {
+/* Consignes folded under what they produced: the default ones under the Candidat's, and those of
+   each Version under it */
+.consignes__default summary,
+.version-consignes summary {
   color: var(--color-accent-deep);
   font-weight: 500;
   cursor: pointer;
 }
-.consignes__default[open] summary {
+.consignes__default[open] summary,
+.version-consignes[open] summary {
   margin-bottom: var(--space-sm);
 }
-.consignes__default .prose {
+.consignes__default .prose,
+.version-consignes .prose {
   max-width: none;
   padding: var(--space-md);
   border-radius: var(--radius-input);

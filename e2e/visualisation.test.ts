@@ -26,7 +26,7 @@ test('launches the Visualisation of the Fiche d’entretien retenue, shows it in
 
   await launch(visualisation, 'Visualisation');
 
-  await expect(visualisation.locator('summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
+  await expect(visualisation.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
   const frame = visualisation.getByTitle('Visualisation v1');
   await expect(frame).toHaveAttribute('sandbox', '');
   await expect(frame.contentFrame().getByRole('table')).toContainText('Missions, Partenaires, Service');
@@ -43,7 +43,7 @@ test('launches the Visualisation of the Fiche d’entretien retenue, shows it in
 
   await visualisation.getByRole('button', { name: 'Relancer la Visualisation' }).click();
 
-  await expect(visualisation.locator('summary')).toHaveText([/^v1\s*Prêt/, /^v2\s*Prêt\s*Retenue/], {
+  await expect(visualisation.locator('li > details > summary')).toHaveText([/^v1\s*Prêt/, /^v2\s*Prêt\s*Retenue/], {
     timeout: READY_TIMEOUT_MS,
   });
   await expect(visualisation.getByTitle('Visualisation v2')).toBeVisible();
