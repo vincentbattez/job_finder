@@ -49,6 +49,9 @@ export const FICHE_DE_POSTE_SCHEMA = z
 
 export type FicheDePoste = z.infer<typeof FICHE_DE_POSTE_SCHEMA>;
 
+// The file of the Fiche de poste in the folder of its Offre, where every session runs
+export const FICHE_DE_POSTE_FILE_NAME = 'fiche-de-poste.md';
+
 // Where an Offre is: its ville, and the région and coordinates API Géo gives its commune. The ville
 // stays as read, without région nor coordinates, while API Géo knows no commune by that name.
 const LIEU_SHAPE = {

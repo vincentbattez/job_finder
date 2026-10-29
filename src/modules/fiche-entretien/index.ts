@@ -1,9 +1,7 @@
 import type { IAiModule } from '#/ai-module/index.ts';
 
 import { FICHE_ENTRETIEN_DEFAULT_CONSIGNES } from './consignes.ts';
-import { composeFicheEntretienPrompt } from './prompt.ts';
-
-const FICHE_ENTRETIEN_FILE_NAME = 'fiche-entretien.md';
+import { composeFicheEntretienPrompt, FICHE_ENTRETIEN_FILE_NAME } from './prompt.ts';
 
 // A Fiche d'entretien starts with its title; its plan is that of the Consignes, which the
 // Candidat may change

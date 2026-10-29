@@ -1,7 +1,5 @@
-import type { Artefact, Candidat, Offre } from '#/domain/index.ts';
-
-// The Brouillon of a Lettre Version, next to the Lettre the Candidat corrects
-export const BROUILLON_FILE_NAME = 'brouillon.md';
+import { FICHE_DE_POSTE_FILE_NAME, type Artefact, type Candidat, type Offre } from '#/domain/index.ts';
+import { BROUILLON_FILE_NAME, LETTRE_MODULE } from '#/modules/lettre/index.ts';
 
 const ARTEFACT_NAME_BY_ARTEFACT: Record<Artefact, string> = {
   recherche: 'la Recherche',
@@ -24,11 +22,11 @@ export function composeEditPrompt({ candidat: { name }, offre, artefact, version
   const artefactName = ARTEFACT_NAME_BY_ARTEFACT[artefact];
   const lettreFiles =
     artefact === 'lettre'
-      ? ` La Lettre à corriger est \`${versionPath}/lettre.md\`, et \`${versionPath}/${BROUILLON_FILE_NAME}\` est son Brouillon, ce que l'IA avait écrit.`
+      ? ` La Lettre à corriger est \`${versionPath}/${LETTRE_MODULE.fileName}\`, et \`${versionPath}/${BROUILLON_FILE_NAME}\` est son Brouillon, ce que l'IA avait écrit.`
       : '';
   return `Tu aides ${name} à modifier ${artefactName} de l'Offre ${offre.reference}, « ${offre.title} ». Parle en français.
 
-Le dossier courant est celui de cette Offre : \`fiche-de-poste.md\` est sa Fiche de poste, et chaque Artefact y a un dossier par Version, numérotées \`v1\`, \`v2\`…
+Le dossier courant est celui de cette Offre : \`${FICHE_DE_POSTE_FILE_NAME}\` est sa Fiche de poste, et chaque Artefact y a un dossier par Version, numérotées \`v1\`, \`v2\`…
 
 Tu modifies la Version retenue de ${artefactName}, le dossier \`${versionPath}/\` : c'est sur elle que l'outil s'appuie ensuite.${lettreFiles}
 

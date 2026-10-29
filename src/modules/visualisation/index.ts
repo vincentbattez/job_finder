@@ -1,9 +1,7 @@
 import type { IAiModule } from '#/ai-module/index.ts';
 
 import { VISUALISATION_DEFAULT_CONSIGNES } from './consignes.ts';
-import { composeVisualisationPrompt } from './prompt.ts';
-
-const VISUALISATION_FILE_NAME = 'visualisation.html';
+import { composeVisualisationPrompt, VISUALISATION_FILE_NAME } from './prompt.ts';
 
 // A whole HTML page, without a script: the front's sandboxed frame runs none, so a diagram drawn by
 // one would never show

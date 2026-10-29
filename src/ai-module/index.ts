@@ -1,11 +1,12 @@
 import type { Artefact, Offre } from '#/domain/index.ts';
 
 // What the fixed part of a prompt names: the folder of the Version, relative to the folder of the
-// Offre where the session runs, and the absolute folders of what it reads
+// Offre where the session runs, and the absolute folders of what it reads, with the file of each
+// Version read
 export interface IPromptInput {
   offre: Offre;
   outputDirectory: string;
-  readVersionList: { reference: string; artefact: Artefact; directory: string }[];
+  readVersionList: { reference: string; artefact: Artefact; directory: string; filePath: string }[];
   profilDirectory: string;
 }
 

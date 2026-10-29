@@ -1,4 +1,11 @@
 import type { IPromptInput } from '#/ai-module/index.ts';
+import { FICHE_DE_POSTE_FILE_NAME } from '#/domain/index.ts';
+
+import { RECIPIENTS_FILE_NAME } from './acl/recipients.ts';
+
+// The Brouillon the session writes, never modified, and the Lettre the Candidat corrects, its copy
+export const BROUILLON_FILE_NAME = 'brouillon.md';
+export const LETTRE_FILE_NAME = 'lettre.md';
 
 function quote(field: string | null): string {
   return field === null ? 'non renseigné' : `« ${field.trim()} »`;
@@ -10,7 +17,7 @@ function describeSentLettres(sentList: IPromptInput['readVersionList']): string 
     return "Le Candidat n'a encore envoyé aucune Lettre.";
   }
   const folderList = sentList.map(({ reference, directory }) => `- Offre ${reference} : \`${directory}\``);
-  return `Les Lettres que le Candidat a déjà envoyées, une par dossier. Chaque dossier contient le Brouillon que l'outil avait écrit (\`brouillon.md\`) et la Lettre telle que le Candidat l'a corrigée puis envoyée (\`lettre.md\`). Compare chaque paire : ses corrections montrent son style et ce qu'il refuse, applique-les.
+  return `Les Lettres que le Candidat a déjà envoyées, une par dossier. Chaque dossier contient le Brouillon que l'outil avait écrit (\`${BROUILLON_FILE_NAME}\`) et la Lettre telle que le Candidat l'a corrigée puis envoyée (\`${LETTRE_FILE_NAME}\`). Compare chaque paire : ses corrections montrent son style et ce qu'il refuse, applique-les.
 ${folderList.join('\n')}`;
 }
 
@@ -38,8 +45,8 @@ Le dossier courant est celui de l'Offre.
 ## Ce que tu lis
 
 Lis tout avant d'écrire :
-- La Fiche de poste, telle qu'elle a été publiée : \`fiche-de-poste.md\`.
-${rechercheList.map(({ directory }) => `- La Recherche retenue, qui établit ce que les recruteurs attendent et dans quel contexte : \`${directory}/recherche.md\`.`).join('\n')}
+- La Fiche de poste, telle qu'elle a été publiée : \`${FICHE_DE_POSTE_FILE_NAME}\`.
+${rechercheList.map(({ filePath }) => `- La Recherche retenue, qui établit ce que les recruteurs attendent et dans quel contexte : \`${filePath}\`.`).join('\n')}
 - Le Profil du Candidat, dans \`${profilDirectory}\` : les faits qu'il a validés, son CV et ses lettres passées, quand ils existent. Lis chacun de ses fichiers : c'est la seule source des faits sur le Candidat, et ses lettres passées donnent son style.
 - ${describeSentLettres(sentList)}
 
@@ -53,8 +60,8 @@ Ce sont des champs en texte libre : une adresse peut y être mêlée à un nom, 
 
 ## Ce que tu produis
 
-1. \`${outputDirectory}/brouillon.md\` : le Brouillon, la lettre complète en Markdown, de la formule d'appel à la signature, prête à être corrigée puis collée dans un mail.
-2. \`${outputDirectory}/destinataires.json\` : les destinataires recommandés, en JSON, exactement sous cette forme :
+1. \`${outputDirectory}/${BROUILLON_FILE_NAME}\` : le Brouillon, la lettre complète en Markdown, de la formule d'appel à la signature, prête à être corrigée puis collée dans un mail.
+2. \`${outputDirectory}/${RECIPIENTS_FILE_NAME}\` : les destinataires recommandés, en JSON, exactement sous cette forme :
 
 \`\`\`json
 {

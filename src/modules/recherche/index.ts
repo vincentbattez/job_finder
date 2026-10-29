@@ -1,9 +1,7 @@
 import type { IAiModule } from '#/ai-module/index.ts';
 
 import { RECHERCHE_DEFAULT_CONSIGNES } from './consignes.ts';
-import { composeRecherchePrompt } from './prompt.ts';
-
-const RECHERCHE_FILE_NAME = 'recherche.md';
+import { composeRecherchePrompt, RECHERCHE_FILE_NAME } from './prompt.ts';
 
 // A Recherche starts with its title and ends with its sources, at least one link
 function findFormatError(markdown: string): string | undefined {

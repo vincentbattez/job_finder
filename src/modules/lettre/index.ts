@@ -8,10 +8,9 @@ import type { Offre, Recipients } from '#/domain/index.ts';
 
 import { parseRecipients, readRecipients, RECIPIENTS_FILE_NAME } from './acl/recipients.ts';
 import { LETTRE_DEFAULT_CONSIGNES } from './consignes.ts';
-import { composeLettrePrompt } from './prompt.ts';
+import { BROUILLON_FILE_NAME, composeLettrePrompt, LETTRE_FILE_NAME } from './prompt.ts';
 
-const BROUILLON_FILE_NAME = 'brouillon.md';
-const LETTRE_FILE_NAME = 'lettre.md';
+export { BROUILLON_FILE_NAME } from './prompt.ts';
 
 // The recipients follow the format of the prompt, and each address is found as is in the field of
 // the Offre it cites, so none is invented, even from a field written as free text

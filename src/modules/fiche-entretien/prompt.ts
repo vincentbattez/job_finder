@@ -1,11 +1,14 @@
 import type { IPromptInput } from '#/ai-module/index.ts';
+import { FICHE_DE_POSTE_FILE_NAME } from '#/domain/index.ts';
+
+export const FICHE_ENTRETIEN_FILE_NAME = 'fiche-entretien.md';
 
 // The Lettre retenue when there is one: the recruiters question the Candidat on what it says
 function describeLettre(readVersionList: IPromptInput['readVersionList']): string {
   const lettre = readVersionList.find(({ artefact }) => artefact === 'lettre');
   return lettre === undefined
     ? "Le Candidat n'a pas de Lettre pour cette Offre : prépare l'entretien sans elle."
-    : `La Lettre retenue, celle que le Candidat a envoyée ou va envoyer : \`${lettre.directory}/lettre.md\`. Les recruteurs l'auront lue : prépare les questions qu'ils poseront sur ce qu'il y a écrit.`;
+    : `La Lettre retenue, celle que le Candidat a envoyée ou va envoyer : \`${lettre.filePath}\`. Les recruteurs l'auront lue : prépare les questions qu'ils poseront sur ce qu'il y a écrit.`;
 }
 
 // The fixed part of the prompt of the Fiche d'entretien: its objective, what it reads, what it
@@ -17,7 +20,7 @@ export function composeFicheEntretienPrompt({
   readVersionList,
   profilDirectory,
 }: IPromptInput): string {
-  const outputPath = `${outputDirectory}/fiche-entretien.md`;
+  const outputPath = `${outputDirectory}/${FICHE_ENTRETIEN_FILE_NAME}`;
   const rechercheList = readVersionList.filter(({ artefact }) => artefact === 'recherche');
   return `Tu écris la Fiche d'entretien d'un Candidat pour une Offre d'emploi : ce qu'il doit réviser et comment s'entraîner avant l'entretien de recrutement. Écris en français.
 
@@ -33,8 +36,8 @@ Le dossier courant est celui de l'Offre.
 ## Ce que tu lis
 
 Lis tout avant d'écrire :
-- La Fiche de poste, telle qu'elle a été publiée : \`fiche-de-poste.md\`.
-${rechercheList.map(({ directory }) => `- La Recherche retenue, qui établit ce que les recruteurs attendent et dans quel contexte : \`${directory}/recherche.md\`.`).join('\n')}
+- La Fiche de poste, telle qu'elle a été publiée : \`${FICHE_DE_POSTE_FILE_NAME}\`.
+${rechercheList.map(({ filePath }) => `- La Recherche retenue, qui établit ce que les recruteurs attendent et dans quel contexte : \`${filePath}\`.`).join('\n')}
 - Le Profil du Candidat, dans \`${profilDirectory}\` : les faits qu'il a validés, son CV et ses lettres passées, quand ils existent. Lis chacun de ses fichiers : c'est la seule source des faits sur le Candidat.
 - ${describeLettre(readVersionList)}
 

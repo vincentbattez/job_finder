@@ -1,14 +1,19 @@
 import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import type { Artefact, FicheDePoste, Lieu, Offre, Version } from '#/domain/index.ts';
+import {
+  FICHE_DE_POSTE_FILE_NAME,
+  type Artefact,
+  type FicheDePoste,
+  type Lieu,
+  type Offre,
+  type Version,
+} from '#/domain/index.ts';
 import { wordListOf } from '#/text/index.ts';
 
 import { loadConfig } from './acl/config.ts';
 import { openDatabase, type INewOffre } from './acl/database.ts';
 import { readMarkdownFiles, readTextFile } from './acl/files.ts';
-
-const FICHE_DE_POSTE_FILE_NAME = 'fiche-de-poste.md';
 
 function slugify(text: string): string {
   return wordListOf(text).join('-');

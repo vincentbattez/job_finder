@@ -185,11 +185,16 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
     const offreDirectory = workspace.offreDirectoryOf(offre);
     const outputDirectory = workspace.versionDirectoryOf(offre, version);
     mkdirSync(outputDirectory, { recursive: true });
-    const readVersionList = inputList.map((input) => ({
-      reference: input.offre.reference,
-      artefact: input.version.artefact,
-      directory: workspace.versionDirectoryOf(input.offre, input.version),
-    }));
+    const readVersionList = inputList.map((input) => {
+      const directory = workspace.versionDirectoryOf(input.offre, input.version);
+      const { fileName } = AI_MODULE_BY_ARTEFACT[input.version.artefact];
+      return {
+        reference: input.offre.reference,
+        artefact: input.version.artefact,
+        directory,
+        filePath: path.join(directory, fileName),
+      };
+    });
     const fixedPrompt = aiModule.composePrompt({
       offre,
       outputDirectory: path.relative(offreDirectory, outputDirectory),

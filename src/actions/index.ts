@@ -27,10 +27,10 @@ import {
   type Version,
   type Visualisation,
 } from '#/domain/index.ts';
-import { BROUILLON_FILE_NAME, composeEditPrompt } from '#/edit/prompt.ts';
+import { composeEditPrompt } from '#/edit/prompt.ts';
 import { createApiGeo } from '#/geo/acl/api-geo.ts';
 import { readCity } from '#/geo/city.ts';
-import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
+import { BROUILLON_FILE_NAME, LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import {
   composeNouvelleOffreNotification,
   composeRecherchePreteNotification,
