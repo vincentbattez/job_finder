@@ -51,6 +51,7 @@ L'automation lpm `detect`, déclarée dans `.lpm.yml`, lance `jf detect` chaque 
 Le Candidat est notifié sur son téléphone :
 
 - d'une nouvelle Offre dans sa Zone, avec son titre, sa juridiction et sa Date limite. Rien n'est envoyé au premier lancement, ni quand la Détection ne trouve rien ;
+- de la Republication d'une Offre : dans sa Zone, en nommant l'Offre qu'elle publie à nouveau ; quelle que soit la Zone quand cette Offre a été Postulée, et aucune Recherche n'est alors lancée ;
 - d'une Recherche prête, quand le worker l'a produite.
 
 Le seul canal est Home Assistant. La cible de chaque Candidat est le service `notify.mobile_app_*` de son téléphone, dans `data/config.json`. L'URL de Home Assistant et un token longue durée (profil Home Assistant, onglet Sécurité) vont dans `.env`, hors de git, sur le modèle de `.env.example`. `jf` et le worker le lisent au lancement. Une notification qui ne part pas n'empêche rien : la Détection enregistre d'abord toutes les nouvelles Offres et met leur Recherche en file ; `jf detect` affiche alors ce qu'elle a trouvé, puis chaque notification non envoyée avec ce qu'il faut vérifier, et sort en erreur. Le worker, lui, ne s'arrête pas : il écrit l'échec dans son log (`lpm logs worker`) et continue la file.

@@ -38,8 +38,21 @@ export function composeNouvelleOffreNotification(offre: Offre): INotification {
   };
 }
 
-// The Candidat already applied to the Offre published again: they decide whether to apply again
+// A Republication in the Zone, whose Recherche starts from that of the Offre it publishes again
 export function composeRepublicationNotification(offre: Offre, republishedOffre: Offre): INotification {
+  return {
+    title: 'Republication dans la Zone',
+    message: [
+      offre.title,
+      juridictionOf(offre),
+      `Republication de l'Offre ${republishedOffre.reference} : sa Recherche part de celle de cette Offre`,
+      dateLimiteOf(offre),
+    ].join('\n'),
+  };
+}
+
+// The Candidat already applied to the Offre published again: they decide whether to apply again
+export function composeRepublicationPostuleeNotification(offre: Offre, republishedOffre: Offre): INotification {
   return {
     title: "Republication d'une Offre Postulée",
     message: [

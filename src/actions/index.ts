@@ -35,6 +35,7 @@ import {
   composeNouvelleOffreNotification,
   composeRecherchePreteNotification,
   composeRepublicationNotification,
+  composeRepublicationPostuleeNotification,
   HOME_ASSISTANT,
   type INotification,
   type INotificationChannel,
@@ -239,15 +240,21 @@ export async function createActions({
     }
   }
 
-  // What a new Offre in the Zone starts: its Recherche, and the notification to send once the
-  // Détection is over (ADR-0003). The Republication of an Offre Postulée starts nothing: the
-  // Candidat decides whether to apply again (spec « Republication »).
-  async function startNewOffre(offre: Offre, republicationOf: Offre | undefined): Promise<INotification> {
+  // What a new Offre starts past the first launch: in the Zone, its Recherche and the notification
+  // to send once the Détection is over (ADR-0003). The Republication of an Offre once Postulée
+  // starts no Recherche but is notified whatever the Zone: the Candidat, who applied to the Poste,
+  // decides whether to apply again.
+  async function startNewOffre(offre: Offre, republicationOf: Offre | undefined): Promise<INotification | undefined> {
     if (republicationOf !== undefined && hasBeenPostulee(republicationOf)) {
-      return composeRepublicationNotification(offre, republicationOf);
+      return composeRepublicationPostuleeNotification(offre, republicationOf);
+    }
+    if (!offre.isInZone) {
+      return;
     }
     await workspace.createJob(offre, 'recherche');
-    return composeNouvelleOffreNotification(offre);
+    return republicationOf === undefined
+      ? composeNouvelleOffreNotification(offre)
+      : composeRepublicationNotification(offre, republicationOf);
   }
 
   // Those of the Lettre retenue, none before the Offre has one
@@ -324,8 +331,9 @@ export async function createActions({
           offreList.push(offre);
           newOffreList.push(offre);
           // The Offres already online at the first launch start nothing (ADR-0003)
-          if (isInZone && !isFirstLaunch) {
-            notificationList.push({ offre, notification: await startNewOffre(offre, republicationOf) });
+          const notification = isFirstLaunch ? undefined : await startNewOffre(offre, republicationOf);
+          if (notification !== undefined) {
+            notificationList.push({ offre, notification });
           }
         }
         await workspace.setDetected(veille);
