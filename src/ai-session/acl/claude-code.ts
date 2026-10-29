@@ -8,12 +8,11 @@ export interface IAiSession {
 // key (ADR-0003): the rest of the app sees an IAiSession, which the tests replace with a fake.
 export const CLAUDE_CODE: IAiSession = {
   // The fixed prompt goes into the system prompt so the Candidat does not see it as their own
-  // message; the opening line only gets Claude to speak first.
+  // message; the opening line only gets Claude to speak first. The manual mode, whatever the
+  // user's settings say, shows the Candidat each file edit and waits for their consent.
   openInteractive({ prompt, directory }) {
-    const { status, error } = spawnSync('claude', ['--append-system-prompt', prompt, 'Bonjour !'], {
-      cwd: directory,
-      stdio: 'inherit',
-    });
+    const argumentList = ['--permission-mode', 'manual', '--append-system-prompt', prompt, 'Bonjour !'];
+    const { status, error } = spawnSync('claude', argumentList, { cwd: directory, stdio: 'inherit' });
     if (error !== undefined) {
       throw new Error(`Impossible de lancer Claude Code (${error.message}). Installer « claude » et s'y connecter.`);
     }
