@@ -2,7 +2,12 @@ import { useId, useState } from 'react';
 
 import { Markdown } from './markdown.tsx';
 
-export function MarkdownEditor({ label, defaultValue }: Readonly<{ label: string; defaultValue: string }>) {
+// Within a form, name sends the text typed
+export function MarkdownEditor({
+  label,
+  defaultValue,
+  name,
+}: Readonly<{ label: string; defaultValue: string; name?: string }>) {
   const [markdown, setMarkdown] = useState(defaultValue);
   const textareaId = useId();
   const previewId = useId();
@@ -12,6 +17,7 @@ export function MarkdownEditor({ label, defaultValue }: Readonly<{ label: string
         <label htmlFor={textareaId}>{label}</label>
         <textarea
           id={textareaId}
+          name={name}
           value={markdown}
           spellCheck
           onChange={(event) => {

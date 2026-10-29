@@ -4,5 +4,7 @@ export default [
   index('routes/offres.tsx'),
   route('offres/:reference', 'routes/offre.tsx'),
   route('candidat', 'routes/candidat.ts'),
+  route('profil', 'routes/profil.tsx'),
+  route('consignes', 'routes/consignes.tsx'),
   route('design', 'routes/design.tsx'),
 ] satisfies RouteConfig;

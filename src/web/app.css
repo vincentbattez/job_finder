@@ -1,5 +1,5 @@
 /* Hallmark · shape: app screen · genre: modern-minimal · theme: Dose (deal 3/3, seed soft-friendly-app-track-8518·cf75787d·2026-10-29·r0)
- * nav: a top bar, the wordmark alone until the Candidat menu (#11) · signature: the Offre label, reference and Date limite in DM Mono over a dashed stub, above four plastic Artefact compartments · states: full and empty list, the four états · dose: white
+ * nav: a top bar, the wordmark, the Candidat's pages (Offres, Profil, Consignes: #14) and the Candidat menu (#11) · signature: the Offre label, reference and Date limite in DM Mono over a dashed stub, above four plastic Artefact compartments · states: full and empty list, the four états · dose: white
  * axes: light/grotesk-sans/chromatic-green · posture: committed · contrast: pass · v2.0.0 */
 /* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a list and a fiche fit any tracker; the Offre became a pharmacy label with its Artefacts as an organiser's compartments */
 /* Hallmark · deviation: Expirée and En échec are red, against Dose's grey for a missed state, because the map of issue #20 asks red for Expirée · no fibre grain: an app screen takes the theme's surfaces, not its ornament */
@@ -37,7 +37,8 @@
 }
 .candidat-menu select,
 .candidat-menu button,
-.command button {
+.command button,
+.button {
   min-height: 40px;
   padding: 0 var(--space-sm);
   border: var(--rule-hair) solid var(--color-muted);
@@ -50,16 +51,41 @@
   transition: background-color var(--dur-short) var(--ease-out);
 }
 .candidat-menu select:hover,
-.command button:hover {
+.command button:hover,
+.button:hover {
   background: var(--color-paper-2);
 }
-.candidat-menu button {
+.candidat-menu button,
+.button--primary {
   border-color: transparent;
   background: var(--color-accent);
   color: var(--color-accent-ink);
 }
-.candidat-menu button:hover {
+.candidat-menu button:hover,
+.button--primary:hover {
   background: var(--color-accent-deep);
+}
+
+/* The pages of the Candidat chosen in the menu: their Offres, their Profil, their Consignes */
+.topbar__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs) var(--space-md);
+}
+.topbar__nav a {
+  padding-block: var(--space-2xs);
+  border-bottom: 2px solid transparent;
+  color: var(--color-ink-2);
+  font-weight: 500;
+  text-decoration: none;
+  transition: border-color var(--dur-short) var(--ease-out);
+}
+.topbar__nav a:hover {
+  border-bottom-color: var(--color-rule);
+}
+.topbar__nav a[aria-current='page'] {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-ink);
 }
 
 .page {
@@ -569,4 +595,67 @@ a:active {
   .fiche__label {
     padding: var(--space-md);
   }
+}
+
+/* A form saves its editor: the buttons, then what the last save did */
+.button {
+  white-space: nowrap;
+}
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  margin-top: var(--space-sm);
+}
+.form-actions [role='status'] {
+  color: var(--color-accent-deep);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+/* Each file of the Profil, named as on disk */
+.profil-file {
+  display: grid;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+.profil-file h2 {
+  font: var(--text-md) / 1.4 var(--font-outlier);
+  letter-spacing: 0;
+}
+
+/* The Consignes of a module sit in its compartment, under its tint, like its Versions */
+.consignes__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+}
+.badge[data-consignes='candidat'] {
+  --badge-ink: var(--color-accent-ink);
+  --badge-soft: var(--color-accent);
+}
+.consignes__default summary {
+  color: var(--color-accent-deep);
+  font-weight: 500;
+  cursor: pointer;
+}
+.consignes__default[open] summary {
+  margin-bottom: var(--space-sm);
+}
+.consignes__default .prose {
+  max-width: none;
+  padding: var(--space-md);
+  border-radius: var(--radius-input);
+  background: var(--color-paper-2);
+}
+/* Which Consignes produced a Version: a small tag, like the source of a recipient */
+.consignes-origin {
+  padding: 0 var(--space-xs);
+  border-radius: var(--radius-pill);
+  background: var(--color-paper-2);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-weight: 500;
 }

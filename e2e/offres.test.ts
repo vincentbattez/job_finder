@@ -91,7 +91,10 @@ test.describe('Offres of a Candidat', () => {
     await page.goto('/offres/2026-2445600');
 
     const recherche = page.getByRole('region', { name: 'Recherche' });
-    await expect(recherche.locator('summary')).toHaveText([/^v1\s*Prêt\s*Retenue/, /^v2\s*Prêt\s*\d/]);
+    await expect(recherche.locator('summary')).toHaveText([
+      /^v1\s*Prêt\s*Retenue/,
+      /^v2\s*Prêt\s*Consignes par défaut\s*\d/,
+    ]);
     await expect(recherche.getByRole('heading', { name: /^Recherche retenue/ })).toBeVisible();
     await expect(recherche.getByRole('heading', { name: /^Recherche relancée/ })).toBeHidden();
     await recherche.locator('summary', { hasText: 'v2' }).click();

@@ -26,7 +26,13 @@ export const ETAT_BY_VERSION_STATE: Record<VersionState, Etat> = {
 export interface IArtefactVersions {
   artefact: Artefact;
   versionList: {
-    version: { number: number; state: VersionState; isRetenue: boolean; createdAt: Date };
+    version: {
+      number: number;
+      state: VersionState;
+      isRetenue: boolean;
+      hasCandidatConsignes: boolean;
+      createdAt: Date;
+    };
     documentList: { fileName: string; markdown: string }[];
   }[];
 }

@@ -4,6 +4,7 @@ import { EtatBadge } from './badge.tsx';
 import { CopyCommand } from './copy-command.tsx';
 import { DateText } from './date.tsx';
 import { Markdown } from './markdown.tsx';
+import { ConsignesOrigin } from './module-consignes.tsx';
 import { ARTEFACT_LABEL_BY_ARTEFACT, ETAT_BY_VERSION_STATE, type IArtefactVersions } from './offre-fiche.tsx';
 
 // Every Version of an Artefact, oldest first: the Version retenue opens, the others stay folded
@@ -35,6 +36,7 @@ export function ArtefactVersions({
                       Retenue
                     </span>
                   )}
+                  <ConsignesOrigin hasCandidatConsignes={version.hasCandidatConsignes} />
                   <span className="date">
                     <DateText date={version.createdAt} />
                   </span>
