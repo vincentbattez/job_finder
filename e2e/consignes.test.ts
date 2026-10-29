@@ -33,11 +33,8 @@ test.describe('Consignes of a Candidat', () => {
     await openConsignesOfSacha(page);
     const lettre = page.getByRole('region', { name: 'Lettre' });
 
-    // Typed before React hydrates the page, the change goes unnoticed: type again until it shows
-    await expect(async () => {
-      await lettre.getByRole('textbox').fill('Une lettre courte, au ton direct.\n');
-      await expect(lettre.getByText('Modifications non enregistrées')).toBeVisible({ timeout: 1000 });
-    }).toPass();
+    await lettre.getByRole('textbox').fill('Une lettre courte, au ton direct.\n');
+    await expect(lettre.getByText('Modifications non enregistrées')).toBeVisible();
     await lettre.getByRole('button', { name: 'Enregistrer mes Consignes' }).click();
     await expect(lettre.getByText('Vos Consignes', { exact: true })).toBeVisible();
     await lettre.getByRole('textbox').fill('Une lettre très courte.\n');

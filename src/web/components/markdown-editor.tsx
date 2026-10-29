@@ -1,8 +1,10 @@
 import { useId, useState } from 'react';
 
 import { Markdown } from './markdown.tsx';
+import { useIsHydrated } from './use-is-hydrated.ts';
 
-// The textarea posts its text under `name` within a form
+// The textarea posts its text under `name` within a form. It stays read-only until React runs the
+// page: React taking over the field resets it, which would drop or misplace the text typed before.
 export function MarkdownEditor({
   label,
   name,
@@ -12,6 +14,7 @@ export function MarkdownEditor({
   const [markdown, setMarkdown] = useState(defaultValue);
   const textareaId = useId();
   const previewId = useId();
+  const isHydrated = useIsHydrated();
   return (
     <div className="editor">
       <div className="editor__pane">
@@ -20,6 +23,7 @@ export function MarkdownEditor({
           id={textareaId}
           name={name}
           value={markdown}
+          readOnly={!isHydrated}
           spellCheck
           onChange={(event) => {
             setMarkdown(event.target.value);
