@@ -9,5 +9,7 @@ export default [
   route('candidat', 'routes/candidat.ts'),
   route('profil', 'routes/profil.tsx'),
   route('consignes', 'routes/consignes.tsx'),
+  route('run', 'routes/run.ts'),
+  route('detect', 'routes/detect.ts'),
   route('design', 'routes/design.tsx'),
 ] satisfies RouteConfig;

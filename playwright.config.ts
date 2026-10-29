@@ -9,18 +9,30 @@ const BASE_URL = `http://localhost:${PORT}`;
 // The front runs on a temporary data folder, never data/: test/seed-front.ts fills it through the
 // actions with the fakes before the dev server starts
 const DATA_DIRECTORY = path.join(tmpdir(), `job-finder-e2e-${PORT}`);
+// Even when the shell exports them: neither the front nor the worker sends a real notification in
+// the tests
+const ENV = { JF_DATA_DIRECTORY: DATA_DIRECTORY, HOME_ASSISTANT_URL: '', HOME_ASSISTANT_TOKEN: '' };
 
 export default defineConfig({
   testDir: 'e2e',
   forbidOnly: process.env.CI !== undefined,
   use: { baseURL: BASE_URL },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: {
-    command: `node test/seed-front.ts && react-router dev --port ${PORT} --strictPort`,
-    // Even when the shell exports them: the front never sends a real notification in the tests
-    env: { JF_DATA_DIRECTORY: DATA_DIRECTORY, HOME_ASSISTANT_URL: '', HOME_ASSISTANT_TOKEN: '' },
-    url: `${BASE_URL}/design`,
-    // A server already running on the port may read data/: always start the one seeded above
-    reuseExistingServer: false,
-  },
+  webServer: [
+    {
+      // The e2e mode serves the actions with the fakes of the external boundaries (vite.config.ts)
+      command: `node test/seed-front.ts && react-router dev --mode e2e --port ${PORT} --strictPort`,
+      env: ENV,
+      url: `${BASE_URL}/design`,
+      // A server already running on the port may read data/: always start the one seeded above
+      reuseExistingServer: false,
+    },
+    {
+      // The worker, in its own process like the lpm service: it runs the jobs the front queues,
+      // with the fake Claude. Started once the folder is seeded and the front is up.
+      command: 'node test/e2e-worker.ts',
+      env: ENV,
+      wait: { stdout: /Worker prêt/ },
+    },
+  ],
 });
