@@ -106,7 +106,7 @@ describe('the Republication of an Offre Postulée', () => {
   it('launches no Recherche and tells the Candidat, who decides whether to apply again', async () => {
     const aiSession = createFakeAiSession();
     const { actions, notificationChannel } = await detectBeforeRepublication(aiSession);
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     await actions.detect();
 
@@ -132,7 +132,7 @@ describe('the Republication of an Offre Postulée out of the Zone', () => {
     const { actions, notificationChannel } = await detectBeforeRepublication(createFakeAiSession(), {
       isOutOfZone: true,
     });
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     await actions.detect();
 
@@ -146,8 +146,8 @@ describe('the Republication of an Offre Postulée out of the Zone', () => {
     const { actions, notificationChannel } = await detectBeforeRepublication(createFakeAiSession(), {
       isOutOfZone: true,
     });
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
-    await actions.changeStatus({ reference: REFERENCE, status: 'archivee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'archivee' });
 
     await actions.detect();
 

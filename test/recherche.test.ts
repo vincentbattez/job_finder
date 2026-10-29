@@ -188,7 +188,7 @@ describe('a Recherche that fails', () => {
   // A Postulée Offre keeps the Lettre that was sent (spec « Versions »)
   it('refuses to change the Lettre retenue of a Postulée Offre', async () => {
     const { actions } = await detectOffres(createFakeAiSession());
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     await expect(actions.retenirVersion({ reference: REFERENCE, artefact: 'lettre', number: 1 })).rejects.toThrow(
       /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/,

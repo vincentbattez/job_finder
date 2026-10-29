@@ -43,7 +43,7 @@ function formatOffre(offre: Offre): string {
     offre.title,
     offre.workplace ?? '—',
     offre.dateLimite?.toLocaleDateString('fr-FR', { timeZone: 'UTC' }) ?? '—',
-    offre.isExpiree ? `${STATUT_LABEL_BY_STATUT[offre.status]}, Expirée` : STATUT_LABEL_BY_STATUT[offre.status],
+    offre.isExpiree ? `${STATUT_LABEL_BY_STATUT[offre.statut]}, Expirée` : STATUT_LABEL_BY_STATUT[offre.statut],
     offre.isInZone ? 'Zone' : 'hors Zone',
     // The link of a Republication, both ways, only on the Offres that have one
     ...(republicationOf === null ? [] : [`Republication de ${republicationOf.reference}`]),
@@ -194,15 +194,15 @@ async function runConsignesOperation(
   }
 }
 
-function changeStatusCommand(status: Offre['status'], name: string, description: string): ICommand {
+function changeStatutCommand(statut: Offre['statut'], name: string, description: string): ICommand {
   return {
     description: `${description} : jf ${name} <offre>`,
     run: async (actions, [reference]) => {
       if (reference === undefined) {
         throw new Error(`Usage : jf ${name} <offre>. « jf list <candidat> » liste les Offres.`);
       }
-      await actions.changeStatus({ reference, status });
-      process.stdout.write(`${reference} : ${STATUT_LABEL_BY_STATUT[status]}\n`);
+      await actions.changeStatut({ reference, statut });
+      process.stdout.write(`${reference} : ${STATUT_LABEL_BY_STATUT[statut]}\n`);
     },
   };
 }
@@ -368,13 +368,13 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       process.stdout.write(`${artefact} ${version} retenue pour l'Offre ${reference}.\n`);
     },
   },
-  postuler: changeStatusCommand(
+  postuler: changeStatutCommand(
     'postulee',
     'postuler',
     'Passe une Offre en Postulée, avec ou sans Lettre, ce qui fige sa Lettre pour de bon ; remet en Postulée une Offre Postulée puis Archivée',
   ),
-  archiver: changeStatusCommand('archivee', 'archiver', 'Passe une Offre en Archivée, Postulée ou non'),
-  traiter: changeStatusCommand(
+  archiver: changeStatutCommand('archivee', 'archiver', 'Passe une Offre en Archivée, Postulée ou non'),
+  traiter: changeStatutCommand(
     'a_traiter',
     'traiter',
     "Remet À traiter une Offre Archivée qui n'a jamais été Postulée",

@@ -50,7 +50,7 @@ model Offre {
   applicationEmail  String?
   contact1          String?
   contact2          String?
-  status            OffreStatus @default(a_traiter)
+  statut            OffreStatut @default(a_traiter) @map("status")
   // When the Offre was first marked Postulée: its Lettre retenue, the one sent, stays frozen even
   // once it is Archivée
   postuleeAt        DateTime?
@@ -65,7 +65,7 @@ model Offre {
   @@unique([candidatId, source, reference])
 }
 
-enum OffreStatus {
+enum OffreStatut {
   a_traiter
   postulee
   archivee

@@ -66,26 +66,26 @@ describe('Expirée', () => {
 describe('Lettre retenue of an Offre', () => {
   it('is frozen once the Offre is Postulée', () => {
     expect(() => {
-      assertLettreModifiable({ reference: '2026-2445600', status: 'postulee', postuleeAt: new Date() });
+      assertLettreModifiable({ reference: '2026-2445600', statut: 'postulee', postuleeAt: new Date() });
     }).toThrow(/L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/);
   });
 
   it('stays frozen once the Postulée Offre is Archivée', () => {
     expect(() => {
-      assertLettreModifiable({ reference: '2026-2445600', status: 'archivee', postuleeAt: new Date() });
+      assertLettreModifiable({ reference: '2026-2445600', statut: 'archivee', postuleeAt: new Date() });
     }).toThrow(/a été Postulée/);
   });
 
   // Postulée before the tool kept the date
   it('is frozen for an Offre Postulée without a date', () => {
     expect(() => {
-      assertLettreModifiable({ reference: '2026-2445600', status: 'postulee', postuleeAt: null });
+      assertLettreModifiable({ reference: '2026-2445600', statut: 'postulee', postuleeAt: null });
     }).toThrow(/a été Postulée/);
   });
 
-  it.each(['a_traiter', 'archivee'] as const)('can still change while the Offre, never Postulée, is %s', (status) => {
+  it.each(['a_traiter', 'archivee'] as const)('can still change while the Offre, never Postulée, is %s', (statut) => {
     expect(() => {
-      assertLettreModifiable({ reference: '2026-2445600', status, postuleeAt: null });
+      assertLettreModifiable({ reference: '2026-2445600', statut, postuleeAt: null });
     }).not.toThrow();
   });
 });

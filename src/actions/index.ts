@@ -77,7 +77,7 @@ const DOCUMENT_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ fileName: z.string(
 const JOB_INPUT_SCHEMA = z.object({ jobId: z.coerce.number().int() });
 const VISUALISATION_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
 
-const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: STATUT_SCHEMA });
+const STATUT_INPUT_SCHEMA = z.object({ reference: z.string(), statut: STATUT_SCHEMA });
 
 const ETAT_BY_VERSION_STATE = { running: 'en_cours', ready: 'pret', failed: 'en_echec' } as const;
 const ETAT_BY_JOB_STATE = { queued: 'en_cours', running: 'en_cours', done: 'pret', failed: 'en_echec' } as const;
@@ -407,11 +407,11 @@ export async function createActions({
       return workspace.listOffres(candidat.id);
     },
 
-    async changeStatus(rawInput: unknown): Promise<void> {
-      const { reference, status } = STATUS_INPUT_SCHEMA.parse(rawInput);
+    async changeStatut(rawInput: unknown): Promise<void> {
+      const { reference, statut } = STATUT_INPUT_SCHEMA.parse(rawInput);
       const offre = await findOffre(reference);
-      assertStatutChange(offre, status);
-      await workspace.setStatus(offre, status);
+      assertStatutChange(offre, statut);
+      await workspace.setStatut(offre, statut);
     },
 
     async openProfil(rawInput: unknown): Promise<void> {
@@ -665,7 +665,7 @@ export async function createActions({
       const versionList = await workspace.listVersions(offre, artefact);
       const version = versionList.find((candidate) => candidate.number === number);
       assertRetenable(offre, artefact, version, number);
-      await workspace.retainVersion(offre, version);
+      await workspace.retenirVersion(offre, version);
     },
   } satisfies Record<string, (rawInput: unknown) => Promise<void> | Promise<DomainValue | DomainValue[]>>;
 }

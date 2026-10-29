@@ -2,7 +2,7 @@ import type { Offre, Statut } from '#/domain/index.ts';
 import { STATUT_LABEL_BY_STATUT } from '#/domain/labels.ts';
 
 // What the statut rules read of an Offre
-type OffreStatut = Pick<Offre, 'reference' | 'status' | 'postuleeAt'>;
+type OffreStatut = Pick<Offre, 'reference' | 'statut' | 'postuleeAt'>;
 
 // A calendar day in France, as « 2026-11-20 », so that two days compare as strings
 const FRANCE_DAY_FORMAT = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' });
@@ -37,20 +37,20 @@ export function isExpiree(
 
 // Postulée once, even if Archivée since: the Candidat sent its Lettre retenue. An Offre Postulée
 // before postuleeAt existed has none.
-export function hasBeenPostulee({ status, postuleeAt }: Pick<Offre, 'status' | 'postuleeAt'>): boolean {
-  return status === 'postulee' || postuleeAt !== null;
+export function hasBeenPostulee({ statut, postuleeAt }: Pick<Offre, 'statut' | 'postuleeAt'>): boolean {
+  return statut === 'postulee' || postuleeAt !== null;
 }
 
 // When an Offre moving to the statut was first Postulée: its Lettre retenue, the one sent, stays
 // frozen from then on
-export function findPostuleeAt(offre: Pick<Offre, 'status' | 'postuleeAt'>, statut: Statut, now: Date): Date | null {
+export function findPostuleeAt(offre: Pick<Offre, 'statut' | 'postuleeAt'>, statut: Statut, now: Date): Date | null {
   return offre.postuleeAt ?? (statut === 'postulee' || hasBeenPostulee(offre) ? now : null);
 }
 
 // The statuts an Offre can move to. Postulée is never undone, since the Lettre retenue was sent: a
 // Postulée Offre can be Archivée, and comes back from Archivée as Postulée, never À traiter.
-export function listNextStatuts(offre: Pick<Offre, 'status' | 'postuleeAt'>): Statut[] {
-  switch (offre.status) {
+export function listNextStatuts(offre: Pick<Offre, 'statut' | 'postuleeAt'>): Statut[] {
+  switch (offre.statut) {
     case 'a_traiter': {
       return ['postulee', 'archivee'];
     }
@@ -66,13 +66,13 @@ export function listNextStatuts(offre: Pick<Offre, 'status' | 'postuleeAt'>): St
 // Moving to the statut it already has changes nothing
 export function assertStatutChange(offre: OffreStatut, statut: Statut): void {
   const nextStatutList = listNextStatuts(offre);
-  if (statut === offre.status || nextStatutList.includes(statut)) {
+  if (statut === offre.statut || nextStatutList.includes(statut)) {
     return;
   }
   const nextLabelList = nextStatutList.map((nextStatut) => STATUT_LABEL_BY_STATUT[nextStatut]);
   const reason = hasBeenPostulee(offre) ? ", Postulée ne s'annulant jamais : sa Lettre retenue est celle envoyée" : '';
   throw new Error(
-    `L'Offre ${offre.reference} est ${STATUT_LABEL_BY_STATUT[offre.status]} : elle ne peut passer qu'en ${nextLabelList.join(' ou ')}${reason}.`,
+    `L'Offre ${offre.reference} est ${STATUT_LABEL_BY_STATUT[offre.statut]} : elle ne peut passer qu'en ${nextLabelList.join(' ou ')}${reason}.`,
   );
 }
 

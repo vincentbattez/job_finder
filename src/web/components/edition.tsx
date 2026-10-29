@@ -28,20 +28,20 @@ export function ArtefactDocument({
   markdown,
   isModifiable,
 }: Readonly<IArtefactDocument>) {
-  const [draft, setDraft] = useState(markdown);
+  const [editedMarkdown, setEditedMarkdown] = useState(markdown);
   return (
     <figure className="document">
       <figcaption className="reference">{fileName}</figcaption>
       {isModifiable ? (
         <Form method="post" action={`/offres/${reference}/${artefact}/document`} preventScrollReset>
           <input type="hidden" name="fileName" value={fileName} />
-          <MarkdownEditor label="Markdown" name="markdown" defaultValue={markdown} onChange={setDraft} />
+          <MarkdownEditor label="Markdown" name="markdown" defaultValue={markdown} onChange={setEditedMarkdown} />
           <div className="edition">
             <button type="submit" className="button--primary">
               Enregistrer
             </button>
-            <CopyMarkdown markdown={draft} />
-            {draft !== markdown && <p role="status">Modifications non enregistrées</p>}
+            <CopyMarkdown markdown={editedMarkdown} />
+            {editedMarkdown !== markdown && <p role="status">Modifications non enregistrées</p>}
           </div>
         </Form>
       ) : (
@@ -88,14 +88,14 @@ export function StatutButtons({
       {nextStatutList.map((statut) => {
         if (statut !== 'postulee') {
           return (
-            <button key={statut} type="submit" name="status" value={statut}>
+            <button key={statut} type="submit" name="statut" value={statut}>
               {STATUT_BUTTON_LABEL_BY_STATUT[statut]}
             </button>
           );
         }
         return isConfirming ? (
           <Fragment key={statut}>
-            <button type="submit" name="status" value={statut} className="button--primary">
+            <button type="submit" name="statut" value={statut} className="button--primary">
               Confirmer : Postulée
             </button>
             <button

@@ -87,7 +87,7 @@ describe('import of a Fiche de poste in Markdown', () => {
       title: FILE_NAME,
       employer: null,
       url: null,
-      status: 'a_traiter',
+      statut: 'a_traiter',
       // No Zone of a Veille holds it: the import queues its Recherche whatever the Zone
       isInZone: false,
     });

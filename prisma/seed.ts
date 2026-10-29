@@ -35,7 +35,7 @@ function fakeOffre(candidatId: string): Prisma.OffreUncheckedCreateInput {
     applicationEmail: faker.internet.email({ provider: 'example.org' }),
     contact1: `${faker.person.fullName()}, ${faker.phone.number()}`,
     contact2: faker.helpers.maybe(() => faker.person.fullName()) ?? null,
-    status: faker.helpers.arrayElement(['a_traiter', 'postulee', 'archivee'] as const),
+    statut: faker.helpers.arrayElement(['a_traiter', 'postulee', 'archivee'] as const),
     isInZone: faker.datatype.boolean(),
     versionList: {
       create: hasRecherche

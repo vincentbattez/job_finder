@@ -133,5 +133,5 @@ await actions.runModule({ module: 'recherche', reference: CONSIGNES_REFERENCE })
 await actions.runQueuedJobs();
 await actions.deleteConsignes({ candidatId: 'lea', module: 'recherche' });
 
-await actions.changeStatus({ reference: '2026-2285305', status: 'postulee' });
-await actions.changeStatus({ reference: '2026-2290529', status: 'archivee' });
+await actions.changeStatut({ reference: '2026-2285305', statut: 'postulee' });
+await actions.changeStatut({ reference: '2026-2290529', statut: 'archivee' });

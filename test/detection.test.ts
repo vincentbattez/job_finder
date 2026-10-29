@@ -160,7 +160,7 @@ describe('detection on the responses recorded on 2026-10-29', () => {
       applicationEmail: 'p.tj-bethune@justice.fr',
       contact1: 'Madame Odile SIMART, présidente du Tribunal Judiciaire de Béthune',
       contact2: 'secrétariat en copie : sec.p.tj-bethune@justice.fr',
-      status: 'a_traiter',
+      statut: 'a_traiter',
       isInZone: true,
       isExpiree: false,
     });

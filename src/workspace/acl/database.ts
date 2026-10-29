@@ -75,7 +75,15 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
   });
 
   // A single Version retenue per Artefact of an Offre
-  function retainStatementList({ offreId, artefact, number }: { offreId: number; artefact: Artefact; number: number }) {
+  function retenirStatementList({
+    offreId,
+    artefact,
+    number,
+  }: {
+    offreId: number;
+    artefact: Artefact;
+    number: number;
+  }) {
     return [
       prisma.version.updateMany({ where: { offreId, artefact, number: { not: number } }, data: { isRetenue: false } }),
       prisma.version.updateMany({ where: { offreId, artefact, number }, data: { isRetenue: true } }),
@@ -151,7 +159,7 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       await prisma.$transaction([
         prisma.version.updateMany({ where: versionWhere, data: { state: isReady ? 'ready' : 'failed' } }),
         prisma.job.update({ where: { id: job.id }, data: { state: isReady ? 'done' : 'failed', log, sessionId } }),
-        ...(isReady ? retainStatementList(versionWhere) : []),
+        ...(isReady ? retenirStatementList(versionWhere) : []),
       ]);
       return {
         job: JOB_SCHEMA.parse(await prisma.job.findUniqueOrThrow({ where: { id: job.id }, include: JOB_INCLUDE })),
@@ -225,8 +233,8 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       );
     },
 
-    async retainVersion(offre: Offre, { artefact, number }: Version): Promise<void> {
-      await prisma.$transaction(retainStatementList({ offreId: offre.id, artefact, number }));
+    async retenirVersion(offre: Offre, { artefact, number }: Version): Promise<void> {
+      await prisma.$transaction(retenirStatementList({ offreId: offre.id, artefact, number }));
     },
 
     async setDetected({ id }: Veille): Promise<void> {
@@ -262,9 +270,9 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       return OFFRE_SCHEMA.parse(await prisma.offre.update({ where: { id }, data, include: OFFRE_INCLUDE }));
     },
 
-    async setStatus(offre: Offre, status: Statut): Promise<void> {
-      const postuleeAt = findPostuleeAt(offre, status, new Date());
-      await prisma.offre.update({ where: { id: offre.id }, data: { status, postuleeAt } });
+    async setStatut(offre: Offre, statut: Statut): Promise<void> {
+      const postuleeAt = findPostuleeAt(offre, statut, new Date());
+      await prisma.offre.update({ where: { id: offre.id }, data: { statut, postuleeAt } });
     },
 
     async createOffre({

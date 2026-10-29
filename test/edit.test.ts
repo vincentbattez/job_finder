@@ -109,7 +109,7 @@ describe('an edit refused', () => {
   it('refuses to edit the Lettre of a Postulée Offre, saying why, without opening a session', async () => {
     const aiSession = createFakeAiSession();
     const { actions } = await detectOffres(aiSession);
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     await expect(actions.openArtefact({ reference: REFERENCE, artefact: 'lettre' })).rejects.toThrow(
       /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée telle qu'envoyée/,

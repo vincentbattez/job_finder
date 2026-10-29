@@ -81,7 +81,7 @@ export function OffreFiche({
         <header className="fiche__label">
           <div className="fiche__title">
             <TITLE_TAG>{offre.title}</TITLE_TAG>
-            <StatutBadge statut={offre.status} isExpiree={offre.isExpiree} />
+            <StatutBadge statut={offre.statut} isExpiree={offre.isExpiree} />
           </div>
           <p>{[offre.workplace, offre.employer].filter(Boolean).join(', ')}</p>
           <dl className="fiche__facts">

@@ -28,7 +28,7 @@ export function ConsignesOrigin({ hasCandidatConsignes }: Readonly<{ hasCandidat
 export function ModuleConsignes({ module, defaultConsignes, candidatConsignes }: Readonly<IModuleConsignes>) {
   const headingId = useId();
   const hasCandidatConsignes = candidatConsignes !== null;
-  const [draft, setDraft] = useState(candidatConsignes ?? defaultConsignes);
+  const [editedConsignes, setEditedConsignes] = useState(candidatConsignes ?? defaultConsignes);
   return (
     <section className="artefact consignes" data-artefact={module} aria-labelledby={headingId}>
       <div className="consignes__head">
@@ -47,7 +47,7 @@ export function ModuleConsignes({ module, defaultConsignes, candidatConsignes }:
               : 'Les Consignes par défaut, à modifier pour en faire les vôtres'
           }
           defaultValue={candidatConsignes ?? defaultConsignes}
-          onChange={setDraft}
+          onChange={setEditedConsignes}
         />
         <div className="edition">
           <button type="submit" name="intent" value="save" className="button--primary">
@@ -58,7 +58,9 @@ export function ModuleConsignes({ module, defaultConsignes, candidatConsignes }:
               Revenir aux Consignes par défaut
             </button>
           )}
-          {draft !== (candidatConsignes ?? defaultConsignes) && <p role="status">Modifications non enregistrées</p>}
+          {editedConsignes !== (candidatConsignes ?? defaultConsignes) && (
+            <p role="status">Modifications non enregistrées</p>
+          )}
         </div>
       </Form>
       {hasCandidatConsignes && (

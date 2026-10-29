@@ -134,7 +134,7 @@ describe('saving a correction', () => {
     const actions = await detectOffres(rechercheRun('Recherche'), LETTRE_RUN);
     await runModule(actions, 'recherche');
     await runModule(actions, 'lettre');
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     await expect(
       actions.saveDocument({
@@ -184,7 +184,7 @@ describe('saving a correction', () => {
     await runModule(actions, 'lettre');
     const beforePostuleeList = await readModifiableFiles(actions);
 
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     expect(beforePostuleeList).toEqual([
       { artefact: 'recherche', fileNameList: [[], ['recherche.md']] },
@@ -212,7 +212,7 @@ describe('saving a correction', () => {
     await runModule(actions, 'lettre');
     const beforePostuleeList = await readRetenableVersions(actions);
 
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     expect(beforePostuleeList).toEqual([
       { artefact: 'recherche', numberList: [1] },

@@ -91,7 +91,7 @@ describe('the modules the fiche of an Offre offers', () => {
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runQueuedJobs();
 
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     expect(await readModuleByArtefact(actions)).toMatchObject({
       recherche: { refusal: null },

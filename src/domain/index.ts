@@ -94,7 +94,7 @@ export const OFFRE_SCHEMA = z
     applicationEmail: z.string().nullable(),
     contact1: z.string().nullable(),
     contact2: z.string().nullable(),
-    status: STATUT_SCHEMA,
+    statut: STATUT_SCHEMA,
     // When it was first marked Postulée, null if never
     postuleeAt: z.date().nullable(),
     isInZone: z.boolean(),

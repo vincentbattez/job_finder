@@ -119,7 +119,7 @@ describe('lettre', () => {
     const { actions, dataDirectory, offreDirectory } = await detectOffres(aiSession);
     await runModule(actions, 'recherche', SENT_REFERENCE);
     await runModule(actions, 'lettre', SENT_REFERENCE);
-    await actions.changeStatus({ reference: SENT_REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: SENT_REFERENCE, statut: 'postulee' });
     await runModule(actions, 'recherche', UNSENT_REFERENCE);
     await runModule(actions, 'lettre', UNSENT_REFERENCE);
     await runModule(actions, 'recherche', REFERENCE);
@@ -284,7 +284,7 @@ describe('a Lettre refused', () => {
     const { actions } = await detectOffres(aiSession);
     await runModule(actions, 'recherche', REFERENCE);
     await runModule(actions, 'lettre', REFERENCE);
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     await expect(actions.runModule({ module: 'lettre', reference: REFERENCE })).rejects.toThrow(
       /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/,
@@ -301,7 +301,7 @@ describe('a Lettre refused', () => {
     const { actions } = await detectOffres(aiSession);
     await runModule(actions, 'recherche', REFERENCE);
     const { id } = await actions.runModule({ module: 'lettre', reference: REFERENCE });
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     await actions.runQueuedJobs();
 

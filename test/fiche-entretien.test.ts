@@ -110,7 +110,7 @@ describe("fiche d'entretien", () => {
     await runModule(actions, 'recherche');
     await actions.retenirVersion({ reference: REFERENCE, artefact: 'recherche', number: 1 });
     await runModule(actions, 'lettre');
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     const { version } = await runModule(actions, 'fiche');
 
