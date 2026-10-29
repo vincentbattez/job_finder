@@ -12,6 +12,8 @@ jf detect                                      # cherche les nouvelles Offres de
 jf list lea                                    # liste les Offres d'un Candidat, avec leur statut et celles qui sont Expirées
 jf postuler 2026-2445600                       # passe une Offre en Postulée, ce qui fige sa Lettre ; jf archiver l'archive
 jf run recherche 2026-2445600                  # produit une nouvelle Version de la Recherche d'une Offre
+jf run lettre 2026-2445600                     # produit une nouvelle Version de la Lettre, sur la Recherche retenue
+jf destinataires 2026-2445600                  # affiche à qui adresser la candidature, selon la Lettre retenue
 jf versions 2026-2445600 recherche             # liste les Versions d'un Artefact
 jf retenir 2026-2445600 recherche 1            # change la Version retenue
 ```
@@ -25,7 +27,7 @@ Tout vit dans `data/`, hors de git et sans sauvegarde :
 - `config.json` : les Candidats, leurs Veilles et leur cible de notification, et le délai par défaut. Le modèle versionné est `config.example.json` ;
 - `job_finder.sqlite` : la base, migrée à chaque lancement ;
 - `candidats/<id>/profil/` : le Profil de chaque Candidat, en fichiers Markdown : `faits.md`, `cv.md` et une `lettre-<employeur>-<année>.md` par lettre passée. `jf profil <candidat>` les écrit et les complète au fil d'une session Claude Code interactive ;
-- `candidats/<id>/offres/<référence>-<titre>/` : un dossier par Offre, avec sa Fiche de poste (`fiche-de-poste.md`) sauvegardée dès la Détection, et un dossier par Version de chaque Artefact, par exemple `recherche/v2/recherche.md` ;
+- `candidats/<id>/offres/<référence>-<titre>/` : un dossier par Offre, avec sa Fiche de poste (`fiche-de-poste.md`) sauvegardée dès la Détection, et un dossier par Version de chaque Artefact, par exemple `recherche/v2/recherche.md`. Une Version de la Lettre (`lettre/v<n>/`) contient le Brouillon (`brouillon.md`, en lecture seule), la Lettre à corriger (`lettre.md`, d'abord sa copie) et les destinataires recommandés (`destinataires.json`) ;
 - `candidats/<id>/consignes/<artefact>.md` : les Consignes d'un module que le Candidat a remplacées, par exemple `recherche.md`. Sans ce fichier, le module suit ses Consignes par défaut.
 
 `dev-data/` a la même forme, avec des Offres factices pour le développement. Les commandes Prisma et les tasks `db:` ne touchent qu'à lui.

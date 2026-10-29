@@ -3,7 +3,8 @@ import type { Offre } from '#/domain/index.ts';
 // The fixed part of the prompt of the Recherche: its objective, what it reads, what it writes and
 // where, and the rules no Consignes can lift (ADR-0003). The objective is fixed, the way to reach
 // it is left to the session and its Consignes. It runs in the folder of the Offre.
-export function composeRecherchePrompt(offre: Offre, outputPath: string): string {
+export function composeRecherchePrompt({ offre, outputDirectory }: { offre: Offre; outputDirectory: string }): string {
+  const outputPath = `${outputDirectory}/recherche.md`;
   return `Tu produis la Recherche d'une Offre d'emploi, pour le Candidat qui va y postuler. Écris en français.
 
 ## Objectif

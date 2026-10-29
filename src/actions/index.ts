@@ -9,20 +9,23 @@ import {
   type DomainValue,
   type ModuleRun,
   type Offre,
+  type Recipients,
   type Version,
 } from '#/domain/index.ts';
+import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
 import { assertLettreModifiable } from '#/statut/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
-import { createJobRunner, parseModule } from './run-job.ts';
+import { createJobRunner, findInputs, parseModule } from './run-job.ts';
 
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
 const CANDIDAT_INPUT_SCHEMA = z.object({ candidatId: z.string() });
-const MODULE_INPUT_SCHEMA = z.object({ module: z.string(), reference: z.string() });
-const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: ARTEFACT_SCHEMA });
+const OFFRE_INPUT_SCHEMA = z.object({ reference: z.string() });
+const MODULE_INPUT_SCHEMA = OFFRE_INPUT_SCHEMA.extend({ module: z.string() });
+const ARTEFACT_INPUT_SCHEMA = OFFRE_INPUT_SCHEMA.extend({ artefact: ARTEFACT_SCHEMA });
 const VERSION_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
 
 const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: z.enum(['postulee', 'archivee']) });
@@ -133,12 +136,25 @@ export async function createActions({
       const { module, reference } = MODULE_INPUT_SCHEMA.parse(rawInput);
       const artefact = parseModule(module);
       const offre = await findOffre(reference);
+      await findInputs(workspace, offre, artefact);
       return runJob(await workspace.createJob(offre, artefact));
     },
 
     async listVersions(rawInput: unknown): Promise<Version[]> {
       const { reference, artefact } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
       return workspace.listVersions(await findOffre(reference), artefact);
+    },
+
+    // To whom the Lettre retenue recommends sending the application, and why
+    async readRecipients(rawInput: unknown): Promise<Recipients> {
+      const { reference } = OFFRE_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      const versionList = await workspace.listVersions(offre, 'lettre');
+      const version = versionList.find(({ isRetenue }) => isRetenue);
+      if (version === undefined) {
+        throw new Error(`L'Offre ${reference} n'a pas de Lettre retenue. La produire : jf run lettre ${reference}.`);
+      }
+      return LETTRE_MODULE.readRecipients(workspace.versionDirectoryOf(offre, version));
     },
 
     async retenirVersion(rawInput: unknown): Promise<void> {

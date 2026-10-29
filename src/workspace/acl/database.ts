@@ -29,7 +29,9 @@ const ROOT_DIRECTORY = path.join(import.meta.dirname, '..', '..', '..');
 const PRISMA_CLI_PATH = fileURLToPath(import.meta.resolve('prisma/build/index.js'));
 
 const JOB_INCLUDE = { offre: true };
-const VERSION_INCLUDE = { inputList: { select: { artefact: true, number: true } } };
+const VERSION_INCLUDE = {
+  inputList: { select: { artefact: true, number: true, offre: { select: { reference: true } } } },
+};
 
 export interface INewOffre {
   candidatId: string;
@@ -88,8 +90,12 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       return JOB_SCHEMA.parse(await prisma.job.create({ data: { module, offreId: offre.id }, include: JOB_INCLUDE }));
     },
 
-    // The job runs and its Version is created, numbered after the last Version of its Artefact
-    async startJob({ id, module, offre }: Job, consignes: string): Promise<Version> {
+    // The job runs and its Version is created, numbered after the last Version of its Artefact,
+    // with the Versions it reads
+    async startJob(
+      { id, module, offre }: Job,
+      { consignes, inputList }: { consignes: string; inputList: { offre: Offre; version: Version }[] },
+    ): Promise<Version> {
       const { _max: max } = await prisma.version.aggregate({
         where: { offreId: offre.id, artefact: module },
         _max: { number: true },
@@ -97,7 +103,18 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       const [, version] = await prisma.$transaction([
         prisma.job.update({ where: { id }, data: { state: 'running' } }),
         prisma.version.create({
-          data: { offreId: offre.id, artefact: module, number: (max.number ?? 0) + 1, state: 'running', consignes },
+          data: {
+            offreId: offre.id,
+            artefact: module,
+            number: (max.number ?? 0) + 1,
+            state: 'running',
+            consignes,
+            inputList: {
+              connect: inputList.map(({ offre: { id: offreId }, version: { artefact, number } }) => ({
+                offreId_artefact_number: { offreId, artefact, number },
+              })),
+            },
+          },
           include: VERSION_INCLUDE,
         }),
       ]);
