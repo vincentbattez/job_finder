@@ -67,12 +67,21 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     description: "Liste les Offres d'un Candidat : jf list <candidat>",
     run: async (actions, [candidatId]) => {
       if (candidatId === undefined) {
-        throw new Error('Préciser le Candidat : jf list <candidat>. « jf candidats » liste les Candidats.');
+        throw new Error('Usage : jf list <candidat>. « jf candidats » liste les Candidats.');
       }
       const offreList = await actions.listOffres({ candidatId });
       for (const offre of offreList) {
         process.stdout.write(`${formatOffre(offre)}\n`);
       }
+    },
+  },
+  profil: {
+    description: "Complète le Profil d'un Candidat avec Claude Code : jf profil <candidat>",
+    run: async (actions, [candidatId]) => {
+      if (candidatId === undefined) {
+        throw new Error('Usage : jf profil <candidat>. « jf candidats » liste les Candidats.');
+      }
+      await actions.openProfil({ candidatId });
     },
   },
 };

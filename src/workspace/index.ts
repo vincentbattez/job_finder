@@ -22,12 +22,14 @@ export async function openWorkspace(dataDirectory: string) {
   const config = loadConfig(path.join(dataDirectory, 'config.json'));
   const database = openDatabase(path.join(dataDirectory, 'job_finder.sqlite'));
   await database.copyConfig(config);
+  const profilDirectoryOf = (candidatId: string): string => path.join(dataDirectory, 'candidats', candidatId, 'profil');
   for (const candidat of config.candidatList) {
-    mkdirSync(path.join(dataDirectory, 'candidats', candidat.id, 'profil'), { recursive: true });
+    mkdirSync(profilDirectoryOf(candidat.id), { recursive: true });
   }
 
   return {
     ...database,
+    profilDirectoryOf,
 
     // Each Offre has a folder named by its reference and title, for its Fiche de poste and its
     // Artefacts. The Fiche de poste is written first, so an Offre in the database always has it.
