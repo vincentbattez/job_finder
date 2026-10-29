@@ -7,6 +7,7 @@ const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
 
 // Through the actions only: the CLI never reaches the domain directly (ADR-0003)
 type Offre = Awaited<ReturnType<Actions['listOffres']>>[number];
+type Version = Awaited<ReturnType<Actions['listVersions']>>[number];
 
 interface ICommand {
   description: string;
@@ -17,6 +18,12 @@ const STATUT_LABEL_BY_STATUS: Record<Offre['status'], string> = {
   a_traiter: 'À traiter',
   postulee: 'Postulée',
   archivee: 'Archivée',
+};
+
+const VERSION_STATE_LABEL_BY_STATE: Record<Version['state'], string> = {
+  running: 'en cours',
+  ready: 'prête',
+  failed: 'en échec',
 };
 
 function formatOffre(offre: Offre): string {
@@ -73,6 +80,49 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       for (const offre of offreList) {
         process.stdout.write(`${formatOffre(offre)}\n`);
       }
+    },
+  },
+  run: {
+    description: "Produit une nouvelle Version d'un Artefact avec Claude Code : jf run recherche <offre>",
+    run: async (actions, [module, reference]) => {
+      if (module === undefined || reference === undefined) {
+        throw new Error('Usage : jf run <module> <offre>, par exemple jf run recherche 2026-2445600.');
+      }
+      process.stdout.write(
+        `${module} de l'Offre ${reference} : lancement de Claude Code, qui peut prendre plusieurs minutes…\n`,
+      );
+      const { job, version, filePath } = await actions.runModule({ module, reference });
+      if (job.state === 'failed') {
+        throw new Error(
+          `${module} v${String(version.number)} en échec :\n${job.log}\nRelancer : jf run ${module} ${reference}`,
+        );
+      }
+      process.stdout.write(`${module} v${String(version.number)} prête et retenue : ${filePath}\n`);
+    },
+  },
+  versions: {
+    description: "Liste les Versions d'un Artefact : jf versions <offre> recherche",
+    run: async (actions, [reference, artefact]) => {
+      if (reference === undefined || artefact === undefined) {
+        throw new Error('Usage : jf versions <offre> <artefact>, par exemple jf versions 2026-2445600 recherche.');
+      }
+      const versionList = await actions.listVersions({ reference, artefact });
+      for (const { number, state, isRetenue, createdAt } of versionList) {
+        const columnList = [`v${String(number)}`, VERSION_STATE_LABEL_BY_STATE[state], isRetenue ? 'retenue' : '—'];
+        process.stdout.write(`${[...columnList, createdAt.toLocaleString('fr-FR')].join('\t')}\n`);
+      }
+    },
+  },
+  retenir: {
+    description: "Change la Version retenue d'un Artefact : jf retenir <offre> recherche <version>",
+    run: async (actions, [reference, artefact, version]) => {
+      if (reference === undefined || artefact === undefined || version === undefined) {
+        throw new Error(
+          'Usage : jf retenir <offre> <artefact> <version>, par exemple jf retenir 2026-2445600 recherche 2.',
+        );
+      }
+      await actions.retenirVersion({ reference, artefact, number: version.replace(/^v/, '') });
+      process.stdout.write(`${artefact} ${version} retenue pour l'Offre ${reference}.\n`);
     },
   },
   profil: {

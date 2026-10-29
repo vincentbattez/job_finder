@@ -48,6 +48,8 @@ export type FicheDePoste = z.infer<typeof FICHE_DE_POSTE_SCHEMA>;
 
 export const OFFRE_SCHEMA = z
   .object({
+    id: z.int(),
+    candidatId: z.string(),
     reference: z.string(),
     title: z.string(),
     url: z.string().nullable(),
@@ -78,5 +80,49 @@ export const DETECTION_SCHEMA = z
   .brand<'Domain'>();
 
 export type Detection = z.infer<typeof DETECTION_SCHEMA>;
+
+export const ARTEFACT_SCHEMA = z.enum(['recherche', 'lettre', 'fiche_entretien', 'visualisation']);
+
+export type Artefact = z.infer<typeof ARTEFACT_SCHEMA>;
+
+// A Version that another Version read as input
+const READ_VERSION_SCHEMA = z.object({ artefact: ARTEFACT_SCHEMA, number: z.int() });
+
+// Each launch of a module creates a new Version, which keeps the Consignes it was produced with
+// and the Versions it read
+export const VERSION_SCHEMA = z
+  .object({
+    artefact: ARTEFACT_SCHEMA,
+    number: z.int(),
+    isRetenue: z.boolean(),
+    state: z.enum(['running', 'ready', 'failed']),
+    consignes: z.string(),
+    inputList: z.array(READ_VERSION_SCHEMA),
+    createdAt: z.date(),
+  })
+  .brand<'Domain'>();
+
+export type Version = z.infer<typeof VERSION_SCHEMA>;
+
+// A job runs a module on an Offre; a module is named after the Artefact it produces
+export const JOB_SCHEMA = z
+  .object({
+    id: z.int(),
+    module: ARTEFACT_SCHEMA,
+    offre: OFFRE_SCHEMA,
+    state: z.enum(['queued', 'running', 'done', 'failed']),
+    log: z.string(),
+    sessionId: z.string().nullable(),
+  })
+  .brand<'Domain'>();
+
+export type Job = z.infer<typeof JOB_SCHEMA>;
+
+// What a job leaves: the job, the Version it produced and the path of that Version's file
+export const MODULE_RUN_SCHEMA = z
+  .object({ job: JOB_SCHEMA, version: VERSION_SCHEMA, filePath: z.string() })
+  .brand<'Domain'>();
+
+export type ModuleRun = z.infer<typeof MODULE_RUN_SCHEMA>;
 
 export type DomainValue = z.$brand<'Domain'>;

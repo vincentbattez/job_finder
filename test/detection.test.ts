@@ -144,7 +144,8 @@ describe('detection on the responses recorded on 2026-10-29', () => {
   });
 
   it('records the fields of the detail page as published', async () => {
-    expect(await findOffre('2026-2445600')).toEqual({
+    expect(await findOffre('2026-2445600')).toMatchObject({
+      candidatId: 'lea',
       reference: '2026-2445600',
       title: 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE',
       url: 'https://choisirleservicepublic.gouv.fr/offre-emploi/2026-2445600/?tracking=1&idOrigine=502',
