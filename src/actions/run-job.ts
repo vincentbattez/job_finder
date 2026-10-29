@@ -24,7 +24,7 @@ interface IReadVersion {
   version: Version;
 }
 
-async function findVersionRetenue(workspace: Workspace, offre: Offre, artefact: Artefact) {
+export async function findVersionRetenue(workspace: Workspace, offre: Offre, artefact: Artefact) {
   const versionList = await workspace.listVersions(offre, artefact);
   return versionList.find(({ isRetenue }) => isRetenue);
 }

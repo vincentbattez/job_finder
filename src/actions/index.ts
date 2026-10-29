@@ -49,7 +49,14 @@ import { assertLettreModifiable, assertStatutChange, hasBeenPostulee, listNextSt
 import { messageOf } from '#/text/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
-import { createJobRunner, describeModule, findDefaultConsignes, findInputs, parseModule } from './run-job.ts';
+import {
+  createJobRunner,
+  describeModule,
+  findDefaultConsignes,
+  findInputs,
+  findVersionRetenue,
+  parseModule,
+} from './run-job.ts';
 
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
@@ -268,8 +275,7 @@ export async function createActions({
 
   // Those of the Lettre retenue, none before the Offre has one
   async function findRecipients(offre: Offre): Promise<Recipients | null> {
-    const versionList = await workspace.listVersions(offre, 'lettre');
-    const version = versionList.find(({ isRetenue }) => isRetenue);
+    const version = await findVersionRetenue(workspace, offre, 'lettre');
     return version === undefined ? null : LETTRE_MODULE.readRecipients(workspace.versionDirectoryOf(offre, version));
   }
 
@@ -480,8 +486,7 @@ export async function createActions({
     async openArtefact(rawInput: unknown): Promise<void> {
       const { reference, artefact } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
       const offre = await findOffre(reference);
-      const versionList = await workspace.listVersions(offre, artefact);
-      const version = versionList.find(({ isRetenue }) => isRetenue);
+      const version = await findVersionRetenue(workspace, offre, artefact);
       assertArtefactModifiable(offre, artefact, version);
       const candidat = await findCandidat({ candidatId: offre.candidatId });
       const offreDirectory = workspace.offreDirectoryOf(offre);
@@ -569,6 +574,7 @@ export async function createActions({
       const artefactList = await Promise.all(
         ARTEFACT_SCHEMA.options.map(async (artefact) => {
           const versionList = await workspace.listVersions(offre, artefact);
+          const versionRetenue = await findVersionRetenue(workspace, offre, artefact);
           // A queued job has no Version yet, while the worker runs another one (ADR-0003): it is
           // already en cours
           const isQueued = jobList.some(({ module, state }) => module === artefact && state === 'queued');
@@ -578,11 +584,7 @@ export async function createActions({
             etat: state === undefined ? 'absent' : ETAT_BY_VERSION_STATE[state],
             module: await describeModule(workspace, offre, artefact),
             isEditable: isAccepted(() => {
-              assertArtefactModifiable(
-                offre,
-                artefact,
-                versionList.find(({ isRetenue }) => isRetenue),
-              );
+              assertArtefactModifiable(offre, artefact, versionRetenue);
             }),
             versionList: versionList.map((version) => readFicheVersion(offre, version)),
           };
@@ -638,8 +640,7 @@ export async function createActions({
     async saveDocument(rawInput: unknown): Promise<void> {
       const { reference, artefact, fileName, markdown } = DOCUMENT_INPUT_SCHEMA.parse(rawInput);
       const offre = await findOffre(reference);
-      const versionList = await workspace.listVersions(offre, artefact);
-      const version = versionList.find(({ isRetenue }) => isRetenue);
+      const version = await findVersionRetenue(workspace, offre, artefact);
       assertDocumentModifiable(offre, artefact, version, fileName);
       // The front sends the name back: nothing else than a file of the Version may be written
       if (workspace.readVersionDocuments(offre, version).every((document) => document.fileName !== fileName)) {
