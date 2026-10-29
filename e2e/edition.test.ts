@@ -18,11 +18,8 @@ test('corrects a Lettre, saves it, marks the Offre Postulée and finds the Lettr
   await expect(brouillon.locator('mark')).toHaveText(['[à compléter : diplôme et année d’obtention]']);
   await expect(correction.locator('mark')).toHaveText(['[à compléter : diplôme et année d’obtention]']);
 
-  // Typed before React hydrates the page, the text would not reach the preview: type again until it does
-  await expect(async () => {
-    await correction.getByRole('textbox', { name: 'Markdown' }).fill(CORRECTED_LETTRE);
-    await expect(correction.getByText('Modifications non enregistrées')).toBeVisible({ timeout: 1000 });
-  }).toPass();
+  await correction.getByRole('textbox', { name: 'Markdown' }).fill(CORRECTED_LETTRE);
+  await expect(correction.getByText('Modifications non enregistrées')).toBeVisible();
   await expect(correction.locator('mark')).toHaveCount(0);
   await correction.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(correction.getByText('Modifications non enregistrées')).toBeHidden();
