@@ -1,17 +1,13 @@
-import { copyFileSync, mkdtempSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { createActions, type Actions } from '#/actions/index.ts';
+import { type Actions } from '#/actions/index.ts';
 import { VISUALISATION_DEFAULT_CONSIGNES } from '#/modules/visualisation/consignes.ts';
 
+import { detectOffres as detectRecordedOffres, LEA_OFFRES_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
-import { createRecordedFetch } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -52,16 +48,8 @@ function visualisationRun(html = VISUALISATION) {
 }
 
 async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  const actions = await createActions({
-    dataDirectory,
-    aiSession,
-    fetch: createRecordedFetch().fetch,
-    notificationChannel: createFakeNotificationChannel(),
-  });
-  await actions.detect();
-  return { actions, offreDirectory: path.join(dataDirectory, 'candidats/lea/offres', OFFRE_DIRECTORY_NAME) };
+  const { actions, dataDirectory } = await detectRecordedOffres(aiSession);
+  return { actions, offreDirectory: path.join(dataDirectory, LEA_OFFRES_PATH, OFFRE_DIRECTORY_NAME) };
 }
 
 // Launching a module queues its job, which the worker runs (ADR-0003)

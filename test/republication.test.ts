@@ -1,16 +1,13 @@
-import { copyFileSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
 
+import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // The Boulogne parquet Poste, published as 2026-2231960 then again as 2026-2338409, both in Léa's
 // Zone (responses recorded on 2026-10-29)
@@ -35,12 +32,6 @@ const LETTRE_RUN = {
     }),
   },
 };
-
-function createDataDirectory(): string {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  return dataDirectory;
-}
 
 // A first Détection on the feed as it was before the Republication, then the actions for the next
 // one, on the feed as recorded

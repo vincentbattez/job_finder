@@ -1,15 +1,9 @@
-import { copyFileSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
-import { createActions, type Actions } from '#/actions/index.ts';
+import { type Actions } from '#/actions/index.ts';
 
+import { detectOffres } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createRecordedFetch } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -18,14 +12,6 @@ const RECHERCHE_RUN = {
   fileByName: { 'recherche.md': '# Recherche\n\nLe TJ de Béthune.\n\n## Sources\n\n- https://www.justice.fr/\n' },
 };
 
-async function detectOffres(aiSession = createFakeAiSession()) {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  const actions = await createActions({ dataDirectory, aiSession, fetch: createRecordedFetch().fetch });
-  await actions.detect();
-  return actions;
-}
-
 async function readEtatByArtefact(actions: Actions) {
   const { artefactList } = await actions.readOffre({ reference: REFERENCE });
   return Object.fromEntries(artefactList.map(({ artefact, etat }) => [artefact, etat]));
@@ -33,7 +19,7 @@ async function readEtatByArtefact(actions: Actions) {
 
 describe('the état of each Artefact on the fiche of an Offre', () => {
   it('is absent, then en cours from the moment its job is queued, then prêt', async () => {
-    const actions = await detectOffres(createFakeAiSession(RECHERCHE_RUN));
+    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN));
     const before = await readEtatByArtefact(actions);
 
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
@@ -51,7 +37,7 @@ describe('the état of each Artefact on the fiche of an Offre', () => {
   });
 
   it('is en échec after a failed run, and en cours again once relaunched', async () => {
-    const actions = await detectOffres(createFakeAiSession(RECHERCHE_RUN, { isSuccess: false }));
+    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, { isSuccess: false }));
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runQueuedJobs();
@@ -71,7 +57,7 @@ async function readModuleByArtefact(actions: Actions) {
 
 describe('the modules the fiche of an Offre offers', () => {
   it('offers a module for each Artefact a module produces, held back while an input it needs is missing', async () => {
-    const actions = await detectOffres(createFakeAiSession(RECHERCHE_RUN));
+    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN));
     const before = await readModuleByArtefact(actions);
 
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
@@ -91,7 +77,7 @@ describe('the modules the fiche of an Offre offers', () => {
   });
 
   it('holds the Lettre back once the Offre is Postulée', async () => {
-    const actions = await detectOffres(createFakeAiSession(RECHERCHE_RUN));
+    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN));
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runQueuedJobs();
 

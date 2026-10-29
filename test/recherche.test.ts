@@ -1,17 +1,13 @@
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { createActions, type Actions } from '#/actions/index.ts';
+import { type Actions } from '#/actions/index.ts';
 import { RECHERCHE_DEFAULT_CONSIGNES } from '#/modules/recherche/consignes.ts';
 
+import { detectOffres as detectRecordedOffres, LEA_OFFRES_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
-import { createRecordedFetch } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -28,21 +24,8 @@ Le tribunal judiciaire de Béthune compte un tribunal pour enfants ([justice.fr]
 `;
 
 async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  const notificationChannel = createFakeNotificationChannel();
-  const actions = await createActions({
-    dataDirectory,
-    aiSession,
-    fetch: createRecordedFetch().fetch,
-    notificationChannel,
-  });
-  await actions.detect();
-  return {
-    actions,
-    dataDirectory,
-    offreDirectory: path.join(dataDirectory, 'candidats/lea/offres', OFFRE_DIRECTORY_NAME),
-  };
+  const { actions, dataDirectory } = await detectRecordedOffres(aiSession);
+  return { actions, dataDirectory, offreDirectory: path.join(dataDirectory, LEA_OFFRES_PATH, OFFRE_DIRECTORY_NAME) };
 }
 
 // Launching a module queues its job, which the worker runs (ADR-0003)

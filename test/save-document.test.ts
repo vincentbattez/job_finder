@@ -1,16 +1,9 @@
-import { copyFileSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
-import { createActions, type Actions } from '#/actions/index.ts';
+import { type Actions } from '#/actions/index.ts';
 
+import { detectOffres as detectRecordedOffres } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
-import { createRecordedFetch } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -39,15 +32,7 @@ const CORRECTED_LETTRE =
 
 // Launching a module only queues its job: the worker's turn is taken here
 async function detectOffres(...plannedRunList: Parameters<typeof createFakeAiSession>) {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  const actions = await createActions({
-    dataDirectory,
-    aiSession: createFakeAiSession(...plannedRunList),
-    fetch: createRecordedFetch().fetch,
-    notificationChannel: createFakeNotificationChannel(),
-  });
-  await actions.detect();
+  const { actions } = await detectRecordedOffres(createFakeAiSession(...plannedRunList));
   return actions;
 }
 

@@ -1,16 +1,7 @@
-import { copyFileSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
-import { createActions } from '#/actions/index.ts';
-
+import { detectOffres } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
-import { createRecordedFetch } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -24,23 +15,9 @@ const RECIPIENTS = {
   justification: 'Le mail de candidature est celui de la présidence ; le contact 2 demande le secrétariat en copie.',
 };
 
-async function detectOffres(aiSession = createFakeAiSession()) {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  const notificationChannel = createFakeNotificationChannel();
-  const actions = await createActions({
-    dataDirectory,
-    aiSession,
-    fetch: createRecordedFetch().fetch,
-    notificationChannel,
-  });
-  await actions.detect();
-  return actions;
-}
-
 describe('the fiche of an Offre', () => {
   it('reads an Offre with its raw contacts and its Fiche de poste', async () => {
-    const actions = await detectOffres();
+    const { actions } = await detectOffres();
 
     const { offre, ficheDePoste } = await actions.readOffre({ reference: REFERENCE });
 
@@ -56,7 +33,7 @@ describe('the fiche of an Offre', () => {
   });
 
   it('reads every Version of each Artefact with its files, and tells the Version retenue', async () => {
-    const actions = await detectOffres(
+    const { actions } = await detectOffres(
       createFakeAiSession({ fileByName: { 'recherche.md': RECHERCHE } }, { isSuccess: false }),
     );
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
@@ -82,7 +59,7 @@ describe('the fiche of an Offre', () => {
   });
 
   it('reads the recipients the Lettre retenue recommends, none before it exists', async () => {
-    const actions = await detectOffres(
+    const { actions } = await detectOffres(
       createFakeAiSession(
         { fileByName: { 'recherche.md': RECHERCHE } },
         { fileByName: { 'brouillon.md': 'Madame la Présidente,\n', 'destinataires.json': JSON.stringify(RECIPIENTS) } },
@@ -101,7 +78,7 @@ describe('the fiche of an Offre', () => {
   });
 
   it('refuses an unknown reference', async () => {
-    const actions = await detectOffres();
+    const { actions } = await detectOffres();
 
     await expect(actions.readOffre({ reference: '2026-0000000' })).rejects.toThrow('Offre inconnue : 2026-0000000');
   });

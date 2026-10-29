@@ -1,16 +1,11 @@
-import { copyFileSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createActions } from '#/actions/index.ts';
 
+import { createDataDirectory, detectOffres } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // Léa's phone, as config.example.json names it
 const LEA_TARGET = 'notify.mobile_app_iphone_de_lea';
@@ -26,12 +21,6 @@ const RECHERCHE = { fileByName: { 'recherche.md': '# Recherche\n\n## Sources\n\n
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-function createDataDirectory(): string {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  return dataDirectory;
-}
 
 // A first Détection on the feed as it was before the given Offres were published, then the actions
 // for the next one, on the feed as recorded
@@ -88,20 +77,6 @@ describe('the notification of a new Offre in the Zone', () => {
     expect(notificationChannel.sentList).toEqual([]);
   });
 });
-
-// The Offres already online, imported by a first Détection without any notification
-async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
-  const notificationChannel = createFakeNotificationChannel();
-  const dataDirectory = createDataDirectory();
-  const actions = await createActions({
-    dataDirectory,
-    aiSession,
-    fetch: createRecordedFetch().fetch,
-    notificationChannel,
-  });
-  await actions.detect();
-  return { actions, notificationChannel };
-}
 
 describe('the notification of a Recherche ready', () => {
   it('tells the Candidat which Offre has its Recherche ready, once the worker has produced it', async () => {

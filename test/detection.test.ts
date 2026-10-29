@@ -1,5 +1,4 @@
-import { copyFileSync, mkdtempSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -8,9 +7,8 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createActions, type Actions } from '#/actions/index.ts';
 import type { Detection, Offre } from '#/domain/index.ts';
 
+import { createDataDirectory } from './data-directory.ts';
 import { createRecordedFetch, DSJ_FEED_URL, readRecordedFile } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // Every attaché de justice offer of the DSJ feed recorded on 2026-10-29, counted by hand from its
 // titles, « (e) » and « .e » forms included
@@ -97,12 +95,6 @@ const ATTACHE_DE_JUSTICE_REFERENCE_LIST = [
   '2026-2448225',
   '2026-2453874',
 ];
-
-function createDataDirectory(): string {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  return dataDirectory;
-}
 
 // Expirée depends on the day: the clock stays on the day the responses were recorded
 beforeAll(() => {

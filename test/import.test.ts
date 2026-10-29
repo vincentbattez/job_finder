@@ -1,16 +1,11 @@
-import { copyFileSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
 
+import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // A Fiche de poste found elsewhere than on the Sources the Veilles read
 const FICHE_DE_POSTE = `# Greffier placé – Tribunal judiciaire de Lille
@@ -60,8 +55,7 @@ function extractionRun(extraction: Record<string, unknown> = EXTRACTION) {
 }
 
 async function openActions(aiSession: ReturnType<typeof createFakeAiSession>) {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
+  const dataDirectory = createDataDirectory();
   return createActions({
     dataDirectory,
     aiSession,

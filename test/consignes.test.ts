@@ -1,7 +1,3 @@
-import { copyFileSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
@@ -10,10 +6,9 @@ import { LETTRE_DEFAULT_CONSIGNES } from '#/modules/lettre/consignes.ts';
 import { RECHERCHE_DEFAULT_CONSIGNES } from '#/modules/recherche/consignes.ts';
 import { VISUALISATION_DEFAULT_CONSIGNES } from '#/modules/visualisation/consignes.ts';
 
+import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createRecordedFetch } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -23,8 +18,7 @@ const RECHERCHE_RUN = {
 };
 
 async function openActions(aiSession = createFakeAiSession()) {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
+  const dataDirectory = createDataDirectory();
   return createActions({ dataDirectory, aiSession, fetch: createRecordedFetch().fetch });
 }
 
