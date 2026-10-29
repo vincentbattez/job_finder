@@ -2,8 +2,9 @@ import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 
 import { fakerFR as faker } from '@faker-js/faker';
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 
-import type { Prisma } from '#/workspace/generated/client.ts';
+import { PrismaClient, type Prisma } from '#/workspace/generated/client.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
 // Same folder as the default database of prisma.config.ts
@@ -51,8 +52,13 @@ const configPath = path.join(DEVELOPMENT_DATA_DIRECTORY, 'config.json');
 if (!existsSync(configPath)) {
   copyFileSync(EXAMPLE_CONFIG_PATH, configPath);
 }
-const database = await openWorkspace(DEVELOPMENT_DATA_DIRECTORY);
-const candidatList = await database.candidat.findMany();
+const workspace = await openWorkspace(DEVELOPMENT_DATA_DIRECTORY);
+const candidatList = await workspace.listCandidats();
+// The seed is tooling, not the application: it writes raw rows without the anti-corruption
+// layer (ADR-0005)
+const database = new PrismaClient({
+  adapter: new PrismaBetterSqlite3({ url: `file:${path.join(DEVELOPMENT_DATA_DIRECTORY, 'job_finder.sqlite')}` }),
+});
 faker.seed(1);
 await database.$transaction([
   database.job.deleteMany(),
