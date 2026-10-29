@@ -9,28 +9,36 @@ function isSameField(left: string | null, right: string | null): boolean {
   return leftKey !== '' && leftKey === wordListOf(right ?? '').join(' ');
 }
 
-// The words of one title all appear in the other: a Republication drops or adds some, such as its
-// juridiction, but never swaps the service, the only thing telling two Postes of one juridiction
-// apart (the Béthune Offres share workplace and mail)
-function isTitleClose(left: string, right: string): boolean {
-  const leftWordList = wordListOf(left);
-  const rightWordList = wordListOf(right);
-  return (
-    leftWordList.every((word) => rightWordList.includes(word)) ||
-    rightWordList.every((word) => leftWordList.includes(word))
-  );
+// A word without the marks of the feminine and the plural, which recruiters write in many ways:
+// « attaché(e)s », « attachée » and « attaché » are one word (ADR-0001)
+function stemOf(word: string): string {
+  let stem = word.endsWith('s') ? word.slice(0, -1) : word;
+  while (stem.endsWith('e')) {
+    stem = stem.slice(0, -1);
+  }
+  return stem;
+}
+
+// The Poste a title names, set apart from its inclusive writing and from its juridiction, already in
+// the workplace (« TJ » abbreviates the Tribunal judiciaire it names in full)
+function posteOf(title: string, workplace: string | null): string {
+  const juridictionStemSet = new Set([...wordListOf(workplace ?? '').map((word) => stemOf(word)), 'tj']);
+  return wordListOf(title)
+    .map((word) => stemOf(word))
+    .filter((stem) => stem !== '' && !juridictionStemSet.has(stem))
+    .join(' ');
 }
 
 // The Offre that a new Offre publishes again, among the earlier ones of its Candidat: same
-// workplace, same mail de candidature and a close title (spec « Republication »). The latest one
-// when the Poste was published several times.
+// workplace, same mail and same Poste in the title, the service telling apart the Postes of one
+// juridiction. The latest one when the Poste was published several times.
 export function findRepublishedOffre<T extends IComparedOffre>(offre: IComparedOffre, offreList: T[]): T | undefined {
   return offreList
     .filter(
       (earlierOffre) =>
         isSameField(earlierOffre.workplace, offre.workplace) &&
         isSameField(earlierOffre.applicationEmail, offre.applicationEmail) &&
-        isTitleClose(earlierOffre.title, offre.title),
+        posteOf(earlierOffre.title, earlierOffre.workplace) === posteOf(offre.title, offre.workplace),
     )
     .toSorted((left, right) => right.reference.localeCompare(left.reference))[0];
 }

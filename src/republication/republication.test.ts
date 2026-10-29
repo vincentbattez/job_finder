@@ -55,6 +55,23 @@ describe('the Republication of an Offre', () => {
     );
   });
 
+  it('links a Poste published again in another inclusive writing', () => {
+    const republished = {
+      ...BETHUNE_PARQUET,
+      reference: '2026-2500000',
+      title: 'Attachée de justice affectée auprès des magistrats du parquet - TJ Béthune',
+    };
+
+    expect(findRepublishedOffre(republished, [BETHUNE_PARQUET])).toBe(BETHUNE_PARQUET);
+  });
+
+  // A generic title is included in every other title of its juridiction
+  it('never links a generic title to an Offre of the same workplace and mail', () => {
+    const generic = { ...BETHUNE_INSTRUCTION, reference: '2026-2500000', title: 'Attaché de justice - TJ Béthune' };
+
+    expect(findRepublishedOffre(generic, [BETHUNE_ENFANTS, BETHUNE_INSTRUCTION])).toBeUndefined();
+  });
+
   // Same juridiction, two of them with the same workplace and mail: only the service in the title
   // tells the Postes apart
   it.each([
