@@ -97,12 +97,12 @@ export async function openWorkspace(dataDirectory: string) {
     async saveOffre(newOffre: INewOffre): Promise<Offre> {
       const offreDirectory = offreDirectoryOf({ candidatId: newOffre.candidatId, ...newOffre.listedOffre });
       mkdirSync(offreDirectory, { recursive: true });
-      writeFileSync(path.join(offreDirectory, FICHE_DE_POSTE_FILE_NAME), newOffre.fiche.markdown);
+      writeFileSync(path.join(offreDirectory, FICHE_DE_POSTE_FILE_NAME), newOffre.ficheDePoste.markdown);
       return database.createOffre(newOffre);
     },
 
     // The folder of an Offre is named after its title: it follows a new title
-    async fillOffre(offre: Offre, fields: { title: string; fiche: FicheDePoste; lieu: Lieu }): Promise<Offre> {
+    async fillOffre(offre: Offre, fields: { title: string; ficheDePoste: FicheDePoste; lieu: Lieu }): Promise<Offre> {
       const filledOffre = await database.fillOffre(offre, fields);
       renameSync(offreDirectoryOf(offre), offreDirectoryOf(filledOffre));
       return filledOffre;

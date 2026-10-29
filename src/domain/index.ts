@@ -66,6 +66,11 @@ export const LIEU_SCHEMA = z.object(LIEU_SHAPE).brand<'Domain'>();
 
 export type Lieu = z.infer<typeof LIEU_SCHEMA>;
 
+// Where an Offre comes from: a site a Veille reads, or a Fiche de poste the Candidat imported
+const SOURCE_SCHEMA = z.enum(['pep', 'import']);
+
+export type Source = z.infer<typeof SOURCE_SCHEMA>;
+
 export const STATUT_SCHEMA = z.enum(['a_traiter', 'postulee', 'archivee']);
 
 export type Statut = z.infer<typeof STATUT_SCHEMA>;
@@ -78,7 +83,7 @@ export const OFFRE_SCHEMA = z
     ...LIEU_SHAPE,
     id: z.int(),
     candidatId: z.string(),
-    source: z.string(),
+    source: SOURCE_SCHEMA,
     reference: z.string(),
     title: z.string(),
     url: z.string().nullable(),

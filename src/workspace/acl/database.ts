@@ -19,6 +19,7 @@ import {
   type ListedOffre,
   type Module,
   type Offre,
+  type Source,
   type Statut,
   type Veille,
   type Version,
@@ -43,9 +44,9 @@ const JOB_INCLUDE = { offre: { include: OFFRE_INCLUDE }, version: { include: VER
 
 export interface INewOffre {
   candidatId: string;
-  source: string;
+  source: Source;
   listedOffre: ListedOffre;
-  fiche: FicheDePoste;
+  ficheDePoste: FicheDePoste;
   isInZone: boolean;
   republicationOf: Offre | undefined;
   lieu: Lieu;
@@ -232,7 +233,7 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       await prisma.veille.update({ where: { id }, data: { detectedAt: new Date() } });
     },
 
-    async listReferences(candidatId: string, source: string): Promise<string[]> {
+    async listReferences(candidatId: string, source: Source): Promise<string[]> {
       const offreList = await prisma.offre.findMany({ where: { candidatId, source }, select: { reference: true } });
       return z.array(z.string()).parse(offreList.map(({ reference }) => reference));
     },
@@ -252,8 +253,11 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
     },
 
     // The fields read in its Fiche de poste replace those of the Offre, its title included
-    async fillOffre({ id }: Offre, { title, fiche, lieu }: { title: string; fiche: FicheDePoste; lieu: Lieu }) {
-      const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = fiche;
+    async fillOffre(
+      { id }: Offre,
+      { title, ficheDePoste, lieu }: { title: string; ficheDePoste: FicheDePoste; lieu: Lieu },
+    ) {
+      const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = ficheDePoste;
       const data = { title, dateLimite, employer, workplace, applicationEmail, contact1, contact2, ...lieu };
       return OFFRE_SCHEMA.parse(await prisma.offre.update({ where: { id }, data, include: OFFRE_INCLUDE }));
     },
@@ -267,13 +271,13 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       candidatId,
       source,
       listedOffre,
-      fiche,
+      ficheDePoste,
       isInZone,
       republicationOf,
       lieu,
     }: INewOffre): Promise<Offre> {
       const { reference, title, url, publishedAt } = listedOffre;
-      const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = fiche;
+      const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = ficheDePoste;
       const data = { candidatId, source, reference, title, url, publishedAt, dateLimite, employer, workplace };
       return OFFRE_SCHEMA.parse(
         await prisma.offre.create({

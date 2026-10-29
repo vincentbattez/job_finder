@@ -224,15 +224,13 @@ export async function createActions({
   // fails the job and leaves the Offre as it was.
   async function runExtraction(job: Job): Promise<{ job: Job }> {
     const { offre } = job;
-    const {
-      title,
-      ficheDePoste: fiche,
-      city,
-      session,
-    } = await importSource.extract(workspace.offreDirectoryOf(offre), workspace.readFicheDePoste(offre));
+    const { title, ficheDePoste, city, session } = await importSource.extract(
+      workspace.offreDirectoryOf(offre),
+      workspace.readFicheDePoste(offre),
+    );
     // A Fiche de poste without a title keeps the name of its file: nothing is invented
     const lieu = await locate(city);
-    const filledOffre = await workspace.fillOffre(offre, { title: title ?? offre.title, fiche, lieu });
+    const filledOffre = await workspace.fillOffre(offre, { title: title ?? offre.title, ficheDePoste, lieu });
     // Imported by the Candidat, it gets its Recherche whatever the Zone
     await workspace.createJob(filledOffre, 'recherche');
     return { job: await workspace.finishJobWithoutVersion(job, { log: session.log, sessionId: session.sessionId }) };
@@ -334,14 +332,14 @@ export async function createActions({
           if (knownReferenceList.includes(listedOffre.reference)) {
             continue;
           }
-          const { fiche, isInZone } = await pepSource.readFiche(listedOffre.reference, veille.zone);
-          const republicationOf = findRepublishedOffre({ ...listedOffre, ...fiche }, offreList);
-          const lieu = await locate(readCity(fiche.workplace));
+          const { ficheDePoste, isInZone } = await pepSource.readFicheDePoste(listedOffre.reference, veille.zone);
+          const republicationOf = findRepublishedOffre({ ...listedOffre, ...ficheDePoste }, offreList);
+          const lieu = await locate(readCity(ficheDePoste.workplace));
           const offre = await workspace.saveOffre({
             candidatId,
             source,
             listedOffre,
-            fiche,
+            ficheDePoste,
             isInZone,
             republicationOf,
             lieu,
@@ -380,7 +378,7 @@ export async function createActions({
     async importFicheDePoste(rawInput: unknown): Promise<Job> {
       const candidat = await findCandidat(rawInput);
       const { fileName, markdown } = IMPORT_INPUT_SCHEMA.parse(rawInput);
-      const { listedOffre, fiche } = importSource.list(fileName, markdown);
+      const { listedOffre, ficheDePoste } = importSource.list(fileName, markdown);
       const offreList = await workspace.listOffres(candidat.id);
       const importedOffre = offreList.find(({ reference }) => reference === listedOffre.reference);
       if (importedOffre !== undefined) {
@@ -394,7 +392,7 @@ export async function createActions({
         candidatId: candidat.id,
         source: 'import',
         listedOffre,
-        fiche,
+        ficheDePoste,
         lieu: await locate(null),
         // No Veille detected it, so no Zone holds it; chosen by the Candidat, it gets its Recherche
         // once extracted, whatever the Zone (ADR-0003)

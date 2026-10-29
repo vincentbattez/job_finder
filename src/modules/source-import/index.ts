@@ -21,7 +21,7 @@ export function createImportSource(aiSession: IAiSession) {
       const reference = `import-${createHash('sha256').update(markdown).digest('hex').slice(0, 10)}`;
       return {
         listedOffre: LISTED_OFFRE_SCHEMA.parse({ reference, title: fileName, url: null, publishedAt: new Date() }),
-        fiche: FICHE_DE_POSTE_SCHEMA.parse({
+        ficheDePoste: FICHE_DE_POSTE_SCHEMA.parse({
           dateLimite: null,
           employer: null,
           workplace: null,
