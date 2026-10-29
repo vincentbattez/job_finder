@@ -23,6 +23,10 @@ jf edit 2026-2445600 recherche                 # corrige la Version retenue d'un
 
 Lancer un module ne fait que mettre son job en file. Le worker, service lpm `worker` déclaré dans `.lpm.yml` (`mise run worker`), exécute les jobs de `data/` un par un, donc une seule session Claude à la fois, dans son propre processus : redémarrer le front ne coupe pas une session (ADR-0003). Un job interrompu par un arrêt du worker passe « en échec » à son redémarrage, et se relance avec `jf run`. Une nouvelle Offre détectée dans la Zone met sa Recherche en file, sauf au premier lancement.
 
+## Détection quotidienne
+
+L'automation lpm `detect`, déclarée dans `.lpm.yml`, lance `jf detect` chaque jour à 18:00 (ADR-0003). Son run affiche « aucune nouvelle Offre » ou la liste des nouvelles Offres. Une Détection en échec sort en erreur : lpm marque le run « needs a look » et notifie. `.lpm.yml` se vérifie avec `lpm config validate .lpm.yml`.
+
 ## Données
 
 Tout vit dans `data/`, hors de git et sans sauvegarde :
