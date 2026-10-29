@@ -159,7 +159,13 @@ describe('a notification that cannot be sent', () => {
 
     const offreList = await actions.listOffres({ candidatId: 'lea' });
     expect(offreList.map(({ reference }) => reference)).toEqual(expect.arrayContaining([REFERENCE, OTHER_REFERENCE]));
-    const jobList = await actions.runQueuedJobs();
+    // The worker, a process of its own, whose notifications go through
+    const worker = await createActions({
+      dataDirectory,
+      aiSession,
+      notificationChannel: createFakeNotificationChannel(),
+    });
+    const jobList = await worker.runQueuedJobs();
     expect(jobList.map(({ module, offre, state }) => `${module} ${offre.reference} ${state}`)).toEqual([
       `recherche ${REFERENCE} done`,
       `recherche ${OTHER_REFERENCE} done`,
