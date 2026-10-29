@@ -1,6 +1,7 @@
 import { STATUT_LABEL_BY_STATUT } from '#/actions/labels.ts';
 
-export type Statut = 'a_traiter' | 'postulee' | 'archivee';
+// The statuts as the actions name them
+export type Statut = keyof typeof STATUT_LABEL_BY_STATUT;
 
 const SHOWN_STATUT_LABEL_BY_STATUT: Record<Statut | 'expiree', string> = {
   ...STATUT_LABEL_BY_STATUT,
