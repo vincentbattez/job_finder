@@ -1,0 +1,113 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/workspace/generated"
+  // Node runs the generated TypeScript as is, without a build
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Candidats and Veilles are copied from data/config.json at every launch: the config is
+// their source of truth, never edit these rows.
+model Candidat {
+  id         String   @id
+  name       String
+  veilleList Veille[]
+  offreList  Offre[]
+}
+
+model Veille {
+  id         String   @id
+  candidat   Candidat @relation(fields: [candidatId], references: [id])
+  candidatId String
+  source     String
+  // Shaped by the Source
+  criteria   Json
+  zone       Json
+}
+
+model Offre {
+  id                Int         @id @default(autoincrement())
+  candidat          Candidat    @relation(fields: [candidatId], references: [id])
+  candidatId        String
+  source            String
+  reference         String
+  title             String
+  url               String?
+  publishedAt       DateTime?
+  dateLimite        DateTime?
+  employer          String?
+  workplace         String?
+  city              String?
+  latitude          Float?
+  longitude         Float?
+  applicationEmail  String?
+  contact1          String?
+  contact2          String?
+  status            OffreStatus @default(a_traiter)
+  republicationOf   Offre?      @relation("Republication", fields: [republicationOfId], references: [id])
+  republicationOfId Int?
+  republicationList Offre[]     @relation("Republication")
+  detectedAt        DateTime    @default(now())
+  isInZone          Boolean
+  versionList       Version[]
+  jobList           Job[]
+
+  @@unique([candidatId, source, reference])
+}
+
+enum OffreStatus {
+  a_traiter
+  postulee
+  archivee
+}
+
+// A Version of the lettre Artefact holds a pair: the Brouillon, never changed, and the Lettre.
+model Version {
+  id         Int          @id @default(autoincrement())
+  offre      Offre        @relation(fields: [offreId], references: [id])
+  offreId    Int
+  artefact   Artefact
+  number     Int
+  isRetenue  Boolean      @default(false)
+  state      VersionState
+  consignes  String
+  // The Versions this one read as input
+  inputList  Version[]    @relation("Input")
+  readByList Version[]    @relation("Input")
+  createdAt  DateTime     @default(now())
+
+  @@unique([offreId, artefact, number])
+}
+
+enum Artefact {
+  recherche
+  lettre
+  fiche_entretien
+  visualisation
+}
+
+enum VersionState {
+  running
+  ready
+  failed
+}
+
+model Job {
+  id        Int      @id @default(autoincrement())
+  module    String
+  offre     Offre    @relation(fields: [offreId], references: [id])
+  offreId   Int
+  state     JobState @default(queued)
+  log       String   @default("")
+  sessionId String?
+}
+
+enum JobState {
+  queued
+  running
+  done
+  failed
+}

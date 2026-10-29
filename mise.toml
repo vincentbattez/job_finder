@@ -1,0 +1,75 @@
+[settings]
+experimental = true # required for [hooks]
+
+[tools]
+node = "26"
+lefthook = "2"
+gitleaks = "8"
+
+[env]
+_.path = ["{{config_root}}/bin", "{{config_root}}/node_modules/.bin"]
+# No Prisma telemetry nor update check
+CHECKPOINT_DISABLE = "1"
+
+[hooks]
+postinstall = "npm install && lefthook install"
+
+[tasks.init]
+description = "Create data/config.json from config.example.json if it is missing, and seed dev-data/"
+run = [
+  "mkdir -p data && { [ -f data/config.json ] || cp config.example.json data/config.json; }",
+  "mise run db:seed",
+]
+
+# The db: tasks work on dev-data/, fake data for development. The app migrates data/ itself at launch.
+[tasks."db:migrate"]
+description = "Create a migration from prisma/schema.prisma and apply it to dev-data/"
+run = "mkdir -p dev-data && prisma migrate dev"
+
+[tasks."db:seed"]
+description = "Replace the Offres of dev-data/ with fake ones (faker)"
+run = "prisma db seed"
+
+[tasks."db:reset"]
+description = "Recreate the dev-data/ database from the migrations, then seed it"
+run = ["mkdir -p dev-data && prisma migrate reset --force", "mise run db:seed"]
+
+[tasks."lint:ts"]
+description = "Lint with ESLint"
+run = "eslint ."
+
+[tasks."lint:format"]
+description = "Check formatting with Prettier and prisma format"
+run = "prettier --check . && prisma format --check"
+
+[tasks."lint:dead-code"]
+description = "Find unused files, exports and dependencies with Knip"
+run = "knip"
+
+[tasks."lint:migrations"]
+description = "Check that prisma/migrations matches prisma/schema.prisma"
+run = "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code"
+
+[tasks.lint]
+description = "Run all linters"
+depends = ["lint:ts", "lint:format", "lint:dead-code", "lint:migrations"]
+
+[tasks.typecheck]
+description = "Type-check with TypeScript"
+run = "tsc"
+
+[tasks."test:unit"]
+description = "Run the Vitest suite (actions and architecture)"
+run = "vitest run"
+
+[tasks."test:e2e"]
+description = "Run the Playwright end-to-end tests"
+run = "playwright test --pass-with-no-tests"
+
+[tasks.test]
+description = "Run all tests"
+depends = ["test:unit", "test:e2e"]
+
+[tasks.ci]
+description = "Full CI pipeline locally"
+depends = ["lint", "typecheck", "test"]

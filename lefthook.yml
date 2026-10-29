@@ -1,0 +1,27 @@
+pre-commit:
+  parallel: true
+  jobs:
+    - name: fix
+      group:
+        piped: true
+        jobs:
+          - name: lint
+            glob: '*.ts'
+            run: npx eslint --fix {staged_files}
+          - name: format
+            run: npx prettier --write --ignore-unknown {staged_files}
+          - name: schema
+            glob: '*.prisma'
+            run: npx prisma format
+      stage_fixed: true
+    - name: typecheck
+      run: npx tsc
+    - name: dead-code
+      run: npx knip
+    - name: secrets
+      run: mise exec -- gitleaks git --staged --no-banner --redact -v .
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: npx commitlint --edit {1}

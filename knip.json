@@ -1,0 +1,7 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["src/cli/jf.ts"],
+  "project": ["src/**/*.ts", "test/**/*.ts", "prisma/**/*.{ts,prisma}"],
+  "lefthook": true,
+  "ignoreDependencies": ["@prisma/client"]
+}
