@@ -98,6 +98,52 @@
   color: var(--color-error);
 }
 
+/* The drop zone of a Fiche de poste found elsewhere: a dashed tray that lights up under a file */
+.fiche-de-poste-import {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+  padding: var(--space-md);
+  border: var(--rule-hair) dashed var(--color-muted);
+  border-radius: var(--radius-card);
+  color: var(--color-ink-2);
+  transition: background-color var(--dur-short) var(--ease-out);
+}
+.fiche-de-poste-import[data-drag-over='true'] {
+  border-style: solid;
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+.fiche-de-poste-import__choose {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 var(--space-sm);
+  border: var(--rule-hair) solid var(--color-muted);
+  border-radius: var(--radius-input);
+  background: var(--light);
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+.fiche-de-poste-import__choose:hover {
+  background: var(--color-paper-2);
+}
+.fiche-de-poste-import__choose:focus-within {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+/* Waiting for React, or for Claude to read the Fiche de poste */
+.fiche-de-poste-import__choose[data-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.fiche-de-poste-import__error {
+  color: var(--color-error);
+}
+
 .page {
   display: grid;
   gap: var(--space-2xl);

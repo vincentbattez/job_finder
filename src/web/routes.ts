@@ -9,5 +9,6 @@ export default [
   route('candidat', 'routes/candidat.ts'),
   route('run', 'routes/run.ts'),
   route('detect', 'routes/detect.ts'),
+  route('import', 'routes/import.ts'),
   route('design', 'routes/design.tsx'),
 ] satisfies RouteConfig;
