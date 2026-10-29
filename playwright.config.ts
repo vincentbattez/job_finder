@@ -15,11 +15,21 @@ export default defineConfig({
   forbidOnly: process.env.CI !== undefined,
   use: { baseURL: BASE_URL },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: {
-    command: `node test/seed-front.ts && react-router dev --port ${PORT} --strictPort`,
-    env: { JF_DATA_DIRECTORY: DATA_DIRECTORY },
-    url: `${BASE_URL}/design`,
-    // A server already running on the port may read data/: always start the one seeded above
-    reuseExistingServer: false,
-  },
+  webServer: [
+    {
+      // The e2e mode serves the actions with the fakes of the external boundaries (vite.config.ts)
+      command: `node test/seed-front.ts && react-router dev --mode e2e --port ${PORT} --strictPort`,
+      env: { JF_DATA_DIRECTORY: DATA_DIRECTORY },
+      url: `${BASE_URL}/design`,
+      // A server already running on the port may read data/: always start the one seeded above
+      reuseExistingServer: false,
+    },
+    {
+      // The worker, in its own process like the lpm service: it runs the jobs the front queues,
+      // with the fake Claude. Started once the folder is seeded and the front is up.
+      command: 'node test/e2e-worker.ts',
+      env: { JF_DATA_DIRECTORY: DATA_DIRECTORY },
+      wait: { stdout: /Worker prêt/ },
+    },
+  ],
 });

@@ -25,6 +25,9 @@ export const ETAT_BY_VERSION_STATE: Record<VersionState, Etat> = {
 
 export interface IArtefactVersions {
   artefact: Artefact;
+  etat: Etat;
+  // The module that produces the Artefact, if any yet, and why it cannot run now
+  module: { refusal: string | null } | null;
   versionList: {
     version: { number: number; state: VersionState; isRetenue: boolean; createdAt: Date };
     documentList: { fileName: string; markdown: string }[];
@@ -93,15 +96,12 @@ export function OffreFiche({ fiche, isPage = false }: Readonly<{ fiche: IOffreFi
         <section className="fiche__part" aria-labelledby={artefactsId}>
           <PART_TAG id={artefactsId}>Artefacts</PART_TAG>
           <ul className="artefact-list">
-            {artefactList.map(({ artefact, versionList }) => {
-              const lastVersion = versionList.at(-1)?.version;
-              return (
-                <li key={artefact} data-artefact={artefact}>
-                  <a href={`#${artefact}`}>{ARTEFACT_LABEL_BY_ARTEFACT[artefact]}</a>
-                  <EtatBadge etat={lastVersion === undefined ? 'absent' : ETAT_BY_VERSION_STATE[lastVersion.state]} />
-                </li>
-              );
-            })}
+            {artefactList.map(({ artefact, etat }) => (
+              <li key={artefact} data-artefact={artefact}>
+                <a href={`#${artefact}`}>{ARTEFACT_LABEL_BY_ARTEFACT[artefact]}</a>
+                <EtatBadge etat={etat} />
+              </li>
+            ))}
           </ul>
         </section>
       </div>
