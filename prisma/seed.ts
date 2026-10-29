@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { fakerFR as faker } from '@faker-js/faker';
@@ -60,12 +60,16 @@ const database = new PrismaClient({
   adapter: new PrismaBetterSqlite3({ url: `file:${path.join(DEVELOPMENT_DATA_DIRECTORY, 'job_finder.sqlite')}` }),
 });
 faker.seed(1);
-await database.$transaction([
-  database.job.deleteMany(),
-  database.version.deleteMany(),
-  database.offre.deleteMany(),
-  ...candidatList.flatMap(({ id }) =>
+await database.$transaction([database.job.deleteMany(), database.version.deleteMany(), database.offre.deleteMany()]);
+const offreList = await database.$transaction(
+  candidatList.flatMap(({ id }) =>
     Array.from({ length: OFFRE_COUNT_PER_CANDIDAT }, () => database.offre.create({ data: fakeOffre(id) })),
   ),
-]);
+);
+// Every Offre has its Fiche de poste in its folder, as the Détection saves it
+for (const offre of offreList) {
+  const offreDirectory = workspace.offreDirectoryOf(offre);
+  mkdirSync(offreDirectory, { recursive: true });
+  writeFileSync(path.join(offreDirectory, 'fiche-de-poste.md'), `## Missions\n\n${faker.lorem.paragraphs(3)}\n`);
+}
 process.stdout.write(`${String(candidatList.length * OFFRE_COUNT_PER_CANDIDAT)} Offres factices dans dev-data/\n`);

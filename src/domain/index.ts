@@ -152,4 +152,27 @@ export const RECIPIENTS_SCHEMA = z
 
 export type Recipients = z.infer<typeof RECIPIENTS_SCHEMA>;
 
+// A Markdown file of a Version, such as the Brouillon or the Lettre of a Lettre Version
+const DOCUMENT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string() });
+
+const VERSION_DOCUMENTS_SCHEMA = z.object({ version: VERSION_SCHEMA, documentList: z.array(DOCUMENT_SCHEMA) });
+
+const ARTEFACT_VERSIONS_SCHEMA = z.object({
+  artefact: ARTEFACT_SCHEMA,
+  versionList: z.array(VERSION_DOCUMENTS_SCHEMA),
+});
+
+// What the fiche of an Offre shows: the Offre with its raw contacts, its Fiche de poste, every
+// Version of each Artefact with its files, and the recipients its Lettre retenue recommends
+export const OFFRE_FICHE_SCHEMA = z
+  .object({
+    offre: OFFRE_SCHEMA,
+    ficheDePoste: z.string(),
+    artefactList: z.array(ARTEFACT_VERSIONS_SCHEMA),
+    recipients: RECIPIENTS_SCHEMA.nullable(),
+  })
+  .brand<'Domain'>();
+
+export type OffreFiche = z.infer<typeof OFFRE_FICHE_SCHEMA>;
+
 export type DomainValue = z.$brand<'Domain'>;

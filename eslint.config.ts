@@ -87,6 +87,12 @@ export default defineConfig(
     rules: { 'sonarjs/no-os-command-from-path': 'off' },
   },
   {
+    // Over plain http on the LAN (ADR-0002) the Clipboard API is withheld: copying goes through the
+    // deprecated execCommand, which every browser still runs
+    files: ['src/web/components/copy-command.tsx'],
+    rules: { 'sonarjs/deprecation': 'off', '@typescript-eslint/no-deprecated': 'off' },
+  },
+  {
     // React Router loads the route config and each route module through a default export
     files: ['src/web/root.tsx', 'src/web/routes.ts', 'src/web/routes/*.{ts,tsx}'],
     rules: { 'no-restricted-exports': 'off' },

@@ -1,15 +1,25 @@
 import type { ReactNode } from 'react';
 import {
   isRouteErrorResponse,
+  Link,
   Links,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  useRouteLoaderData,
   type LinksFunction,
+  type LoaderFunctionArgs,
 } from 'react-router';
 
+import { readCandidat } from './candidat.server.ts';
+import { CandidatMenu } from './components/candidat-menu.tsx';
+
 import './app.css';
+
+export function loader({ request }: LoaderFunctionArgs) {
+  return readCandidat(request);
+}
 
 export const links: LinksFunction = () => [
   { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
@@ -21,6 +31,8 @@ export const links: LinksFunction = () => [
 ];
 
 export function Layout({ children }: Readonly<{ children: ReactNode }>) {
+  // Undefined when the root loader itself failed: the error page then shows without the menu
+  const candidatData = useRouteLoaderData<typeof loader>('root');
   return (
     <html lang="fr">
       <head>
@@ -32,7 +44,10 @@ export function Layout({ children }: Readonly<{ children: ReactNode }>) {
       <body>
         <header className="topbar">
           <div className="container">
-            <span className="wordmark">Job Finder</span>
+            <Link to="/" className="wordmark">
+              Job Finder
+            </Link>
+            {candidatData !== undefined && <CandidatMenu {...candidatData} />}
           </div>
         </header>
         {children}

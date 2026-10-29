@@ -7,11 +7,13 @@ import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
 import {
   ARTEFACT_SCHEMA,
   DETECTION_SCHEMA,
+  OFFRE_FICHE_SCHEMA,
   type Candidat,
   type Detection,
   type DomainValue,
   type Job,
   type Offre,
+  type OffreFiche,
   type Recipients,
   type Version,
 } from '#/domain/index.ts';
@@ -77,6 +79,13 @@ export async function createActions({
       throw new Error(`Plusieurs Offres ont la référence ${reference}, chez des Candidats différents.`);
     }
     return offre;
+  }
+
+  // Those of the Lettre retenue, none before the Offre has one
+  async function findRecipients(offre: Offre): Promise<Recipients | null> {
+    const versionList = await workspace.listVersions(offre, 'lettre');
+    const version = versionList.find(({ isRetenue }) => isRetenue);
+    return version === undefined ? null : LETTRE_MODULE.readRecipients(workspace.versionDirectoryOf(offre, version));
   }
 
   return {
@@ -229,6 +238,29 @@ export async function createActions({
       return jobList;
     },
 
+    async readOffre(rawInput: unknown): Promise<OffreFiche> {
+      const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      const artefactList = await Promise.all(
+        ARTEFACT_SCHEMA.options.map(async (artefact) => {
+          const versionList = await workspace.listVersions(offre, artefact);
+          return {
+            artefact,
+            versionList: versionList.map((version) => ({
+              version,
+              documentList: workspace.readVersionDocuments(offre, version),
+            })),
+          };
+        }),
+      );
+      return OFFRE_FICHE_SCHEMA.parse({
+        offre,
+        ficheDePoste: workspace.readFicheDePoste(offre),
+        artefactList,
+        recipients: await findRecipients(offre),
+      });
+    },
+
     async listVersions(rawInput: unknown): Promise<Version[]> {
       const { reference, artefact } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
       return workspace.listVersions(await findOffre(reference), artefact);
@@ -237,13 +269,11 @@ export async function createActions({
     // To whom the Lettre retenue recommends sending the application, and why
     async readRecipients(rawInput: unknown): Promise<Recipients> {
       const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
-      const offre = await findOffre(reference);
-      const versionList = await workspace.listVersions(offre, 'lettre');
-      const version = versionList.find(({ isRetenue }) => isRetenue);
-      if (version === undefined) {
+      const recipients = await findRecipients(await findOffre(reference));
+      if (recipients === null) {
         throw new Error(`L'Offre ${reference} n'a pas de Lettre retenue. La produire : jf run lettre ${reference}.`);
       }
-      return LETTRE_MODULE.readRecipients(workspace.versionDirectoryOf(offre, version));
+      return recipients;
     },
 
     async retenirVersion(rawInput: unknown): Promise<void> {
