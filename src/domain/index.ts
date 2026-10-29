@@ -62,6 +62,7 @@ export const OFFRE_SCHEMA = z
     contact2: z.string().nullable(),
     status: z.enum(['a_traiter', 'postulee', 'archivee']),
     isInZone: z.boolean(),
+    isExpiree: z.boolean(),
   })
   .brand<'Domain'>();
 

@@ -9,7 +9,8 @@ mise install                                   # Node 26, lefthook, gitleaks, pu
 mise run init                                  # crée data/config.json depuis l'exemple, à adapter ensuite, et remplit dev-data/
 jf                                             # affiche l'aide
 jf detect                                      # cherche les nouvelles Offres de chaque Veille
-jf list lea                                    # liste les Offres d'un Candidat
+jf list lea                                    # liste les Offres d'un Candidat, avec leur statut et celles qui sont Expirées
+jf postuler 2026-2445600                       # passe une Offre en Postulée, ce qui fige sa Lettre ; jf archiver l'archive
 jf run recherche 2026-2445600                  # produit une nouvelle Version de la Recherche d'une Offre
 jf versions 2026-2445600 recherche             # liste les Versions d'un Artefact
 jf retenir 2026-2445600 recherche 1            # change la Version retenue
@@ -43,6 +44,7 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 - `src/ai-session/` : le lancement des sessions d'IA. Seul `acl/claude-code.ts` sait qu'elles tournent sur Claude Code, toujours sur l'abonnement (`claude -p`, sans clé API) ; les tests le remplacent par un faux.
 - `src/actions/run-job.ts` : l'exécution d'un job d'un module IA : la Version, le prompt en deux parties (partie fixe et Consignes), la vérification du fichier produit et la Version retenue.
 - `src/profil/` : le prompt fixe de `jf profil`.
+- `src/statut/` : les règles du statut d'une Offre : le calcul d'Expirée, et le gel de la Lettre retenue d'une Offre Postulée.
 - `src/modules/` : un dossier par module, avec un seul point d'entrée. Un module n'en importe jamais un autre, ce que vérifie `test/architecture.test.ts`. Un module IA, comme `recherche/`, a sa partie fixe du prompt dans `prompt.ts` et ses Consignes par défaut dans `consignes.ts`.
 - `prisma/` : le schéma, les migrations et le seed.
 - `test/fixtures/pep/` : les réponses du site PEP enregistrées le 2026-10-29, que `test/recorded-http.ts` sert aux tests à la place du vrai site.

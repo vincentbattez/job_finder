@@ -21,7 +21,7 @@ function slugify(text: string): string {
 // config and the database are only read in acl/: only domain types come out (ADR-0005).
 export async function openWorkspace(dataDirectory: string) {
   const config = loadConfig(path.join(dataDirectory, 'config.json'));
-  const database = openDatabase(path.join(dataDirectory, 'job_finder.sqlite'));
+  const database = openDatabase(path.join(dataDirectory, 'job_finder.sqlite'), config.defaultDelayMonths);
   await database.copyConfig(config);
   const candidatDirectoryOf = (candidatId: string): string => path.join(dataDirectory, 'candidats', candidatId);
   const profilDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'profil');

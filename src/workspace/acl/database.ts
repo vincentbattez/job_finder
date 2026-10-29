@@ -20,6 +20,7 @@ import {
   type Veille,
   type Version,
 } from '#/domain/index.ts';
+import { isExpiree } from '#/statut/index.ts';
 import { PrismaClient } from '#/workspace/generated/client.ts';
 
 import type { Config } from './config.ts';
@@ -41,14 +42,24 @@ export interface INewOffre {
 // Applies the pending migrations of prisma/migrations first, so the schema exists from the
 // first launch and follows every upgrade. Prisma never leaves this file: every row read is
 // parsed into a domain type (ADR-0005).
-export function openDatabase(databasePath: string) {
+export function openDatabase(databasePath: string, defaultDelayMonths: number) {
   const url = `file:${databasePath}`;
   execFileSync(process.execPath, [PRISMA_CLI_PATH, 'migrate', 'deploy'], {
     cwd: ROOT_DIRECTORY,
     env: { ...process.env, DATABASE_URL: url, CHECKPOINT_DISABLE: '1' },
     stdio: 'pipe',
   });
-  const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url }) });
+  // Expirée depends on the day, so every Offre read computes it rather than storing it
+  const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url }) }).$extends({
+    result: {
+      offre: {
+        isExpiree: {
+          needs: { dateLimite: true, publishedAt: true },
+          compute: (offre) => isExpiree(offre, new Date(), defaultDelayMonths),
+        },
+      },
+    },
+  });
 
   // A single Version retenue per Artefact of an Offre
   function retainStatementList({ offreId, artefact, number }: { offreId: number; artefact: Artefact; number: number }) {
@@ -71,10 +82,6 @@ export function openDatabase(databasePath: string) {
       return z
         .array(OFFRE_SCHEMA)
         .parse(await prisma.offre.findMany({ where: { candidatId }, orderBy: { reference: 'desc' } }));
-    },
-
-    async findOffres(reference: string): Promise<Offre[]> {
-      return z.array(OFFRE_SCHEMA).parse(await prisma.offre.findMany({ where: { reference } }));
     },
 
     async createJob(offre: Offre, module: Artefact): Promise<Job> {
@@ -136,6 +143,14 @@ export function openDatabase(databasePath: string) {
     async listReferences(candidatId: string, source: string): Promise<string[]> {
       const offreList = await prisma.offre.findMany({ where: { candidatId, source }, select: { reference: true } });
       return z.array(z.string()).parse(offreList.map(({ reference }) => reference));
+    },
+
+    async findOffres(reference: string): Promise<Offre[]> {
+      return z.array(OFFRE_SCHEMA).parse(await prisma.offre.findMany({ where: { reference } }));
+    },
+
+    async setStatus(reference: string, status: Offre['status']): Promise<void> {
+      await prisma.offre.updateMany({ where: { reference }, data: { status } });
     },
 
     async createOffre({ candidatId, source, listedOffre, fiche, isInZone }: INewOffre): Promise<Offre> {
