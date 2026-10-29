@@ -111,7 +111,9 @@ export const CLAUDE_CODE: IAiSession = {
       throw new Error(`Impossible de lancer Claude Code (${error.message}). Installer « claude » et s'y connecter.`);
     }
     if (status !== 0) {
-      throw new Error(`La session Claude Code s'est arrêtée en erreur (code ${String(status)}).`);
+      throw new Error(
+        `La session Claude Code s'est arrêtée en erreur (code ${String(status)}). Relancer la commande ; si l'erreur revient, lancer « claude » seul pour lire son message.`,
+      );
     }
   },
 

@@ -96,6 +96,16 @@ describe('the headless launch of Claude Code', () => {
 });
 
 describe('the interactive launch of Claude Code', () => {
+  it('tells how to read why an interactive session ended in error', () => {
+    stubClaude({}, 3);
+
+    expect(() => {
+      CLAUDE_CODE.openInteractive({ prompt: 'Bonjour', directory: createDirectory() });
+    }).toThrow(
+      "La session Claude Code s'est arrêtée en erreur (code 3). Relancer la commande ; si l'erreur revient, lancer « claude » seul pour lire son message.",
+    );
+  });
+
   it('confines a session with read-only paths to its directory, without shell, web nor customization', () => {
     vi.stubEnv('ANTHROPIC_API_KEY', 'cle-de-test');
     const recordDirectory = stubClaude({});

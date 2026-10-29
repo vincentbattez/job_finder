@@ -206,7 +206,12 @@ describe('reading a Visualisation', () => {
   });
 
   it.each([
-    { case: 'an unknown Version', number: '2', error: "Version inconnue : visualisation v2 de l'Offre 2026-2445600." },
+    {
+      case: 'an unknown Version',
+      number: '2',
+      error:
+        "Version inconnue : visualisation v2 de l'Offre 2026-2445600. « jf versions 2026-2445600 visualisation » liste ses Versions.",
+    },
     {
       case: 'a Version without its page',
       number: '1',

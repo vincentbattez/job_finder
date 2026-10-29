@@ -112,7 +112,9 @@ export async function openWorkspace(dataDirectory: string) {
       const filePath = path.join(offreDirectoryOf(offre), FICHE_DE_POSTE_FILE_NAME);
       const ficheDePoste = readTextFile(filePath);
       if (ficheDePoste === null) {
-        throw new Error(`Fiche de poste introuvable pour l'Offre ${offre.reference} : ${filePath}`);
+        throw new Error(
+          `Fiche de poste introuvable pour l'Offre ${offre.reference} : ${filePath}. La remettre à cet emplacement, d'où l'outil la lit.`,
+        );
       }
       return ficheDePoste;
     },

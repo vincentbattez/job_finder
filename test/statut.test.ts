@@ -165,7 +165,7 @@ it('refuses a reference shared by the Offres of two Candidats', async () => {
   await actions.detect();
 
   await expect(actions.changeStatus({ reference: '2026-2445600', status: 'postulee' })).rejects.toThrow(
-    /Plusieurs Offres ont la référence 2026-2445600/,
+    /Plusieurs Offres ont la référence 2026-2445600, chez des Candidats différents : .*Veille/,
   );
   const offre = await findOffre(actions, '2026-2445600');
   expect(offre?.status).toBe('a_traiter');

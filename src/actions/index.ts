@@ -56,6 +56,7 @@ import {
   findDefaultConsignes,
   findInputs,
   findVersionRetenue,
+  parseArtefact,
   parseModule,
 } from './run-job.ts';
 
@@ -71,7 +72,7 @@ const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
 const PROFIL_FILE_INPUT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string() });
 const CONSIGNES_MODULE_INPUT_SCHEMA = z.object({ module: z.string() });
 const CONSIGNES_INPUT_SCHEMA = CONSIGNES_MODULE_INPUT_SCHEMA.extend({ consignes: z.string() });
-const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: ARTEFACT_SCHEMA });
+const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: z.string() });
 const VERSION_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
 const DOCUMENT_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ fileName: z.string(), markdown: z.string() });
 const JOB_INPUT_SCHEMA = z.object({ jobId: z.coerce.number().int() });
@@ -141,7 +142,9 @@ function assertRetenable(
   const { reference } = offre;
   assertNotFrozen(offre, artefact);
   if (version === undefined) {
-    throw new Error(`Version inconnue : ${artefact} v${String(number)} de l'Offre ${reference}.`);
+    throw new Error(
+      `Version inconnue : ${artefact} v${String(number)} de l'Offre ${reference}. « jf versions ${reference} ${artefact} » liste ses Versions.`,
+    );
   }
   if (version.state === 'ready') {
     return;
@@ -203,7 +206,9 @@ export async function createActions({
     }
     // Two Candidats may follow the same Source: a reference alone then names several Offres
     if (otherOffreList.length > 0) {
-      throw new Error(`Plusieurs Offres ont la référence ${reference}, chez des Candidats différents.`);
+      throw new Error(
+        `Plusieurs Offres ont la référence ${reference}, chez des Candidats différents : leurs Veilles suivent la même Source, et l'outil ne sait pas encore choisir entre elles. Le signaler pour qu'il les distingue.`,
+      );
     }
     return offre;
   }
@@ -481,7 +486,8 @@ export async function createActions({
     // jf edit: a Claude Code session where the Candidat corrects the Version retenue in place,
     // without creating a new Version nor ever touching a Brouillon (spec « Versions »)
     async openArtefact(rawInput: unknown): Promise<void> {
-      const { reference, artefact } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
+      const { reference, ...input } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
+      const artefact = parseArtefact(input.artefact);
       const offre = await findOffre(reference);
       const version = await findVersionRetenue(workspace, offre, artefact);
       assertArtefactModifiable(offre, artefact, version);
@@ -521,7 +527,9 @@ export async function createActions({
       for (;;) {
         const job = await workspace.findJob(jobId);
         if (job === null) {
-          throw new Error(`Job inconnu : ${String(jobId)}.`);
+          throw new Error(
+            `Job inconnu : ${String(jobId)}. Son numéro est celui que « jf run » ou « jf import » a affiché.`,
+          );
         }
         if (job.state === 'done' || job.state === 'failed') {
           return job;
@@ -600,7 +608,7 @@ export async function createActions({
 
     async listVersions(rawInput: unknown): Promise<Version[]> {
       const { reference, artefact } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
-      return workspace.listVersions(await findOffre(reference), artefact);
+      return workspace.listVersions(await findOffre(reference), parseArtefact(artefact));
     },
 
     // The page of a Visualisation Version, for the front to show
@@ -610,7 +618,9 @@ export async function createActions({
       const versionList = await workspace.listVersions(offre, 'visualisation');
       const version = versionList.find((candidate) => candidate.number === number);
       if (version === undefined) {
-        throw new Error(`Version inconnue : visualisation v${String(number)} de l'Offre ${reference}.`);
+        throw new Error(
+          `Version inconnue : visualisation v${String(number)} de l'Offre ${reference}. « jf versions ${reference} visualisation » liste ses Versions.`,
+        );
       }
       const html = workspace.readTextFile(
         path.join(workspace.versionDirectoryOf(offre, version), VISUALISATION_MODULE.fileName),
@@ -635,7 +645,8 @@ export async function createActions({
 
     // The front's editor: the Candidat corrects a file of the Version retenue in place (spec « Versions »)
     async saveDocument(rawInput: unknown): Promise<void> {
-      const { reference, artefact, fileName, markdown } = DOCUMENT_INPUT_SCHEMA.parse(rawInput);
+      const { reference, fileName, markdown, ...input } = DOCUMENT_INPUT_SCHEMA.parse(rawInput);
+      const artefact = parseArtefact(input.artefact);
       const offre = await findOffre(reference);
       const version = await findVersionRetenue(workspace, offre, artefact);
       assertDocumentModifiable(offre, artefact, version, fileName);
@@ -649,7 +660,8 @@ export async function createActions({
     },
 
     async retenirVersion(rawInput: unknown): Promise<void> {
-      const { reference, artefact, number } = VERSION_INPUT_SCHEMA.parse(rawInput);
+      const { reference, number, ...input } = VERSION_INPUT_SCHEMA.parse(rawInput);
+      const artefact = parseArtefact(input.artefact);
       const offre = await findOffre(reference);
       const versionList = await workspace.listVersions(offre, artefact);
       const version = versionList.find((candidate) => candidate.number === number);

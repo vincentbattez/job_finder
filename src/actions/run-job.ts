@@ -30,16 +30,24 @@ const AI_MODULE_BY_ARTEFACT: Record<Artefact, IAiModule> = {
   visualisation: VISUALISATION_MODULE,
 };
 
-// The modules, each named after the Artefact it produces, or by its alias
-export function parseModule(name: string): Artefact {
+// An Artefact, or the module that produces it, named after it or by the module's alias
+function parseArtefactName(name: string, noun: 'Artefact' | 'Module'): Artefact {
   const artefact = ARTEFACT_SCHEMA.options.find(
     (candidate) => name === candidate || name === AI_MODULE_BY_ARTEFACT[candidate].alias,
   );
   if (artefact === undefined) {
     const nameList = Object.entries(AI_MODULE_BY_ARTEFACT).map(([candidate, aiModule]) => aiModule.alias ?? candidate);
-    throw new Error(`Module inconnu : ${name}. Modules : ${nameList.join(', ')}.`);
+    throw new Error(`${noun} inconnu : ${name}. ${noun}s : ${nameList.join(', ')}.`);
   }
   return artefact;
+}
+
+export function parseModule(name: string): Artefact {
+  return parseArtefactName(name, 'Module');
+}
+
+export function parseArtefact(name: string): Artefact {
+  return parseArtefactName(name, 'Artefact');
 }
 
 export function findDefaultConsignes(module: Artefact): string {
