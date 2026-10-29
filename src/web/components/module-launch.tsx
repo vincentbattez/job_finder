@@ -12,7 +12,7 @@ export function ModuleLaunch({
   artefact,
   etat,
   module,
-}: Readonly<Omit<IArtefactVersions, 'versionList'> & { reference: string }>) {
+}: Readonly<Pick<IArtefactVersions, 'artefact' | 'etat' | 'module'> & { reference: string }>) {
   const fetcher = useFetcher<{ error: string | null }>();
   const isHydrated = useIsHydrated();
   const isRunning = etat === 'en_cours';

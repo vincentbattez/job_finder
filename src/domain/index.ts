@@ -214,6 +214,9 @@ const ARTEFACT_VERSIONS_SCHEMA = z.object({
   etat: ETAT_SCHEMA,
   // The module that produces it, null while none does: why it cannot run now, null when it can
   module: z.object({ refusal: z.string().nullable() }).nullable(),
+  // Whether jf edit opens it now: it has a Version retenue, and is neither a Visualisation nor the
+  // Lettre of a Postulée Offre
+  isEditable: z.boolean(),
   versionList: z.array(VERSION_DOCUMENTS_SCHEMA),
 });
 
@@ -232,5 +235,10 @@ export const OFFRE_FICHE_SCHEMA = z
   .brand<'Domain'>();
 
 export type OffreFiche = z.infer<typeof OFFRE_FICHE_SCHEMA>;
+
+// The HTML page of a Visualisation Version, which the front shows in a sandboxed frame
+export const VISUALISATION_SCHEMA = z.object({ html: z.string() }).brand<'Domain'>();
+
+export type Visualisation = z.infer<typeof VISUALISATION_SCHEMA>;
 
 export type DomainValue = z.$brand<'Domain'>;

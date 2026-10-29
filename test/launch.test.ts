@@ -81,7 +81,7 @@ describe('the modules the fiche of an Offre offers', () => {
       recherche: { refusal: null },
       lettre: { refusal: /^L'Offre 2026-2445600 n'a pas de Recherche retenue/ },
       fiche_entretien: { refusal: /^L'Offre 2026-2445600 n'a pas de Recherche retenue/ },
-      visualisation: null,
+      visualisation: { refusal: /^L'Offre 2026-2445600 n'a pas de Fiche d'entretien retenue/ },
     });
     expect(await readModuleByArtefact(actions)).toMatchObject({
       recherche: { refusal: null },

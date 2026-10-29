@@ -781,6 +781,15 @@ a:active {
   display: grid;
   gap: var(--space-sm);
 }
+/* The Visualisation, a page of its own, read in a tall frame on the paper of the fiche */
+.visualisation iframe {
+  display: block;
+  width: 100%;
+  height: min(80vh, 48rem);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-input);
+  background: var(--glint);
+}
 
 @media (max-width: 60rem) {
   .editor,

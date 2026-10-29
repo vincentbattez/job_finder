@@ -18,9 +18,9 @@ if (!dataDirectory.startsWith(tmpdir())) {
   throw new Error(`JF_DATA_DIRECTORY doit être un dossier temporaire, pas « ${dataDirectory} ».`);
 }
 
-// What the fake Claude writes for each module, whatever the Offre: a Recherche and a Fiche
-// d'entretien in their format, and a Lettre whose recipients come from no field of the Offre, so
-// they hold for any of them
+// What the fake Claude writes for each module, whatever the Offre: a Recherche, a Fiche
+// d'entretien and its Visualisation in their format, and a Lettre whose recipients come from no
+// field of the Offre, so they hold for any of them
 const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
   // The fields of test/fixtures/import/greffier-grenoble.md, the Fiche de poste e2e/import.test.ts drops
   extraction: {
@@ -54,6 +54,15 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
       '## Présentez-vous\n\nTitulaire d’un [à compléter : diplôme], je souhaite rejoindre votre juridiction.',
       '## Questions probables\n\n- Pourquoi ce poste ?\n',
     ].join('\n\n'),
+  },
+  visualisation: {
+    'visualisation.html': [
+      '<!DOCTYPE html>',
+      '<html lang="fr"><head><meta charset="utf-8"><title>Fiche d’entretien factice</title></head><body>',
+      '<h1>Fiche d’entretien factice</h1>',
+      '<table><tr><th>MPS</th><td>Missions, Partenaires, Service</td></tr></table>',
+      '</body></html>\n',
+    ].join('\n'),
   },
 };
 

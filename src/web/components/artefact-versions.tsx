@@ -8,12 +8,46 @@ import { ConsignesOrigin } from './module-consignes.tsx';
 import { ModuleLaunch } from './module-launch.tsx';
 import { ARTEFACT_LABEL_BY_ARTEFACT, ETAT_BY_VERSION_STATE, type IArtefactVersions } from './offre-fiche.tsx';
 
+type VersionDocuments = IArtefactVersions['versionList'][number];
+
+// What a Version holds: the page of a ready Visualisation, in a frame that runs none of its scripts
+// (spec « Front »), else its Markdown files
+function VersionFiles({
+  reference,
+  artefact,
+  version,
+  documentList,
+}: Readonly<Omit<VersionDocuments, 'isRetenable'> & { reference: string; artefact: IArtefactVersions['artefact'] }>) {
+  if (artefact === 'visualisation' && version.state === 'ready') {
+    return (
+      <div className="visualisation">
+        <iframe
+          src={`/offres/${reference}/visualisation/${String(version.number)}`}
+          sandbox=""
+          title={`Visualisation v${String(version.number)}`}
+        />
+      </div>
+    );
+  }
+  if (documentList.length === 0) {
+    return <p className="missing">Aucun fichier dans cette Version.</p>;
+  }
+  return (
+    <>
+      {documentList.map((document) => (
+        <ArtefactDocument key={document.fileName} reference={reference} artefact={artefact} {...document} />
+      ))}
+    </>
+  );
+}
+
 // Every Version of an Artefact, oldest first: the Version retenue opens, the others stay folded
 export function ArtefactVersions({
   reference,
   artefact,
   etat,
   module,
+  isEditable,
   versionList,
 }: Readonly<IArtefactVersions & { reference: string }>) {
   const headingId = useId();
@@ -21,10 +55,7 @@ export function ArtefactVersions({
     <section className="artefact" id={artefact} data-artefact={artefact} aria-labelledby={headingId}>
       <h2 id={headingId}>{ARTEFACT_LABEL_BY_ARTEFACT[artefact]}</h2>
       <ModuleLaunch reference={reference} artefact={artefact} etat={etat} module={module} />
-      {/* jf edit works on the Version retenue */}
-      {versionList.some(({ version }) => version.isRetenue) && (
-        <CopyCommand command={`jf edit ${reference} ${artefact}`} />
-      )}
+      {isEditable && <CopyCommand command={`jf edit ${reference} ${artefact}`} />}
       {versionList.length === 0 ? (
         <p className="missing">Aucune Version pour l’instant.</p>
       ) : (
@@ -46,13 +77,7 @@ export function ArtefactVersions({
                   </span>
                 </summary>
                 {isRetenable && <RetenirButton reference={reference} artefact={artefact} number={version.number} />}
-                {documentList.length === 0 ? (
-                  <p className="missing">Aucun fichier dans cette Version.</p>
-                ) : (
-                  documentList.map((document) => (
-                    <ArtefactDocument key={document.fileName} reference={reference} artefact={artefact} {...document} />
-                  ))
-                )}
+                <VersionFiles reference={reference} artefact={artefact} version={version} documentList={documentList} />
               </details>
             </li>
           ))}

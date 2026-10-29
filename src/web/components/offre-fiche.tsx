@@ -29,6 +29,8 @@ export interface IArtefactVersions {
   etat: Etat;
   // The module that produces the Artefact, if any yet, and why it cannot run now
   module: { refusal: string | null } | null;
+  // Given by the action: jf edit opens its Version retenue
+  isEditable: boolean;
   versionList: {
     version: {
       number: number;

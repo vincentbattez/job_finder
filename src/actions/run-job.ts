@@ -14,6 +14,7 @@ import {
 import { FICHE_ENTRETIEN_MODULE } from '#/modules/fiche-entretien/index.ts';
 import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import { RECHERCHE_MODULE } from '#/modules/recherche/index.ts';
+import { VISUALISATION_MODULE } from '#/modules/visualisation/index.ts';
 import { assertLettreModifiable } from '#/statut/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
@@ -73,6 +74,7 @@ const AI_MODULE_BY_ARTEFACT: Partial<Record<Artefact, IAiModule>> = {
   recherche: RECHERCHE_MODULE,
   lettre: LETTRE_MODULE,
   fiche_entretien: FICHE_ENTRETIEN_MODULE,
+  visualisation: VISUALISATION_MODULE,
 };
 
 // The modules available so far, each named after the Artefact it produces, or by its alias

@@ -8,6 +8,7 @@ import { createActions, type Actions } from '#/actions/index.ts';
 import { FICHE_ENTRETIEN_DEFAULT_CONSIGNES } from '#/modules/fiche-entretien/consignes.ts';
 import { LETTRE_DEFAULT_CONSIGNES } from '#/modules/lettre/consignes.ts';
 import { RECHERCHE_DEFAULT_CONSIGNES } from '#/modules/recherche/consignes.ts';
+import { VISUALISATION_DEFAULT_CONSIGNES } from '#/modules/visualisation/consignes.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createRecordedFetch } from './recorded-http.ts';
@@ -43,6 +44,7 @@ describe('consignes', () => {
       { module: 'recherche', defaultConsignes: RECHERCHE_DEFAULT_CONSIGNES, candidatConsignes: null },
       { module: 'lettre', defaultConsignes: LETTRE_DEFAULT_CONSIGNES, candidatConsignes: null },
       { module: 'fiche_entretien', defaultConsignes: FICHE_ENTRETIEN_DEFAULT_CONSIGNES, candidatConsignes: null },
+      { module: 'visualisation', defaultConsignes: VISUALISATION_DEFAULT_CONSIGNES, candidatConsignes: null },
     ]);
   });
 
@@ -56,6 +58,7 @@ describe('consignes', () => {
       { module: 'recherche', defaultConsignes: RECHERCHE_DEFAULT_CONSIGNES, candidatConsignes: null },
       { module: 'lettre', defaultConsignes: LETTRE_DEFAULT_CONSIGNES, candidatConsignes: 'Une lettre très courte.\n' },
       { module: 'fiche_entretien', defaultConsignes: FICHE_ENTRETIEN_DEFAULT_CONSIGNES, candidatConsignes: null },
+      { module: 'visualisation', defaultConsignes: VISUALISATION_DEFAULT_CONSIGNES, candidatConsignes: null },
     ]);
   });
 
@@ -90,21 +93,19 @@ describe('consignes', () => {
     ]);
   });
 
-  it.each(['visualisation', 'inconnu'])(
-    'refuses Consignes for « %s », not an available module, and keeps none',
-    async (module) => {
-      const actions = await openActions();
+  it('refuses Consignes for a module that does not exist, and keeps none', async () => {
+    const actions = await openActions();
 
-      await expect(actions.saveConsignes({ candidatId: 'lea', module, consignes: 'Courte.\n' })).rejects.toThrow(
-        new RegExp(String.raw`Module inconnu : ${module}\. Modules : recherche, lettre, fiche\.`),
-      );
-      expect(await actions.listConsignes({ candidatId: 'lea' })).toMatchObject([
-        { candidatConsignes: null },
-        { candidatConsignes: null },
-        { candidatConsignes: null },
-      ]);
-    },
-  );
+    await expect(
+      actions.saveConsignes({ candidatId: 'lea', module: 'inconnu', consignes: 'Courte.\n' }),
+    ).rejects.toThrow('Module inconnu : inconnu. Modules : recherche, lettre, fiche, visualisation.');
+    expect(await actions.listConsignes({ candidatId: 'lea' })).toMatchObject([
+      { candidatConsignes: null },
+      { candidatConsignes: null },
+      { candidatConsignes: null },
+      { candidatConsignes: null },
+    ]);
+  });
 
   it('refuses the Consignes of an unknown Candidat', async () => {
     const actions = await openActions();

@@ -6,6 +6,7 @@ export default [
   route('offres/:reference/statut', 'routes/statut.ts'),
   route('offres/:reference/:artefact/document', 'routes/document.ts'),
   route('offres/:reference/:artefact/retenue', 'routes/version-retenue.ts'),
+  route('offres/:reference/visualisation/:number', 'routes/visualisation.ts'),
   route('candidat', 'routes/candidat.ts'),
   route('profil', 'routes/profil.tsx'),
   route('consignes', 'routes/consignes.tsx'),
