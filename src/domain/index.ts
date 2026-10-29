@@ -25,10 +25,10 @@ export const VEILLE_SCHEMA = z
 
 export type Veille = z.infer<typeof VEILLE_SCHEMA>;
 
-// An Offre as a Source lists it, before its detail page is read. An imported Fiche de poste has
-// neither link nor publication date.
+// An Offre as a Source lists it, before its detail page is read. An imported Fiche de poste has no
+// link, and is published the day it is imported, so that it expires like any Offre.
 export const LISTED_OFFRE_SCHEMA = z
-  .object({ reference: z.string(), title: z.string(), url: z.string().nullable(), publishedAt: z.date().nullable() })
+  .object({ reference: z.string(), title: z.string(), url: z.string().nullable(), publishedAt: z.date() })
   .brand<'Domain'>();
 
 export type ListedOffre = z.infer<typeof LISTED_OFFRE_SCHEMA>;

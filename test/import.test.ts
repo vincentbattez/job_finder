@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
 
@@ -201,6 +201,23 @@ describe('import of a Fiche de poste in Markdown', () => {
       contact2: null,
       isExpiree: false,
     });
+  });
+
+  // An imported Fiche de poste is published, for the tool, the day it is imported
+  it('makes an Offre without a Date limite Expirée once its import plus the default delay is over', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date('2026-10-29T12:00:00Z'));
+      const actions = await openActions(createFakeAiSession(extractionRun(EMPTY_EXTRACTION)));
+      const { fiche } = await importThenRunWorker(actions, 'Le greffier assiste les magistrats du tribunal.\n');
+      expect(fiche.offre).toMatchObject({ publishedAt: new Date('2026-10-29T12:00:00Z'), isExpiree: false });
+
+      vi.setSystemTime(new Date('2027-05-01T12:00:00Z'));
+
+      expect(await actions.listOffres({ candidatId: 'lea' })).toMatchObject([{ isExpiree: true }]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('refuses a field the Fiche de poste does not contain as is, which Claude invented', async () => {
