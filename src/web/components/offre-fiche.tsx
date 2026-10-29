@@ -5,6 +5,7 @@ import { DateText } from './date.tsx';
 import { Markdown } from './markdown.tsx';
 import type { IOffreRow } from './offre-list.tsx';
 import { Recipients, type IRecipients } from './recipients.tsx';
+import { RepublicationFacts, type IRepublication } from './republication.tsx';
 
 type Artefact = 'recherche' | 'lettre' | 'fiche_entretien' | 'visualisation';
 
@@ -38,6 +39,8 @@ export interface IOffreFiche {
     applicationEmail: string | null;
     contact1: string | null;
     contact2: string | null;
+    republicationOf: IRepublication['republicationOf'];
+    republicationList: IRepublication['republicationList'];
   };
   ficheDePoste: string;
   artefactList: IArtefactVersions[];
@@ -88,6 +91,7 @@ export function OffreFiche({ fiche, isPage = false }: Readonly<{ fiche: IOffreFi
                 <DateText date={offre.dateLimite} />
               </dd>
             </div>
+            <RepublicationFacts offre={offre} />
           </dl>
         </header>
         <section className="fiche__part" aria-labelledby={artefactsId}>
