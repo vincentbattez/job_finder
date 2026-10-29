@@ -1,6 +1,7 @@
 import { copyFileSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -172,6 +173,30 @@ describe('detection on the responses recorded on 2026-10-29', () => {
     });
   });
 
+  it('locates an Offre in the commune of its ville, with its région and coordinates', async () => {
+    expect(await findOffre('2026-2445600')).toMatchObject({
+      city: 'Béthune',
+      region: 'Hauts-de-France',
+      latitude: 50.5299,
+      longitude: 2.6438,
+    });
+    // The commune's own name, whatever the spelling of the lieu d'affectation
+    expect(await findOffre('2026-2350473')).toMatchObject({ city: 'Boulogne-sur-Mer', region: 'Hauts-de-France' });
+  });
+
+  it('locates every Offre, those out of the Zone too', async () => {
+    const offreList = await actions.listOffres({ candidatId: 'lea' });
+
+    expect(offreList.filter(({ latitude, longitude }) => latitude === null || longitude === null)).toEqual([]);
+    expect(await findOffre('2026-2430337')).toMatchObject({
+      isInZone: false,
+      city: 'Nouméa',
+      region: 'Nouvelle-Calédonie',
+      latitude: -22.3363,
+      longitude: 166.4076,
+    });
+  });
+
   it('keeps an application email written in free text as published', async () => {
     expect(await findOffre('2026-2199164')).toMatchObject({
       applicationEmail: 'Laurent DUMAINE, Procureur de la République : pr.tj-avesnes-sur-helpe@justice.fr',
@@ -235,10 +260,60 @@ describe('a second detection', () => {
     );
   });
 
+  it('locates the Offres saved before they had a ville', async () => {
+    const dataDirectory = createDataDirectory();
+    const firstActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
+    await firstActions.detect();
+    // As the Offres detected before the ville existed: no ville, no région, no coordinates
+    new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite')).exec(
+      'UPDATE "Offre" SET "city" = NULL, "region" = NULL, "latitude" = NULL, "longitude" = NULL',
+    );
+    const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
+
+    await actions.detect();
+
+    const offreList = await actions.listOffres({ candidatId: 'lea' });
+    expect(offreList.filter(({ latitude }) => latitude === null)).toEqual([]);
+    expect(offreList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
+      city: 'Béthune',
+      region: 'Hauts-de-France',
+      latitude: 50.5299,
+      longitude: 2.6438,
+    });
+  });
+
   it('downloads the detail page of an Offre only once', async () => {
     const { requestedUrlList } = await detectTwice();
 
     expect(requestedUrlList).toEqual([DSJ_FEED_URL]);
+  });
+});
+
+const BETHUNE_API_GEO_URL =
+  'https://geo.api.gouv.fr/communes?nom=B%C3%A9thune&fields=nom,centre,region&boost=population&limit=5';
+
+describe('a ville API Géo does not know', () => {
+  it('keeps it as read, without coordinates, and looks it up again at the next detection', async () => {
+    const dataDirectory = createDataDirectory();
+    const recordedFetch = createRecordedFetch({ [BETHUNE_API_GEO_URL]: { body: '[]' } });
+    const firstActions = await createActions({ dataDirectory, fetch: recordedFetch.fetch });
+    await firstActions.detect();
+    const firstOffreList = await firstActions.listOffres({ candidatId: 'lea' });
+    expect(firstOffreList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
+      city: 'Béthune',
+      region: null,
+      latitude: null,
+      longitude: null,
+    });
+    const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
+
+    await actions.detect();
+
+    const offreList = await actions.listOffres({ candidatId: 'lea' });
+    expect(offreList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
+      city: 'Béthune',
+      latitude: 50.5299,
+    });
   });
 });
 
@@ -264,6 +339,13 @@ describe('a detection that fails visibly', () => {
     const actions = await createActions({ dataDirectory: createDataDirectory(), fetch: recordedFetch.fetch });
 
     await expect(actions.detect()).rejects.toThrow(message);
+  });
+
+  it('stops when API Géo answers an HTTP error', async () => {
+    const recordedFetch = createRecordedFetch({ [BETHUNE_API_GEO_URL]: { body: '', status: 503 } });
+    const actions = await createActions({ dataDirectory: createDataDirectory(), fetch: recordedFetch.fetch });
+
+    await expect(actions.detect()).rejects.toThrow(/API Géo a répondu HTTP 503/);
   });
 });
 

@@ -41,6 +41,7 @@ model Offre {
   employer          String?
   workplace         String?
   city              String?
+  region            String?
   latitude          Float?
   longitude         Float?
   applicationEmail  String?
@@ -66,21 +67,23 @@ enum OffreStatus {
 
 // A Version of the lettre Artefact holds a pair: the Brouillon, never changed, and the Lettre.
 model Version {
-  id         Int          @id @default(autoincrement())
-  offre      Offre        @relation(fields: [offreId], references: [id])
-  offreId    Int
-  artefact   Artefact
-  number     Int
-  isRetenue  Boolean      @default(false)
-  state      VersionState
-  consignes  String
+  id                   Int          @id @default(autoincrement())
+  offre                Offre        @relation(fields: [offreId], references: [id])
+  offreId              Int
+  artefact             Artefact
+  number               Int
+  isRetenue            Boolean      @default(false)
+  state                VersionState
+  consignes            String
+  // Whether those Consignes are the Candidat's own rather than the module's default ones
+  hasCandidatConsignes Boolean      @default(false)
   // The Versions this one read as input
-  inputList  Version[]    @relation("Input")
-  readByList Version[]    @relation("Input")
-  createdAt  DateTime     @default(now())
+  inputList            Version[]    @relation("Input")
+  readByList           Version[]    @relation("Input")
+  createdAt            DateTime     @default(now())
   // The job that produced this Version, so a job can be followed to its Version
-  job        Job?         @relation(fields: [jobId], references: [id])
-  jobId      Int?         @unique
+  job                  Job?         @relation(fields: [jobId], references: [id])
+  jobId                Int?         @unique
 
   @@unique([offreId, artefact, number])
 }

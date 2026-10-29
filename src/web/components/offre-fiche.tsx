@@ -30,7 +30,13 @@ export interface IArtefactVersions {
   // The module that produces the Artefact, if any yet, and why it cannot run now
   module: { refusal: string | null } | null;
   versionList: {
-    version: { number: number; state: VersionState; isRetenue: boolean; createdAt: Date };
+    version: {
+      number: number;
+      state: VersionState;
+      isRetenue: boolean;
+      hasCandidatConsignes: boolean;
+      createdAt: Date;
+    };
     isRetenable: boolean;
     documentList: { fileName: string; markdown: string; isModifiable: boolean }[];
   }[];

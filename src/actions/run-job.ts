@@ -88,6 +88,15 @@ export function parseModule(name: string): Artefact {
   return artefact;
 }
 
+// The default Consignes of each module available, in the order of the Artefacts: a module added
+// to AI_MODULE_BY_ARTEFACT shows up in the front and the CLI by itself
+export function listDefaultConsignes(): { module: Artefact; defaultConsignes: string }[] {
+  return ARTEFACT_SCHEMA.options.flatMap((module) => {
+    const aiModule = AI_MODULE_BY_ARTEFACT[module];
+    return aiModule === undefined ? [] : { module, defaultConsignes: aiModule.defaultConsignes };
+  });
+}
+
 // A Republication starts from the work done for the Offre it publishes again: the Version retenue
 // of each of its Artefacts (spec « Republication »)
 async function findRepublishedVersions(workspace: Workspace, { republicationOf, candidatId }: Offre) {
@@ -195,8 +204,10 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
       throw new Error(`Module pas encore disponible : ${module}.`);
     }
     const { versionList: inputList, directoryList } = await findInputs(workspace, offre, module);
-    const consignes = workspace.readConsignes(offre.candidatId, module) ?? aiModule.defaultConsignes;
-    const version = await workspace.startJob(job, { consignes, inputList });
+    const candidatConsignes = workspace.readConsignes(offre.candidatId, module);
+    const consignes = candidatConsignes ?? aiModule.defaultConsignes;
+    const hasCandidatConsignes = candidatConsignes !== null;
+    const version = await workspace.startJob(job, { consignes, hasCandidatConsignes, inputList });
     const offreDirectory = workspace.offreDirectoryOf(offre);
     const outputDirectory = workspace.versionDirectoryOf(offre, version);
     mkdirSync(outputDirectory, { recursive: true });

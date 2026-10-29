@@ -29,6 +29,7 @@ function fakeOffre(candidatId: string): Prisma.OffreUncheckedCreateInput {
     employer: `Cour d'appel de ${faker.helpers.arrayElement(COURT_OF_APPEAL_LIST)}`,
     workplace: `Tribunal judiciaire de ${city}`,
     city,
+    region: faker.location.state(),
     latitude: faker.location.latitude({ min: 42.5, max: 51 }),
     longitude: faker.location.longitude({ min: -4.5, max: 7.5 }),
     applicationEmail: faker.internet.email({ provider: 'example.org' }),
