@@ -31,51 +31,53 @@ function listLeaProfilFiles(dataDirectory: string): string[] {
 }
 
 describe('actions', () => {
-  it('lists the Candidats declared in the config', () => {
-    const actions = createActions({ dataDirectory: createDataDirectoryFromExample() });
+  it('lists the Candidats declared in the config', async () => {
+    const actions = await createActions({ dataDirectory: createDataDirectoryFromExample() });
 
-    expect(actions.listCandidats()).toEqual([{ id: 'lea', name: 'Léa' }]);
+    expect(await actions.listCandidats()).toEqual([{ id: 'lea', name: 'Léa' }]);
   });
 
-  it('gives each Candidat an empty Profil folder on first launch', () => {
+  it('gives each Candidat an empty Profil folder on first launch', async () => {
     const dataDirectory = createDataDirectoryFromExample();
 
-    createActions({ dataDirectory });
+    await createActions({ dataDirectory });
 
     expect(listLeaProfilFiles(dataDirectory)).toEqual([]);
   });
 
-  it('keeps the existing Profil and Candidats when launched again', () => {
+  it('keeps the existing Profil and Candidats when launched again', async () => {
     const dataDirectory = createDataDirectoryFromExample();
-    createActions({ dataDirectory });
+    await createActions({ dataDirectory });
     writeFileSync(path.join(dataDirectory, 'candidats', 'lea', 'profil', 'faits.md'), '# Faits\n');
 
-    const actions = createActions({ dataDirectory });
+    const actions = await createActions({ dataDirectory });
 
     expect(listLeaProfilFiles(dataDirectory)).toEqual(['faits.md']);
-    expect(actions.listCandidats()).toEqual([{ id: 'lea', name: 'Léa' }]);
+    expect(await actions.listCandidats()).toEqual([{ id: 'lea', name: 'Léa' }]);
   });
 
-  it('forgets a Candidat removed from the config', () => {
+  it('forgets a Candidat removed from the config', async () => {
     const dataDirectory = createEmptyDataDirectory();
     writeConfig(dataDirectory, {
       defaultDelayMonths: 6,
       candidatList: [candidatConfig('lea', 'Léa'), candidatConfig('vincent', 'Vincent')],
     });
-    createActions({ dataDirectory });
+    await createActions({ dataDirectory });
     writeConfig(dataDirectory, { defaultDelayMonths: 6, candidatList: [candidatConfig('lea', 'Léa')] });
 
-    expect(createActions({ dataDirectory }).listCandidats()).toEqual([{ id: 'lea', name: 'Léa' }]);
+    const actions = await createActions({ dataDirectory });
+
+    expect(await actions.listCandidats()).toEqual([{ id: 'lea', name: 'Léa' }]);
   });
 
-  it('refuses to start without a config, pointing to the example', () => {
-    expect(() => createActions({ dataDirectory: createEmptyDataDirectory() })).toThrow(/config\.example\.json/);
+  it('refuses to start without a config, pointing to the example', async () => {
+    await expect(createActions({ dataDirectory: createEmptyDataDirectory() })).rejects.toThrow(/config\.example\.json/);
   });
 
-  it('refuses an invalid config, naming the faulty field', () => {
+  it('refuses an invalid config, naming the faulty field', async () => {
     const dataDirectory = createEmptyDataDirectory();
     writeConfig(dataDirectory, { defaultDelayMonths: 6, candidatList: [{ id: 'lea' }] });
 
-    expect(() => createActions({ dataDirectory })).toThrow(/candidatList\[0\]\.name/);
+    await expect(createActions({ dataDirectory })).rejects.toThrow(/candidatList\[0\]\.name/);
   });
 });

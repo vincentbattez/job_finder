@@ -5,5 +5,7 @@
 mise.local.toml
 node_modules/
 /data/
+/dev-data/
+src/workspace/generated/
 playwright-report/
 test-results/

@@ -7,7 +7,7 @@ import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  { ignores: ['data/', 'playwright-report/', 'test-results/'] },
+  { ignores: ['data/', 'dev-data/', 'src/workspace/generated/', 'playwright-report/', 'test-results/'] },
   js.configs.recommended,
   tseslint.configs.strictTypeChecked,
   unicorn.configs.recommended,

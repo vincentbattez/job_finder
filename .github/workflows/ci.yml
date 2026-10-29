@@ -19,6 +19,8 @@ jobs:
         run: mise run typecheck
       - name: Vitest
         run: mise run test:unit
+      - name: Seed
+        run: mise run db:seed
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
       - name: Playwright
