@@ -154,6 +154,14 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       };
     },
 
+    async listJobs(offre: Offre): Promise<Job[]> {
+      return z
+        .array(JOB_SCHEMA)
+        .parse(
+          await prisma.job.findMany({ where: { offreId: offre.id }, include: JOB_INCLUDE, orderBy: { id: 'asc' } }),
+        );
+    },
+
     async findJob(id: number): Promise<Job | null> {
       const job = await prisma.job.findUnique({ where: { id }, include: JOB_INCLUDE });
       return job === null ? null : JOB_SCHEMA.parse(job);

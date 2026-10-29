@@ -14,7 +14,8 @@ import { createRecordedFetch } from './recorded-http.ts';
 // channel. Léa follows the attaché de justice Offres, and the Béthune Offre 2026-2445600 has two
 // Recherches, the first one retenue, and a Lettre; Camille has no Veille, hence no Offre. The tests
 // that change data work on Offres of their own: Bastia 2026-2426147 (a Recherche and a Lettre to
-// correct) and Versailles 2026-2409178 (two Recherches).
+// correct), Versailles 2026-2409178 (two Recherches), Rennes 2026-2420931 (a Recherche, ready for
+// its Lettre) and Narbonne 2026-2412591 (a Recherche en échec).
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 // The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
 if (!dataDirectory.startsWith(tmpdir())) {
@@ -23,6 +24,8 @@ if (!dataDirectory.startsWith(tmpdir())) {
 const BETHUNE_REFERENCE = '2026-2445600';
 const BASTIA_REFERENCE = '2026-2426147';
 const VERSAILLES_REFERENCE = '2026-2409178';
+const RENNES_REFERENCE = '2026-2420931';
+const NARBONNE_REFERENCE = '2026-2412591';
 const NOTIFICATION = { channel: 'home-assistant', service: 'notify.mobile_app_test' };
 const CONFIG = {
   defaultDelayMonths: 6,
@@ -88,6 +91,8 @@ const actions = await createActions({
     rechercheRun('Recherche première : le pôle civil du TJ de Versailles'),
     rechercheRun('Recherche relancée : le pôle civil du TJ de Versailles'),
     BASTIA_LETTRE,
+    rechercheRun('Recherche : la JIRS du TJ de Rennes'),
+    { isSuccess: false },
   ),
 });
 await actions.detect();
@@ -103,4 +108,7 @@ await actions.runModule({ module: 'recherche', reference: VERSAILLES_REFERENCE }
 await actions.runModule({ module: 'recherche', reference: VERSAILLES_REFERENCE });
 await actions.runQueuedJobs();
 await actions.runModule({ module: 'lettre', reference: BASTIA_REFERENCE });
+await actions.runQueuedJobs();
+await actions.runModule({ module: 'recherche', reference: RENNES_REFERENCE });
+await actions.runModule({ module: 'recherche', reference: NARBONNE_REFERENCE });
 await actions.runQueuedJobs();

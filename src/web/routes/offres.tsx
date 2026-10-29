@@ -2,6 +2,7 @@ import { useLoaderData, type LoaderFunctionArgs } from 'react-router';
 
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidat } from '#/web/candidat.server.ts';
+import { Detection } from '#/web/components/detection.tsx';
 import { OffreList } from '#/web/components/offre-list.tsx';
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -29,6 +30,7 @@ export default function Offres() {
     <main className="container page">
       <div className="page__head">
         <h1>Offres de {candidat.name}</h1>
+        <Detection />
       </div>
       <OffreList offreList={offreList} />
     </main>

@@ -51,7 +51,16 @@ interface IAiModule {
   composePrompt(input: IPromptInput): string;
   // Runs once the files are valid, before the Version is ready
   completeVersion?(versionDirectory: string): void;
+  // The Artefacts of the Offre the module reads: it refuses to run until each has a Version retenue
+  requiredArtefactList?: readonly Artefact[];
 }
+
+const ARTEFACT_LABEL_BY_ARTEFACT: Record<Artefact, string> = {
+  recherche: 'Recherche',
+  lettre: 'Lettre',
+  fiche_entretien: "Fiche d'entretien",
+  visualisation: 'Visualisation',
+};
 
 const AI_MODULE_BY_ARTEFACT: Partial<Record<Artefact, IAiModule>> = {
   recherche: RECHERCHE_MODULE,
@@ -84,25 +93,33 @@ async function findRepublishedVersions(workspace: Workspace, { republicationOf, 
 }
 
 // What a job reads besides the Fiche de poste of its Offre: Versions, and folders outside the
-// Offre. The Recherche of a Republication reads the Artefacts of the Offre it publishes again. The
-// Lettre reads the Recherche retenue, the Profil, and the Brouillon/Lettre pairs the Candidat sent,
-// those of the Lettre retenue of each Postulée Offre (spec « Modules IA »). Throws, before anything
-// is written, when the module cannot run on the Offre: a Lettre frozen by Postulée, or no Recherche
-// retenue. The actions call it to refuse a job up front, the runner again for a job queued before
-// the Offre changed.
+// Offre. The Version retenue of each Artefact its module requires. The Recherche of a Republication
+// reads the Artefacts of the Offre it publishes again. The Lettre also reads the Profil, and the
+// Brouillon/Lettre pairs the Candidat sent, those of the Lettre retenue of each Postulée Offre (spec
+// « Modules IA »). Throws, before anything is written, when the module cannot run on the Offre: a
+// Lettre frozen by Postulée, or a required Artefact without a Version retenue. The actions call it
+// to refuse a job up front, the runner again for a job queued before the Offre changed.
 export async function findInputs(workspace: Workspace, offre: Offre, module: Artefact) {
+  if (module === 'lettre') {
+    assertLettreModifiable(offre);
+  }
+  const requiredArtefactList = AI_MODULE_BY_ARTEFACT[module]?.requiredArtefactList ?? [];
+  const requiredList: IReadVersion[] = [];
+  for (const artefact of requiredArtefactList) {
+    const version = await findVersionRetenue(workspace, offre, artefact);
+    if (version === undefined) {
+      const label = ARTEFACT_LABEL_BY_ARTEFACT[artefact];
+      throw new Error(
+        `L'Offre ${offre.reference} n'a pas de ${label} retenue, sur laquelle s'appuie la ${ARTEFACT_LABEL_BY_ARTEFACT[module]}. La produire d'abord : jf run ${artefact} ${offre.reference}.`,
+      );
+    }
+    requiredList.push({ offre, version });
+  }
   if (module === 'recherche') {
-    return { versionList: await findRepublishedVersions(workspace, offre), directoryList: [] };
+    return { versionList: [...requiredList, ...(await findRepublishedVersions(workspace, offre))], directoryList: [] };
   }
   if (module !== 'lettre') {
-    return { versionList: [], directoryList: [] };
-  }
-  assertLettreModifiable(offre);
-  const recherche = await findVersionRetenue(workspace, offre, 'recherche');
-  if (recherche === undefined) {
-    throw new Error(
-      `L'Offre ${offre.reference} n'a pas de Recherche retenue, sur laquelle s'appuie la Lettre. La produire d'abord : jf run recherche ${offre.reference}.`,
-    );
+    return { versionList: requiredList, directoryList: [] };
   }
   const offreList = await workspace.listOffres(offre.candidatId);
   const sentList: IReadVersion[] = [];
@@ -114,9 +131,23 @@ export async function findInputs(workspace: Workspace, offre: Offre, module: Art
     }
   }
   return {
-    versionList: [{ offre, version: recherche }, ...sentList],
+    versionList: [...requiredList, ...sentList],
     directoryList: [workspace.profilDirectoryOf(offre.candidatId)],
   };
+}
+
+// The module of an Artefact as the fiche of an Offre offers it: null while no module produces the
+// Artefact, else why it cannot run on the Offre now, from the very checks of a launch
+export async function describeModule(workspace: Workspace, offre: Offre, artefact: Artefact) {
+  if (AI_MODULE_BY_ARTEFACT[artefact] === undefined) {
+    return null;
+  }
+  try {
+    await findInputs(workspace, offre, artefact);
+    return { refusal: null };
+  } catch (error) {
+    return { refusal: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 // The one function that runs a job: the worker calls it on each queued job (ADR-0003). The

@@ -26,6 +26,8 @@ jf edit 2026-2445600 recherche                 # corrige la Version retenue d'un
 
 Le front, service lpm `web` déclaré dans `.lpm.yml` (`mise run web`), sert les Offres de `data/` sur le port 5180, sans authentification : il n'est joignable qu'en LAN et via WireGuard, jamais depuis internet (ADR-0002). On l'ouvre par l'adresse IP du Mac mini ou par son nom `.local`, par exemple `http://mac-mini-vincent.local:5180`. Le Candidat se choisit dans le menu du haut, mémorisé par un cookie ; la fiche de chaque Offre montre ses contacts bruts, les destinataires recommandés par la Lettre retenue, la Fiche de poste et toutes les Versions de chaque Artefact, avec la commande `jf edit` à copier.
 
+Sur la fiche, chaque Artefact montre son état (absent, en cours, prêt, en échec) et le bouton de son module : il met le job en file, comme `jf run`, et le worker l'exécute. Le bouton attend tant qu'il manque au module une entrée, par exemple une Recherche retenue pour la Lettre, et dit laquelle. L'état se met à jour tout seul jusqu'à ce que le job soit fini. La liste des Offres a un bouton « Lancer une Détection », la même action que `jf detect`, qui dit ce qu'elle a trouvé pour chaque Veille. Comme le worker, le front lit `.env` pour les notifications.
+
 `JF_DATA_DIRECTORY` sert le front sur un autre dossier : `JF_DATA_DIRECTORY=dev-data mise run web` pour les Offres factices.
 
 ## Worker
@@ -81,6 +83,7 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 - `test/fake-notification-channel.ts` : le faux canal de notification, qui garde les notifications au lieu de les envoyer. Les tests ne lisent jamais `.env`, et `vitest.config.ts` comme `playwright.config.ts` vident les réglages de Home Assistant : un test qui oublie le faux canal n'envoie jamais de vraie notification.
 - `test/fake-ai-session.ts` : le faux lancement de Claude, qui écrit l'Artefact prévu et garde le prompt reçu. `test/fixtures/claude/claude` remplace le binaire `claude` pour tester le vrai lancement sans ouvrir de session.
 - `test/seed-front.ts` : les données des tests Playwright, produites par les actions avec les faux dans un dossier temporaire, jamais `data/`. `playwright.config.ts` le lance avant le serveur de développement, qu'il pointe sur ce dossier.
+- `test/e2e-actions.server.ts` : les actions des tests Playwright, avec les trois faux. Le serveur de développement les sert à la place de `src/web/acl/actions.server.ts` en mode `e2e` (`vite.config.ts`), et `test/e2e-worker.ts`, le worker des tests, exécute avec elles les jobs mis en file par le front.
 
 ## Commandes
 

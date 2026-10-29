@@ -34,7 +34,7 @@ import { findRepublishedOffre } from '#/republication/index.ts';
 import { assertLettreModifiable } from '#/statut/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
-import { createJobRunner, findInputs, parseModule } from './run-job.ts';
+import { createJobRunner, describeModule, findInputs, parseModule } from './run-job.ts';
 
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
@@ -47,6 +47,8 @@ const DOCUMENT_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ fileName: z.string(
 const JOB_INPUT_SCHEMA = z.object({ jobId: z.coerce.number().int() });
 
 const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: z.enum(['postulee', 'archivee']) });
+
+const ETAT_BY_VERSION_STATE = { running: 'en_cours', ready: 'pret', failed: 'en_echec' } as const;
 
 // How often a followed job is read again: a module runs for minutes
 const FOLLOW_INTERVAL_MS = 1000;
@@ -392,11 +394,18 @@ export async function createActions({
     async readOffre(rawInput: unknown): Promise<OffreFiche> {
       const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
       const offre = await findOffre(reference);
+      const jobList = await workspace.listJobs(offre);
       const artefactList = await Promise.all(
         ARTEFACT_SCHEMA.options.map(async (artefact) => {
           const versionList = await workspace.listVersions(offre, artefact);
+          // A queued job has no Version yet, while the worker runs another one (ADR-0003): it is
+          // already en cours
+          const isQueued = jobList.some(({ module, state }) => module === artefact && state === 'queued');
+          const state = isQueued ? 'running' : versionList.at(-1)?.state;
           return {
             artefact,
+            etat: state === undefined ? 'absent' : ETAT_BY_VERSION_STATE[state],
+            module: await describeModule(workspace, offre, artefact),
             versionList: versionList.map((version) => readFicheVersion(offre, version)),
           };
         }),

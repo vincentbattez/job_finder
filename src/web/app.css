@@ -38,6 +38,8 @@
 .candidat-menu select,
 .candidat-menu button,
 .command button,
+.module-launch button,
+.detection button,
 .edition button {
   min-height: 40px;
   padding: 0 var(--space-sm);
@@ -56,14 +58,44 @@
   background: var(--color-paper-2);
 }
 .candidat-menu button,
+.module-launch button,
+.detection button,
 .edition .button--primary {
   border-color: transparent;
   background: var(--color-accent);
   color: var(--color-accent-ink);
 }
 .candidat-menu button:hover,
+.module-launch button:hover:enabled,
+.detection button:hover:enabled,
 .edition .button--primary:hover {
   background: var(--color-accent-deep);
+}
+/* A module missing an input, an Artefact en cours, a Détection running: the button waits */
+.module-launch button:disabled,
+.detection button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* The Détection beside the name of the list: what it found shows below the button */
+.detection {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+}
+.detection [role='status'] {
+  display: grid;
+  gap: var(--space-xs);
+  color: var(--color-ink-2);
+}
+.detection ul {
+  margin: 0;
+  padding-inline-start: var(--space-lg);
+}
+.detection__error {
+  color: var(--color-error);
 }
 
 .page {
@@ -475,6 +507,23 @@ a:active {
   min-width: 0;
   padding-top: var(--space-md);
   border-top: 4px solid var(--tint);
+}
+/* The état of the Artefact, then the button of its module and why it waits, if it does */
+.module-launch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+}
+.module-launch p {
+  flex-basis: 100%;
+  font-size: var(--text-sm);
+}
+.module-launch__refusal {
+  color: var(--color-muted);
+}
+.module-launch [role='alert'] {
+  color: var(--color-error);
 }
 /* jf edit, a line to type in a terminal: DM Mono on the paper tray */
 .command {
