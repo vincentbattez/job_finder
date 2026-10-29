@@ -211,15 +211,17 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
   },
   run: {
     description:
-      "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run recherche|lettre <offre> [--wait]",
+      "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run recherche|lettre|fiche <offre> [--wait]",
     run: async (actions, [module, reference], { isWaiting }) => {
       if (module === undefined || reference === undefined) {
         throw new Error('Usage : jf run <module> <offre> [--wait], par exemple jf run recherche 2026-2445600.');
       }
       const queuedJob = await actions.runModule({ module, reference });
+      // jf versions takes the Artefact, which the module of jf run fiche is not named after
+      const versionsCommand = `jf versions ${reference} ${queuedJob.module}`;
       process.stdout.write(`${module} de l'Offre ${reference} en file (job ${String(queuedJob.id)}).\n`);
       if (!isWaiting) {
-        process.stdout.write(`Le worker la produira. « jf versions ${reference} ${module} » suit ses Versions.\n`);
+        process.stdout.write(`Le worker la produira. « ${versionsCommand} » suit ses Versions.\n`);
         return;
       }
       process.stdout.write('Attente du worker (service lpm worker) : Claude Code peut prendre plusieurs minutes…\n');
@@ -228,7 +230,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       if (state === 'failed') {
         throw new Error(`${name} en échec :\n${log}\nRelancer : jf run ${module} ${reference}`);
       }
-      process.stdout.write(`${name} prête et retenue. « jf versions ${reference} ${module} » liste ses Versions.\n`);
+      process.stdout.write(`${name} prête et retenue. « ${versionsCommand} » liste ses Versions.\n`);
     },
   },
   destinataires: {

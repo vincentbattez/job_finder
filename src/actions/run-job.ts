@@ -11,6 +11,7 @@ import {
   type Offre,
   type Version,
 } from '#/domain/index.ts';
+import { FICHE_ENTRETIEN_MODULE } from '#/modules/fiche-entretien/index.ts';
 import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import { RECHERCHE_MODULE } from '#/modules/recherche/index.ts';
 import { assertLettreModifiable } from '#/statut/index.ts';
@@ -43,6 +44,8 @@ interface IPromptInput {
 
 // What an AI module gives the job runner, from the single entry point of its folder (ADR-0003)
 interface IAiModule {
+  // A shorter name than its Artefact, for jf run
+  alias?: string;
   // The file of the Version the Candidat reads, returned once the job has run
   fileName: string;
   // The files the session writes in the folder of the Version
@@ -53,6 +56,10 @@ interface IAiModule {
   completeVersion?(versionDirectory: string): void;
   // The Artefacts of the Offre the module reads: it refuses to run until each has a Version retenue
   requiredArtefactList?: readonly Artefact[];
+  // The Artefacts of the Offre the module also reads, when they have a Version retenue
+  optionalArtefactList?: readonly Artefact[];
+  // Whether the module reads the Profil of the Candidat
+  isReadingProfil?: boolean;
 }
 
 const ARTEFACT_LABEL_BY_ARTEFACT: Record<Artefact, string> = {
@@ -65,15 +72,20 @@ const ARTEFACT_LABEL_BY_ARTEFACT: Record<Artefact, string> = {
 const AI_MODULE_BY_ARTEFACT: Partial<Record<Artefact, IAiModule>> = {
   recherche: RECHERCHE_MODULE,
   lettre: LETTRE_MODULE,
+  fiche_entretien: FICHE_ENTRETIEN_MODULE,
 };
 
-// The modules available so far, each named after the Artefact it produces
+// The modules available so far, each named after the Artefact it produces, or by its alias
 export function parseModule(name: string): Artefact {
-  const artefact = ARTEFACT_SCHEMA.safeParse(name);
-  if (!artefact.success || AI_MODULE_BY_ARTEFACT[artefact.data] === undefined) {
-    throw new Error(`Module inconnu : ${name}. Modules : ${Object.keys(AI_MODULE_BY_ARTEFACT).join(', ')}.`);
+  const artefact = ARTEFACT_SCHEMA.options.find((candidate) => {
+    const aiModule = AI_MODULE_BY_ARTEFACT[candidate];
+    return aiModule !== undefined && (name === candidate || name === aiModule.alias);
+  });
+  if (artefact === undefined) {
+    const nameList = Object.entries(AI_MODULE_BY_ARTEFACT).map(([candidate, aiModule]) => aiModule.alias ?? candidate);
+    throw new Error(`Module inconnu : ${name}. Modules : ${nameList.join(', ')}.`);
   }
-  return artefact.data;
+  return artefact;
 }
 
 // A Republication starts from the work done for the Offre it publishes again: the Version retenue
@@ -93,8 +105,9 @@ async function findRepublishedVersions(workspace: Workspace, { republicationOf, 
 }
 
 // What a job reads besides the Fiche de poste of its Offre: Versions, and folders outside the
-// Offre. The Version retenue of each Artefact its module requires. The Recherche of a Republication
-// reads the Artefacts of the Offre it publishes again. The Lettre also reads the Profil, and the
+// Offre. The Version retenue of each Artefact its module requires, and of each one it reads when
+// there is one, and the Profil if it reads it, as the module declares. The Recherche of a
+// Republication reads the Artefacts of the Offre it publishes again. The Lettre also reads the
 // Brouillon/Lettre pairs the Candidat sent, those of the Lettre retenue of each Postulée Offre (spec
 // « Modules IA »). Throws, before anything is written, when the module cannot run on the Offre: a
 // Lettre frozen by Postulée, or a required Artefact without a Version retenue. The actions call it
@@ -103,7 +116,8 @@ export async function findInputs(workspace: Workspace, offre: Offre, module: Art
   if (module === 'lettre') {
     assertLettreModifiable(offre);
   }
-  const requiredArtefactList = AI_MODULE_BY_ARTEFACT[module]?.requiredArtefactList ?? [];
+  const aiModule = AI_MODULE_BY_ARTEFACT[module];
+  const requiredArtefactList = aiModule?.requiredArtefactList ?? [];
   const requiredList: IReadVersion[] = [];
   for (const artefact of requiredArtefactList) {
     const version = await findVersionRetenue(workspace, offre, artefact);
@@ -115,11 +129,19 @@ export async function findInputs(workspace: Workspace, offre: Offre, module: Art
     }
     requiredList.push({ offre, version });
   }
+  const optionalList = await Promise.all(
+    (aiModule?.optionalArtefactList ?? []).map((artefact) => findVersionRetenue(workspace, offre, artefact)),
+  );
+  const offreVersionList = [
+    ...requiredList,
+    ...optionalList.filter((version) => version !== undefined).map((version) => ({ offre, version })),
+  ];
+  const directoryList = aiModule?.isReadingProfil === true ? [workspace.profilDirectoryOf(offre.candidatId)] : [];
   if (module === 'recherche') {
-    return { versionList: [...requiredList, ...(await findRepublishedVersions(workspace, offre))], directoryList: [] };
+    return { versionList: [...offreVersionList, ...(await findRepublishedVersions(workspace, offre))], directoryList };
   }
   if (module !== 'lettre') {
-    return { versionList: requiredList, directoryList: [] };
+    return { versionList: offreVersionList, directoryList };
   }
   const offreList = await workspace.listOffres(offre.candidatId);
   const sentList: IReadVersion[] = [];
@@ -130,10 +152,7 @@ export async function findInputs(workspace: Workspace, offre: Offre, module: Art
       sentList.push({ offre: sentOffre, version: lettre });
     }
   }
-  return {
-    versionList: [...requiredList, ...sentList],
-    directoryList: [workspace.profilDirectoryOf(offre.candidatId)],
-  };
+  return { versionList: [...offreVersionList, ...sentList], directoryList };
 }
 
 // The module of an Artefact as the fiche of an Offre offers it: null while no module produces the

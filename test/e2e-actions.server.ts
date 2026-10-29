@@ -18,8 +18,9 @@ if (!dataDirectory.startsWith(tmpdir())) {
   throw new Error(`JF_DATA_DIRECTORY doit être un dossier temporaire, pas « ${dataDirectory} ».`);
 }
 
-// What the fake Claude writes for each module, whatever the Offre: a Recherche in its format, and a
-// Lettre whose recipients come from no field of the Offre, so they hold for any of them
+// What the fake Claude writes for each module, whatever the Offre: a Recherche and a Fiche
+// d'entretien in their format, and a Lettre whose recipients come from no field of the Offre, so
+// they hold for any of them
 const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
   recherche: { 'recherche.md': '# Recherche factice\n\n## Sources\n\n- https://www.justice.fr/\n' },
   lettre: {
@@ -31,6 +32,15 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
       salutation: { text: 'Madame, Monsieur,', source: null },
       justification: 'Aucun champ de l’Offre ne donne d’adresse.',
     }),
+  },
+  fiche_entretien: {
+    'fiche-entretien.md': [
+      '# Fiche d’entretien factice',
+      '## À réviser\n\n- Les missions du poste.',
+      '## Moyens mnémotechniques\n\n- « MPS » : Missions, Partenaires, Service.',
+      '## Présentez-vous\n\nTitulaire d’un [à compléter : diplôme], je souhaite rejoindre votre juridiction.',
+      '## Questions probables\n\n- Pourquoi ce poste ?\n',
+    ].join('\n\n'),
   },
 };
 
