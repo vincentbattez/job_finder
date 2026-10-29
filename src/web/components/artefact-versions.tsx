@@ -20,12 +20,13 @@ function VersionFiles({
 }: Readonly<Omit<VersionDocuments, 'isRetenable'> & { reference: string; artefact: IArtefactVersions['artefact'] }>) {
   if (artefact === 'visualisation' && version.state === 'ready') {
     return (
-      <iframe
-        className="visualisation"
-        src={`/offres/${reference}/visualisation/${String(version.number)}`}
-        sandbox=""
-        title={`Visualisation v${String(version.number)}`}
-      />
+      <div className="visualisation">
+        <iframe
+          src={`/offres/${reference}/visualisation/${String(version.number)}`}
+          sandbox=""
+          title={`Visualisation v${String(version.number)}`}
+        />
+      </div>
     );
   }
   if (documentList.length === 0) {

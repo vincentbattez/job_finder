@@ -737,7 +737,8 @@ a:active {
   gap: var(--space-sm);
 }
 /* The Visualisation, a page of its own, read in a tall frame on the paper of the fiche */
-.visualisation {
+.visualisation iframe {
+  display: block;
   width: 100%;
   height: min(80vh, 48rem);
   border: var(--rule-hair) solid var(--color-rule);
