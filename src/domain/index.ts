@@ -157,8 +157,15 @@ const DOCUMENT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string() })
 
 const VERSION_DOCUMENTS_SCHEMA = z.object({ version: VERSION_SCHEMA, documentList: z.array(DOCUMENT_SCHEMA) });
 
+// What the front shows of an Artefact at a glance (spec « Front »)
+const ETAT_SCHEMA = z.enum(['absent', 'en_cours', 'pret', 'en_echec']);
+
 const ARTEFACT_VERSIONS_SCHEMA = z.object({
   artefact: ARTEFACT_SCHEMA,
+  // En cours from the moment its job is queued, then that of its latest Version; absent before any
+  etat: ETAT_SCHEMA,
+  // The module that produces it, null while none does: why it cannot run now, null when it can
+  module: z.object({ refusal: z.string().nullable() }).nullable(),
   versionList: z.array(VERSION_DOCUMENTS_SCHEMA),
 });
 
