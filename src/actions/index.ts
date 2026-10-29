@@ -15,6 +15,13 @@ import {
   type Version,
 } from '#/domain/index.ts';
 import { BROUILLON_FILE_NAME, composeEditPrompt } from '#/edit/prompt.ts';
+import {
+  composeNouvelleOffreNotification,
+  composeRecherchePreteNotification,
+  HOME_ASSISTANT,
+  type INotification,
+  type INotificationChannel,
+} from '#/modules/notification/index.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
 import { assertLettreModifiable } from '#/statut/index.ts';
@@ -40,16 +47,19 @@ const FOLLOW_INTERVAL_MS = 1000;
 // so no business rule lives in either of them (ADR-0003). `satisfies` holds them to the
 // anti-corruption layer (ADR-0005): the input is whatever a user typed, so each action takes it
 // as unknown and parses it with Zod, and the output is nothing or domain values, so no raw data
-// reaches the CLI or the front. The tests pass a fake aiSession and a fake fetch for the HTTP of
-// the Sources, since Claude and the sites are external boundaries.
+// reaches the CLI or the front. The tests pass a fake aiSession, a fake fetch for the HTTP of the
+// Sources and a fake notificationChannel, since Claude, the sites and the phones are external
+// boundaries.
 export async function createActions({
   dataDirectory,
   aiSession = CLAUDE_CODE,
   fetch,
+  notificationChannel = HOME_ASSISTANT,
 }: {
   dataDirectory: string;
   aiSession?: IAiSession;
   fetch?: typeof globalThis.fetch;
+  notificationChannel?: INotificationChannel;
 }) {
   const workspace = await openWorkspace(dataDirectory);
   const pepSource = createPepSource(fetch);
@@ -77,6 +87,11 @@ export async function createActions({
     return offre;
   }
 
+  // Sends a notification to the Candidat of the Offre, on their channel (spec « Notification »)
+  async function notify(offre: Offre, notification: INotification): Promise<void> {
+    await notificationChannel.send(workspace.notificationTargetOf(offre.candidatId), notification);
+  }
+
   return {
     listCandidats(): Promise<Candidat[]> {
       return workspace.listCandidats();
@@ -101,11 +116,13 @@ export async function createActions({
           const { fiche, isInZone } = await pepSource.readFiche(listedOffre.reference, veille.zone);
           const offre = await workspace.saveOffre({ candidatId, source, listedOffre, fiche, isInZone });
           newOffreList.push(offre);
-          // A new Offre in the Zone starts its Recherche, except the ones already online at the first
-          // launch (ADR-0003)
-          if (isInZone && !isFirstLaunch) {
-            await workspace.createJob(offre, 'recherche');
+          // A new Offre in the Zone starts its Recherche and is notified, except the ones already
+          // online at the first launch (ADR-0003)
+          if (!isInZone || isFirstLaunch) {
+            continue;
           }
+          await workspace.createJob(offre, 'recherche');
+          await notify(offre, composeNouvelleOffreNotification(offre));
         }
         detectionList.push(
           DETECTION_SCHEMA.parse({
@@ -214,12 +231,19 @@ export async function createActions({
     async runQueuedJobs(): Promise<Job[]> {
       const jobList: Job[] = [];
       for (let job = await workspace.claimNextJob(); job !== null; job = await workspace.claimNextJob()) {
+        let finishedJob: Job;
         try {
-          const { job: finishedJob } = await runJob(job);
-          jobList.push(finishedJob);
+          ({ job: finishedJob } = await runJob(job));
         } catch (error) {
           // An error fails this job only, the one running, and the worker goes on with the queue
           jobList.push(...(await workspace.failRunningJobs(error instanceof Error ? error.message : String(error))));
+          continue;
+        }
+        jobList.push(finishedJob);
+        // Out of the try: a notification that cannot be sent is no failure of the job, and stops the
+        // worker visibly instead
+        if (finishedJob.module === 'recherche' && finishedJob.state === 'done') {
+          await notify(finishedJob.offre, composeRecherchePreteNotification(finishedJob.offre));
         }
       }
       return jobList;

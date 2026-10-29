@@ -1,2 +1,7 @@
 #!/bin/sh
-exec node "$(dirname "$0")/../src/cli/jf.ts" "$@"
+root="$(dirname "$0")/.."
+# .env, out of git, holds the Home Assistant settings of the notifications (README « Notifications »)
+if [ -f "$root/.env" ]; then
+  exec node --env-file="$root/.env" "$root/src/cli/jf.ts" "$@"
+fi
+exec node "$root/src/cli/jf.ts" "$@"

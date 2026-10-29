@@ -7,6 +7,7 @@ Veille d'offres d'emploi et préparation des candidatures. Vocabulaire : `GLOSSA
 ```bash
 mise install                                   # Node 26, lefthook, gitleaks, puis npm install (et prisma generate) et les git hooks
 mise run init                                  # crée data/config.json depuis l'exemple, à adapter ensuite, et remplit dev-data/
+cp .env.example .env                           # puis y renseigner l'URL et le token de Home Assistant, pour les notifications
 jf                                             # affiche l'aide
 jf detect                                      # cherche les nouvelles Offres de chaque Veille
 jf list lea                                    # liste les Offres d'un Candidat, avec leur statut et celles qui sont Expirées
@@ -22,6 +23,15 @@ jf edit 2026-2445600 recherche                 # corrige la Version retenue d'un
 ## Worker
 
 Lancer un module ne fait que mettre son job en file. Le worker, service lpm `worker` déclaré dans `.lpm.yml` (`mise run worker`), exécute les jobs de `data/` un par un, donc une seule session Claude à la fois, dans son propre processus : redémarrer le front ne coupe pas une session (ADR-0003). Un job interrompu par un arrêt du worker passe « en échec » à son redémarrage, et se relance avec `jf run`. Une nouvelle Offre détectée dans la Zone met sa Recherche en file, sauf au premier lancement.
+
+## Notifications
+
+Le Candidat est notifié sur son téléphone :
+
+- d'une nouvelle Offre dans sa Zone, avec son titre, sa juridiction et sa Date limite. Rien n'est envoyé au premier lancement, ni quand la Détection ne trouve rien ;
+- d'une Recherche prête, quand le worker l'a produite.
+
+Le seul canal est Home Assistant. La cible de chaque Candidat est le service `notify.mobile_app_*` de son téléphone, dans `data/config.json`. L'URL de Home Assistant et un token longue durée (profil Home Assistant, onglet Sécurité) vont dans `.env`, hors de git, sur le modèle de `.env.example`. `jf` et le worker le lisent au lancement. Une notification qui ne part pas fait échouer la commande, ou arrête le worker, avec un message qui dit quoi vérifier : relancer le worker une fois le problème réglé.
 
 ## Données
 
@@ -53,8 +63,10 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 - `src/edit/` : le prompt fixe de `jf edit`, qui ouvre une session dans le dossier de l'Offre, sans shell ni web, où aucun Brouillon ne peut être modifié.
 - `src/statut/` : les règles du statut d'une Offre : le calcul d'Expirée, et le gel de la Lettre retenue d'une Offre Postulée.
 - `src/modules/` : un dossier par module, avec un seul point d'entrée. Un module n'en importe jamais un autre, ce que vérifie `test/architecture.test.ts`. Un module IA, comme `recherche/`, a sa partie fixe du prompt dans `prompt.ts` et ses Consignes par défaut dans `consignes.ts`.
+- `src/modules/notification/` : le texte de chaque notification, et l'interface commune aux canaux. Seul `acl/home-assistant.ts` sait appeler Home Assistant.
 - `prisma/` : le schéma, les migrations et le seed.
 - `test/fixtures/pep/` : les réponses du site PEP enregistrées le 2026-10-29, que `test/recorded-http.ts` sert aux tests à la place du vrai site.
+- `test/fake-notification-channel.ts` : le faux canal de notification, qui garde les notifications au lieu de les envoyer. Les tests ne lisent jamais `.env`, et `vitest.config.ts` vide les réglages de Home Assistant : un test sans le faux canal échoue au lieu d'envoyer une vraie notification.
 - `test/fake-ai-session.ts` : le faux lancement de Claude, qui écrit l'Artefact prévu et garde le prompt reçu. `test/fixtures/claude/claude` remplace le binaire `claude` pour tester le vrai lancement sans ouvrir de session.
 
 ## Commandes

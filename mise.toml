@@ -40,7 +40,8 @@ run = "react-router dev --host"
 
 [tasks.worker]
 description = "Run the queued jobs of data/, one Claude session at a time: the lpm service worker (ADR-0003)"
-run = "node src/worker/worker.ts"
+# .env holds the Home Assistant settings of the notifications
+run = "node --env-file-if-exists=.env src/worker/worker.ts"
 
 [tasks."lint:ts"]
 description = "Lint with ESLint"

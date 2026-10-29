@@ -46,6 +46,15 @@ export async function openWorkspace(dataDirectory: string) {
       return path.join(offreDirectoryOf(offre), artefact, `v${String(number)}`);
     },
 
+    // Where a Candidat receives their notifications, as their config names it
+    notificationTargetOf(candidatId: string): string {
+      const candidat = config.candidatList.find(({ id }) => id === candidatId);
+      if (candidat === undefined) {
+        throw new Error(`Candidat inconnu : ${candidatId}. « jf candidats » liste les Candidats.`);
+      }
+      return candidat.notification.service;
+    },
+
     // The Consignes with which a Candidat replaced the default ones of an Artefact, if any
     readConsignes(candidatId: string, artefact: Artefact): string | null {
       return readTextFile(path.join(candidatDirectoryOf(candidatId), 'consignes', `${artefact}.md`));
