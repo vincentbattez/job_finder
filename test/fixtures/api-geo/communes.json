@@ -2272,5 +2272,23 @@
         "nom": "Île-de-France"
       }
     }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Grenoble&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Grenoble",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.7155,
+          45.1842
+        ]
+      },
+      "code": "38185",
+      "_score": 2.5614,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    }
   ]
 }

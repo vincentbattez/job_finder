@@ -197,7 +197,7 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
     return formatError === undefined ? undefined : `Le fichier ${outputPath} est mal formé : ${formatError}.`;
   }
 
-  return async function runJob(job: Job): Promise<ModuleRun> {
+  return async function runJob(job: Job & { module: Artefact }): Promise<ModuleRun> {
     const { offre, module } = job;
     const aiModule = AI_MODULE_BY_ARTEFACT[module];
     if (aiModule === undefined) {

@@ -17,6 +17,7 @@ import {
   type Job,
   type Lieu,
   type ListedOffre,
+  type Module,
   type Offre,
   type Veille,
   type Version,
@@ -98,14 +99,14 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       );
     },
 
-    async createJob(offre: Offre, module: Artefact): Promise<Job> {
+    async createJob(offre: Offre, module: Module): Promise<Job> {
       return JOB_SCHEMA.parse(await prisma.job.create({ data: { module, offreId: offre.id }, include: JOB_INCLUDE }));
     },
 
     // The job runs and its Version is created, numbered after the last Version of its Artefact,
     // with the Versions it reads
     async startJob(
-      { id, module, offre }: Job,
+      { id, module, offre }: Job & { module: Artefact },
       {
         consignes,
         hasCandidatConsignes,
@@ -144,7 +145,7 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       { job, version }: { job: Job; version: Version },
       { isReady, log, sessionId }: { isReady: boolean; log: string; sessionId: string | null },
     ): Promise<{ job: Job; version: Version }> {
-      const versionWhere = { offreId: job.offre.id, artefact: job.module, number: version.number };
+      const versionWhere = { offreId: job.offre.id, artefact: version.artefact, number: version.number };
       await prisma.$transaction([
         prisma.version.updateMany({ where: versionWhere, data: { state: isReady ? 'ready' : 'failed' } }),
         prisma.job.update({ where: { id: job.id }, data: { state: isReady ? 'done' : 'failed', log, sessionId } }),
@@ -159,6 +160,13 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
           }),
         ),
       };
+    },
+
+    // A job that ran without a Version, such as an extraction, is done
+    async finishJobWithoutVersion({ id }: Job, { log, sessionId }: { log: string; sessionId: string | null }) {
+      return JOB_SCHEMA.parse(
+        await prisma.job.update({ where: { id }, data: { state: 'done', log, sessionId }, include: JOB_INCLUDE }),
+      );
     },
 
     async listJobs(offre: Offre): Promise<Job[]> {
@@ -236,6 +244,13 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
 
     async setLieu({ id }: Offre, lieu: Lieu): Promise<void> {
       await prisma.offre.update({ where: { id }, data: lieu });
+    },
+
+    // The fields read in its Fiche de poste replace those of the Offre, its title included
+    async fillOffre({ id }: Offre, { title, fiche, lieu }: { title: string; fiche: FicheDePoste; lieu: Lieu }) {
+      const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = fiche;
+      const data = { title, dateLimite, employer, workplace, applicationEmail, contact1, contact2, ...lieu };
+      return OFFRE_SCHEMA.parse(await prisma.offre.update({ where: { id }, data, include: OFFRE_INCLUDE }));
     },
 
     async setStatus(reference: string, status: Offre['status']): Promise<void> {
