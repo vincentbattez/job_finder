@@ -12,7 +12,8 @@ async function chooseCandidat(page: Page, name: string) {
 
 // Léa reads the front on her phone through the VPN (ADR-0002). overflow-x: clip hides a horizontal
 // scrollbar, so the check is that nothing runs past the right edge, where it would be cut off. The
-// map lays its tiles and points out past its edges and clips them: only the map itself counts.
+// map lays its tiles and points out past its edges and clips them: only the map itself counts. On a
+// cold dev server the stylesheet may apply after the page shows: the check polls until it does.
 function findOverflowing(page: Page): Promise<string[]> {
   return page.locator('body').evaluate((body) =>
     [...body.querySelectorAll('*')]
@@ -128,13 +129,13 @@ test.describe('Offres of a Candidat', () => {
     await chooseCandidat(page, 'Léa');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Léa');
 
-    expect(await findOverflowing(page)).toEqual([]);
+    await expect.poll(() => findOverflowing(page)).toEqual([]);
 
     await page.goto('/offres/2026-2445600');
     await page.locator('summary', { hasText: 'v2' }).click();
     await page.getByText('Lire la Fiche de poste').click();
 
-    expect(await findOverflowing(page)).toEqual([]);
+    await expect.poll(() => findOverflowing(page)).toEqual([]);
   });
 
   test('asks who is there before showing any Offre', async ({ page }) => {
