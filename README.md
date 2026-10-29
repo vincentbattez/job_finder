@@ -30,6 +30,7 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 
 - `src/actions/` : la couche d'actions, seule source de vérité de chaque fonctionnalité. La CLI et le front ne font que l'appeler (ADR-0003). Les tests passent par elle.
 - `src/cli/` : la CLI `jf`, qui relaie vers les actions.
+- `src/web/` : le front React Router, qui relaie lui aussi vers les actions. `mise run web` le lance en développement, et `/design` montre ses composants avec des Offres d'exemple. Les couleurs, les polices et les espacements sont des tokens de `src/web/tokens.css`.
 - `src/domain/` : les types domaine, tirés de leurs schémas Zod. Une fois passée l'anti-corruption layer, le code ne manipule qu'eux (ADR-0005).
 - `src/workspace/` : l'accès au dossier de données (config, base, dossiers des Candidats). Seul son dossier `acl/` lit la config et la base. Le client Prisma est généré dans `generated/`, hors de git.
 - `src/modules/` : un dossier par module, avec un seul point d'entrée. Un module n'en importe jamais un autre, ce que vérifie `test/architecture.test.ts`.
@@ -37,13 +38,14 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 
 ## Commandes
 
-| Commande              | Rôle                                                              |
-| --------------------- | ----------------------------------------------------------------- |
-| `mise run ci`         | Lint, typecheck et tests, comme la CI                             |
-| `mise run lint`       | ESLint, Prettier, Knip, et les migrations à jour du schéma        |
-| `mise run typecheck`  | TypeScript                                                        |
-| `mise run test:unit`  | Vitest : les actions et l'architecture                            |
-| `mise run test:e2e`   | Playwright : les parcours du front (dès L2)                       |
-| `mise run db:migrate` | Crée une migration depuis le schéma et l'applique à `dev-data/`   |
-| `mise run db:seed`    | Remplace les Offres de `dev-data/` par des Offres factices        |
-| `mise run db:reset`   | Recrée la base de `dev-data/` depuis les migrations, puis la seed |
+| Commande              | Rôle                                                               |
+| --------------------- | ------------------------------------------------------------------ |
+| `mise run ci`         | Lint, typecheck et tests, comme la CI                              |
+| `mise run lint`       | ESLint, Prettier, Knip, et les migrations à jour du schéma         |
+| `mise run typecheck`  | TypeScript                                                         |
+| `mise run test:unit`  | Vitest : les actions et l'architecture                             |
+| `mise run test:e2e`   | Playwright : les parcours du front                                 |
+| `mise run web`        | Lance le front en développement, ouvert au réseau local (ADR-0002) |
+| `mise run db:migrate` | Crée une migration depuis le schéma et l'applique à `dev-data/`    |
+| `mise run db:seed`    | Remplace les Offres de `dev-data/` par des Offres factices         |
+| `mise run db:reset`   | Recrée la base de `dev-data/` depuis les migrations, puis la seed  |

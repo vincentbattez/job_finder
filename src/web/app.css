@@ -1,0 +1,409 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: Dose (deal 3/3, seed soft-friendly-app-track-8518·cf75787d·2026-10-29·r0)
+ * nav: a top bar, the wordmark alone until the Candidat menu (#11) · signature: the Offre label, reference and Date limite in DM Mono over a dashed stub, above four plastic Artefact compartments · states: full and empty list, the four états · dose: white
+ * axes: light/grotesk-sans/chromatic-green · posture: committed · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a list and a fiche fit any tracker; the Offre became a pharmacy label with its Artefacts as an organiser's compartments */
+/* Hallmark · deviation: Expirée and En échec are red, against Dose's grey for a missed state, because the map of issue #20 asks red for Expirée · no fibre grain: an app screen takes the theme's surfaces, not its ornament */
+/* Hallmark · finish-review: subagent · 8 findings · 5 resolved 3 partial · gap: the list's loading and error states and the title linking to its fiche (#11), the empty list's action (#12) */
+@import url('./tokens.css');
+@import url('./base.css');
+
+.topbar {
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+}
+.topbar .container {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+}
+.wordmark {
+  font: var(--display-weight) var(--text-lg) / 1 var(--font-display);
+  letter-spacing: var(--tracking-display);
+}
+
+.page {
+  display: grid;
+  gap: var(--space-2xl);
+  padding-block: var(--space-xl) var(--space-3xl);
+}
+.page > section {
+  display: grid;
+  align-content: start;
+  gap: var(--space-md);
+  min-width: 0;
+}
+.page__head {
+  display: grid;
+  gap: var(--space-xs);
+}
+.page__head p {
+  color: var(--color-ink-2);
+}
+
+a {
+  text-decoration-color: var(--color-rule);
+  transition: text-decoration-color var(--dur-short) var(--ease-out);
+}
+a:hover {
+  text-decoration-color: var(--color-accent);
+}
+a:active {
+  color: var(--color-accent-deep);
+}
+.missing {
+  color: var(--color-muted);
+  font-family: var(--font-body);
+}
+/* A sunken tray where the Offres will land */
+.empty {
+  padding: var(--space-lg);
+  border-radius: var(--radius-card);
+  background: var(--color-paper-2);
+  color: var(--color-ink-2);
+}
+.reference,
+.date {
+  font-family: var(--font-outlier);
+  font-variant-numeric: tabular-nums;
+}
+.reference {
+  font-size: var(--text-sm);
+}
+.date {
+  white-space: nowrap;
+}
+
+.badge-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.badge {
+  --badge-ink: var(--color-statut-a-traiter);
+  --badge-soft: var(--color-statut-a-traiter-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 28px;
+  padding: 0 var(--space-sm);
+  border: var(--rule-hair) solid var(--badge-soft);
+  border-radius: var(--radius-pill);
+  background: var(--badge-soft);
+  color: var(--badge-ink);
+  font: 500 var(--text-sm) / 1 var(--font-body);
+  white-space: nowrap;
+}
+.badge[data-statut='postulee'] {
+  --badge-ink: var(--color-statut-postulee);
+  --badge-soft: var(--color-statut-postulee-soft);
+}
+.badge[data-statut='expiree'] {
+  --badge-ink: var(--color-statut-expiree);
+  --badge-soft: var(--color-statut-expiree-soft);
+}
+.badge[data-statut='archivee'] {
+  --badge-ink: var(--color-statut-archivee);
+  --badge-soft: var(--color-statut-archivee-soft);
+}
+.badge[data-etat='absent'] {
+  --badge-ink: var(--color-etat-absent);
+  --badge-soft: var(--color-etat-absent-soft);
+}
+.badge[data-etat='en_cours'] {
+  --badge-ink: var(--color-etat-en-cours);
+  --badge-soft: var(--color-etat-en-cours-soft);
+}
+.badge[data-etat='pret'] {
+  --badge-ink: var(--color-etat-pret);
+  --badge-soft: var(--color-etat-pret-soft);
+}
+.badge[data-etat='en_echec'] {
+  --badge-ink: var(--color-etat-en-echec);
+  --badge-soft: var(--color-etat-en-echec-soft);
+}
+/* What steps back keeps its place: a dashed rim instead of a fill */
+.badge:is([data-statut='archivee'], [data-etat='absent']) {
+  border-style: dashed;
+  border-color: var(--color-muted);
+}
+/* The one motion of the screen: a loader while a module writes the Artefact */
+.badge[data-etat='en_cours']::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-inline-end-color: color-mix(in oklab, currentColor 25%, transparent);
+  border-radius: var(--radius-pill);
+  animation: turn 900ms linear infinite;
+}
+@keyframes turn {
+  to {
+    transform: rotate(1turn);
+  }
+}
+/* A still arc reads as a letter: the label alone carries the état */
+@media (prefers-reduced-motion: reduce) {
+  .badge[data-etat='en_cours']::before {
+    content: none;
+  }
+}
+
+.offre-list {
+  width: 100%;
+  border-collapse: collapse;
+}
+.offre-list th {
+  padding: 0 var(--space-md) var(--space-xs) 0;
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+  color: var(--color-muted);
+  font: 500 var(--text-sm) var(--font-body);
+  text-align: start;
+  white-space: nowrap;
+}
+.offre-list td {
+  padding: var(--space-md) var(--space-md) var(--space-md) 0;
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+  vertical-align: top;
+}
+.offre-list :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+.offre-list__offre {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3xs);
+}
+.offre-list__title {
+  font-weight: 500;
+}
+.offre-list__workplace,
+.offre-list .reference {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+/* The label beside its Artefacts, then the contacts beside the Fiche de poste */
+.fiche {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  align-items: start;
+  gap: var(--space-xl);
+}
+.fiche__part {
+  display: grid;
+  gap: var(--space-sm);
+}
+.fiche h4 {
+  margin: 0;
+  font: var(--display-weight) var(--text-md) / 1.2 var(--font-display);
+  letter-spacing: var(--tracking-display);
+}
+.fiche__label {
+  display: grid;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+  border-radius: var(--radius-card);
+  background: var(--light);
+  box-shadow: var(--shadow-lift);
+}
+.fiche__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+.fiche__title h3 {
+  font-size: var(--text-xl);
+}
+.fiche__label > p {
+  color: var(--color-ink-2);
+}
+/* The tear-off stub of a pharmacy label: what identifies the Offre and when it closes */
+.fiche__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-xl);
+  margin: var(--space-xs) 0 0;
+  padding-top: var(--space-md);
+  border-top: var(--rule-hair) dashed var(--color-muted);
+}
+.fiche__facts dd {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+.fiche dt {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+/* Plastic compartments, one tint per Artefact like the days of a pill organiser: a tint names the
+   Artefact, never its état, which the badge carries */
+.artefact-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.artefact-list li {
+  --tint: var(--p-mon);
+  display: grid;
+  align-content: space-between;
+  justify-items: start;
+  gap: var(--space-md);
+  min-height: 7rem;
+  padding: var(--space-md);
+  border-radius: var(--radius-card);
+  background:
+    linear-gradient(color-mix(in oklab, var(--glint) 32%, transparent), transparent 18%),
+    color-mix(in oklab, var(--tint) 62%, var(--color-paper));
+  /* A glint along the top, a deeper tint at the foot, and the light it lets through on the paper */
+  box-shadow:
+    inset 0 1.5px 0 var(--glint),
+    inset 0 -24px 36px -28px oklch(from var(--tint) calc(l - 0.2) calc(c + 0.03) h),
+    0 18px 26px -16px color-mix(in oklab, var(--tint) 85%, transparent);
+  font-weight: 500;
+}
+.artefact-list li[data-artefact='lettre'] {
+  --tint: var(--p-tue);
+}
+.artefact-list li[data-artefact='fiche_entretien'] {
+  --tint: var(--p-wed);
+}
+.artefact-list li[data-artefact='visualisation'] {
+  --tint: var(--p-fri);
+}
+
+.fiche__contacts {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+}
+.fiche__contacts div {
+  display: grid;
+  gap: var(--space-3xs);
+}
+.fiche__contacts dd {
+  margin: 0;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+.prose {
+  max-width: 65ch;
+  line-height: 1.65;
+}
+.prose > * + * {
+  margin-top: var(--space-sm);
+}
+.prose :is(h1, h2, h3, h4) {
+  max-width: none;
+  margin-top: var(--space-lg);
+  font-size: var(--text-md);
+}
+.prose :is(h1, h2, h3, h4):first-child {
+  margin-top: 0;
+}
+.prose :is(ul, ol) {
+  margin-bottom: 0;
+  padding-inline-start: var(--space-lg);
+}
+
+.editor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-lg);
+}
+.editor__pane {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+.editor label,
+.editor__label {
+  color: var(--color-ink-2);
+  margin: 0;
+  font: 500 var(--text-sm) / 1.4 var(--font-body);
+}
+.editor textarea {
+  min-height: 20rem;
+  padding: var(--space-md);
+  border: var(--rule-hair) solid var(--color-muted);
+  border-radius: var(--radius-input);
+  outline: 2px solid transparent;
+  outline-offset: -3px;
+  background: var(--light);
+  color: var(--color-ink);
+  line-height: 1.6;
+  resize: vertical;
+  field-sizing: content;
+  transition: background-color var(--dur-short) var(--ease-out);
+}
+.editor textarea:hover {
+  background: var(--color-paper);
+}
+.editor textarea:focus-visible {
+  outline-color: var(--color-focus);
+}
+/* A Lettre is frozen once its Offre is Postulée */
+.editor textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.fiche .prose,
+.editor .prose {
+  max-width: none;
+  padding: var(--space-md);
+  border-radius: var(--radius-input);
+  background: var(--color-paper-2);
+}
+
+@media (max-width: 60rem) {
+  .editor,
+  .fiche {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* On a phone each Offre restacks as a block whose dates name themselves */
+@media (max-width: 40rem) {
+  .offre-list thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .offre-list tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs) var(--space-md);
+    padding-block: var(--space-md);
+    border-bottom: var(--rule-hair) solid var(--color-rule);
+  }
+  .offre-list td {
+    padding: 0;
+    border: 0;
+  }
+  .offre-list td:first-child {
+    flex-basis: 100%;
+  }
+  .offre-list td[data-label='Publiée le'] {
+    order: 1;
+  }
+  .offre-list td[data-label]::before {
+    content: attr(data-label) ' ';
+    color: var(--color-muted);
+    font: 500 var(--text-sm) var(--font-body);
+  }
+  .fiche__label {
+    padding: var(--space-md);
+  }
+}

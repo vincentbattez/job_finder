@@ -34,6 +34,10 @@ run = "prisma db seed"
 description = "Recreate the dev-data/ database from the migrations, then seed it"
 run = ["mkdir -p dev-data && prisma migrate reset --force", "mise run db:seed"]
 
+[tasks.web]
+description = "Start the front in development mode, open to the local network (ADR-0002)"
+run = "react-router dev --host"
+
 [tasks."lint:ts"]
 description = "Lint with ESLint"
 run = "eslint ."
