@@ -1,10 +1,12 @@
-import { useLoaderData, type LoaderFunctionArgs } from 'react-router';
+import { useLoaderData, useSearchParams, type LoaderFunctionArgs } from 'react-router';
 
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidat } from '#/web/candidat.server.ts';
 import { Detection } from '#/web/components/detection.tsx';
 import { FicheDePosteImport } from '#/web/components/fiche-de-poste-import.tsx';
+import { filterOffres, OffreFilters } from '#/web/components/offre-filters.tsx';
 import { OffreList } from '#/web/components/offre-list.tsx';
+import { OffreMap } from '#/web/components/offre-map.tsx';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { candidat } = await readCandidat(request);
@@ -17,6 +19,7 @@ export function meta() {
 
 export default function Offres() {
   const { candidat, offreList } = useLoaderData<typeof loader>();
+  const [searchParameters] = useSearchParams();
   if (candidat === null) {
     return (
       <main className="container page">
@@ -27,14 +30,21 @@ export default function Offres() {
       </main>
     );
   }
+  const filteredOffreList = filterOffres(offreList, searchParameters);
   return (
     <main className="container page">
       <div className="page__head">
         <h1>Offres de {candidat.name}</h1>
         <Detection />
         <FicheDePosteImport />
+        {offreList.length > 0 && <OffreFilters offreList={offreList} />}
       </div>
-      <OffreList offreList={offreList} />
+      {offreList.length > 0 && <OffreMap offreList={filteredOffreList} />}
+      {filteredOffreList.length === 0 && offreList.length > 0 ? (
+        <p className="empty">Aucune Offre ne répond à ces filtres.</p>
+      ) : (
+        <OffreList offreList={filteredOffreList} />
+      )}
     </main>
   );
 }

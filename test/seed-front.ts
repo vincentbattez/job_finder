@@ -12,10 +12,13 @@ import { createRecordedFetch } from './recorded-http.ts';
 // JF_DATA_DIRECTORY, through the actions and with the fakes of the external boundaries: the HTTP of
 // the PEP Source recorded on 2026-10-29, the fake launch of Claude and the fake notification
 // channel. Léa follows the attaché de justice Offres, and the Béthune Offre 2026-2445600 has two
-// Recherches, the first one retenue, and a Lettre; Camille has no Veille, hence no Offre. The tests
+// Recherches, the first one retenue, and a Lettre; the Melun Offres, past their Date limite, are
+// Postulée, Archivée and À traiter; Camille has no Veille, hence no Offre. The tests
 // that change data work on Offres of their own: Bastia 2026-2426147 (a Recherche and a Lettre to
 // correct), Versailles 2026-2409178 (two Recherches), Rennes 2026-2420931 (a Recherche, ready for
-// its Lettre) and Narbonne 2026-2412591 (a Recherche en échec).
+// its Lettre) and Narbonne 2026-2412591 (a Recherche en échec). Sacha, without Veille either, has
+// a Profil and is the one whose Profil and Consignes the e2e tests change. Léa's Offre
+// 2026-2409247 has a Recherche made with the default Consignes, then one made with hers.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 // The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
 if (!dataDirectory.startsWith(tmpdir())) {
@@ -26,6 +29,7 @@ const BASTIA_REFERENCE = '2026-2426147';
 const VERSAILLES_REFERENCE = '2026-2409178';
 const RENNES_REFERENCE = '2026-2420931';
 const NARBONNE_REFERENCE = '2026-2412591';
+const CONSIGNES_REFERENCE = '2026-2409247';
 const NOTIFICATION = { channel: 'home-assistant', service: 'notify.mobile_app_test' };
 const CONFIG = {
   defaultDelayMonths: 6,
@@ -44,6 +48,7 @@ const CONFIG = {
       ],
     },
     { id: 'camille', name: 'Camille', notification: NOTIFICATION, veilleList: [] },
+    { id: 'sacha', name: 'Sacha', notification: NOTIFICATION, veilleList: [] },
   ],
 };
 
@@ -93,6 +98,8 @@ const actions = await createActions({
     BASTIA_LETTRE,
     rechercheRun('Recherche : la JIRS du TJ de Rennes'),
     { isSuccess: false },
+    rechercheRun('Recherche par défaut : le TJ de Pontoise'),
+    rechercheRun('Recherche selon Léa : le TJ de Pontoise'),
   ),
 });
 await actions.detect();
@@ -112,3 +119,19 @@ await actions.runQueuedJobs();
 await actions.runModule({ module: 'recherche', reference: RENNES_REFERENCE });
 await actions.runModule({ module: 'recherche', reference: NARBONNE_REFERENCE });
 await actions.runQueuedJobs();
+
+// What jf profil would have written in Sacha's Profil
+const sachaProfilDirectory = path.join(dataDirectory, 'candidats/sacha/profil');
+writeFileSync(path.join(sachaProfilDirectory, 'cv.md'), '# CV de Sacha\n\n## Formation\n\n- Master 2 droit public\n');
+writeFileSync(path.join(sachaProfilDirectory, 'faits.md'), '# Faits\n\n## Mobilité\n\n- Lille et alentours\n');
+
+// One Recherche with the default Consignes, one with Léa's, which she then deletes
+await actions.runModule({ module: 'recherche', reference: CONSIGNES_REFERENCE });
+await actions.runQueuedJobs();
+await actions.saveConsignes({ candidatId: 'lea', module: 'recherche', consignes: 'Creuse la ville.\n' });
+await actions.runModule({ module: 'recherche', reference: CONSIGNES_REFERENCE });
+await actions.runQueuedJobs();
+await actions.deleteConsignes({ candidatId: 'lea', module: 'recherche' });
+
+await actions.changeStatus({ reference: '2026-2285305', status: 'postulee' });
+await actions.changeStatus({ reference: '2026-2290529', status: 'archivee' });

@@ -1,0 +1,2294 @@
+{
+  "https://geo.api.gouv.fr/communes?nom=Aix%20en%20provence&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Aix-en-Provence",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.3879,
+          43.536
+        ]
+      },
+      "code": "13001",
+      "_score": 0.5759028149828533,
+      "region": {
+        "code": "93",
+        "nom": "Provence-Alpes-Côte d'Azur"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Aix%20en%20Provence&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Aix-en-Provence",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.3879,
+          43.536
+        ]
+      },
+      "code": "13001",
+      "_score": 0.5759028149828533,
+      "region": {
+        "code": "93",
+        "nom": "Provence-Alpes-Côte d'Azur"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Aurillac&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Aurillac",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.4416,
+          44.9281
+        ]
+      },
+      "code": "15014",
+      "_score": 1.26214,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    },
+    {
+      "nom": "Saint-Pierre-d'Aurillac",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -0.1916,
+          44.5807
+        ]
+      },
+      "code": "33463",
+      "_score": 0.848260417454516,
+      "region": {
+        "code": "75",
+        "nom": "Nouvelle-Aquitaine"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Auxerre&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Auxerre",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.5821,
+          47.7939
+        ]
+      },
+      "code": "89024",
+      "_score": 1.35097,
+      "region": {
+        "code": "27",
+        "nom": "Bourgogne-Franche-Comté"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Avesnes-sur-Helpe&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Avesnes-sur-Helpe",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.9269,
+          50.1224
+        ]
+      },
+      "code": "59036",
+      "_score": 0.33335742544144575,
+      "region": {
+        "code": "32",
+        "nom": "Hauts-de-France"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Avignon&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Avignon",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          4.8333,
+          43.9416
+        ]
+      },
+      "code": "84007",
+      "_score": 1.349742580832386,
+      "region": {
+        "code": "93",
+        "nom": "Provence-Alpes-Côte d'Azur"
+      }
+    },
+    {
+      "nom": "Avignonet",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.6671,
+          44.9562
+        ]
+      },
+      "code": "38023",
+      "_score": 0.7133230069954856,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    },
+    {
+      "nom": "Villeneuve-lès-Avignon",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          4.792,
+          43.9776
+        ]
+      },
+      "code": "30351",
+      "_score": 0.6058106990986643,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    },
+    {
+      "nom": "Avignonet-Lauragais",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.7777,
+          43.3773
+        ]
+      },
+      "code": "31037",
+      "_score": 0.56272023965369,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    },
+    {
+      "nom": "Saint-Saturnin-lès-Avignon",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          4.9447,
+          43.9625
+        ]
+      },
+      "code": "84119",
+      "_score": 0.5075359654899052,
+      "region": {
+        "code": "93",
+        "nom": "Provence-Alpes-Côte d'Azur"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=B&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Brest",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -4.4996,
+          48.4085
+        ]
+      },
+      "code": "29019",
+      "_score": 0.054537837484188,
+      "region": {
+        "code": "53",
+        "nom": "Bretagne"
+      }
+    },
+    {
+      "nom": "Bordeaux",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -0.5848,
+          44.8624
+        ]
+      },
+      "code": "33063",
+      "_score": 0.05213495472248187,
+      "region": {
+        "code": "75",
+        "nom": "Nouvelle-Aquitaine"
+      }
+    },
+    {
+      "nom": "Bron",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          4.9116,
+          45.7355
+        ]
+      },
+      "code": "69029",
+      "_score": 0.04321571733994312,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    },
+    {
+      "nom": "Boulogne-Billancourt",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.2429,
+          48.8375
+        ]
+      },
+      "code": "92012",
+      "_score": 0.04118718176985127,
+      "region": {
+        "code": "11",
+        "nom": "Île-de-France"
+      }
+    },
+    {
+      "nom": "Besançon",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          6.0123,
+          47.2602
+        ]
+      },
+      "code": "25056",
+      "_score": 0.037283064744145195,
+      "region": {
+        "code": "27",
+        "nom": "Bourgogne-Franche-Comté"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Bastia&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Bastia",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          9.424,
+          42.6861
+        ]
+      },
+      "code": "2B033",
+      "_score": 1.46867,
+      "region": {
+        "code": "94",
+        "nom": "Corse"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=B%C3%A9thune&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Béthune",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.6438,
+          50.5299
+        ]
+      },
+      "code": "62119",
+      "_score": 1.25224,
+      "region": {
+        "code": "32",
+        "nom": "Hauts-de-France"
+      }
+    },
+    {
+      "nom": "Vendin-lès-Béthune",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.6062,
+          50.5473
+        ]
+      },
+      "code": "62841",
+      "_score": 0.6936282799322565,
+      "region": {
+        "code": "32",
+        "nom": "Hauts-de-France"
+      }
+    },
+    {
+      "nom": "Fouquières-lès-Béthune",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.6127,
+          50.5126
+        ]
+      },
+      "code": "62350",
+      "_score": 0.6637151480851694,
+      "region": {
+        "code": "32",
+        "nom": "Hauts-de-France"
+      }
+    },
+    {
+      "nom": "Hesdigneul-lès-Béthune",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.5975,
+          50.4962
+        ]
+      },
+      "code": "62445",
+      "_score": 0.6618771111201038,
+      "region": {
+        "code": "32",
+        "nom": "Hauts-de-France"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=BEZIERS&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Béziers",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.2342,
+          43.3481
+        ]
+      },
+      "code": "34032",
+      "_score": 1.81545,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    },
+    {
+      "nom": "Villeneuve-lès-Béziers",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.2909,
+          43.3178
+        ]
+      },
+      "code": "34336",
+      "_score": 0.7966758751126278,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    },
+    {
+      "nom": "Cazouls-lès-Béziers",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.0923,
+          43.3971
+        ]
+      },
+      "code": "34069",
+      "_score": 0.6747376116977091,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    },
+    {
+      "nom": "Thézan-lès-Béziers",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.1593,
+          43.4126
+        ]
+      },
+      "code": "34310",
+      "_score": 0.6610391452552659,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    },
+    {
+      "nom": "Murviel-lès-Béziers",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.1362,
+          43.4597
+        ]
+      },
+      "code": "34178",
+      "_score": 0.6602442880541134,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=BLOIS&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Blois",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.3049,
+          47.5813
+        ]
+      },
+      "code": "41018",
+      "_score": 1.4721899999999999,
+      "region": {
+        "code": "24",
+        "nom": "Centre-Val de Loire"
+      }
+    },
+    {
+      "nom": "Blois-sur-Seille",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.6677,
+          46.7479
+        ]
+      },
+      "code": "39057",
+      "_score": 0.7337157088003836,
+      "region": {
+        "code": "27",
+        "nom": "Bourgogne-Franche-Comté"
+      }
+    },
+    {
+      "nom": "Naives-en-Blois",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.5508,
+          48.6665
+        ]
+      },
+      "code": "55368",
+      "_score": 0.6538760924476645,
+      "region": {
+        "code": "44",
+        "nom": "Grand Est"
+      }
+    },
+    {
+      "nom": "Broussey-en-Blois",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.5534,
+          48.6342
+        ]
+      },
+      "code": "55084",
+      "_score": 0.6532362855777142,
+      "region": {
+        "code": "44",
+        "nom": "Grand Est"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Bonneville&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Bonneville",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          6.404,
+          46.0786
+        ]
+      },
+      "code": "74042",
+      "_score": 1.13335,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    },
+    {
+      "nom": "Bonneville",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.2627,
+          50.0776
+        ]
+      },
+      "code": "80113",
+      "_score": 1.00325,
+      "region": {
+        "code": "32",
+        "nom": "Hauts-de-France"
+      }
+    },
+    {
+      "nom": "La Bonneville",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -1.4645,
+          49.3873
+        ]
+      },
+      "code": "50064",
+      "_score": 0.9210098131571242,
+      "region": {
+        "code": "28",
+        "nom": "Normandie"
+      }
+    },
+    {
+      "nom": "La Bonneville-sur-Iton",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.0372,
+          48.9959
+        ]
+      },
+      "code": "27082",
+      "_score": 0.6613430128809831,
+      "region": {
+        "code": "28",
+        "nom": "Normandie"
+      }
+    },
+    {
+      "nom": "Bonneville-sur-Touques",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          0.1179,
+          49.3283
+        ]
+      },
+      "code": "14086",
+      "_score": 0.6489503605976502,
+      "region": {
+        "code": "28",
+        "nom": "Normandie"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Boulogne%20sur%20mer&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Boulogne-sur-Mer",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.6062,
+          50.7303
+        ]
+      },
+      "code": "62160",
+      "_score": 0.17912619671887167,
+      "region": {
+        "code": "32",
+        "nom": "Hauts-de-France"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=BOULOGNE%20SUR%20MER&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Boulogne-sur-Mer",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.6062,
+          50.7303
+        ]
+      },
+      "code": "62160",
+      "_score": 0.17912619671887167,
+      "region": {
+        "code": "32",
+        "nom": "Hauts-de-France"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Boulogne-sur-mer&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Boulogne-sur-Mer",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.6062,
+          50.7303
+        ]
+      },
+      "code": "62160",
+      "_score": 0.17912619671887167,
+      "region": {
+        "code": "32",
+        "nom": "Hauts-de-France"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Boulogne-sur-Mer&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Boulogne-sur-Mer",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.6062,
+          50.7303
+        ]
+      },
+      "code": "62160",
+      "_score": 0.17912619671887167,
+      "region": {
+        "code": "32",
+        "nom": "Hauts-de-France"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=BOURG-EN-BRESSE&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Bourg-en-Bresse",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.2469,
+          46.2027
+        ]
+      },
+      "code": "01053",
+      "_score": 0.24187375395346494,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Caen&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Caen",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -0.3722,
+          49.1846
+        ]
+      },
+      "code": "14118",
+      "_score": 2.0940000000000003,
+      "region": {
+        "code": "28",
+        "nom": "Normandie"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Cayenne&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Cayenne",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -52.3319,
+          4.9464
+        ]
+      },
+      "code": "97302",
+      "_score": 1.62675,
+      "region": {
+        "code": "03",
+        "nom": "Guyane"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=CHARTRES&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Chartres",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.5046,
+          48.4481
+        ]
+      },
+      "code": "28085",
+      "_score": 1.38324,
+      "region": {
+        "code": "24",
+        "nom": "Centre-Val de Loire"
+      }
+    },
+    {
+      "nom": "Chartres-de-Bretagne",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -1.7039,
+          48.0451
+        ]
+      },
+      "code": "35066",
+      "_score": 0.8028842053763653,
+      "region": {
+        "code": "53",
+        "nom": "Bretagne"
+      }
+    },
+    {
+      "nom": "Ver-lès-Chartres",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.4841,
+          48.379
+        ]
+      },
+      "code": "28403",
+      "_score": 0.6931405631567343,
+      "region": {
+        "code": "24",
+        "nom": "Centre-Val de Loire"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=colmar&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Colmar",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          7.3924,
+          48.1115
+        ]
+      },
+      "code": "68066",
+      "_score": 1.2347719494459097,
+      "region": {
+        "code": "44",
+        "nom": "Grand Est"
+      }
+    },
+    {
+      "nom": "Colmars",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          6.6585,
+          44.1602
+        ]
+      },
+      "code": "04061",
+      "_score": 0.6770620004031664,
+      "region": {
+        "code": "93",
+        "nom": "Provence-Alpes-Côte d'Azur"
+      }
+    },
+    {
+      "nom": "Villars-Colmars",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          6.5713,
+          44.1952
+        ]
+      },
+      "code": "04240",
+      "_score": 0.5317009450470468,
+      "region": {
+        "code": "93",
+        "nom": "Provence-Alpes-Côte d'Azur"
+      }
+    },
+    {
+      "nom": "Herrlisheim-près-Colmar",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          7.3242,
+          48.0183
+        ]
+      },
+      "code": "68134",
+      "_score": 0.48070228262076126,
+      "region": {
+        "code": "44",
+        "nom": "Grand Est"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Cr%C3%A9teil&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Créteil",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.4523,
+          48.7845
+        ]
+      },
+      "code": "94028",
+      "_score": 1.93397,
+      "region": {
+        "code": "11",
+        "nom": "Île-de-France"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Cusset&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Cusset",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.4774,
+          46.1342
+        ]
+      },
+      "code": "03095",
+      "_score": 1.13316,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Draguignan&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Draguignan",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          6.4651,
+          43.5346
+        ]
+      },
+      "code": "83050",
+      "_score": 1.40826,
+      "region": {
+        "code": "93",
+        "nom": "Provence-Alpes-Côte d'Azur"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=%C3%89vry-Courcouronnes&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Évry-Courcouronnes",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.4313,
+          48.6287
+        ]
+      },
+      "code": "91228",
+      "_score": 1.6691899999999997,
+      "region": {
+        "code": "11",
+        "nom": "Île-de-France"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=La%20Rochelle&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "La Rochelle",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -1.1765,
+          46.162
+        ]
+      },
+      "code": "17300",
+      "_score": 0.10182602376347212,
+      "region": {
+        "code": "75",
+        "nom": "Nouvelle-Aquitaine"
+      }
+    },
+    {
+      "nom": "La Rochelle",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.7258,
+          47.7515
+        ]
+      },
+      "code": "70450",
+      "_score": 0.056639526148299146,
+      "region": {
+        "code": "27",
+        "nom": "Bourgogne-Franche-Comté"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=LE%20MANS&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Le Mans",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          0.1957,
+          47.9819
+        ]
+      },
+      "code": "72181",
+      "_score": 0.19079792494980974,
+      "region": {
+        "code": "52",
+        "nom": "Pays de la Loire"
+      }
+    },
+    {
+      "nom": "Mansle-les-Fontaines",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          0.1866,
+          45.8874
+        ]
+      },
+      "code": "16206",
+      "_score": 0.06840216610392659,
+      "region": {
+        "code": "75",
+        "nom": "Nouvelle-Aquitaine"
+      }
+    },
+    {
+      "nom": "Sargé-lès-le-Mans",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          0.2503,
+          48.0394
+        ]
+      },
+      "code": "72328",
+      "_score": 0.062421384833479254,
+      "region": {
+        "code": "52",
+        "nom": "Pays de la Loire"
+      }
+    },
+    {
+      "nom": "Étival-lès-le-Mans",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          0.0785,
+          47.964
+        ]
+      },
+      "code": "72127",
+      "_score": 0.06228989715609206,
+      "region": {
+        "code": "52",
+        "nom": "Pays de la Loire"
+      }
+    },
+    {
+      "nom": "Voivres-lès-le-Mans",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          0.0781,
+          47.9274
+        ]
+      },
+      "code": "72381",
+      "_score": 0.06091511151504515,
+      "region": {
+        "code": "52",
+        "nom": "Pays de la Loire"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Lille&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Lille",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.0468,
+          50.6311
+        ]
+      },
+      "code": "59350",
+      "_score": 1.8082078747980779,
+      "region": {
+        "code": "32",
+        "nom": "Hauts-de-France"
+      }
+    },
+    {
+      "nom": "Lillers",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.4824,
+          50.5622
+        ]
+      },
+      "code": "62516",
+      "_score": 0.5930316358519863,
+      "region": {
+        "code": "32",
+        "nom": "Hauts-de-France"
+      }
+    },
+    {
+      "nom": "Lillemer",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -1.8538,
+          48.5703
+        ]
+      },
+      "code": "35153",
+      "_score": 0.5403173538815326,
+      "region": {
+        "code": "53",
+        "nom": "Bretagne"
+      }
+    },
+    {
+      "nom": "Saint-André-lez-Lille",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.0415,
+          50.6599
+        ]
+      },
+      "code": "59527",
+      "_score": 0.4120008545816538,
+      "region": {
+        "code": "32",
+        "nom": "Hauts-de-France"
+      }
+    },
+    {
+      "nom": "Lillebonne",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          0.5393,
+          49.505
+        ]
+      },
+      "code": "76384",
+      "_score": 0.3987382500251008,
+      "region": {
+        "code": "28",
+        "nom": "Normandie"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Lons-le-Saunier&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Lons-le-Saunier",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.5574,
+          46.6758
+        ]
+      },
+      "code": "39300",
+      "_score": 0.14007032315715945,
+      "region": {
+        "code": "27",
+        "nom": "Bourgogne-Franche-Comté"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=LONS-LE-SAUNIER&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Lons-le-Saunier",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.5574,
+          46.6758
+        ]
+      },
+      "code": "39300",
+      "_score": 0.14007032315715945,
+      "region": {
+        "code": "27",
+        "nom": "Bourgogne-Franche-Comté"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Lorient&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Lorient",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -3.3799,
+          47.7494
+        ]
+      },
+      "code": "56121",
+      "_score": 1.5832899999999999,
+      "region": {
+        "code": "53",
+        "nom": "Bretagne"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Lyon&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Lyon",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          4.8351,
+          45.758
+        ]
+      },
+      "code": "69123",
+      "_score": 3.3309776503428137,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    },
+    {
+      "nom": "Cognat-Lyonne",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.3002,
+          46.11
+        ]
+      },
+      "code": "03080",
+      "_score": 0.4452426608471379,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    },
+    {
+      "nom": "Lyons-la-Forêt",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.4761,
+          49.3969
+        ]
+      },
+      "code": "27377",
+      "_score": 0.43860828416329795,
+      "region": {
+        "code": "28",
+        "nom": "Normandie"
+      }
+    },
+    {
+      "nom": "Beauvoir-en-Lyons",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.5852,
+          49.487
+        ]
+      },
+      "code": "76067",
+      "_score": 0.4121779779761865,
+      "region": {
+        "code": "28",
+        "nom": "Normandie"
+      }
+    },
+    {
+      "nom": "Sainte-Foy-lès-Lyon",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          4.7926,
+          45.7362
+        ]
+      },
+      "code": "69202",
+      "_score": 0.409021828687698,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=LYON&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Lyon",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          4.8351,
+          45.758
+        ]
+      },
+      "code": "69123",
+      "_score": 3.3309776503428137,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    },
+    {
+      "nom": "Cognat-Lyonne",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.3002,
+          46.11
+        ]
+      },
+      "code": "03080",
+      "_score": 0.4452426608471379,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    },
+    {
+      "nom": "Lyons-la-Forêt",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.4761,
+          49.3969
+        ]
+      },
+      "code": "27377",
+      "_score": 0.43860828416329795,
+      "region": {
+        "code": "28",
+        "nom": "Normandie"
+      }
+    },
+    {
+      "nom": "Beauvoir-en-Lyons",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.5852,
+          49.487
+        ]
+      },
+      "code": "76067",
+      "_score": 0.4121779779761865,
+      "region": {
+        "code": "28",
+        "nom": "Normandie"
+      }
+    },
+    {
+      "nom": "Sainte-Foy-lès-Lyon",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          4.7926,
+          45.7362
+        ]
+      },
+      "code": "69202",
+      "_score": 0.409021828687698,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Marseille&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Marseille",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.3806,
+          43.2803
+        ]
+      },
+      "code": "13055",
+      "_score": 4.953310028125956,
+      "region": {
+        "code": "93",
+        "nom": "Provence-Alpes-Côte d'Azur"
+      }
+    },
+    {
+      "nom": "Marseillette",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.5438,
+          43.2119
+        ]
+      },
+      "code": "11220",
+      "_score": 0.6156741667933626,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    },
+    {
+      "nom": "Marseilles-lès-Aubigny",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.9895,
+          47.07
+        ]
+      },
+      "code": "18139",
+      "_score": 0.47333950162835925,
+      "region": {
+        "code": "24",
+        "nom": "Centre-Val de Loire"
+      }
+    },
+    {
+      "nom": "Marseille-en-Beauvaisis",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.9532,
+          49.5774
+        ]
+      },
+      "code": "60387",
+      "_score": 0.3012319964042962,
+      "region": {
+        "code": "32",
+        "nom": "Hauts-de-France"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Melun&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Melun",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.6552,
+          48.5421
+        ]
+      },
+      "code": "77288",
+      "_score": 1.45995,
+      "region": {
+        "code": "11",
+        "nom": "Île-de-France"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Mende&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Mende",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.4909,
+          44.5349
+        ]
+      },
+      "code": "48095",
+      "_score": 1.12464,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=MONTARGIS&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Montargis",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.7388,
+          47.9998
+        ]
+      },
+      "code": "45208",
+      "_score": 1.14825,
+      "region": {
+        "code": "24",
+        "nom": "Centre-Val de Loire"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Mulhouse&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Mulhouse",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          7.3255,
+          47.7526
+        ]
+      },
+      "code": "68224",
+      "_score": 2.04978,
+      "region": {
+        "code": "44",
+        "nom": "Grand Est"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=NANCY&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Nancy",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          6.1734,
+          48.6881
+        ]
+      },
+      "code": "54395",
+      "_score": 2.0367100000000002,
+      "region": {
+        "code": "44",
+        "nom": "Grand Est"
+      }
+    },
+    {
+      "nom": "Villers-lès-Nancy",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          6.1276,
+          48.6603
+        ]
+      },
+      "code": "54578",
+      "_score": 0.8727198480817593,
+      "region": {
+        "code": "44",
+        "nom": "Grand Est"
+      }
+    },
+    {
+      "nom": "Vandœuvre-lès-Nancy",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          6.1603,
+          48.66
+        ]
+      },
+      "code": "54547",
+      "_score": 0.7911023986353783,
+      "region": {
+        "code": "44",
+        "nom": "Grand Est"
+      }
+    },
+    {
+      "nom": "Essey-lès-Nancy",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          6.2326,
+          48.7077
+        ]
+      },
+      "code": "54184",
+      "_score": 0.7075547558712073,
+      "region": {
+        "code": "44",
+        "nom": "Grand Est"
+      }
+    },
+    {
+      "nom": "Saulxures-lès-Nancy",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          6.2576,
+          48.686
+        ]
+      },
+      "code": "54495",
+      "_score": 0.6928741537466847,
+      "region": {
+        "code": "44",
+        "nom": "Grand Est"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Nanterre&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Nanterre",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.2018,
+          48.8974
+        ]
+      },
+      "code": "92050",
+      "_score": 1.97783,
+      "region": {
+        "code": "11",
+        "nom": "Île-de-France"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Nantes&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Nantes",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -1.5603,
+          47.2382
+        ]
+      },
+      "code": "44109",
+      "_score": 4.277340000000001,
+      "region": {
+        "code": "52",
+        "nom": "Pays de la Loire"
+      }
+    },
+    {
+      "nom": "Nantes-en-Ratier",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.8285,
+          44.9294
+        ]
+      },
+      "code": "38273",
+      "_score": 0.6608967054881676,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=NARBONNE&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Narbonne",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.0337,
+          43.1493
+        ]
+      },
+      "code": "11262",
+      "_score": 1.57587,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Nevers&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Nevers",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.1598,
+          46.9852
+        ]
+      },
+      "code": "58194",
+      "_score": 1.3308499999999999,
+      "region": {
+        "code": "27",
+        "nom": "Bourgogne-Franche-Comté"
+      }
+    },
+    {
+      "nom": "Coulanges-lès-Nevers",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.2005,
+          47.0157
+        ]
+      },
+      "code": "58088",
+      "_score": 0.7274690277961241,
+      "region": {
+        "code": "27",
+        "nom": "Bourgogne-Franche-Comté"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Nice&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Nice",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          7.2528,
+          43.7032
+        ]
+      },
+      "code": "06088",
+      "_score": 3.478733907669288,
+      "region": {
+        "code": "93",
+        "nom": "Provence-Alpes-Côte d'Azur"
+      }
+    },
+    {
+      "nom": "Nicey",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          4.2933,
+          47.8676
+        ]
+      },
+      "code": "21454",
+      "_score": 0.6506681960737337,
+      "region": {
+        "code": "27",
+        "nom": "Bourgogne-Franche-Comté"
+      }
+    },
+    {
+      "nom": "Nicey-sur-Aire",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.3505,
+          48.8943
+        ]
+      },
+      "code": "55384",
+      "_score": 0.4865203770242371,
+      "region": {
+        "code": "44",
+        "nom": "Grand Est"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Noum%C3%A9a&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Nouméa",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          166.4076,
+          -22.3363
+        ]
+      },
+      "code": "98818",
+      "_score": 1.85976,
+      "region": {
+        "code": "988",
+        "nom": "Nouvelle-Calédonie"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=ORLEANS&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Orléans",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.9122,
+          47.8734
+        ]
+      },
+      "code": "45234",
+      "_score": 2.16357,
+      "region": {
+        "code": "24",
+        "nom": "Centre-Val de Loire"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Paris&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Paris",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.347,
+          48.8589
+        ]
+      },
+      "code": "75056",
+      "_score": 9.535435286815508,
+      "region": {
+        "code": "11",
+        "nom": "Île-de-France"
+      }
+    },
+    {
+      "nom": "Parisot",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.8296,
+          43.7968
+        ]
+      },
+      "code": "81202",
+      "_score": 0.5146125221077134,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    },
+    {
+      "nom": "Parisot",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.8682,
+          44.2607
+        ]
+      },
+      "code": "82137",
+      "_score": 0.5121880116950436,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    },
+    {
+      "nom": "Cormeilles-en-Parisis",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.201,
+          48.9701
+        ]
+      },
+      "code": "95176",
+      "_score": 0.46319342931816143,
+      "region": {
+        "code": "11",
+        "nom": "Île-de-France"
+      }
+    },
+    {
+      "nom": "Seyssinet-Pariset",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.6701,
+          45.1721
+        ]
+      },
+      "code": "38485",
+      "_score": 0.4283454721108535,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=PAU&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Pau",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -0.3435,
+          43.3219
+        ]
+      },
+      "code": "64445",
+      "_score": 0.4376368558820141,
+      "region": {
+        "code": "75",
+        "nom": "Nouvelle-Aquitaine"
+      }
+    },
+    {
+      "nom": "Saint-Paul",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          55.3402,
+          -21.0366
+        ]
+      },
+      "code": "97415",
+      "_score": 0.27151638513353654,
+      "region": {
+        "code": "04",
+        "nom": "La Réunion"
+      }
+    },
+    {
+      "nom": "Paulx",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -1.7835,
+          46.9612
+        ]
+      },
+      "code": "44119",
+      "_score": 0.22530158289536448,
+      "region": {
+        "code": "52",
+        "nom": "Pays de la Loire"
+      }
+    },
+    {
+      "nom": "Paudy",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          1.9215,
+          47.0376
+        ]
+      },
+      "code": "36152",
+      "_score": 0.22173178005038235,
+      "region": {
+        "code": "24",
+        "nom": "Centre-Val de Loire"
+      }
+    },
+    {
+      "nom": "Paulhe",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.1141,
+          44.1487
+        ]
+      },
+      "code": "12178",
+      "_score": 0.2215573740981538,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Poitiers&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Poitiers",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          0.3715,
+          46.5846
+        ]
+      },
+      "code": "86194",
+      "_score": 1.89916,
+      "region": {
+        "code": "75",
+        "nom": "Nouvelle-Aquitaine"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Pontoise&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Pontoise",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.0996,
+          49.0488
+        ]
+      },
+      "code": "95500",
+      "_score": 1.3197,
+      "region": {
+        "code": "11",
+        "nom": "Île-de-France"
+      }
+    },
+    {
+      "nom": "Puiseux-Pontoise",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.0135,
+          49.0659
+        ]
+      },
+      "code": "95510",
+      "_score": 0.7410133439707881,
+      "region": {
+        "code": "11",
+        "nom": "Île-de-France"
+      }
+    },
+    {
+      "nom": "Pontoise-lès-Noyon",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.0461,
+          49.5442
+        ]
+      },
+      "code": "60507",
+      "_score": 0.6819663758582729,
+      "region": {
+        "code": "32",
+        "nom": "Hauts-de-France"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=RENNES&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Rennes",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -1.6884,
+          48.1159
+        ]
+      },
+      "code": "35238",
+      "_score": 3.3089,
+      "region": {
+        "code": "53",
+        "nom": "Bretagne"
+      }
+    },
+    {
+      "nom": "Rennes-le-Château",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.2782,
+          42.9154
+        ]
+      },
+      "code": "11309",
+      "_score": 0.775780549056794,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    },
+    {
+      "nom": "Rennes-les-Bains",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.3468,
+          42.9227
+        ]
+      },
+      "code": "11310",
+      "_score": 0.76025704256788,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    },
+    {
+      "nom": "Rennes-sur-Loue",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.8609,
+          47.0168
+        ]
+      },
+      "code": "25488",
+      "_score": 0.6750487708618494,
+      "region": {
+        "code": "27",
+        "nom": "Bourgogne-Franche-Comté"
+      }
+    },
+    {
+      "nom": "Rennes-en-Grenouilles",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -0.5066,
+          48.4885
+        ]
+      },
+      "code": "53189",
+      "_score": 0.6249058500237304,
+      "region": {
+        "code": "52",
+        "nom": "Pays de la Loire"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Sens&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Sens",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.3039,
+          48.1949
+        ]
+      },
+      "code": "89387",
+      "_score": 0.8727037168445495,
+      "region": {
+        "code": "27",
+        "nom": "Bourgogne-Franche-Comté"
+      }
+    },
+    {
+      "nom": "Miramont-Sensacq",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -0.327,
+          43.5969
+        ]
+      },
+      "code": "40185",
+      "_score": 0.5575848660448499,
+      "region": {
+        "code": "75",
+        "nom": "Nouvelle-Aquitaine"
+      }
+    },
+    {
+      "nom": "Saint-Denis-lès-Sens",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.2643,
+          48.2321
+        ]
+      },
+      "code": "89342",
+      "_score": 0.5089129518922622,
+      "region": {
+        "code": "27",
+        "nom": "Bourgogne-Franche-Comté"
+      }
+    },
+    {
+      "nom": "Sens-de-Bretagne",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          -1.5563,
+          48.3367
+        ]
+      },
+      "code": "35326",
+      "_score": 0.5072582116914749,
+      "region": {
+        "code": "53",
+        "nom": "Bretagne"
+      }
+    },
+    {
+      "nom": "Sens-sur-Seille",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.3106,
+          46.7463
+        ]
+      },
+      "code": "71514",
+      "_score": 0.5001736549950396,
+      "region": {
+        "code": "27",
+        "nom": "Bourgogne-Franche-Comté"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=STRASBOURG&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Strasbourg",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          7.7621,
+          48.5691
+        ]
+      },
+      "code": "67482",
+      "_score": 3.93771,
+      "region": {
+        "code": "44",
+        "nom": "Grand Est"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Thonon%20les%20bains&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Thonon-les-Bains",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          6.4776,
+          46.3745
+        ]
+      },
+      "code": "74281",
+      "_score": 0.30420368474523635,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Toulon&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Toulon",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.9334,
+          43.1364
+        ]
+      },
+      "code": "83137",
+      "_score": 1.938972358185209,
+      "region": {
+        "code": "93",
+        "nom": "Provence-Alpes-Côte d'Azur"
+      }
+    },
+    {
+      "nom": "Toulonjac",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.0013,
+          44.3799
+        ]
+      },
+      "code": "12281",
+      "_score": 0.7247465177209801,
+      "region": {
+        "code": "76",
+        "nom": "Occitanie"
+      }
+    },
+    {
+      "nom": "Toulon-sur-Allier",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.3819,
+          46.5094
+        ]
+      },
+      "code": "03286",
+      "_score": 0.5257584592726136,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    },
+    {
+      "nom": "Vert-Toulon",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          3.9046,
+          48.8425
+        ]
+      },
+      "code": "51611",
+      "_score": 0.5201312326305826,
+      "region": {
+        "code": "44",
+        "nom": "Grand Est"
+      }
+    },
+    {
+      "nom": "Toulon-sur-Arroux",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          4.1526,
+          46.6869
+        ]
+      },
+      "code": "71542",
+      "_score": 0.4965374422116299,
+      "region": {
+        "code": "27",
+        "nom": "Bourgogne-Franche-Comté"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=VERSAILLES&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Versailles",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.1191,
+          48.8039
+        ]
+      },
+      "code": "78646",
+      "_score": 1.8409499999999999,
+      "region": {
+        "code": "11",
+        "nom": "Île-de-France"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=VILLEJUIF&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Villejuif",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          2.3603,
+          48.7934
+        ]
+      },
+      "code": "94076",
+      "_score": 1.60183,
+      "region": {
+        "code": "11",
+        "nom": "Île-de-France"
+      }
+    }
+  ],
+  "https://geo.api.gouv.fr/communes?nom=Grenoble&fields=nom,centre,region&boost=population&limit=5": [
+    {
+      "nom": "Grenoble",
+      "centre": {
+        "type": "Point",
+        "coordinates": [
+          5.7155,
+          45.1842
+        ]
+      },
+      "code": "38185",
+      "_score": 2.5614,
+      "region": {
+        "code": "84",
+        "nom": "Auvergne-Rhône-Alpes"
+      }
+    }
+  ]
+}

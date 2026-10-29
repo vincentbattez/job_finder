@@ -8,6 +8,7 @@ import { createActions } from '#/actions/index.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
+import { createRecordedFetch } from './recorded-http.ts';
 
 const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
@@ -59,7 +60,12 @@ function extractionRun(extraction: Record<string, unknown> = EXTRACTION) {
 async function openActions(aiSession: ReturnType<typeof createFakeAiSession>) {
   const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
   copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  return createActions({ dataDirectory, aiSession, notificationChannel: createFakeNotificationChannel() });
+  return createActions({
+    dataDirectory,
+    aiSession,
+    fetch: createRecordedFetch().fetch,
+    notificationChannel: createFakeNotificationChannel(),
+  });
 }
 
 describe('import of a Fiche de poste in Markdown', () => {
@@ -73,7 +79,6 @@ describe('import of a Fiche de poste in Markdown', () => {
       title: 'Greffier placé – Tribunal judiciaire de Lille',
       employer: 'Ministère de la Justice – Tribunal judiciaire de Lille',
       workplace: '13 avenue du Peuple Belge, 59000 Lille',
-      city: 'Lille',
       dateLimite: new Date('2026-11-30T00:00:00Z'),
       applicationEmail: 'greffe.tj-lille@justice.fr',
       contact1: 'Marie Martin, directrice de greffe, 03 20 00 00 00',

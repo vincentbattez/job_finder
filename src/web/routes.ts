@@ -7,6 +7,8 @@ export default [
   route('offres/:reference/:artefact/document', 'routes/document.ts'),
   route('offres/:reference/:artefact/retenue', 'routes/version-retenue.ts'),
   route('candidat', 'routes/candidat.ts'),
+  route('profil', 'routes/profil.tsx'),
+  route('consignes', 'routes/consignes.tsx'),
   route('run', 'routes/run.ts'),
   route('detect', 'routes/detect.ts'),
   route('import', 'routes/import.ts'),

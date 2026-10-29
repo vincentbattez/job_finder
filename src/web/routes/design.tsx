@@ -34,7 +34,13 @@ const SAMPLE_FICHE_DE_POSTE = [
 
 function sampleVersion(number: number, state: 'running' | 'ready' | 'failed') {
   return {
-    version: { number, state, isRetenue: number === 1, createdAt: new Date('2026-10-21') },
+    version: {
+      number,
+      state,
+      isRetenue: number === 1,
+      hasCandidatConsignes: number === 2,
+      createdAt: new Date('2026-10-21'),
+    },
     isRetenable: false,
     documentList: [],
   };

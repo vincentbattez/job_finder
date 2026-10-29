@@ -7,11 +7,14 @@ const STATUT_LABEL_BY_STATUT: Record<Statut | 'expiree', string> = {
   archivee: 'Archivée',
 };
 
-// Expirée comes from the Date limite, whatever the statut (GLOSSARY.md). Like the map of issue
-// #20, the badge shows it only in place of À traiter: a Postulée Offre stays green past its
-// Date limite.
+// Expirée comes from the Date limite, whatever the statut (GLOSSARY.md). The badge and the map
+// show it only in place of À traiter: a Postulée Offre stays green past its Date limite.
+export function showStatut(statut: Statut, isExpiree: boolean): Statut | 'expiree' {
+  return statut === 'a_traiter' && isExpiree ? 'expiree' : statut;
+}
+
 export function StatutBadge({ statut, isExpiree }: Readonly<{ statut: Statut; isExpiree: boolean }>) {
-  const shownStatut = statut === 'a_traiter' && isExpiree ? 'expiree' : statut;
+  const shownStatut = showStatut(statut, isExpiree);
   return (
     <span className="badge" data-statut={shownStatut}>
       {STATUT_LABEL_BY_STATUT[shownStatut]}

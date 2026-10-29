@@ -4,6 +4,7 @@ import { EtatBadge } from './badge.tsx';
 import { CopyCommand } from './copy-command.tsx';
 import { DateText } from './date.tsx';
 import { ArtefactDocument, RetenirButton } from './edition.tsx';
+import { ConsignesOrigin } from './module-consignes.tsx';
 import { ModuleLaunch } from './module-launch.tsx';
 import { ARTEFACT_LABEL_BY_ARTEFACT, ETAT_BY_VERSION_STATE, type IArtefactVersions } from './offre-fiche.tsx';
 
@@ -39,6 +40,7 @@ export function ArtefactVersions({
                       Retenue
                     </span>
                   )}
+                  <ConsignesOrigin hasCandidatConsignes={version.hasCandidatConsignes} />
                   <span className="date">
                     <DateText date={version.createdAt} />
                   </span>

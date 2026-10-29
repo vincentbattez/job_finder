@@ -15,6 +15,7 @@ import {
   type Candidat,
   type FicheDePoste,
   type Job,
+  type Lieu,
   type ListedOffre,
   type Offre,
   type Veille,
@@ -45,8 +46,7 @@ export interface INewOffre {
   fiche: FicheDePoste;
   isInZone: boolean;
   republicationOf: Offre | undefined;
-  // Given by the Sources that read it, such as the Source Import Markdown
-  city?: string | null;
+  lieu: Lieu;
 }
 
 // Applies the pending migrations of prisma/migrations first, so the schema exists from the
@@ -106,7 +106,11 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
     // with the Versions it reads
     async startJob(
       { id, module, offre }: Job,
-      { consignes, inputList }: { consignes: string; inputList: { offre: Offre; version: Version }[] },
+      {
+        consignes,
+        hasCandidatConsignes,
+        inputList,
+      }: { consignes: string; hasCandidatConsignes: boolean; inputList: { offre: Offre; version: Version }[] },
     ): Promise<Version> {
       const { _max: max } = await prisma.version.aggregate({
         where: { offreId: offre.id, artefact: module },
@@ -121,6 +125,7 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
             number: (max.number ?? 0) + 1,
             state: 'running',
             consignes,
+            hasCandidatConsignes,
             jobId: id,
             inputList: {
               connect: inputList.map(({ offre: { id: offreId }, version: { artefact, number } }) => ({
@@ -223,6 +228,16 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       return z.array(OFFRE_SCHEMA).parse(await prisma.offre.findMany({ where: { reference }, include: OFFRE_INCLUDE }));
     },
 
+    async listUnlocatedOffres(): Promise<Offre[]> {
+      return z
+        .array(OFFRE_SCHEMA)
+        .parse(await prisma.offre.findMany({ where: { latitude: null }, include: OFFRE_INCLUDE }));
+    },
+
+    async setLieu({ id }: Offre, lieu: Lieu): Promise<void> {
+      await prisma.offre.update({ where: { id }, data: lieu });
+    },
+
     async setStatus(reference: string, status: Offre['status']): Promise<void> {
       await prisma.offre.updateMany({ where: { reference }, data: { status } });
     },
@@ -234,7 +249,7 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       fiche,
       isInZone,
       republicationOf,
-      city = null,
+      lieu,
     }: INewOffre): Promise<Offre> {
       const { reference, title, url, publishedAt } = listedOffre;
       const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = fiche;
@@ -243,7 +258,7 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
         await prisma.offre.create({
           data: {
             ...data,
-            city,
+            ...lieu,
             applicationEmail,
             contact1,
             contact2,
