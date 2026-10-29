@@ -33,7 +33,11 @@ const SAMPLE_FICHE_DE_POSTE = [
 ].join('\n');
 
 function sampleVersion(number: number, state: 'running' | 'ready' | 'failed') {
-  return { version: { number, state, isRetenue: number === 1, createdAt: new Date('2026-10-21') }, documentList: [] };
+  return {
+    version: { number, state, isRetenue: number === 1, createdAt: new Date('2026-10-21') },
+    isRetenable: false,
+    documentList: [],
+  };
 }
 
 // One Artefact in each état: the état of an Artefact is the state of its latest Version

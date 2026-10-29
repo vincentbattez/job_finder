@@ -158,10 +158,16 @@ export const RECIPIENTS_SCHEMA = z
 
 export type Recipients = z.infer<typeof RECIPIENTS_SCHEMA>;
 
-// A Markdown file of a Version, such as the Brouillon or the Lettre of a Lettre Version
-const DOCUMENT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string() });
+// A Markdown file of a Version, such as the Brouillon or the Lettre of a Lettre Version, and whether
+// the Candidat may correct it by hand
+const DOCUMENT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string(), isModifiable: z.boolean() });
 
-const VERSION_DOCUMENTS_SCHEMA = z.object({ version: VERSION_SCHEMA, documentList: z.array(DOCUMENT_SCHEMA) });
+// isRetenable: whether the Candidat may make it the Version retenue
+const VERSION_DOCUMENTS_SCHEMA = z.object({
+  version: VERSION_SCHEMA,
+  isRetenable: z.boolean(),
+  documentList: z.array(DOCUMENT_SCHEMA),
+});
 
 const ARTEFACT_VERSIONS_SCHEMA = z.object({
   artefact: ARTEFACT_SCHEMA,

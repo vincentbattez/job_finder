@@ -8,6 +8,7 @@ import {
   ARTEFACT_SCHEMA,
   DETECTION_SCHEMA,
   OFFRE_FICHE_SCHEMA,
+  type Artefact,
   type Candidat,
   type Detection,
   type DomainValue,
@@ -42,12 +43,76 @@ const MODULE_INPUT_SCHEMA = z.object({ module: z.string(), reference: z.string()
 const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
 const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: ARTEFACT_SCHEMA });
 const VERSION_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
+const DOCUMENT_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ fileName: z.string(), markdown: z.string() });
 const JOB_INPUT_SCHEMA = z.object({ jobId: z.coerce.number().int() });
 
 const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: z.enum(['postulee', 'archivee']) });
 
 // How often a followed job is read again: a module runs for minutes
 const FOLLOW_INTERVAL_MS = 1000;
+
+// What the Candidat corrects by hand: a file of the Version retenue, in place (spec « Versions »).
+// Never a Brouillon, kept as the AI wrote it so that the tool learns from the corrections, never a
+// Visualisation, regenerated from the Fiche d'entretien, nor the Lettre of a Postulée Offre, the
+// one sent.
+function assertDocumentModifiable(
+  offre: Offre,
+  artefact: Artefact,
+  version: Version | undefined,
+  fileName: string,
+): asserts version is Version {
+  const { reference } = offre;
+  if (artefact === 'visualisation') {
+    throw new Error(
+      `La Visualisation ne se modifie pas à la main : elle reprend la Fiche d'entretien retenue. Corrigez celle-ci, puis relancez la Visualisation de l'Offre ${reference}.`,
+    );
+  }
+  if (artefact === 'lettre') {
+    assertLettreModifiable(offre);
+  }
+  if (version?.isRetenue !== true) {
+    throw new Error(`L'Offre ${reference} n'a pas de Version retenue de ${artefact} à modifier.`);
+  }
+  if (fileName === BROUILLON_FILE_NAME) {
+    throw new Error(
+      `Le Brouillon ne se modifie jamais : il garde ce que l'IA a écrit. Corrigez la Lettre de l'Offre ${reference}.`,
+    );
+  }
+}
+
+// Only a ready Version can become the Version retenue, and the Lettre of a Postulée Offre stays
+// the one sent (spec « Versions »)
+function assertRetenable(
+  offre: Offre,
+  artefact: Artefact,
+  version: Version | undefined,
+  number: number,
+): asserts version is Version {
+  const { reference } = offre;
+  if (artefact === 'lettre') {
+    assertLettreModifiable(offre);
+  }
+  if (version === undefined) {
+    throw new Error(`Version inconnue : ${artefact} v${String(number)} de l'Offre ${reference}.`);
+  }
+  if (version.state === 'ready') {
+    return;
+  }
+  const state = version.state === 'failed' ? 'en échec' : 'en cours';
+  throw new Error(
+    `La Version ${artefact} v${String(number)} de l'Offre ${reference} est ${state} : seule une Version prête peut être retenue.`,
+  );
+}
+
+// The front shows a control only where its action accepts it: the same check, read as a flag
+function isAccepted(check: () => void): boolean {
+  try {
+    check();
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // The single entry point of every feature: the CLI and the front only call these actions,
 // so no business rule lives in either of them (ADR-0003). `satisfies` holds them to the
@@ -121,6 +186,25 @@ export async function createActions({
     const versionList = await workspace.listVersions(offre, 'lettre');
     const version = versionList.find(({ isRetenue }) => isRetenue);
     return version === undefined ? null : LETTRE_MODULE.readRecipients(workspace.versionDirectoryOf(offre, version));
+  }
+
+  // A Version as the fiche shows it: its files, and what the Candidat may do with them
+  function readFicheVersion(offre: Offre, version: Version) {
+    const { artefact, number, isRetenue } = version;
+    return {
+      version,
+      isRetenable:
+        !isRetenue &&
+        isAccepted(() => {
+          assertRetenable(offre, artefact, version, number);
+        }),
+      documentList: workspace.readVersionDocuments(offre, version).map((document) => ({
+        ...document,
+        isModifiable: isAccepted(() => {
+          assertDocumentModifiable(offre, artefact, version, document.fileName);
+        }),
+      })),
+    };
   }
 
   return {
@@ -313,10 +397,7 @@ export async function createActions({
           const versionList = await workspace.listVersions(offre, artefact);
           return {
             artefact,
-            versionList: versionList.map((version) => ({
-              version,
-              documentList: workspace.readVersionDocuments(offre, version),
-            })),
+            versionList: versionList.map((version) => readFicheVersion(offre, version)),
           };
         }),
       );
@@ -343,23 +424,28 @@ export async function createActions({
       return recipients;
     },
 
+    // The front's editor: the Candidat corrects a file of the Version retenue in place (spec « Versions »)
+    async saveDocument(rawInput: unknown): Promise<void> {
+      const { reference, artefact, fileName, markdown } = DOCUMENT_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      const versionList = await workspace.listVersions(offre, artefact);
+      const version = versionList.find(({ isRetenue }) => isRetenue);
+      assertDocumentModifiable(offre, artefact, version, fileName);
+      // The front sends the name back: nothing else than a file of the Version may be written
+      if (workspace.readVersionDocuments(offre, version).every((document) => document.fileName !== fileName)) {
+        throw new Error(
+          `« ${fileName} » n'est pas un fichier de la Version retenue de ${artefact} de l'Offre ${reference}.`,
+        );
+      }
+      workspace.writeVersionDocument(offre, version, fileName, markdown);
+    },
+
     async retenirVersion(rawInput: unknown): Promise<void> {
       const { reference, artefact, number } = VERSION_INPUT_SCHEMA.parse(rawInput);
       const offre = await findOffre(reference);
-      if (artefact === 'lettre') {
-        assertLettreModifiable(offre);
-      }
       const versionList = await workspace.listVersions(offre, artefact);
       const version = versionList.find((candidate) => candidate.number === number);
-      if (version === undefined) {
-        throw new Error(`Version inconnue : ${artefact} v${String(number)} de l'Offre ${reference}.`);
-      }
-      if (version.state !== 'ready') {
-        const state = version.state === 'failed' ? 'en échec' : 'en cours';
-        throw new Error(
-          `La Version ${artefact} v${String(number)} de l'Offre ${reference} est ${state} : seule une Version prête peut être retenue.`,
-        );
-      }
+      assertRetenable(offre, artefact, version, number);
       await workspace.retainVersion(offre, version);
     },
   } satisfies Record<string, (rawInput: unknown) => Promise<void> | Promise<DomainValue | DomainValue[]>>;

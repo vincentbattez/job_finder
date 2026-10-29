@@ -54,6 +54,11 @@ export async function openWorkspace(dataDirectory: string) {
       return readMarkdownFiles(versionDirectoryOf(offre, version));
     },
 
+    // A correction by the Candidat changes the Version in place, without creating another one
+    writeVersionDocument(offre: Offre, version: Version, fileName: string, markdown: string): void {
+      writeFileSync(path.join(versionDirectoryOf(offre, version), fileName), markdown);
+    },
+
     // Where a Candidat receives their notifications, as their config names it
     notificationTargetOf(candidatId: string): string {
       const candidat = config.candidatList.find(({ id }) => id === candidatId);
