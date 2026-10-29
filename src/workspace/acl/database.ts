@@ -13,8 +13,6 @@ import type { Config } from './config.ts';
 const ROOT_DIRECTORY = path.join(import.meta.dirname, '..', '..', '..');
 const PRISMA_CLI_PATH = fileURLToPath(import.meta.resolve('prisma/build/index.js'));
 
-export type Database = ReturnType<typeof openDatabase>;
-
 // Applies the pending migrations of prisma/migrations first, so the schema exists from the
 // first launch and follows every upgrade. Prisma never leaves this file: every row read is
 // parsed into a domain type (ADR-0005).

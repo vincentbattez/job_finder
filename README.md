@@ -18,7 +18,7 @@ Tout vit dans `data/`, hors de git et sans sauvegarde :
 
 - `config.json` : les Candidats, leurs Veilles et leur cible de notification, et le délai par défaut. Le modèle versionné est `config.example.json` ;
 - `job_finder.sqlite` : la base, migrée à chaque lancement ;
-- `candidats/<id>/profil/` : le Profil de chaque Candidat, en fichiers Markdown.
+- `candidats/<id>/profil/` : le Profil de chaque Candidat, en fichiers Markdown : `faits.md`, `cv.md` et une `lettre-<employeur>-<année>.md` par lettre passée. `jf profil <candidat>` les écrit et les complète au fil d'une session Claude Code interactive.
 
 `dev-data/` a la même forme, avec des Offres factices pour le développement. Les commandes Prisma et les tasks `db:` ne touchent qu'à lui.
 
@@ -33,6 +33,8 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 - `src/web/` : le front React Router, qui relaie lui aussi vers les actions. `mise run web` le lance en développement, et `/design` montre ses composants avec des Offres d'exemple. Les couleurs, les polices et les espacements sont des tokens de `src/web/tokens.css`.
 - `src/domain/` : les types domaine, tirés de leurs schémas Zod. Une fois passée l'anti-corruption layer, le code ne manipule qu'eux (ADR-0005).
 - `src/workspace/` : l'accès au dossier de données (config, base, dossiers des Candidats). Seul son dossier `acl/` lit la config et la base. Le client Prisma est généré dans `generated/`, hors de git.
+- `src/ai-session/` : le lancement des sessions d'IA. Seul `acl/claude-code.ts` sait qu'elles tournent sur Claude Code ; les tests le remplacent par un faux.
+- `src/profil/` : le prompt fixe de `jf profil`.
 - `src/modules/` : un dossier par module, avec un seul point d'entrée. Un module n'en importe jamais un autre, ce que vérifie `test/architecture.test.ts`.
 - `prisma/` : le schéma, les migrations et le seed.
 

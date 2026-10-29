@@ -30,6 +30,17 @@ function listLeaProfilFiles(dataDirectory: string): string[] {
   return readdirSync(path.join(dataDirectory, 'candidats', 'lea', 'profil'));
 }
 
+// Stands in for Claude Code, an external boundary: records each session instead of opening it
+function createFakeAiSession() {
+  const interactiveSessionList: { prompt: string; directory: string }[] = [];
+  return {
+    interactiveSessionList,
+    openInteractive(session: { prompt: string; directory: string }): void {
+      interactiveSessionList.push(session);
+    },
+  };
+}
+
 describe('actions', () => {
   it('lists the Candidats declared in the config', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectoryFromExample() });
@@ -79,5 +90,28 @@ describe('actions', () => {
     writeConfig(dataDirectory, { defaultDelayMonths: 6, candidatList: [{ id: 'lea' }] });
 
     await expect(createActions({ dataDirectory })).rejects.toThrow(/candidatList\[0\]\.name/);
+  });
+});
+
+describe('profil', () => {
+  it("opens an interactive session in the chosen Candidat's Profil, naming the Candidat", async () => {
+    const dataDirectory = createDataDirectoryFromExample();
+    const aiSession = createFakeAiSession();
+    const actions = await createActions({ dataDirectory, aiSession });
+
+    await actions.openProfil({ candidatId: 'lea' });
+
+    expect(aiSession.interactiveSessionList.map(({ directory }) => directory)).toEqual([
+      path.join(dataDirectory, 'candidats', 'lea', 'profil'),
+    ]);
+    expect(aiSession.interactiveSessionList[0]?.prompt).toContain('Léa');
+  });
+
+  it('refuses an unknown Candidat without opening a session', async () => {
+    const aiSession = createFakeAiSession();
+    const actions = await createActions({ dataDirectory: createDataDirectoryFromExample(), aiSession });
+
+    await expect(actions.openProfil({ candidatId: 'vincent' })).rejects.toThrow(/Candidat inconnu : vincent/);
+    expect(aiSession.interactiveSessionList).toEqual([]);
   });
 });
