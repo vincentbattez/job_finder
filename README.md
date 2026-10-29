@@ -14,9 +14,12 @@ jf postuler 2026-2445600                       # passe une Offre en Postulée, c
 jf run recherche 2026-2445600                  # met en file une nouvelle Version de la Recherche d'une Offre ; --wait attend que le worker l'ait produite
 jf run lettre 2026-2445600                     # met en file une nouvelle Version de la Lettre, sur la Recherche retenue
 jf destinataires 2026-2445600                  # affiche à qui adresser la candidature, selon la Lettre retenue
-jf versions 2026-2445600 recherche             # liste les Versions d'un Artefact
+jf versions 2026-2445600 recherche             # liste les Versions d'un Artefact, chacune avec l'origine de ses Consignes : par défaut ou du Candidat
 jf retenir 2026-2445600 recherche 1            # change la Version retenue
 jf edit 2026-2445600 recherche                 # corrige la Version retenue d'un Artefact avec Claude Code ; sans argument, propose les Offres puis l'Artefact
+jf consignes lea                               # dit, pour chaque module, si le Candidat suit les Consignes par défaut ou les siennes
+jf consignes lea lettre                        # affiche les Consignes que suit la Lettre ; « defaut » affiche celles par défaut
+jf consignes lea lettre remplacer < c.md       # remplace les Consignes de la Lettre par celles du fichier ; « supprimer » revient à celles par défaut
 ```
 
 `jf` est sur le `PATH` dès que mise est actif dans le dossier du repo.
