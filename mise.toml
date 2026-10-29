@@ -36,7 +36,8 @@ run = ["mkdir -p dev-data && prisma migrate reset --force", "mise run db:seed"]
 
 [tasks.web]
 description = "Serve the front of data/ on port 5180, open to the LAN and WireGuard: the lpm service web (ADR-0002)"
-run = "react-router dev --host --port 5180 --strictPort"
+# .env holds the Home Assistant settings of the notifications, which the Détection button sends
+run = "node --env-file-if-exists=.env node_modules/@react-router/dev/bin.cjs dev --host --port 5180 --strictPort"
 
 [tasks.worker]
 description = "Run the queued jobs of data/, one Claude session at a time: the lpm service worker (ADR-0003)"
