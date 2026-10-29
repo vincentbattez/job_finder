@@ -165,6 +165,11 @@ export type Recipients = z.infer<typeof RECIPIENTS_SCHEMA>;
 // A Markdown file of a Version, such as the Brouillon or the Lettre of a Lettre Version
 const DOCUMENT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string() });
 
+// A Markdown file of the Profil of a Candidat, such as faits.md or cv.md
+export const PROFIL_FILE_SCHEMA = DOCUMENT_SCHEMA.brand<'Domain'>();
+
+export type ProfilFile = z.infer<typeof PROFIL_FILE_SCHEMA>;
+
 const VERSION_DOCUMENTS_SCHEMA = z.object({ version: VERSION_SCHEMA, documentList: z.array(DOCUMENT_SCHEMA) });
 
 const ARTEFACT_VERSIONS_SCHEMA = z.object({

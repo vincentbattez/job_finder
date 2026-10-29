@@ -9,6 +9,7 @@ import {
   DETECTION_SCHEMA,
   MODULE_CONSIGNES_SCHEMA,
   OFFRE_FICHE_SCHEMA,
+  PROFIL_FILE_SCHEMA,
   type Candidat,
   type Detection,
   type DomainValue,
@@ -16,6 +17,7 @@ import {
   type ModuleConsignes,
   type Offre,
   type OffreFiche,
+  type ProfilFile,
   type Recipients,
   type Version,
 } from '#/domain/index.ts';
@@ -33,6 +35,7 @@ export type Actions = Awaited<ReturnType<typeof createActions>>;
 const CANDIDAT_INPUT_SCHEMA = z.object({ candidatId: z.string() });
 const MODULE_INPUT_SCHEMA = z.object({ module: z.string(), reference: z.string() });
 const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
+const PROFIL_FILE_INPUT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string() });
 const CONSIGNES_MODULE_INPUT_SCHEMA = z.object({ module: z.string() });
 const CONSIGNES_INPUT_SCHEMA = CONSIGNES_MODULE_INPUT_SCHEMA.extend({ consignes: z.string() });
 const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: ARTEFACT_SCHEMA });
@@ -156,6 +159,24 @@ export async function createActions({
         prompt: composeProfilPrompt(candidat),
         directory: workspace.profilDirectoryOf(candidat.id),
       });
+    },
+
+    async listProfilFiles(rawInput: unknown): Promise<ProfilFile[]> {
+      const candidat = await findCandidat(rawInput);
+      return z.array(PROFIL_FILE_SCHEMA).parse(workspace.readProfilFiles(candidat.id));
+    },
+
+    async saveProfilFile(rawInput: unknown): Promise<void> {
+      const candidat = await findCandidat(rawInput);
+      const { fileName, markdown } = PROFIL_FILE_INPUT_SCHEMA.parse(rawInput);
+      // The name comes from the front: only a file the Profil already has is written, so no name
+      // can lead out of the Profil folder
+      if (workspace.readProfilFiles(candidat.id).every((profilFile) => profilFile.fileName !== fileName)) {
+        throw new Error(
+          `Le Profil de ${candidat.name} n'a pas de fichier « ${fileName} ». « jf profil ${candidat.id} » complète le Profil.`,
+        );
+      }
+      workspace.saveProfilFile(candidat.id, fileName, markdown);
     },
 
     // The Consignes of each module, the default ones and those the Candidat replaced them with

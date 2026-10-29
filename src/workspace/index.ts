@@ -50,6 +50,15 @@ export async function openWorkspace(dataDirectory: string) {
     versionDirectoryOf,
     readTextFile,
 
+    // The Profil is a flat folder of Markdown files
+    readProfilFiles(candidatId: string) {
+      return readMarkdownFiles(profilDirectoryOf(candidatId));
+    },
+
+    saveProfilFile(candidatId: string, fileName: string, markdown: string): void {
+      writeFileSync(path.join(profilDirectoryOf(candidatId), fileName), markdown);
+    },
+
     // The Markdown files of a Version, such as the Brouillon and the Lettre of a Lettre Version
     readVersionDocuments(offre: Offre, version: Version) {
       return readMarkdownFiles(versionDirectoryOf(offre, version));
