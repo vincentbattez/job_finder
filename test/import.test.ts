@@ -88,6 +88,8 @@ describe('import of a Fiche de poste in Markdown', () => {
       employer: null,
       url: null,
       status: 'a_traiter',
+      // No Zone of a Veille holds it: the import queues its Recherche whatever the Zone
+      isInZone: false,
     });
     const { ficheDePoste, extraction } = await actions.readOffre({ reference: job.offre.reference });
     expect(ficheDePoste).toBe(FICHE_DE_POSTE);
