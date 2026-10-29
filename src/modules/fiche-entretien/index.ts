@@ -1,3 +1,5 @@
+import type { IAiModule } from '#/ai-module/index.ts';
+
 import { FICHE_ENTRETIEN_DEFAULT_CONSIGNES } from './consignes.ts';
 import { composeFicheEntretienPrompt } from './prompt.ts';
 
@@ -19,7 +21,7 @@ export const FICHE_ENTRETIEN_MODULE = {
   composePrompt: composeFicheEntretienPrompt,
   // The Fiche d'entretien builds on the Recherche retenue of its Offre, and on its Lettre retenue
   // once there is one, to prepare the questions on what the Candidat wrote
-  requiredArtefactList: ['recherche'] as const,
-  optionalArtefactList: ['lettre'] as const,
+  requiredArtefactList: ['recherche'],
+  optionalArtefactList: ['lettre'],
   isReadingProfil: true,
-};
+} satisfies IAiModule;

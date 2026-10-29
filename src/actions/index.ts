@@ -45,11 +45,12 @@ import { createPepSource } from '#/modules/source-pep/index.ts';
 import { VISUALISATION_MODULE } from '#/modules/visualisation/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
 import { findRepublishedOffre } from '#/republication/index.ts';
-import { assertLettreModifiable, assertStatutChange, hasBeenPostulee, listNextStatuts } from '#/statut/index.ts';
+import { assertStatutChange, hasBeenPostulee, listNextStatuts } from '#/statut/index.ts';
 import { messageOf } from '#/text/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
 import {
+  assertNotFrozen,
   createJobRunner,
   describeModule,
   findDefaultConsignes,
@@ -104,9 +105,7 @@ function assertArtefactModifiable(
       `La Visualisation ne se modifie pas à la main : elle reprend la Fiche d'entretien retenue. Corrigez celle-ci, puis relancez la Visualisation de l'Offre ${reference}.`,
     );
   }
-  if (artefact === 'lettre') {
-    assertLettreModifiable(offre);
-  }
+  assertNotFrozen(offre, artefact);
   if (version?.isRetenue !== true) {
     throw new Error(
       `L'Offre ${reference} n'a pas de Version retenue de ${artefact} à modifier : « jf run ${artefact} ${reference} » en produit une.`,
@@ -140,9 +139,7 @@ function assertRetenable(
   number: number,
 ): asserts version is Version {
   const { reference } = offre;
-  if (artefact === 'lettre') {
-    assertLettreModifiable(offre);
-  }
+  assertNotFrozen(offre, artefact);
   if (version === undefined) {
     throw new Error(`Version inconnue : ${artefact} v${String(number)} de l'Offre ${reference}.`);
   }

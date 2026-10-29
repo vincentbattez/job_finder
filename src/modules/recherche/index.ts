@@ -1,3 +1,5 @@
+import type { IAiModule } from '#/ai-module/index.ts';
+
 import { RECHERCHE_DEFAULT_CONSIGNES } from './consignes.ts';
 import { composeRecherchePrompt } from './prompt.ts';
 
@@ -19,4 +21,6 @@ export const RECHERCHE_MODULE = {
   outputFileList: [{ name: RECHERCHE_FILE_NAME, findFormatError }],
   defaultConsignes: RECHERCHE_DEFAULT_CONSIGNES,
   composePrompt: composeRecherchePrompt,
-};
+  // A Republication starts from the work done for the Offre it publishes again
+  isReadingRepublishedOffre: true,
+} satisfies IAiModule;

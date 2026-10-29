@@ -1,18 +1,11 @@
-import type { Artefact, Offre } from '#/domain/index.ts';
-
-interface ILettrePromptInput {
-  offre: Offre;
-  outputDirectory: string;
-  readVersionList: { reference: string; artefact: Artefact; directory: string }[];
-  profilDirectory: string;
-}
+import type { IPromptInput } from '#/ai-module/index.ts';
 
 function quote(field: string | null): string {
   return field === null ? 'non renseigné' : `« ${field.trim()} »`;
 }
 
 // The pairs Brouillon/Lettre the Candidat already sent, one folder per Postulée Offre
-function describeSentLettres(sentList: ILettrePromptInput['readVersionList']): string {
+function describeSentLettres(sentList: IPromptInput['readVersionList']): string {
   if (sentList.length === 0) {
     return "Le Candidat n'a encore envoyé aucune Lettre.";
   }
@@ -28,7 +21,7 @@ export function composeLettrePrompt({
   outputDirectory,
   readVersionList,
   profilDirectory,
-}: ILettrePromptInput): string {
+}: IPromptInput): string {
   const rechercheList = readVersionList.filter(({ artefact }) => artefact === 'recherche');
   const sentList = readVersionList.filter(({ artefact }) => artefact === 'lettre');
   return `Tu écris le Brouillon de la lettre de motivation d'un Candidat pour une Offre d'emploi, et tu recommandes à qui l'adresser. Écris en français.

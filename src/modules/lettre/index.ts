@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
+import type { IAiModule } from '#/ai-module/index.ts';
 import type { Offre, Recipients } from '#/domain/index.ts';
 
 import { parseRecipients, readRecipients, RECIPIENTS_FILE_NAME } from './acl/recipients.ts';
@@ -39,9 +40,12 @@ export const LETTRE_MODULE = {
   outputFileList: [{ name: BROUILLON_FILE_NAME }, { name: RECIPIENTS_FILE_NAME, findFormatError: findRecipientsError }],
   defaultConsignes: LETTRE_DEFAULT_CONSIGNES,
   composePrompt: composeLettrePrompt,
-  // The Lettre builds on the Recherche retenue of its Offre
-  requiredArtefactList: ['recherche'] as const,
+  // The Lettre builds on the Recherche retenue of its Offre, and learns from the Lettres the
+  // Candidat sent: the correction of each Brouillon shows their style
+  requiredArtefactList: ['recherche'],
   isReadingProfil: true,
+  isReadingSentVersions: true,
+  isFrozenOncePostulee: true,
 
   // The Lettre starts as a copy of the Brouillon, which becomes read-only: no correction, in the
   // front or with jf edit, can reach it
@@ -52,4 +56,4 @@ export const LETTRE_MODULE = {
   },
 
   readRecipients,
-};
+} satisfies IAiModule & { readRecipients: typeof readRecipients };

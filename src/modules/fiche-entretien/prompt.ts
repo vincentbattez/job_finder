@@ -1,14 +1,7 @@
-import type { Artefact, Offre } from '#/domain/index.ts';
-
-interface IFicheEntretienPromptInput {
-  offre: Offre;
-  outputDirectory: string;
-  readVersionList: { reference: string; artefact: Artefact; directory: string }[];
-  profilDirectory: string;
-}
+import type { IPromptInput } from '#/ai-module/index.ts';
 
 // The Lettre retenue when there is one: the recruiters question the Candidat on what it says
-function describeLettre(readVersionList: IFicheEntretienPromptInput['readVersionList']): string {
+function describeLettre(readVersionList: IPromptInput['readVersionList']): string {
   const lettre = readVersionList.find(({ artefact }) => artefact === 'lettre');
   return lettre === undefined
     ? "Le Candidat n'a pas de Lettre pour cette Offre : prépare l'entretien sans elle."
@@ -23,7 +16,7 @@ export function composeFicheEntretienPrompt({
   outputDirectory,
   readVersionList,
   profilDirectory,
-}: IFicheEntretienPromptInput): string {
+}: IPromptInput): string {
   const outputPath = `${outputDirectory}/fiche-entretien.md`;
   const rechercheList = readVersionList.filter(({ artefact }) => artefact === 'recherche');
   return `Tu écris la Fiche d'entretien d'un Candidat pour une Offre d'emploi : ce qu'il doit réviser et comment s'entraîner avant l'entretien de recrutement. Écris en français.

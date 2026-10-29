@@ -1,6 +1,9 @@
 import type { Offre, Statut } from '#/domain/index.ts';
 import { STATUT_LABEL_BY_STATUT } from '#/domain/labels.ts';
 
+// What the statut rules read of an Offre
+type OffreStatut = Pick<Offre, 'reference' | 'status' | 'postuleeAt'>;
+
 // A calendar day in France, as « 2026-11-20 », so that two days compare as strings
 const FRANCE_DAY_FORMAT = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' });
 
@@ -61,7 +64,7 @@ export function listNextStatuts(offre: Pick<Offre, 'status' | 'postuleeAt'>): St
 }
 
 // Moving to the statut it already has changes nothing
-export function assertStatutChange(offre: Pick<Offre, 'reference' | 'status' | 'postuleeAt'>, statut: Statut): void {
+export function assertStatutChange(offre: OffreStatut, statut: Statut): void {
   const nextStatutList = listNextStatuts(offre);
   if (statut === offre.status || nextStatutList.includes(statut)) {
     return;
@@ -73,13 +76,19 @@ export function assertStatutChange(offre: Pick<Offre, 'reference' | 'status' | '
   );
 }
 
-// The Lettre retenue of an Offre once Postulée is the one that was sent: it can no longer be
-// edited, regenerated or swapped for another Version, even once the Offre is Archivée. Every
-// action that would change it calls this first.
-export function assertLettreModifiable(offre: Pick<Offre, 'reference' | 'status' | 'postuleeAt'>): void {
-  if (hasBeenPostulee(offre)) {
-    throw new Error(
-      `L'Offre ${offre.reference} a été Postulée : sa Lettre retenue est figée telle qu'envoyée. Elle ne se modifie plus, ne se régénère plus et ne se remplace plus par une autre Version.`,
-    );
+// Why the Lettre retenue can no longer change, undefined while it can: once the Offre was
+// Postulée, it is the one sent, even once the Offre is Archivée. It is then never edited,
+// regenerated or swapped for another Version.
+export function findLettreFreeze(offre: OffreStatut): string | undefined {
+  return hasBeenPostulee(offre)
+    ? `L'Offre ${offre.reference} a été Postulée : sa Lettre retenue est figée telle qu'envoyée. Elle ne se modifie plus, ne se régénère plus et ne se remplace plus par une autre Version.`
+    : undefined;
+}
+
+// Every action that would change the Lettre retenue calls this first
+export function assertLettreModifiable(offre: OffreStatut): void {
+  const freeze = findLettreFreeze(offre);
+  if (freeze !== undefined) {
+    throw new Error(freeze);
   }
 }

@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 
+import type { IAiModule } from '#/ai-module/index.ts';
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
 import {
   ARTEFACT_SCHEMA,
@@ -15,10 +16,10 @@ import { FICHE_ENTRETIEN_MODULE } from '#/modules/fiche-entretien/index.ts';
 import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import { RECHERCHE_MODULE } from '#/modules/recherche/index.ts';
 import { VISUALISATION_MODULE } from '#/modules/visualisation/index.ts';
-import { assertLettreModifiable, hasBeenPostulee } from '#/statut/index.ts';
-import { messageOf } from '#/text/index.ts';
+import { assertLettreModifiable, findLettreFreeze, hasBeenPostulee } from '#/statut/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
+// A Version a job reads, of its own Offre or of another one
 interface IReadVersion {
   offre: Offre;
   version: Version;
@@ -27,41 +28,6 @@ interface IReadVersion {
 export async function findVersionRetenue(workspace: Workspace, offre: Offre, artefact: Artefact) {
   const versionList = await workspace.listVersions(offre, artefact);
   return versionList.find(({ isRetenue }) => isRetenue);
-}
-
-interface IOutputFile {
-  name: string;
-  // What makes the file malformed, if anything
-  findFormatError?: (content: string, offre: Offre) => string | undefined;
-}
-
-// What the fixed part of a prompt names: the folder of the Version, relative to the folder of the
-// Offre where the session runs, and the absolute folders of what it reads
-interface IPromptInput {
-  offre: Offre;
-  outputDirectory: string;
-  readVersionList: { reference: string; artefact: Artefact; directory: string }[];
-  profilDirectory: string;
-}
-
-// What an AI module gives the job runner, from the single entry point of its folder (ADR-0003)
-interface IAiModule {
-  // A shorter name than its Artefact, for jf run
-  alias?: string;
-  // The file of the Version the Candidat reads, returned once the job has run
-  fileName: string;
-  // The files the session writes in the folder of the Version
-  outputFileList: IOutputFile[];
-  defaultConsignes: string;
-  composePrompt(input: IPromptInput): string;
-  // Runs once the files are valid, before the Version is ready
-  completeVersion?(versionDirectory: string): void;
-  // The Artefacts of the Offre the module reads: it refuses to run until each has a Version retenue
-  requiredArtefactList?: readonly Artefact[];
-  // The Artefacts of the Offre the module also reads, when they have a Version retenue
-  optionalArtefactList?: readonly Artefact[];
-  // Whether the module reads the Profil of the Candidat
-  isReadingProfil?: boolean;
 }
 
 const ARTEFACT_LABEL_BY_ARTEFACT: Record<Artefact, string> = {
@@ -95,80 +61,96 @@ export function findDefaultConsignes(module: Artefact): string {
 }
 
 // A Republication starts from the work done for the Offre it publishes again: the Version retenue
-// of each of its Artefacts (spec « Republication »)
+// of each of its Artefacts
 async function findRepublishedVersions(workspace: Workspace, { republicationOf, candidatId }: Offre) {
   const offreList = republicationOf === null ? [] : await workspace.findOffres(republicationOf.reference);
   const republishedOffre = offreList.find((candidate) => candidate.candidatId === candidatId);
-  if (republishedOffre === undefined) {
-    return [];
-  }
-  const versionList = await Promise.all(
-    ARTEFACT_SCHEMA.options.map((artefact) => findVersionRetenue(workspace, republishedOffre, artefact)),
-  );
-  return versionList
-    .filter((version) => version !== undefined)
-    .map((version): IReadVersion => ({ offre: republishedOffre, version }));
+  return republishedOffre === undefined
+    ? []
+    : findVersionsRetenues(workspace, republishedOffre, ARTEFACT_SCHEMA.options);
 }
 
-// What a job reads besides the Fiche de poste of its Offre: Versions, and folders outside the
-// Offre. The Version retenue of each Artefact its module requires, and of each one it reads when
-// there is one, and the Profil if it reads it, as the module declares. The Recherche of a
-// Republication reads the Artefacts of the Offre it publishes again. The Lettre also reads the
-// Brouillon/Lettre pairs the Candidat sent, those of the Lettre retenue of each Postulée Offre (spec
-// « Modules IA »). Throws, before anything is written, when the module cannot run on the Offre: a
-// Lettre frozen by Postulée, or a required Artefact without a Version retenue. The actions call it
-// to refuse a job up front, the runner again for a job queued before the Offre changed.
-export async function findInputs(workspace: Workspace, offre: Offre, module: Artefact) {
-  if (module === 'lettre') {
+// The Version retenue of each Artefact that has one
+async function findVersionsRetenues(
+  workspace: Workspace,
+  offre: Offre,
+  artefactList: readonly Artefact[],
+): Promise<IReadVersion[]> {
+  const versionList = await Promise.all(artefactList.map((artefact) => findVersionRetenue(workspace, offre, artefact)));
+  return versionList.filter((version) => version !== undefined).map((version) => ({ offre, version }));
+}
+
+// The Version retenue of the Artefact for each Offre of the Candidat once Postulée: what they sent
+async function findSentVersions(workspace: Workspace, { candidatId }: Offre, artefact: Artefact) {
+  const offreList = await workspace.listOffres(candidatId);
+  const sentList = await Promise.all(
+    offreList
+      .filter((offre) => hasBeenPostulee(offre))
+      .map((offre) => findVersionsRetenues(workspace, offre, [artefact])),
+  );
+  return sentList.flat();
+}
+
+type Refusal = { freeze: string } | { missingArtefact: Artefact };
+
+// Why the module cannot run on the Offre now, undefined when it can: its Artefact frozen since the
+// Offre was Postulée, or an Artefact it requires without a Version retenue
+async function findRefusal(workspace: Workspace, offre: Offre, module: Artefact): Promise<Refusal | undefined> {
+  const aiModule = AI_MODULE_BY_ARTEFACT[module];
+  const freeze = aiModule.isFrozenOncePostulee === true ? findLettreFreeze(offre) : undefined;
+  if (freeze !== undefined) {
+    return { freeze };
+  }
+  const requiredArtefactList = aiModule.requiredArtefactList ?? [];
+  for (const artefact of requiredArtefactList) {
+    if ((await findVersionRetenue(workspace, offre, artefact)) === undefined) {
+      return { missingArtefact: artefact };
+    }
+  }
+  return undefined;
+}
+
+function wordRefusal(refusal: Refusal, offre: Offre, module: Artefact): string {
+  if ('freeze' in refusal) {
+    return refusal.freeze;
+  }
+  const { missingArtefact } = refusal;
+  return `L'Offre ${offre.reference} n'a pas de ${ARTEFACT_LABEL_BY_ARTEFACT[missingArtefact]} retenue, sur laquelle s'appuie la ${ARTEFACT_LABEL_BY_ARTEFACT[module]}. La produire d'abord : jf run ${missingArtefact} ${offre.reference}.`;
+}
+
+// The Version retenue of an Artefact the Candidat sends, the Lettre, is frozen once the Offre was
+// Postulée
+export function assertNotFrozen(offre: Offre, artefact: Artefact): void {
+  if (AI_MODULE_BY_ARTEFACT[artefact].isFrozenOncePostulee === true) {
     assertLettreModifiable(offre);
   }
-  const aiModule = AI_MODULE_BY_ARTEFACT[module];
-  const requiredArtefactList = aiModule.requiredArtefactList ?? [];
-  const requiredList: IReadVersion[] = [];
-  for (const artefact of requiredArtefactList) {
-    const version = await findVersionRetenue(workspace, offre, artefact);
-    if (version === undefined) {
-      const label = ARTEFACT_LABEL_BY_ARTEFACT[artefact];
-      throw new Error(
-        `L'Offre ${offre.reference} n'a pas de ${label} retenue, sur laquelle s'appuie la ${ARTEFACT_LABEL_BY_ARTEFACT[module]}. La produire d'abord : jf run ${artefact} ${offre.reference}.`,
-      );
-    }
-    requiredList.push({ offre, version });
+}
+
+// What a job reads besides the Fiche de poste of its Offre, as its module declares: Versions, and
+// folders outside the Offre. Throws, before anything is written, when the module cannot run on the
+// Offre: the actions call it to refuse a job up front, the runner again for a job queued before the
+// Offre changed.
+export async function findInputs(workspace: Workspace, offre: Offre, module: Artefact) {
+  const refusal = await findRefusal(workspace, offre, module);
+  if (refusal !== undefined) {
+    throw new Error(wordRefusal(refusal, offre, module));
   }
-  const optionalList = await Promise.all(
-    (aiModule.optionalArtefactList ?? []).map((artefact) => findVersionRetenue(workspace, offre, artefact)),
-  );
-  const offreVersionList = [
-    ...requiredList,
-    ...optionalList.filter((version) => version !== undefined).map((version) => ({ offre, version })),
+  const aiModule = AI_MODULE_BY_ARTEFACT[module];
+  const artefactList = [...(aiModule.requiredArtefactList ?? []), ...(aiModule.optionalArtefactList ?? [])];
+  const versionList = [
+    ...(await findVersionsRetenues(workspace, offre, artefactList)),
+    ...(aiModule.isReadingRepublishedOffre === true ? await findRepublishedVersions(workspace, offre) : []),
+    ...(aiModule.isReadingSentVersions === true ? await findSentVersions(workspace, offre, module) : []),
   ];
   const directoryList = aiModule.isReadingProfil === true ? [workspace.profilDirectoryOf(offre.candidatId)] : [];
-  if (module === 'recherche') {
-    return { versionList: [...offreVersionList, ...(await findRepublishedVersions(workspace, offre))], directoryList };
-  }
-  if (module !== 'lettre') {
-    return { versionList: offreVersionList, directoryList };
-  }
-  const offreList = await workspace.listOffres(offre.candidatId);
-  const sentList: IReadVersion[] = [];
-  for (const sentOffre of offreList) {
-    const lettre = hasBeenPostulee(sentOffre) ? await findVersionRetenue(workspace, sentOffre, 'lettre') : undefined;
-    if (lettre !== undefined) {
-      sentList.push({ offre: sentOffre, version: lettre });
-    }
-  }
-  return { versionList: [...offreVersionList, ...sentList], directoryList };
+  return { versionList, directoryList };
 }
 
 // The module of an Artefact as the fiche of an Offre offers it: why it cannot run on the Offre now,
 // from the very checks of a launch
 export async function describeModule(workspace: Workspace, offre: Offre, artefact: Artefact) {
-  try {
-    await findInputs(workspace, offre, artefact);
-    return { refusal: null };
-  } catch (error) {
-    return { refusal: messageOf(error) };
-  }
+  const refusal = await findRefusal(workspace, offre, artefact);
+  return { refusal: refusal === undefined ? null : wordRefusal(refusal, offre, artefact) };
 }
 
 // The one function that runs a job: the worker calls it on each queued job (ADR-0003). The
@@ -176,7 +158,11 @@ export async function describeModule(workspace: Workspace, offre: Offre, artefac
 // ones; the Version keeps them.
 export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
   // A Version is ready only once each of its files exists, is not empty and has the module's format
-  function findOutputProblem({ name, findFormatError }: IOutputFile, offre: Offre, outputDirectory: string) {
+  function findOutputProblem(
+    { name, findFormatError }: IAiModule['outputFileList'][number],
+    offre: Offre,
+    outputDirectory: string,
+  ) {
     const filePath = path.join(outputDirectory, name);
     const outputPath = path.relative(workspace.offreDirectoryOf(offre), filePath);
     const content = workspace.readTextFile(filePath);

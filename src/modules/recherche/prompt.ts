@@ -1,14 +1,8 @@
-import type { Artefact, Offre } from '#/domain/index.ts';
-
-interface IRecherchePromptInput {
-  offre: Offre;
-  outputDirectory: string;
-  readVersionList: { reference: string; artefact: Artefact; directory: string }[];
-}
+import type { IPromptInput } from '#/ai-module/index.ts';
 
 // A Republication starts from the Artefacts of the Offre it publishes again, so the work is not
 // done twice (spec « Republication »)
-function describeRepublishedOffre(readVersionList: IRecherchePromptInput['readVersionList']): string {
+function describeRepublishedOffre(readVersionList: IPromptInput['readVersionList']): string {
   const [firstVersion] = readVersionList;
   if (firstVersion === undefined) {
     return '';
@@ -27,7 +21,7 @@ Ne refais pas ce travail : pars de sa Recherche, vérifie ce que la Fiche de pos
 // The fixed part of the prompt of the Recherche: its objective, what it reads, what it writes and
 // where, and the rules no Consignes can lift (ADR-0003). The objective is fixed, the way to reach
 // it is left to the session and its Consignes. It runs in the folder of the Offre.
-export function composeRecherchePrompt({ offre, outputDirectory, readVersionList }: IRecherchePromptInput): string {
+export function composeRecherchePrompt({ offre, outputDirectory, readVersionList }: IPromptInput): string {
   const outputPath = `${outputDirectory}/recherche.md`;
   return `Tu produis la Recherche d'une Offre d'emploi, pour le Candidat qui va y postuler. Écris en français.
 

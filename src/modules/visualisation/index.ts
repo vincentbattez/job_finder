@@ -1,3 +1,5 @@
+import type { IAiModule } from '#/ai-module/index.ts';
+
 import { VISUALISATION_DEFAULT_CONSIGNES } from './consignes.ts';
 import { composeVisualisationPrompt } from './prompt.ts';
 
@@ -19,5 +21,5 @@ export const VISUALISATION_MODULE = {
   outputFileList: [{ name: VISUALISATION_FILE_NAME, findFormatError }],
   defaultConsignes: VISUALISATION_DEFAULT_CONSIGNES,
   composePrompt: composeVisualisationPrompt,
-  requiredArtefactList: ['fiche_entretien'] as const,
-};
+  requiredArtefactList: ['fiche_entretien'],
+} satisfies IAiModule;
