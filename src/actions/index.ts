@@ -439,6 +439,13 @@ export async function createActions({
       return ARTEFACT_SCHEMA.options.map((module) => readModuleConsignes(candidat.id, module));
     },
 
+    // Those of one module, named by its Artefact or its alias, as jf run names it
+    async readConsignes(rawInput: unknown): Promise<ModuleConsignes> {
+      const candidat = await findCandidat(rawInput);
+      const { module } = CONSIGNES_MODULE_INPUT_SCHEMA.parse(rawInput);
+      return readModuleConsignes(candidat.id, parseModule(module));
+    },
+
     // The Candidat's Consignes replace the default ones of the module, for its next Versions. The
     // fixed part of its prompt stays, so they cannot lift its rules (ADR-0003).
     async saveConsignes(rawInput: unknown): Promise<void> {

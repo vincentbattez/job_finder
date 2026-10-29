@@ -56,6 +56,31 @@ describe('consignes', () => {
     ]);
   });
 
+  // jf consignes lea fiche, like jf run fiche
+  it('reads the Consignes of one module, named by its Artefact or its alias', async () => {
+    const actions = await openActions();
+    await actions.saveConsignes({ candidatId: 'lea', module: 'fiche', consignes: 'Dix questions.\n' });
+
+    expect([
+      await actions.readConsignes({ candidatId: 'lea', module: 'fiche' }),
+      await actions.readConsignes({ candidatId: 'lea', module: 'fiche_entretien' }),
+    ]).toEqual([
+      {
+        module: 'fiche_entretien',
+        defaultConsignes: FICHE_ENTRETIEN_DEFAULT_CONSIGNES,
+        candidatConsignes: 'Dix questions.\n',
+      },
+      {
+        module: 'fiche_entretien',
+        defaultConsignes: FICHE_ENTRETIEN_DEFAULT_CONSIGNES,
+        candidatConsignes: 'Dix questions.\n',
+      },
+    ]);
+    await expect(actions.readConsignes({ candidatId: 'lea', module: 'lettr' })).rejects.toThrow(
+      'Module inconnu : lettr. Modules : recherche, lettre, fiche, visualisation.',
+    );
+  });
+
   it("goes back to the default Consignes once the Candidat's own are deleted", async () => {
     const actions = await openActions();
     await actions.saveConsignes({ candidatId: 'lea', module: 'recherche', consignes: 'Creuse la ville.\n' });

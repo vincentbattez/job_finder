@@ -407,8 +407,8 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       if (candidatId === undefined) {
         throw new Error(`${CONSIGNES_USAGE} « jf candidats » liste les Candidats.`);
       }
-      const consignesList = await actions.listConsignes({ candidatId });
       if (module === undefined) {
+        const consignesList = await actions.listConsignes({ candidatId });
         for (const { module: name, candidatConsignes } of consignesList) {
           process.stdout.write(
             `${name}\t${candidatConsignes === null ? 'Consignes par défaut' : 'Consignes du Candidat'}\n`,
@@ -416,11 +416,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
         }
         return;
       }
-      const consignes = consignesList.find((candidate) => candidate.module === module);
-      if (consignes === undefined) {
-        const nameList = consignesList.map((candidate) => candidate.module);
-        throw new Error(`Module inconnu : ${module}. Modules : ${nameList.join(', ')}.`);
-      }
+      const consignes = await actions.readConsignes({ candidatId, module });
       await runConsignesOperation(actions, { ...consignes, candidatId }, operation);
     },
   },
