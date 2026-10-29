@@ -74,3 +74,24 @@ describe('the headless launch of Claude Code', () => {
     expect(result).toMatchObject({ isSuccess: false, sessionId: null, log: /Impossible de lancer Claude Code/ });
   });
 });
+
+describe('the interactive launch of Claude Code', () => {
+  it('confines a session with read-only paths to its directory, without shell, web nor customization', () => {
+    vi.stubEnv('ANTHROPIC_API_KEY', 'cle-de-test');
+    const recordDirectory = stubClaude({});
+    const directory = createDirectory();
+
+    CLAUDE_CODE.openInteractive({
+      prompt: SESSION.fixedPrompt,
+      directory,
+      readOnlyPathList: ['/donnees/offre/**/brouillon.md'],
+    });
+
+    const argumentList = readRecord(recordDirectory, 'arguments').split('\0');
+    expect(argumentList).toEqual(expect.arrayContaining(['--restricted', '--safe-mode', 'manual']));
+    expect(argumentList[argumentList.indexOf('--disallowedTools') + 1]).toBe('Edit(//donnees/offre/**/brouillon.md)');
+    expect(argumentList[argumentList.indexOf('--append-system-prompt') + 1]).toBe(SESSION.fixedPrompt);
+    expect(readRecord(recordDirectory, 'directory').trim()).toBe(realpathSync(directory));
+    expect(readRecord(recordDirectory, 'environment')).not.toMatch(/^ANTHROPIC_API_KEY=/m);
+  });
+});

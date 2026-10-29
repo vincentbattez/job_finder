@@ -14,6 +14,7 @@ jf postuler 2026-2445600                       # passe une Offre en Postulée, c
 jf run recherche 2026-2445600                  # produit une nouvelle Version de la Recherche d'une Offre
 jf versions 2026-2445600 recherche             # liste les Versions d'un Artefact
 jf retenir 2026-2445600 recherche 1            # change la Version retenue
+jf edit 2026-2445600 recherche                 # corrige la Version retenue d'un Artefact avec Claude Code ; sans argument, propose les Offres puis l'Artefact
 ```
 
 `jf` est sur le `PATH` dès que mise est actif dans le dossier du repo.
@@ -44,6 +45,7 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 - `src/ai-session/` : le lancement des sessions d'IA. Seul `acl/claude-code.ts` sait qu'elles tournent sur Claude Code, toujours sur l'abonnement (`claude -p`, sans clé API) ; les tests le remplacent par un faux.
 - `src/actions/run-job.ts` : l'exécution d'un job d'un module IA : la Version, le prompt en deux parties (partie fixe et Consignes), la vérification du fichier produit et la Version retenue.
 - `src/profil/` : le prompt fixe de `jf profil`.
+- `src/edit/` : le prompt fixe de `jf edit`, qui ouvre une session dans le dossier de l'Offre, sans shell ni web, où aucun Brouillon ne peut être modifié.
 - `src/statut/` : les règles du statut d'une Offre : le calcul d'Expirée, et le gel de la Lettre retenue d'une Offre Postulée.
 - `src/modules/` : un dossier par module, avec un seul point d'entrée. Un module n'en importe jamais un autre, ce que vérifie `test/architecture.test.ts`. Un module IA, comme `recherche/`, a sa partie fixe du prompt dans `prompt.ts` et ses Consignes par défaut dans `consignes.ts`.
 - `prisma/` : le schéma, les migrations et le seed.
