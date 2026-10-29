@@ -1,10 +1,11 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import type { Offre } from '#/domain/index.ts';
+import type { Artefact, Offre, Version } from '#/domain/index.ts';
 
 import { loadConfig } from './acl/config.ts';
 import { openDatabase, type INewOffre } from './acl/database.ts';
+import { readTextFile } from './acl/files.ts';
 
 function slugify(text: string): string {
   return text
@@ -22,29 +23,42 @@ export async function openWorkspace(dataDirectory: string) {
   const config = loadConfig(path.join(dataDirectory, 'config.json'));
   const database = openDatabase(path.join(dataDirectory, 'job_finder.sqlite'), config.defaultDelayMonths);
   await database.copyConfig(config);
-  const profilDirectoryOf = (candidatId: string): string => path.join(dataDirectory, 'candidats', candidatId, 'profil');
+  const candidatDirectoryOf = (candidatId: string): string => path.join(dataDirectory, 'candidats', candidatId);
+  const profilDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'profil');
   for (const candidat of config.candidatList) {
     mkdirSync(profilDirectoryOf(candidat.id), { recursive: true });
+  }
+
+  // Each Offre has a folder named by its reference and title, for its Fiche de poste and its
+  // Artefacts
+  function offreDirectoryOf({ candidatId, reference, title }: Pick<Offre, 'candidatId' | 'reference' | 'title'>) {
+    return path.join(candidatDirectoryOf(candidatId), 'offres', `${reference}-${slugify(title)}`);
   }
 
   return {
     ...database,
     profilDirectoryOf,
+    offreDirectoryOf,
+    readTextFile,
 
-    // Each Offre has a folder named by its reference and title, for its Fiche de poste and its
-    // Artefacts. The Fiche de poste is written first, so an Offre in the database always has it.
+    // Each Version of an Artefact has its own folder, so a new launch never overwrites the others
+    versionDirectoryOf(offre: Offre, { artefact, number }: Version): string {
+      return path.join(offreDirectoryOf(offre), artefact, `v${String(number)}`);
+    },
+
+    // The Consignes with which a Candidat replaced the default ones of an Artefact, if any
+    readConsignes(candidatId: string, artefact: Artefact): string | null {
+      return readTextFile(path.join(candidatDirectoryOf(candidatId), 'consignes', `${artefact}.md`));
+    },
+
+    // The Fiche de poste is written first, so an Offre in the database always has it
     async saveOffre(newOffre: INewOffre): Promise<Offre> {
-      const { reference, title } = newOffre.listedOffre;
-      const offreDirectory = path.join(
-        dataDirectory,
-        'candidats',
-        newOffre.candidatId,
-        'offres',
-        `${reference}-${slugify(title)}`,
-      );
+      const offreDirectory = offreDirectoryOf({ candidatId: newOffre.candidatId, ...newOffre.listedOffre });
       mkdirSync(offreDirectory, { recursive: true });
       writeFileSync(path.join(offreDirectory, 'fiche-de-poste.md'), newOffre.fiche.markdown);
       return database.createOffre(newOffre);
     },
   };
 }
+
+export type Workspace = Awaited<ReturnType<typeof openWorkspace>>;

@@ -1,0 +1,9 @@
+#!/bin/sh
+# Stands in for the claude CLI in test/claude-code.test.ts: records how it was launched, then
+# answers as `claude -p --output-format json` would
+printf '%s\0' "$@" > "$FAKE_CLAUDE_RECORD/arguments"
+env > "$FAKE_CLAUDE_RECORD/environment"
+pwd -P > "$FAKE_CLAUDE_RECORD/directory"
+cat > "$FAKE_CLAUDE_RECORD/message"
+printf '%s' "$FAKE_CLAUDE_OUTPUT"
+exit "${FAKE_CLAUDE_EXIT_CODE:-0}"

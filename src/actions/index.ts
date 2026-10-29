@@ -1,14 +1,29 @@
 import { z } from 'zod/v4';
 
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { DETECTION_SCHEMA, type Candidat, type Detection, type DomainValue, type Offre } from '#/domain/index.ts';
+import {
+  ARTEFACT_SCHEMA,
+  DETECTION_SCHEMA,
+  type Candidat,
+  type Detection,
+  type DomainValue,
+  type ModuleRun,
+  type Offre,
+  type Version,
+} from '#/domain/index.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
+import { assertLettreModifiable } from '#/statut/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
+
+import { createJobRunner, parseModule } from './run-job.ts';
 
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
 const CANDIDAT_INPUT_SCHEMA = z.object({ candidatId: z.string() });
+const MODULE_INPUT_SCHEMA = z.object({ module: z.string(), reference: z.string() });
+const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: ARTEFACT_SCHEMA });
+const VERSION_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
 
 const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: z.enum(['postulee', 'archivee']) });
 
@@ -29,6 +44,7 @@ export async function createActions({
 }) {
   const workspace = await openWorkspace(dataDirectory);
   const pepSource = createPepSource(fetch);
+  const runJob = createJobRunner(workspace, aiSession);
 
   async function findCandidat(rawInput: unknown): Promise<Candidat> {
     const { candidatId } = CANDIDAT_INPUT_SCHEMA.parse(rawInput);
@@ -109,6 +125,40 @@ export async function createActions({
         prompt: composeProfilPrompt(candidat),
         directory: workspace.profilDirectoryOf(candidat.id),
       });
+    },
+
+    // Runs a module on an Offre, which creates a new Version of its Artefact. In L1 the job runs
+    // right away, through the same function the worker will call (ADR-0003).
+    async runModule(rawInput: unknown): Promise<ModuleRun> {
+      const { module, reference } = MODULE_INPUT_SCHEMA.parse(rawInput);
+      const artefact = parseModule(module);
+      const offre = await findOffre(reference);
+      return runJob(await workspace.createJob(offre, artefact));
+    },
+
+    async listVersions(rawInput: unknown): Promise<Version[]> {
+      const { reference, artefact } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
+      return workspace.listVersions(await findOffre(reference), artefact);
+    },
+
+    async retenirVersion(rawInput: unknown): Promise<void> {
+      const { reference, artefact, number } = VERSION_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      if (artefact === 'lettre') {
+        assertLettreModifiable(offre);
+      }
+      const versionList = await workspace.listVersions(offre, artefact);
+      const version = versionList.find((candidate) => candidate.number === number);
+      if (version === undefined) {
+        throw new Error(`Version inconnue : ${artefact} v${String(number)} de l'Offre ${reference}.`);
+      }
+      if (version.state !== 'ready') {
+        const state = version.state === 'failed' ? 'en échec' : 'en cours';
+        throw new Error(
+          `La Version ${artefact} v${String(number)} de l'Offre ${reference} est ${state} : seule une Version prête peut être retenue.`,
+        );
+      }
+      await workspace.retainVersion(offre, version);
     },
   } satisfies Record<string, (rawInput: unknown) => Promise<void> | Promise<DomainValue | DomainValue[]>>;
 }

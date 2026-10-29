@@ -7,13 +7,18 @@ import { z } from 'zod/v4';
 
 import {
   CANDIDAT_SCHEMA,
+  JOB_SCHEMA,
   OFFRE_SCHEMA,
   VEILLE_SCHEMA,
+  VERSION_SCHEMA,
+  type Artefact,
   type Candidat,
   type FicheDePoste,
+  type Job,
   type ListedOffre,
   type Offre,
   type Veille,
+  type Version,
 } from '#/domain/index.ts';
 import { isExpiree } from '#/statut/index.ts';
 import { PrismaClient } from '#/workspace/generated/client.ts';
@@ -22,6 +27,9 @@ import type { Config } from './config.ts';
 
 const ROOT_DIRECTORY = path.join(import.meta.dirname, '..', '..', '..');
 const PRISMA_CLI_PATH = fileURLToPath(import.meta.resolve('prisma/build/index.js'));
+
+const JOB_INCLUDE = { offre: true };
+const VERSION_INCLUDE = { inputList: { select: { artefact: true, number: true } } };
 
 export interface INewOffre {
   candidatId: string;
@@ -53,6 +61,14 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
     },
   });
 
+  // A single Version retenue per Artefact of an Offre
+  function retainStatementList({ offreId, artefact, number }: { offreId: number; artefact: Artefact; number: number }) {
+    return [
+      prisma.version.updateMany({ where: { offreId, artefact, number: { not: number } }, data: { isRetenue: false } }),
+      prisma.version.updateMany({ where: { offreId, artefact, number }, data: { isRetenue: true } }),
+    ];
+  }
+
   return {
     async listCandidats(): Promise<Candidat[]> {
       return z.array(CANDIDAT_SCHEMA).parse(await prisma.candidat.findMany({ orderBy: { name: 'asc' } }));
@@ -66,6 +82,62 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       return z
         .array(OFFRE_SCHEMA)
         .parse(await prisma.offre.findMany({ where: { candidatId }, orderBy: { reference: 'desc' } }));
+    },
+
+    async createJob(offre: Offre, module: Artefact): Promise<Job> {
+      return JOB_SCHEMA.parse(await prisma.job.create({ data: { module, offreId: offre.id }, include: JOB_INCLUDE }));
+    },
+
+    // The job runs and its Version is created, numbered after the last Version of its Artefact
+    async startJob({ id, module, offre }: Job, consignes: string): Promise<Version> {
+      const { _max: max } = await prisma.version.aggregate({
+        where: { offreId: offre.id, artefact: module },
+        _max: { number: true },
+      });
+      const [, version] = await prisma.$transaction([
+        prisma.job.update({ where: { id }, data: { state: 'running' } }),
+        prisma.version.create({
+          data: { offreId: offre.id, artefact: module, number: (max.number ?? 0) + 1, state: 'running', consignes },
+          include: VERSION_INCLUDE,
+        }),
+      ]);
+      return VERSION_SCHEMA.parse(version);
+    },
+
+    // A ready Version becomes the Version retenue: by default, the latest one is retained
+    async finishJob(
+      { job, version }: { job: Job; version: Version },
+      { isReady, log, sessionId }: { isReady: boolean; log: string; sessionId: string | null },
+    ): Promise<{ job: Job; version: Version }> {
+      const versionWhere = { offreId: job.offre.id, artefact: job.module, number: version.number };
+      await prisma.$transaction([
+        prisma.version.updateMany({ where: versionWhere, data: { state: isReady ? 'ready' : 'failed' } }),
+        prisma.job.update({ where: { id: job.id }, data: { state: isReady ? 'done' : 'failed', log, sessionId } }),
+        ...(isReady ? retainStatementList(versionWhere) : []),
+      ]);
+      return {
+        job: JOB_SCHEMA.parse(await prisma.job.findUniqueOrThrow({ where: { id: job.id }, include: JOB_INCLUDE })),
+        version: VERSION_SCHEMA.parse(
+          await prisma.version.findUniqueOrThrow({
+            where: { offreId_artefact_number: versionWhere },
+            include: VERSION_INCLUDE,
+          }),
+        ),
+      };
+    },
+
+    async listVersions(offre: Offre, artefact: Artefact): Promise<Version[]> {
+      return z.array(VERSION_SCHEMA).parse(
+        await prisma.version.findMany({
+          where: { offreId: offre.id, artefact },
+          orderBy: { number: 'asc' },
+          include: VERSION_INCLUDE,
+        }),
+      );
+    },
+
+    async retainVersion(offre: Offre, { artefact, number }: Version): Promise<void> {
+      await prisma.$transaction(retainStatementList({ offreId: offre.id, artefact, number }));
     },
 
     async listReferences(candidatId: string, source: string): Promise<string[]> {
