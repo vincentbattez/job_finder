@@ -5,6 +5,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
+import { FICHE_ENTRETIEN_DEFAULT_CONSIGNES } from '#/modules/fiche-entretien/consignes.ts';
 import { LETTRE_DEFAULT_CONSIGNES } from '#/modules/lettre/consignes.ts';
 import { RECHERCHE_DEFAULT_CONSIGNES } from '#/modules/recherche/consignes.ts';
 
@@ -41,6 +42,7 @@ describe('consignes', () => {
     expect(consignesList).toEqual([
       { module: 'recherche', defaultConsignes: RECHERCHE_DEFAULT_CONSIGNES, candidatConsignes: null },
       { module: 'lettre', defaultConsignes: LETTRE_DEFAULT_CONSIGNES, candidatConsignes: null },
+      { module: 'fiche_entretien', defaultConsignes: FICHE_ENTRETIEN_DEFAULT_CONSIGNES, candidatConsignes: null },
     ]);
   });
 
@@ -53,6 +55,7 @@ describe('consignes', () => {
     expect(await actions.listConsignes({ candidatId: 'lea' })).toEqual([
       { module: 'recherche', defaultConsignes: RECHERCHE_DEFAULT_CONSIGNES, candidatConsignes: null },
       { module: 'lettre', defaultConsignes: LETTRE_DEFAULT_CONSIGNES, candidatConsignes: 'Une lettre très courte.\n' },
+      { module: 'fiche_entretien', defaultConsignes: FICHE_ENTRETIEN_DEFAULT_CONSIGNES, candidatConsignes: null },
     ]);
   });
 
@@ -87,15 +90,16 @@ describe('consignes', () => {
     ]);
   });
 
-  it.each(['fiche_entretien', 'inconnu'])(
+  it.each(['visualisation', 'inconnu'])(
     'refuses Consignes for « %s », not an available module, and keeps none',
     async (module) => {
       const actions = await openActions();
 
       await expect(actions.saveConsignes({ candidatId: 'lea', module, consignes: 'Courte.\n' })).rejects.toThrow(
-        new RegExp(String.raw`Module inconnu : ${module}\. Modules : recherche, lettre\.`),
+        new RegExp(String.raw`Module inconnu : ${module}\. Modules : recherche, lettre, fiche\.`),
       );
       expect(await actions.listConsignes({ candidatId: 'lea' })).toMatchObject([
+        { candidatConsignes: null },
         { candidatConsignes: null },
         { candidatConsignes: null },
       ]);
