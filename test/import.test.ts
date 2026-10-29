@@ -1,4 +1,4 @@
-import { copyFileSync, mkdtempSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -90,6 +90,20 @@ describe('import of a Fiche de poste in Markdown', () => {
     expect(await actions.listOffres({ candidatId: 'lea' })).toEqual([offre]);
     const { ficheDePoste } = await actions.readOffre({ reference: offre.reference });
     expect(ficheDePoste).toBe(FICHE_DE_POSTE);
+  });
+
+  // macOS puts the temporary folders under /var, a link to /private/var: the session writes under
+  // its real path, which its permission rule must name
+  it('runs the extraction session in a folder named by its real path, where it may write', async () => {
+    const aiSession = createFakeAiSession(extractionRun());
+    const actions = await openActions(aiSession);
+
+    await actions.importFicheDePoste({ candidatId: 'lea', markdown: FICHE_DE_POSTE });
+
+    const [session] = aiSession.headlessSessionList;
+    const temporaryDirectory = realpathSync(tmpdir());
+    expect(session?.outputDirectory.startsWith(`${temporaryDirectory}/jf-import-`)).toBe(true);
+    expect(session?.directory).toBe(session?.outputDirectory);
   });
 
   it('locates the imported Offre in its ville with API Géo, to show it on the map', async () => {

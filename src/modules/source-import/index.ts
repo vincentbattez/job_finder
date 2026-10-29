@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -9,6 +9,10 @@ import { EXTRACTION_FILE_NAME, readExtraction } from './acl/extraction.ts';
 import { composeExtractionPrompt, EXTRACTION_REQUEST } from './prompt.ts';
 
 const FICHE_DE_POSTE_FILE_NAME = 'fiche-de-poste.md';
+
+// The real path of the temporary folders, where the extraction session writes: on macOS, they lie
+// behind the link /var, and the rule letting the session write must name the folder it sees
+const TEMPORARY_DIRECTORY = realpathSync(tmpdir());
 
 // The Source Import Markdown: a Fiche de poste the Candidat found elsewhere (spec « Sources et
 // Détection »)
@@ -23,7 +27,7 @@ export function createImportSource(aiSession: IAiSession) {
     // works in a folder of its own, since the folder of the Offre is named after a title it has
     // yet to find.
     async extract(reference: string, markdown: string) {
-      const directory = mkdtempSync(path.join(tmpdir(), 'jf-import-'));
+      const directory = mkdtempSync(path.join(TEMPORARY_DIRECTORY, 'jf-import-'));
       try {
         writeFileSync(path.join(directory, FICHE_DE_POSTE_FILE_NAME), markdown);
         const session = await aiSession.runHeadless({
