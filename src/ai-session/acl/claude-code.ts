@@ -10,11 +10,13 @@ export interface IInteractiveSession {
 }
 
 // The two parts of a module's prompt (ADR-0003): the fixed part, then the Consignes. The session
-// reads in its directory and may write only in its output folder.
+// reads in its directory and in the other folders it is given, and may write only in its output
+// folder.
 export interface IHeadlessSession {
   fixedPrompt: string;
   consignes: string;
   directory: string;
+  readDirectoryList: string[];
   outputDirectory: string;
 }
 
@@ -115,7 +117,7 @@ export const CLAUDE_CODE: IAiSession = {
   // no Consignes can lift its rules. The safe mode leaves out the user's CLAUDE.md, hooks, skills
   // and MCP servers; dontAsk refuses any tool not listed, so the session reads, searches the web
   // and writes only in its output folder. Never fails: a session that cannot run is a failed one.
-  async runHeadless({ fixedPrompt, consignes, directory, outputDirectory }) {
+  async runHeadless({ fixedPrompt, consignes, directory, readDirectoryList, outputDirectory }) {
     const argumentList = [
       '-p',
       '--output-format',
@@ -133,6 +135,7 @@ export const CLAUDE_CODE: IAiSession = {
       'WebFetch',
       // An absolute path takes a double slash in a permission rule
       `Edit(/${outputDirectory}/**)`,
+      ...readDirectoryList.flatMap((readDirectory) => ['--add-dir', readDirectory]),
       '--append-system-prompt',
       fixedPrompt,
     ];

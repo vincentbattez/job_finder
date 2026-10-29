@@ -12,9 +12,11 @@ import {
   type DomainValue,
   type Job,
   type Offre,
+  type Recipients,
   type Version,
 } from '#/domain/index.ts';
 import { BROUILLON_FILE_NAME, composeEditPrompt } from '#/edit/prompt.ts';
+import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import {
   composeNouvelleOffreNotification,
   composeRecherchePreteNotification,
@@ -27,7 +29,7 @@ import { composeProfilPrompt } from '#/profil/prompt.ts';
 import { assertLettreModifiable } from '#/statut/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
-import { createJobRunner, parseModule } from './run-job.ts';
+import { createJobRunner, findInputs, parseModule } from './run-job.ts';
 
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
@@ -200,7 +202,9 @@ export async function createActions({
     async runModule(rawInput: unknown): Promise<Job> {
       const { module, reference } = MODULE_INPUT_SCHEMA.parse(rawInput);
       const artefact = parseModule(module);
-      return workspace.createJob(await findOffre(reference), artefact);
+      const offre = await findOffre(reference);
+      await findInputs(workspace, offre, artefact);
+      return workspace.createJob(offre, artefact);
     },
 
     // Waits until the worker has run the job, and returns it with the Version it produced
@@ -252,6 +256,18 @@ export async function createActions({
     async listVersions(rawInput: unknown): Promise<Version[]> {
       const { reference, artefact } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
       return workspace.listVersions(await findOffre(reference), artefact);
+    },
+
+    // To whom the Lettre retenue recommends sending the application, and why
+    async readRecipients(rawInput: unknown): Promise<Recipients> {
+      const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      const versionList = await workspace.listVersions(offre, 'lettre');
+      const version = versionList.find(({ isRetenue }) => isRetenue);
+      if (version === undefined) {
+        throw new Error(`L'Offre ${reference} n'a pas de Lettre retenue. La produire : jf run lettre ${reference}.`);
+      }
+      return LETTRE_MODULE.readRecipients(workspace.versionDirectoryOf(offre, version));
     },
 
     async retenirVersion(rawInput: unknown): Promise<void> {

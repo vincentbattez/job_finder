@@ -23,6 +23,19 @@ const RECHERCHE = {
   },
 };
 
+// A Lettre Version as the Lettre module writes it: the Brouillon and the recommended recipients
+const LETTRE = {
+  fileByName: {
+    'brouillon.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal pour enfants de Béthune.\n',
+    'destinataires.json': JSON.stringify({
+      to: { email: 'p.tj-bethune@justice.fr', source: 'applicationEmail' },
+      ccList: [],
+      salutation: { text: 'Madame la Présidente,', source: 'contact1' },
+      justification: 'Le mail de candidature est celui de la présidence.',
+    }),
+  },
+};
+
 // Launching a module only queues its job: each test then lets the worker run the queue
 async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
   const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
@@ -83,6 +96,27 @@ describe('edit', () => {
     expect(aiSession.interactiveSessionList[0]?.readOnlyPathList).toEqual([
       path.join(offreDirectory, '**', 'brouillon.md'),
     ]);
+  });
+
+  // The Candidat corrects the Lettre, never its Brouillon (spec « Versions »)
+  it('opens the Lettre retenue of a Version from the Lettre module, never its Brouillon', async () => {
+    const aiSession = createFakeAiSession(RECHERCHE, LETTRE, LETTRE);
+    const { actions, offreDirectory } = await detectOffres(aiSession);
+    await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await actions.runQueuedJobs();
+    await actions.runModule({ module: 'lettre', reference: REFERENCE });
+    await actions.runModule({ module: 'lettre', reference: REFERENCE });
+    await actions.runQueuedJobs();
+    await actions.retenirVersion({ reference: REFERENCE, artefact: 'lettre', number: 1 });
+
+    await actions.openArtefact({ reference: REFERENCE, artefact: 'lettre' });
+
+    const { prompt = '', readOnlyPathList = [] } = aiSession.interactiveSessionList[0] ?? {};
+    expect(prompt).toContain('La Lettre à corriger est `lettre/v1/lettre.md`');
+    expect(prompt).not.toContain('lettre/v2');
+    const isReadOnly = (filePath: string) => readOnlyPathList.some((pattern) => path.matchesGlob(filePath, pattern));
+    expect(isReadOnly(path.join(offreDirectory, 'lettre/v1/brouillon.md'))).toBe(true);
+    expect(isReadOnly(path.join(offreDirectory, 'lettre/v1/lettre.md'))).toBe(false);
   });
 });
 
