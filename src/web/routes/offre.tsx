@@ -19,7 +19,7 @@ export default function Offre() {
   return (
     <main className="container page">
       <OffreFiche fiche={fiche} isPage>
-        <StatutButtons reference={fiche.offre.reference} status={fiche.offre.status} />
+        <StatutButtons reference={fiche.offre.reference} nextStatutList={fiche.nextStatutList} />
         {fiche.extraction !== null && <ExtractionLaunch reference={fiche.offre.reference} {...fiche.extraction} />}
       </OffreFiche>
       {fiche.artefactList.map((artefactVersions) => (

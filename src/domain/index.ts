@@ -62,6 +62,10 @@ export const LIEU_SCHEMA = z.object(LIEU_SHAPE).brand<'Domain'>();
 
 export type Lieu = z.infer<typeof LIEU_SCHEMA>;
 
+export const STATUT_SCHEMA = z.enum(['a_traiter', 'postulee', 'archivee']);
+
+export type Statut = z.infer<typeof STATUT_SCHEMA>;
+
 // Another Offre of the Candidat, named by its reference
 const LINKED_OFFRE_SCHEMA = z.object({ reference: z.string() });
 
@@ -81,7 +85,9 @@ export const OFFRE_SCHEMA = z
     applicationEmail: z.string().nullable(),
     contact1: z.string().nullable(),
     contact2: z.string().nullable(),
-    status: z.enum(['a_traiter', 'postulee', 'archivee']),
+    status: STATUT_SCHEMA,
+    // When it was first marked Postulée, null if never
+    postuleeAt: z.date().nullable(),
     isInZone: z.boolean(),
     isExpiree: z.boolean(),
     // The Offre it publishes again, and the Offres that publish it again (spec « Republication »)
@@ -228,6 +234,8 @@ const ARTEFACT_VERSIONS_SCHEMA = z.object({
 export const OFFRE_FICHE_SCHEMA = z
   .object({
     offre: OFFRE_SCHEMA,
+    // The statuts the Offre can move to, a button each
+    nextStatutList: z.array(STATUT_SCHEMA),
     ficheDePoste: z.string(),
     artefactList: z.array(ARTEFACT_VERSIONS_SCHEMA),
     recipients: RECIPIENTS_SCHEMA.nullable(),

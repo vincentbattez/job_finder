@@ -31,10 +31,14 @@ test('corrects a Lettre, saves it, marks the Offre Postulée and finds the Lettr
     expect(await page.evaluate(() => globalThis.navigator.clipboard.readText())).toBe(CORRECTED_LETTRE);
   }).toPass();
 
+  // Postulée is never undone: a second click confirms it
   await page.getByRole('button', { name: 'Marquer comme Postulée' }).click();
+  await expect(page.getByText('Postulée', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Confirmer : Postulée' }).click();
 
   await expect(page.getByText('Postulée', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Marquer comme Postulée' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Archiver' })).toBeVisible();
   await expect(lettre.getByRole('textbox')).toHaveCount(0);
   await expect(correction).toContainText('Titulaire d’un master 2 de droit privé obtenu en 2025.');
 });

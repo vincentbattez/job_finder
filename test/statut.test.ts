@@ -71,13 +71,65 @@ describe('statut of an Offre', () => {
     expect(await findStatus('2026-2445609')).toBe('archivee');
   });
 
-  it('keeps a Postulée Offre Postulée, so that its Lettre retenue stays the one sent', async () => {
+  it('archives a Postulée Offre, whose Lettre retenue stays the one sent', async () => {
     await actions.changeStatus({ reference: '2026-2445183', status: 'postulee' });
 
-    await expect(actions.changeStatus({ reference: '2026-2445183', status: 'archivee' })).rejects.toThrow(
-      /L'Offre 2026-2445183 est Postulée/,
+    await actions.changeStatus({ reference: '2026-2445183', status: 'archivee' });
+
+    expect(await findStatus('2026-2445183')).toBe('archivee');
+    await expect(actions.runModule({ module: 'lettre', reference: '2026-2445183' })).rejects.toThrow(
+      /L'Offre 2026-2445183 a été Postulée : sa Lettre retenue est figée/,
     );
-    expect(await findStatus('2026-2445183')).toBe('postulee');
+  });
+
+  // Postulée is never undone: the Lettre retenue was sent
+  it('brings an Archivée Offre once Postulée back to Postulée, never to À traiter', async () => {
+    await actions.changeStatus({ reference: '2026-2350473', status: 'postulee' });
+    await actions.changeStatus({ reference: '2026-2350473', status: 'archivee' });
+
+    await expect(actions.changeStatus({ reference: '2026-2350473', status: 'a_traiter' })).rejects.toThrow(
+      /L'Offre 2026-2350473 est Archivée : elle ne peut passer qu'en Postulée/,
+    );
+    await actions.changeStatus({ reference: '2026-2350473', status: 'postulee' });
+    expect(await findStatus('2026-2350473')).toBe('postulee');
+  });
+
+  it('never brings a Postulée Offre back to À traiter', async () => {
+    await actions.changeStatus({ reference: '2026-2360411', status: 'postulee' });
+
+    await expect(actions.changeStatus({ reference: '2026-2360411', status: 'a_traiter' })).rejects.toThrow(
+      /L'Offre 2026-2360411 est Postulée : elle ne peut passer qu'en Archivée/,
+    );
+    expect(await findStatus('2026-2360411')).toBe('postulee');
+  });
+
+  it('brings an Archivée Offre never Postulée back to À traiter', async () => {
+    await actions.changeStatus({ reference: '2026-2199164', status: 'archivee' });
+
+    await actions.changeStatus({ reference: '2026-2199164', status: 'a_traiter' });
+
+    expect(await findStatus('2026-2199164')).toBe('a_traiter');
+  });
+
+  // The front shows a button for each of them, and none other
+  it('gives the statuts each Offre can move to', async () => {
+    await actions.changeStatus({ reference: '2026-2445629', status: 'postulee' });
+    await actions.changeStatus({ reference: '2026-2445637', status: 'archivee' });
+    await actions.changeStatus({ reference: '2026-2445671', status: 'postulee' });
+    await actions.changeStatus({ reference: '2026-2445671', status: 'archivee' });
+
+    const ficheList = await Promise.all(
+      ['2026-2445584', '2026-2445629', '2026-2445637', '2026-2445671'].map((reference) =>
+        actions.readOffre({ reference }),
+      ),
+    );
+
+    expect(ficheList.map(({ nextStatutList }) => nextStatutList)).toEqual([
+      ['postulee', 'archivee'],
+      ['archivee'],
+      ['a_traiter'],
+      ['postulee'],
+    ]);
   });
 
   it('marks a Postulée Offre as Postulée again without complaint', async () => {

@@ -112,7 +112,7 @@ describe('an edit refused', () => {
     await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
 
     await expect(actions.openArtefact({ reference: REFERENCE, artefact: 'lettre' })).rejects.toThrow(
-      /L'Offre 2026-2445600 est Postulée : sa Lettre retenue est figée telle qu'envoyée/,
+      /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée telle qu'envoyée/,
     );
     expect(aiSession.interactiveSessionList).toEqual([]);
   });

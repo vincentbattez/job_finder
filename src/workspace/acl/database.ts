@@ -19,10 +19,11 @@ import {
   type ListedOffre,
   type Module,
   type Offre,
+  type Statut,
   type Veille,
   type Version,
 } from '#/domain/index.ts';
-import { isExpiree } from '#/statut/index.ts';
+import { findPostuleeAt, isExpiree } from '#/statut/index.ts';
 import { PrismaClient } from '#/workspace/generated/client.ts';
 
 import type { Config } from './config.ts';
@@ -257,8 +258,9 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       return OFFRE_SCHEMA.parse(await prisma.offre.update({ where: { id }, data, include: OFFRE_INCLUDE }));
     },
 
-    async setStatus(reference: string, status: Offre['status']): Promise<void> {
-      await prisma.offre.updateMany({ where: { reference }, data: { status } });
+    async setStatus(offre: Offre, status: Statut): Promise<void> {
+      const postuleeAt = findPostuleeAt(offre, status, new Date());
+      await prisma.offre.update({ where: { id: offre.id }, data: { status, postuleeAt } });
     },
 
     async createOffre({

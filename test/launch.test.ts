@@ -85,7 +85,7 @@ describe('the modules the fiche of an Offre offers', () => {
 
     expect(await readModuleByArtefact(actions)).toMatchObject({
       recherche: { refusal: null },
-      lettre: { refusal: /est Postulée : sa Lettre retenue est figée/ },
+      lettre: { refusal: /a été Postulée : sa Lettre retenue est figée/ },
       // The interview comes after the application
       fiche_entretien: { refusal: null },
     });

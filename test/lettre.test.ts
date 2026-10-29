@@ -290,7 +290,7 @@ describe('a Lettre refused', () => {
     await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
 
     await expect(actions.runModule({ module: 'lettre', reference: REFERENCE })).rejects.toThrow(
-      /L'Offre 2026-2445600 est Postulée : sa Lettre retenue est figée/,
+      /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/,
     );
     expect(aiSession.headlessSessionList).toHaveLength(2);
     const versionList = await actions.listVersions({ reference: REFERENCE, artefact: 'lettre' });
@@ -311,7 +311,7 @@ describe('a Lettre refused', () => {
     expect(await actions.followJob({ jobId: id })).toMatchObject({
       state: 'failed',
       version: null,
-      log: /L'Offre 2026-2445600 est Postulée : sa Lettre retenue est figée/,
+      log: /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/,
     });
     expect(aiSession.headlessSessionList).toHaveLength(1);
     expect(await actions.listVersions({ reference: REFERENCE, artefact: 'lettre' })).toEqual([]);

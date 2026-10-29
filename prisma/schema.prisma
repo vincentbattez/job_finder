@@ -51,6 +51,9 @@ model Offre {
   contact1          String?
   contact2          String?
   status            OffreStatus @default(a_traiter)
+  // When the Offre was first marked Postulée: its Lettre retenue, the one sent, stays frozen even
+  // once it is Archivée
+  postuleeAt        DateTime?
   republicationOf   Offre?      @relation("Republication", fields: [republicationOfId], references: [id])
   republicationOfId Int?
   republicationList Offre[]     @relation("Republication")

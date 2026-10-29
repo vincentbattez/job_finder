@@ -15,7 +15,7 @@ import { FICHE_ENTRETIEN_MODULE } from '#/modules/fiche-entretien/index.ts';
 import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import { RECHERCHE_MODULE } from '#/modules/recherche/index.ts';
 import { VISUALISATION_MODULE } from '#/modules/visualisation/index.ts';
-import { assertLettreModifiable } from '#/statut/index.ts';
+import { assertLettreModifiable, hasBeenPostulee } from '#/statut/index.ts';
 import { messageOf } from '#/text/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
@@ -158,8 +158,7 @@ export async function findInputs(workspace: Workspace, offre: Offre, module: Art
   const offreList = await workspace.listOffres(offre.candidatId);
   const sentList: IReadVersion[] = [];
   for (const sentOffre of offreList) {
-    const lettre =
-      sentOffre.status === 'postulee' ? await findVersionRetenue(workspace, sentOffre, 'lettre') : undefined;
+    const lettre = hasBeenPostulee(sentOffre) ? await findVersionRetenue(workspace, sentOffre, 'lettre') : undefined;
     if (lettre !== undefined) {
       sentList.push({ offre: sentOffre, version: lettre });
     }

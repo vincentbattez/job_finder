@@ -11,6 +11,7 @@ import {
   MODULE_CONSIGNES_SCHEMA,
   OFFRE_FICHE_SCHEMA,
   PROFIL_FILE_SCHEMA,
+  STATUT_SCHEMA,
   VISUALISATION_SCHEMA,
   type Artefact,
   type Candidat,
@@ -43,7 +44,7 @@ import { createPepSource } from '#/modules/source-pep/index.ts';
 import { VISUALISATION_MODULE } from '#/modules/visualisation/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
 import { findRepublishedOffre } from '#/republication/index.ts';
-import { assertLettreModifiable } from '#/statut/index.ts';
+import { assertLettreModifiable, assertStatutChange, hasBeenPostulee, listNextStatuts } from '#/statut/index.ts';
 import { messageOf } from '#/text/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
@@ -67,7 +68,7 @@ const DOCUMENT_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ fileName: z.string(
 const JOB_INPUT_SCHEMA = z.object({ jobId: z.coerce.number().int() });
 const VISUALISATION_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
 
-const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: z.enum(['postulee', 'archivee']) });
+const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: STATUT_SCHEMA });
 
 const ETAT_BY_VERSION_STATE = { running: 'en_cours', ready: 'pret', failed: 'en_echec' } as const;
 const ETAT_BY_JOB_STATE = { queued: 'en_cours', running: 'en_cours', done: 'pret', failed: 'en_echec' } as const;
@@ -242,7 +243,7 @@ export async function createActions({
   // Détection is over (ADR-0003). The Republication of an Offre Postulée starts nothing: the
   // Candidat decides whether to apply again (spec « Republication »).
   async function startNewOffre(offre: Offre, republicationOf: Offre | undefined): Promise<INotification> {
-    if (republicationOf?.status === 'postulee') {
+    if (republicationOf !== undefined && hasBeenPostulee(republicationOf)) {
       return composeRepublicationNotification(offre, republicationOf);
     }
     await workspace.createJob(offre, 'recherche');
@@ -385,11 +386,8 @@ export async function createActions({
     async changeStatus(rawInput: unknown): Promise<void> {
       const { reference, status } = STATUS_INPUT_SCHEMA.parse(rawInput);
       const offre = await findOffre(reference);
-      // Leaving Postulée would unfreeze the Lettre retenue, the one that was sent (spec « Versions »)
-      if (status !== 'postulee' && offre.status === 'postulee') {
-        throw new Error(`L'Offre ${reference} est Postulée et le reste : sa Lettre retenue est celle envoyée.`);
-      }
-      await workspace.setStatus(reference, status);
+      assertStatutChange(offre, status);
+      await workspace.setStatus(offre, status);
     },
 
     async openProfil(rawInput: unknown): Promise<void> {
@@ -574,6 +572,7 @@ export async function createActions({
       );
       return OFFRE_FICHE_SCHEMA.parse({
         offre,
+        nextStatutList: listNextStatuts(offre),
         ficheDePoste: workspace.readFicheDePoste(offre),
         artefactList,
         recipients: await findRecipients(offre),

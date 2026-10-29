@@ -13,7 +13,8 @@ jf detect                                      # cherche les nouvelles Offres de
 jf import offre.md lea                         # importe une Fiche de poste en Markdown trouvée ailleurs : le worker en relève les champs avec Claude, puis met sa Recherche en file ; --wait attend l'extraction
 jf run extraction import-1a2b3c4d5e            # relance l'extraction des champs d'une Offre importée, après un échec
 jf list lea                                    # liste les Offres d'un Candidat, avec leur statut et celles qui sont Expirées
-jf postuler 2026-2445600                       # passe une Offre en Postulée, ce qui fige sa Lettre ; jf archiver l'archive
+jf postuler 2026-2445600                       # passe une Offre en Postulée, ce qui fige sa Lettre pour de bon : Postulée ne s'annule jamais
+jf archiver 2026-2445600                       # archive une Offre, Postulée ou non ; jf postuler la remet en Postulée si elle l'a été, jf traiter sinon la remet À traiter
 jf run recherche 2026-2445600                  # met en file une nouvelle Version de la Recherche d'une Offre ; --wait attend que le worker l'ait produite
 jf run lettre 2026-2445600                     # met en file une nouvelle Version de la Lettre, sur la Recherche retenue
 jf run fiche 2026-2445600                      # met en file une nouvelle Version de la Fiche d'entretien, sur la Recherche retenue, et la Lettre retenue s'il y en a une
@@ -82,7 +83,7 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 - `src/actions/run-job.ts` : l'exécution d'un job d'un module IA : la Version, le prompt en deux parties (partie fixe et Consignes), la vérification du fichier produit et la Version retenue.
 - `src/profil/` : le prompt fixe de `jf profil`.
 - `src/edit/` : le prompt fixe de `jf edit`, qui ouvre une session dans le dossier de l'Offre, sans shell ni web, où aucun Brouillon ne peut être modifié.
-- `src/statut/` : les règles du statut d'une Offre : le calcul d'Expirée, et le gel de la Lettre retenue d'une Offre Postulée.
+- `src/statut/` : les règles du statut d'une Offre : les statuts où elle peut passer, le calcul d'Expirée, et le gel de la Lettre retenue d'une Offre qui a été Postulée.
 - `src/modules/` : un dossier par module, avec un seul point d'entrée. Un module n'en importe jamais un autre, ce que vérifie `test/architecture.test.ts`. Un module IA, comme `recherche/`, a sa partie fixe du prompt dans `prompt.ts` et ses Consignes par défaut dans `consignes.ts`.
 - `src/modules/source-import/` : la Source Import Markdown. L'import enregistre l'Offre et met en file l'extraction de ses champs ; le worker la lance comme un module, dans une session Claude sans interface au prompt fixe, qui écrit `extraction/extraction.json` dans le dossier de l'Offre. `acl/extraction.ts` refuse toute valeur que la Fiche de poste ne contient pas telle quelle. Les champs remplissent l'Offre, dont le dossier suit le nouveau titre, puis sa Recherche est mise en file. La référence de l'Offre vient du contenu du fichier : importer deux fois le même fichier redonne la même Offre, sans nouveau job.
 - `src/modules/notification/` : le texte de chaque notification, et l'interface commune aux canaux. Seul `acl/home-assistant.ts` sait appeler Home Assistant.

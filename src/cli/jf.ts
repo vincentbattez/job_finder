@@ -206,8 +206,7 @@ async function runConsignesOperation(
   }
 }
 
-function changeStatusCommand(status: 'postulee' | 'archivee', description: string): ICommand {
-  const name = status === 'postulee' ? 'postuler' : 'archiver';
+function changeStatusCommand(status: Offre['status'], name: string, description: string): ICommand {
   return {
     description: `${description} : jf ${name} <offre>`,
     run: async (actions, [reference]) => {
@@ -381,8 +380,17 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       process.stdout.write(`${artefact} ${version} retenue pour l'Offre ${reference}.\n`);
     },
   },
-  postuler: changeStatusCommand('postulee', 'Passe une Offre en Postulée, avec ou sans Lettre, et fige sa Lettre'),
-  archiver: changeStatusCommand('archivee', 'Passe une Offre en Archivée'),
+  postuler: changeStatusCommand(
+    'postulee',
+    'postuler',
+    'Passe une Offre en Postulée, avec ou sans Lettre, ce qui fige sa Lettre pour de bon ; remet en Postulée une Offre Postulée puis Archivée',
+  ),
+  archiver: changeStatusCommand('archivee', 'archiver', 'Passe une Offre en Archivée, Postulée ou non'),
+  traiter: changeStatusCommand(
+    'a_traiter',
+    'traiter',
+    "Remet À traiter une Offre Archivée qui n'a jamais été Postulée",
+  ),
   profil: {
     description: "Complète le Profil d'un Candidat avec Claude Code : jf profil <candidat>",
     run: async (actions, [candidatId]) => {

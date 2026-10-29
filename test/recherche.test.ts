@@ -191,7 +191,7 @@ describe('a Recherche that fails', () => {
     await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
 
     await expect(actions.retenirVersion({ reference: REFERENCE, artefact: 'lettre', number: 1 })).rejects.toThrow(
-      /L'Offre 2026-2445600 est Postulée : sa Lettre retenue est figée/,
+      /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/,
     );
   });
 

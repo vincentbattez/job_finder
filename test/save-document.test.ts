@@ -143,7 +143,7 @@ describe('saving a correction', () => {
         fileName: 'lettre.md',
         markdown: CORRECTED_LETTRE,
       }),
-    ).rejects.toThrow(/L'Offre 2026-2445600 est Postulée : sa Lettre retenue est figée/);
+    ).rejects.toThrow(/L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/);
 
     expect(await readDocuments(actions, 'lettre')).toMatchObject([
       { documentList: [{ fileName: 'brouillon.md' }, { fileName: 'lettre.md', markdown: BROUILLON }] },
