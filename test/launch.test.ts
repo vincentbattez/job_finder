@@ -63,11 +63,21 @@ describe('the modules the fiche of an Offre offers', () => {
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runQueuedJobs();
 
-    expect(before).toMatchObject({
+    // In the words of the front, beside the button of the missing Artefact: no command to type
+    expect(before).toEqual({
       recherche: { refusal: null },
-      lettre: { refusal: /^L'Offre 2026-2445600 n'a pas de Recherche retenue/ },
-      fiche_entretien: { refusal: /^L'Offre 2026-2445600 n'a pas de Recherche retenue/ },
-      visualisation: { refusal: /^L'Offre 2026-2445600 n'a pas de Fiche d'entretien retenue/ },
+      lettre: {
+        refusal:
+          "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Lettre : lancez d'abord la Recherche.",
+      },
+      fiche_entretien: {
+        refusal:
+          "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Fiche d'entretien : lancez d'abord la Recherche.",
+      },
+      visualisation: {
+        refusal:
+          "L'Offre 2026-2445600 n'a pas de Fiche d'entretien retenue, sur laquelle s'appuie la Visualisation : lancez d'abord la Fiche d'entretien.",
+      },
     });
     expect(await readModuleByArtefact(actions)).toMatchObject({
       recherche: { refusal: null },

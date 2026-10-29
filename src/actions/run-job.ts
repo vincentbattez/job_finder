@@ -110,12 +110,18 @@ async function findRefusal(workspace: Workspace, offre: Offre, module: Artefact)
   return undefined;
 }
 
-function wordRefusal(refusal: Refusal, offre: Offre, module: Artefact): string {
+// The refusal in the words of the CLI, with the command that lifts it, or of the front, beside the
+// button of the missing Artefact
+function wordRefusal(refusal: Refusal, offre: Offre, module: Artefact, isForFront = false): string {
   if ('freeze' in refusal) {
     return refusal.freeze;
   }
   const { missingArtefact } = refusal;
-  return `L'Offre ${offre.reference} n'a pas de ${ARTEFACT_LABEL_BY_ARTEFACT[missingArtefact]} retenue, sur laquelle s'appuie la ${ARTEFACT_LABEL_BY_ARTEFACT[module]}. La produire d'abord : jf run ${missingArtefact} ${offre.reference}.`;
+  const missingLabel = ARTEFACT_LABEL_BY_ARTEFACT[missingArtefact];
+  const reason = `L'Offre ${offre.reference} n'a pas de ${missingLabel} retenue, sur laquelle s'appuie la ${ARTEFACT_LABEL_BY_ARTEFACT[module]}`;
+  return isForFront
+    ? `${reason} : lancez d'abord la ${missingLabel}.`
+    : `${reason}. La produire d'abord : jf run ${missingArtefact} ${offre.reference}.`;
 }
 
 // The Version retenue of an Artefact the Candidat sends, the Lettre, is frozen once the Offre was
@@ -150,7 +156,7 @@ export async function findInputs(workspace: Workspace, offre: Offre, module: Art
 // from the very checks of a launch
 export async function describeModule(workspace: Workspace, offre: Offre, artefact: Artefact) {
   const refusal = await findRefusal(workspace, offre, artefact);
-  return { refusal: refusal === undefined ? null : wordRefusal(refusal, offre, artefact) };
+  return { refusal: refusal === undefined ? null : wordRefusal(refusal, offre, artefact, true) };
 }
 
 // The one function that runs a job: the worker calls it on each queued job (ADR-0003). The
