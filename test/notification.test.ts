@@ -2,7 +2,7 @@ import { copyFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createActions } from '#/actions/index.ts';
 
@@ -22,6 +22,10 @@ const OTHER_REFERENCE = '2026-2445609';
 const OUT_OF_ZONE_REFERENCE = '2026-2215099';
 
 const RECHERCHE = { fileByName: { 'recherche.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function createDataDirectory(): string {
   const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
@@ -130,28 +134,63 @@ describe('the notification of a Recherche ready', () => {
 describe('a notification that cannot be sent', () => {
   const ERROR_MESSAGE = 'Home Assistant injoignable.';
 
-  it('makes the Détection fail visibly', async () => {
+  it('fails the Détection only once every new Offre is saved and its Recherche queued', async () => {
     const dataDirectory = createDataDirectory();
-    const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout([REFERENCE]) } }).fetch;
+    const aiSession = createFakeAiSession(RECHERCHE, RECHERCHE);
+    const earlierFetch = createRecordedFetch({
+      [DSJ_FEED_URL]: { body: feedWithout([REFERENCE, OTHER_REFERENCE]) },
+    }).fetch;
     const earlierActions = await createActions({ dataDirectory, fetch: earlierFetch });
     await earlierActions.detect();
     const notificationChannel = createFakeNotificationChannel({ errorMessage: ERROR_MESSAGE });
-    const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch, notificationChannel });
+    const actions = await createActions({
+      dataDirectory,
+      aiSession,
+      fetch: createRecordedFetch().fetch,
+      notificationChannel,
+    });
 
-    await expect(actions.detect()).rejects.toThrow(ERROR_MESSAGE);
+    // Both notifications were tried: each failure is in the message
+    await expect(actions.detect()).rejects.toThrow(
+      new RegExp(
+        `${REFERENCE} non envoyée : ${ERROR_MESSAGE}[\\s\\S]*${OTHER_REFERENCE} non envoyée : ${ERROR_MESSAGE}`,
+      ),
+    );
+
+    const offreList = await actions.listOffres({ candidatId: 'lea' });
+    expect(offreList.map(({ reference }) => reference)).toEqual(expect.arrayContaining([REFERENCE, OTHER_REFERENCE]));
+    const jobList = await actions.runQueuedJobs();
+    expect(jobList.map(({ module, offre, state }) => `${module} ${offre.reference} ${state}`)).toEqual([
+      `recherche ${REFERENCE} done`,
+      `recherche ${OTHER_REFERENCE} done`,
+    ]);
   });
 
-  it("stops the worker's turn visibly, the Recherche staying ready", async () => {
+  // lpm never restarts a stopped worker: the failure goes to its log, lpm logs worker
+  it('never stops the worker, which logs it and goes on with the queue, each Recherche staying ready', async () => {
+    const stderrList: string[] = [];
+    vi.spyOn(process.stderr, 'write').mockImplementation((text) => {
+      stderrList.push(String(text));
+      return true;
+    });
+    const aiSession = createFakeAiSession(RECHERCHE, RECHERCHE);
     const dataDirectory = createDataDirectory();
-    const aiSession = createFakeAiSession(RECHERCHE);
     const earlierActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
     await earlierActions.detect();
     const notificationChannel = createFakeNotificationChannel({ errorMessage: ERROR_MESSAGE });
     const actions = await createActions({ dataDirectory, aiSession, notificationChannel });
-    const { id } = await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await actions.runModule({ module: 'recherche', reference: OTHER_REFERENCE });
 
-    await expect(actions.runQueuedJobs()).rejects.toThrow(ERROR_MESSAGE);
+    const jobList = await actions.runQueuedJobs();
 
-    expect(await actions.followJob({ jobId: id })).toMatchObject({ state: 'done', version: { state: 'ready' } });
+    expect(jobList).toMatchObject([
+      { offre: { reference: REFERENCE }, state: 'done', version: { state: 'ready' } },
+      { offre: { reference: OTHER_REFERENCE }, state: 'done', version: { state: 'ready' } },
+    ]);
+    expect(stderrList).toEqual([
+      `Notification « Recherche prête » de l'Offre ${REFERENCE} non envoyée : ${ERROR_MESSAGE}\n`,
+      `Notification « Recherche prête » de l'Offre ${OTHER_REFERENCE} non envoyée : ${ERROR_MESSAGE}\n`,
+    ]);
   });
 });

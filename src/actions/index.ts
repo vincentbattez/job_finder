@@ -89,9 +89,16 @@ export async function createActions({
     return offre;
   }
 
-  // Sends a notification to the Candidat of the Offre, on their channel (spec « Notification »)
-  async function notify(offre: Offre, notification: INotification): Promise<void> {
-    await notificationChannel.send(workspace.notificationTargetOf(offre.candidatId), notification);
+  // Sends a notification to the Candidat of the Offre, on their channel (spec « Notification »). A
+  // notification that cannot be sent undoes and skips nothing: it comes back as the failure to report.
+  async function notify(offre: Offre, notification: INotification): Promise<string | undefined> {
+    try {
+      await notificationChannel.send(workspace.notificationTargetOf(offre.candidatId), notification);
+      return undefined;
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      return `Notification « ${notification.title} » de l'Offre ${offre.reference} non envoyée : ${reason}`;
+    }
   }
 
   return {
@@ -105,6 +112,7 @@ export async function createActions({
     async detect(): Promise<Detection[]> {
       const veilleList = await workspace.listVeilles();
       const detectionList: Detection[] = [];
+      const notifiedOffreList: Offre[] = [];
       for (const veille of veilleList) {
         const { candidatId, source } = veille;
         const knownReferenceList = await workspace.listReferences(candidatId, source);
@@ -124,7 +132,7 @@ export async function createActions({
             continue;
           }
           await workspace.createJob(offre, 'recherche');
-          await notify(offre, composeNouvelleOffreNotification(offre));
+          notifiedOffreList.push(offre);
         }
         detectionList.push(
           DETECTION_SCHEMA.parse({
@@ -135,6 +143,18 @@ export async function createActions({
             nearMissList,
           }),
         );
+      }
+      // Notified last, once every Offre is saved and its Recherche queued; a failure then fails the
+      // Détection, visibly in lpm, after every notification was tried
+      const failureList: string[] = [];
+      for (const offre of notifiedOffreList) {
+        const failure = await notify(offre, composeNouvelleOffreNotification(offre));
+        if (failure !== undefined) {
+          failureList.push(failure);
+        }
+      }
+      if (failureList.length > 0) {
+        throw new Error(failureList.join('\n'));
       }
       return detectionList;
     },
@@ -235,19 +255,19 @@ export async function createActions({
     async runQueuedJobs(): Promise<Job[]> {
       const jobList: Job[] = [];
       for (let job = await workspace.claimNextJob(); job !== null; job = await workspace.claimNextJob()) {
-        let finishedJob: Job;
         try {
-          ({ job: finishedJob } = await runJob(job));
+          const { job: finishedJob } = await runJob(job);
+          jobList.push(finishedJob);
+          if (finishedJob.module === 'recherche' && finishedJob.state === 'done') {
+            const failure = await notify(finishedJob.offre, composeRecherchePreteNotification(finishedJob.offre));
+            // Logged, in lpm logs worker: lpm never restarts a stopped worker, and the job is done
+            if (failure !== undefined) {
+              process.stderr.write(`${failure}\n`);
+            }
+          }
         } catch (error) {
           // An error fails this job only, the one running, and the worker goes on with the queue
           jobList.push(...(await workspace.failRunningJobs(error instanceof Error ? error.message : String(error))));
-          continue;
-        }
-        jobList.push(finishedJob);
-        // Out of the try: a notification that cannot be sent is no failure of the job, and stops the
-        // worker visibly instead
-        if (finishedJob.module === 'recherche' && finishedJob.state === 'done') {
-          await notify(finishedJob.offre, composeRecherchePreteNotification(finishedJob.offre));
         }
       }
       return jobList;
