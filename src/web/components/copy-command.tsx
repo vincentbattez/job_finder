@@ -1,30 +1,49 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 // The front is served over plain http on the LAN and through WireGuard (ADR-0002), where browsers
-// withhold the Clipboard API: the command is selected and copied the way every browser still allows
-function copySelected(element: HTMLElement | null): void {
-  if (element === null) {
-    return;
-  }
-  globalThis.getSelection()?.selectAllChildren(element);
+// withhold the Clipboard API: the text is selected in a hidden field and copied the way every
+// browser still allows, then the focus goes back to the button
+function copyText(text: string): void {
+  const focusedElement = document.activeElement;
+  const field = document.createElement('textarea');
+  field.value = text;
+  field.readOnly = true;
+  Object.assign(field.style, { position: 'fixed', top: '0', opacity: '0' });
+  document.body.append(field);
+  field.select();
+  field.setSelectionRange(0, text.length);
   document.execCommand('copy');
+  field.remove();
+  if (focusedElement instanceof HTMLElement) {
+    focusedElement.focus();
+  }
+}
+
+function CopyButton({ text, label, copiedLabel }: Readonly<{ text: string; label: string; copiedLabel: string }>) {
+  const [isCopied, setIsCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        copyText(text);
+        setIsCopied(true);
+      }}
+    >
+      {isCopied ? copiedLabel : label}
+    </button>
+  );
 }
 
 export function CopyCommand({ command }: Readonly<{ command: string }>) {
-  const commandElement = useRef<HTMLElement>(null);
-  const [isCopied, setIsCopied] = useState(false);
   return (
     <div className="command">
-      <code ref={commandElement}>{command}</code>
-      <button
-        type="button"
-        onClick={() => {
-          copySelected(commandElement.current);
-          setIsCopied(true);
-        }}
-      >
-        {isCopied ? 'Copiée' : 'Copier'}
-      </button>
+      <code>{command}</code>
+      <CopyButton text={command} label="Copier" copiedLabel="Copiée" />
     </div>
   );
+}
+
+// A document as Markdown, as it goes into a mail
+export function CopyMarkdown({ markdown }: Readonly<{ markdown: string }>) {
+  return <CopyButton text={markdown} label="Copier le Markdown" copiedLabel="Copié" />;
 }

@@ -3,19 +3,23 @@ import { useId } from 'react';
 import { EtatBadge } from './badge.tsx';
 import { CopyCommand } from './copy-command.tsx';
 import { DateText } from './date.tsx';
-import { Markdown } from './markdown.tsx';
+import { ArtefactDocument, RetenirButton } from './edition.tsx';
+import { ModuleLaunch } from './module-launch.tsx';
 import { ARTEFACT_LABEL_BY_ARTEFACT, ETAT_BY_VERSION_STATE, type IArtefactVersions } from './offre-fiche.tsx';
 
 // Every Version of an Artefact, oldest first: the Version retenue opens, the others stay folded
 export function ArtefactVersions({
   reference,
   artefact,
+  etat,
+  module,
   versionList,
 }: Readonly<IArtefactVersions & { reference: string }>) {
   const headingId = useId();
   return (
     <section className="artefact" id={artefact} data-artefact={artefact} aria-labelledby={headingId}>
       <h2 id={headingId}>{ARTEFACT_LABEL_BY_ARTEFACT[artefact]}</h2>
+      <ModuleLaunch reference={reference} artefact={artefact} etat={etat} module={module} />
       {/* jf edit works on the Version retenue */}
       {versionList.some(({ version }) => version.isRetenue) && (
         <CopyCommand command={`jf edit ${reference} ${artefact}`} />
@@ -24,7 +28,7 @@ export function ArtefactVersions({
         <p className="missing">Aucune Version pour l’instant.</p>
       ) : (
         <ol className="version-list">
-          {versionList.map(({ version, documentList }) => (
+          {versionList.map(({ version, isRetenable, documentList }) => (
             <li key={version.number}>
               <details open={version.isRetenue}>
                 <summary>
@@ -39,14 +43,12 @@ export function ArtefactVersions({
                     <DateText date={version.createdAt} />
                   </span>
                 </summary>
+                {isRetenable && <RetenirButton reference={reference} artefact={artefact} number={version.number} />}
                 {documentList.length === 0 ? (
                   <p className="missing">Aucun fichier dans cette Version.</p>
                 ) : (
-                  documentList.map(({ fileName, markdown }) => (
-                    <figure key={fileName} className="document">
-                      <figcaption className="reference">{fileName}</figcaption>
-                      <Markdown markdown={markdown} />
-                    </figure>
+                  documentList.map((document) => (
+                    <ArtefactDocument key={document.fileName} reference={reference} artefact={artefact} {...document} />
                   ))
                 )}
               </details>

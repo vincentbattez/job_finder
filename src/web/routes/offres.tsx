@@ -2,6 +2,7 @@ import { useLoaderData, useSearchParams, type LoaderFunctionArgs } from 'react-r
 
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidat } from '#/web/candidat.server.ts';
+import { Detection } from '#/web/components/detection.tsx';
 import { filterOffres, OffreFilters } from '#/web/components/offre-filters.tsx';
 import { OffreList } from '#/web/components/offre-list.tsx';
 import { OffreMap } from '#/web/components/offre-map.tsx';
@@ -33,6 +34,7 @@ export default function Offres() {
     <main className="container page">
       <div className="page__head">
         <h1>Offres de {candidat.name}</h1>
+        <Detection />
         {offreList.length > 0 && <OffreFilters offreList={offreList} />}
       </div>
       {offreList.length > 0 && <OffreMap offreList={filteredOffreList} />}

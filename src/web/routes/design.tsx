@@ -17,6 +17,8 @@ const SAMPLE_OFFRE = {
   applicationEmail: 'recrutement@example.org',
   contact1: 'Greffe du pôle civil, 03 00 00 00 00',
   contact2: null,
+  republicationOf: { reference: '2026-0000042' },
+  republicationList: [],
 } satisfies IOffreFiche['offre'];
 
 const SAMPLE_FICHE_DE_POSTE = [
@@ -31,18 +33,27 @@ const SAMPLE_FICHE_DE_POSTE = [
 ].join('\n');
 
 function sampleVersion(number: number, state: 'running' | 'ready' | 'failed') {
-  return { version: { number, state, isRetenue: number === 1, createdAt: new Date('2026-10-21') }, documentList: [] };
+  return {
+    version: { number, state, isRetenue: number === 1, createdAt: new Date('2026-10-21') },
+    isRetenable: false,
+    documentList: [],
+  };
 }
 
-// One Artefact in each état: the état of an Artefact is the state of its latest Version
+// One Artefact in each état, that of its latest Version
 const SAMPLE_FICHE: IOffreFiche = {
   offre: SAMPLE_OFFRE,
   ficheDePoste: SAMPLE_FICHE_DE_POSTE,
   artefactList: [
-    { artefact: 'recherche', versionList: [sampleVersion(1, 'ready')] },
-    { artefact: 'lettre', versionList: [sampleVersion(1, 'ready'), sampleVersion(2, 'running')] },
-    { artefact: 'fiche_entretien', versionList: [sampleVersion(1, 'failed')] },
-    { artefact: 'visualisation', versionList: [] },
+    { artefact: 'recherche', etat: 'pret', module: { refusal: null }, versionList: [sampleVersion(1, 'ready')] },
+    {
+      artefact: 'lettre',
+      etat: 'en_cours',
+      module: { refusal: null },
+      versionList: [sampleVersion(1, 'ready'), sampleVersion(2, 'running')],
+    },
+    { artefact: 'fiche_entretien', etat: 'en_echec', module: null, versionList: [sampleVersion(1, 'failed')] },
+    { artefact: 'visualisation', etat: 'absent', module: null, versionList: [] },
   ],
   recipients: {
     to: { email: 'recrutement@example.org', source: 'applicationEmail' },

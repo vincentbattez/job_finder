@@ -25,6 +25,15 @@ export function readRecordedFile(fileName: string): Uint8Array<ArrayBuffer> {
   return new Uint8Array(readFileSync(path.join(FIXTURE_DIRECTORY, fileName)));
 }
 
+// The recorded feed without some of its Offres, as it was before they were published
+export function feedWithout(referenceList: string[]): string {
+  return new TextDecoder()
+    .decode(readRecordedFile('flux-dsj.xml'))
+    .replaceAll(/<item>[\s\S]*?<\/item>/g, (item) =>
+      referenceList.some((reference) => item.includes(`<title>${reference} `)) ? '' : item,
+    );
+}
+
 function findRecordedResponse(url: string): IRecordedResponse | undefined {
   if (url === DSJ_FEED_URL) {
     return { body: readRecordedFile('flux-dsj.xml') };

@@ -32,7 +32,12 @@ const PRISMA_CLI_PATH = fileURLToPath(import.meta.resolve('prisma/build/index.js
 const VERSION_INCLUDE = {
   inputList: { select: { artefact: true, number: true, offre: { select: { reference: true } } } },
 };
-const JOB_INCLUDE = { offre: true, version: { include: VERSION_INCLUDE } };
+const LINKED_OFFRE_SELECT = { select: { reference: true } };
+const OFFRE_INCLUDE = {
+  republicationOf: LINKED_OFFRE_SELECT,
+  republicationList: { ...LINKED_OFFRE_SELECT, orderBy: { reference: 'asc' } },
+} as const;
+const JOB_INCLUDE = { offre: { include: OFFRE_INCLUDE }, version: { include: VERSION_INCLUDE } };
 
 export interface INewOffre {
   candidatId: string;
@@ -40,6 +45,7 @@ export interface INewOffre {
   listedOffre: ListedOffre;
   fiche: FicheDePoste;
   isInZone: boolean;
+  republicationOf: Offre | undefined;
   lieu: Lieu;
 }
 
@@ -83,9 +89,13 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
     },
 
     async listOffres(candidatId: string): Promise<Offre[]> {
-      return z
-        .array(OFFRE_SCHEMA)
-        .parse(await prisma.offre.findMany({ where: { candidatId }, orderBy: { reference: 'desc' } }));
+      return z.array(OFFRE_SCHEMA).parse(
+        await prisma.offre.findMany({
+          where: { candidatId },
+          orderBy: { reference: 'desc' },
+          include: OFFRE_INCLUDE,
+        }),
+      );
     },
 
     async createJob(offre: Offre, module: Artefact): Promise<Job> {
@@ -146,6 +156,14 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       };
     },
 
+    async listJobs(offre: Offre): Promise<Job[]> {
+      return z
+        .array(JOB_SCHEMA)
+        .parse(
+          await prisma.job.findMany({ where: { offreId: offre.id }, include: JOB_INCLUDE, orderBy: { id: 'asc' } }),
+        );
+    },
+
     async findJob(id: number): Promise<Job | null> {
       const job = await prisma.job.findUnique({ where: { id }, include: JOB_INCLUDE });
       return job === null ? null : JOB_SCHEMA.parse(job);
@@ -202,11 +220,13 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
     },
 
     async findOffres(reference: string): Promise<Offre[]> {
-      return z.array(OFFRE_SCHEMA).parse(await prisma.offre.findMany({ where: { reference } }));
+      return z.array(OFFRE_SCHEMA).parse(await prisma.offre.findMany({ where: { reference }, include: OFFRE_INCLUDE }));
     },
 
     async listUnlocatedOffres(): Promise<Offre[]> {
-      return z.array(OFFRE_SCHEMA).parse(await prisma.offre.findMany({ where: { latitude: null } }));
+      return z
+        .array(OFFRE_SCHEMA)
+        .parse(await prisma.offre.findMany({ where: { latitude: null }, include: OFFRE_INCLUDE }));
     },
 
     async setLieu({ id }: Offre, lieu: Lieu): Promise<void> {
@@ -217,12 +237,31 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       await prisma.offre.updateMany({ where: { reference }, data: { status } });
     },
 
-    async createOffre({ candidatId, source, listedOffre, fiche, isInZone, lieu }: INewOffre): Promise<Offre> {
+    async createOffre({
+      candidatId,
+      source,
+      listedOffre,
+      fiche,
+      isInZone,
+      republicationOf,
+      lieu,
+    }: INewOffre): Promise<Offre> {
       const { reference, title, url, publishedAt } = listedOffre;
       const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = fiche;
       const data = { candidatId, source, reference, title, url, publishedAt, dateLimite, employer, workplace };
       return OFFRE_SCHEMA.parse(
-        await prisma.offre.create({ data: { ...data, ...lieu, applicationEmail, contact1, contact2, isInZone } }),
+        await prisma.offre.create({
+          data: {
+            ...data,
+            ...lieu,
+            applicationEmail,
+            contact1,
+            contact2,
+            isInZone,
+            republicationOfId: republicationOf?.id ?? null,
+          },
+          include: OFFRE_INCLUDE,
+        }),
       );
     },
 

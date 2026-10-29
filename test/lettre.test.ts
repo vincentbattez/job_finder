@@ -8,6 +8,7 @@ import { createActions, type Actions } from '#/actions/index.ts';
 import { LETTRE_DEFAULT_CONSIGNES } from '#/modules/lettre/consignes.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
@@ -66,7 +67,13 @@ const UNSENT_RECIPIENTS = {
 async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
   const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
   copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  const actions = await createActions({ dataDirectory, aiSession, fetch: createRecordedFetch().fetch });
+  const notificationChannel = createFakeNotificationChannel();
+  const actions = await createActions({
+    dataDirectory,
+    aiSession,
+    fetch: createRecordedFetch().fetch,
+    notificationChannel,
+  });
   await actions.detect();
   return {
     actions,

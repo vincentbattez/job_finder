@@ -7,7 +7,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { createActions } from '#/actions/index.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createRecordedFetch, DSJ_FEED_URL, readRecordedFile } from './recorded-http.ts';
+import { createFakeNotificationChannel } from './fake-notification-channel.ts';
+import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
 const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
@@ -28,18 +29,15 @@ function createDataDirectory(): string {
 // A first Détection imports the Offres already online, without queuing anything
 async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
   const dataDirectory = createDataDirectory();
-  const actions = await createActions({ dataDirectory, aiSession, fetch: createRecordedFetch().fetch });
+  const notificationChannel = createFakeNotificationChannel();
+  const actions = await createActions({
+    dataDirectory,
+    aiSession,
+    fetch: createRecordedFetch().fetch,
+    notificationChannel,
+  });
   await actions.detect();
-  return { actions, dataDirectory };
-}
-
-// The recorded feed without some of its Offres, as it was before they were published
-function feedWithout(referenceList: string[]): string {
-  return new TextDecoder()
-    .decode(readRecordedFile('flux-dsj.xml'))
-    .replaceAll(/<item>[\s\S]*?<\/item>/g, (item) =>
-      referenceList.some((reference) => item.includes(`<title>${reference} `)) ? '' : item,
-    );
+  return { actions, dataDirectory, notificationChannel };
 }
 
 describe('the job queue', () => {
@@ -111,14 +109,14 @@ describe('the job queue', () => {
 
   it('puts « en échec » the job a stopped worker left running, at its restart, and it can be launched again', async () => {
     const aiSession = createFakeAiSession({ isInterrupted: true }, RECHERCHE);
-    const { actions, dataDirectory } = await detectOffres(aiSession);
+    const { actions, dataDirectory, notificationChannel } = await detectOffres(aiSession);
     const interruptedJob = await actions.runModule({ module: 'recherche', reference: REFERENCE });
     void actions.runQueuedJobs();
     await vi.waitFor(() => {
       expect(aiSession.headlessSessionList).toHaveLength(1);
     });
 
-    const restartedWorker = await createActions({ dataDirectory, aiSession });
+    const restartedWorker = await createActions({ dataDirectory, aiSession, notificationChannel });
     const failedJobList = await restartedWorker.failInterruptedJobs();
     await restartedWorker.runModule({ module: 'recherche', reference: REFERENCE });
     await restartedWorker.runQueuedJobs();
@@ -139,9 +137,15 @@ describe('the Recherche of a new Offre in the Zone', () => {
     const aiSession = createFakeAiSession(RECHERCHE, RECHERCHE);
     const feed = feedWithout([REFERENCE, OTHER_REFERENCE, OUT_OF_ZONE_REFERENCE]);
     const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feed } }).fetch;
-    const earlierActions = await createActions({ dataDirectory, aiSession, fetch: earlierFetch });
+    const notificationChannel = createFakeNotificationChannel();
+    const earlierActions = await createActions({ dataDirectory, aiSession, fetch: earlierFetch, notificationChannel });
     await earlierActions.detect();
-    const actions = await createActions({ dataDirectory, aiSession, fetch: createRecordedFetch().fetch });
+    const actions = await createActions({
+      dataDirectory,
+      aiSession,
+      fetch: createRecordedFetch().fetch,
+      notificationChannel,
+    });
 
     await actions.detect();
 

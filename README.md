@@ -7,6 +7,7 @@ Veille d'offres d'emploi et préparation des candidatures. Vocabulaire : `GLOSSA
 ```bash
 mise install                                   # Node 26, lefthook, gitleaks, puis npm install (et prisma generate) et les git hooks
 mise run init                                  # crée data/config.json depuis l'exemple, à adapter ensuite, et remplit dev-data/
+cp .env.example .env                           # puis y renseigner l'URL et le token de Home Assistant, pour les notifications
 jf                                             # affiche l'aide
 jf detect                                      # cherche les nouvelles Offres de chaque Veille
 jf list lea                                    # liste les Offres d'un Candidat, avec leur statut et celles qui sont Expirées
@@ -25,6 +26,8 @@ jf edit 2026-2445600 recherche                 # corrige la Version retenue d'un
 
 Le front, service lpm `web` déclaré dans `.lpm.yml` (`mise run web`), sert les Offres de `data/` sur le port 5180, sans authentification : il n'est joignable qu'en LAN et via WireGuard, jamais depuis internet (ADR-0002). On l'ouvre par l'adresse IP du Mac mini ou par son nom `.local`, par exemple `http://mac-mini-vincent.local:5180`. Le Candidat se choisit dans le menu du haut, mémorisé par un cookie ; la fiche de chaque Offre montre ses contacts bruts, les destinataires recommandés par la Lettre retenue, la Fiche de poste et toutes les Versions de chaque Artefact, avec la commande `jf edit` à copier.
 
+Sur la fiche, chaque Artefact montre son état (absent, en cours, prêt, en échec) et le bouton de son module : il met le job en file, comme `jf run`, et le worker l'exécute. Le bouton attend tant qu'il manque au module une entrée, par exemple une Recherche retenue pour la Lettre, et dit laquelle. L'état se met à jour tout seul jusqu'à ce que le job soit fini. La liste des Offres a un bouton « Lancer une Détection », la même action que `jf detect`, qui dit ce qu'elle a trouvé pour chaque Veille. Comme le worker, le front lit `.env` pour les notifications.
+
 `JF_DATA_DIRECTORY` sert le front sur un autre dossier : `JF_DATA_DIRECTORY=dev-data mise run web` pour les Offres factices.
 
 ## Worker
@@ -34,6 +37,15 @@ Lancer un module ne fait que mettre son job en file. Le worker, service lpm `wor
 ## Détection quotidienne
 
 L'automation lpm `detect`, déclarée dans `.lpm.yml`, lance `jf detect` chaque jour à 18:00 (ADR-0003). Son run affiche « aucune nouvelle Offre » ou la liste des nouvelles Offres. Une Détection en échec sort en erreur : lpm marque le run « needs a look » et notifie. `.lpm.yml` se vérifie avec `lpm config validate .lpm.yml`.
+
+## Notifications
+
+Le Candidat est notifié sur son téléphone :
+
+- d'une nouvelle Offre dans sa Zone, avec son titre, sa juridiction et sa Date limite. Rien n'est envoyé au premier lancement, ni quand la Détection ne trouve rien ;
+- d'une Recherche prête, quand le worker l'a produite.
+
+Le seul canal est Home Assistant. La cible de chaque Candidat est le service `notify.mobile_app_*` de son téléphone, dans `data/config.json`. L'URL de Home Assistant et un token longue durée (profil Home Assistant, onglet Sécurité) vont dans `.env`, hors de git, sur le modèle de `.env.example`. `jf` et le worker le lisent au lancement. Une notification qui ne part pas n'empêche rien : la Détection enregistre d'abord toutes les nouvelles Offres et met leur Recherche en file, puis échoue avec un message qui dit quoi vérifier. Le worker, lui, ne s'arrête pas : il écrit l'échec dans son log (`lpm logs worker`) et continue la file.
 
 ## Données
 
@@ -65,10 +77,13 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 - `src/edit/` : le prompt fixe de `jf edit`, qui ouvre une session dans le dossier de l'Offre, sans shell ni web, où aucun Brouillon ne peut être modifié.
 - `src/statut/` : les règles du statut d'une Offre : le calcul d'Expirée, et le gel de la Lettre retenue d'une Offre Postulée.
 - `src/modules/` : un dossier par module, avec un seul point d'entrée. Un module n'en importe jamais un autre, ce que vérifie `test/architecture.test.ts`. Un module IA, comme `recherche/`, a sa partie fixe du prompt dans `prompt.ts` et ses Consignes par défaut dans `consignes.ts`.
+- `src/modules/notification/` : le texte de chaque notification, et l'interface commune aux canaux. Seul `acl/home-assistant.ts` sait appeler Home Assistant.
 - `prisma/` : le schéma, les migrations et le seed.
 - `test/fixtures/pep/` : les réponses du site PEP enregistrées le 2026-10-29, que `test/recorded-http.ts` sert aux tests à la place du vrai site.
+- `test/fake-notification-channel.ts` : le faux canal de notification, qui garde les notifications au lieu de les envoyer. Les tests ne lisent jamais `.env`, et `vitest.config.ts` comme `playwright.config.ts` vident les réglages de Home Assistant : un test qui oublie le faux canal n'envoie jamais de vraie notification.
 - `test/fake-ai-session.ts` : le faux lancement de Claude, qui écrit l'Artefact prévu et garde le prompt reçu. `test/fixtures/claude/claude` remplace le binaire `claude` pour tester le vrai lancement sans ouvrir de session.
 - `test/seed-front.ts` : les données des tests Playwright, produites par les actions avec les faux dans un dossier temporaire, jamais `data/`. `playwright.config.ts` le lance avant le serveur de développement, qu'il pointe sur ce dossier.
+- `test/e2e-actions.server.ts` : les actions des tests Playwright, avec les trois faux. Le serveur de développement les sert à la place de `src/web/acl/actions.server.ts` en mode `e2e` (`vite.config.ts`), et `test/e2e-worker.ts`, le worker des tests, exécute avec elles les jobs mis en file par le front.
 
 ## Commandes
 
