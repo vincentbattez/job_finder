@@ -5,9 +5,29 @@ import { createActions, type Actions } from '#/actions/index.ts';
 
 const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
 
+// Through the actions only: the CLI never reaches the domain directly (ADR-0003)
+type Offre = Awaited<ReturnType<Actions['listOffres']>>[number];
+
 interface ICommand {
   description: string;
   run: (actions: Actions, argumentList: string[]) => Promise<void>;
+}
+
+const STATUT_LABEL_BY_STATUS: Record<Offre['status'], string> = {
+  a_traiter: 'À traiter',
+  postulee: 'Postulée',
+  archivee: 'Archivée',
+};
+
+function formatOffre(offre: Offre): string {
+  return [
+    offre.reference,
+    offre.title,
+    offre.workplace ?? '—',
+    offre.dateLimite?.toLocaleDateString('fr-FR', { timeZone: 'UTC' }) ?? '—',
+    STATUT_LABEL_BY_STATUS[offre.status],
+    offre.isInZone ? 'Zone' : 'hors Zone',
+  ].join('\t');
 }
 
 // The CLI only relays to the actions: no business rule here (ADR-0003)
@@ -18,6 +38,40 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       const candidatList = await actions.listCandidats();
       for (const candidat of candidatList) {
         process.stdout.write(`${candidat.id}\t${candidat.name}\n`);
+      }
+    },
+  },
+  detect: {
+    description: 'Cherche les nouvelles Offres de chaque Veille',
+    run: async (actions) => {
+      const detectionList = await actions.detect();
+      for (const detection of detectionList) {
+        const { veilleId, candidatId, isFirstLaunch, newOffreList, nearMissList } = detection;
+        const summary =
+          newOffreList.length === 0 ? 'aucune nouvelle Offre' : `${String(newOffreList.length)} nouvelles Offres`;
+        const firstLaunch = isFirstLaunch ? ', premier lancement : importées sans rien déclencher' : '';
+        process.stdout.write(`Veille ${veilleId} (${candidatId}) : ${summary}${firstLaunch}\n`);
+        for (const offre of newOffreList) {
+          process.stdout.write(`  ${formatOffre(offre)}\n`);
+        }
+        if (nearMissList.length > 0) {
+          process.stdout.write('Titres écartés de justesse :\n');
+        }
+        for (const { reference, title } of nearMissList) {
+          process.stdout.write(`  ${reference}\t${title}\n`);
+        }
+      }
+    },
+  },
+  list: {
+    description: "Liste les Offres d'un Candidat : jf list <candidat>",
+    run: async (actions, [candidatId]) => {
+      if (candidatId === undefined) {
+        throw new Error('Usage : jf list <candidat>. « jf candidats » liste les Candidats.');
+      }
+      const offreList = await actions.listOffres({ candidatId });
+      for (const offre of offreList) {
+        process.stdout.write(`${formatOffre(offre)}\n`);
       }
     },
   },

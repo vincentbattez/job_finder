@@ -81,6 +81,12 @@ describe('actions', () => {
     expect(await actions.listCandidats()).toEqual([{ id: 'lea', name: 'Léa' }]);
   });
 
+  it('refuses to list the Offres of an unknown Candidat', async () => {
+    const actions = await createActions({ dataDirectory: createDataDirectoryFromExample() });
+
+    await expect(actions.listOffres({ candidatId: 'inconnu' })).rejects.toThrow(/Candidat inconnu : inconnu/);
+  });
+
   it('refuses to start without a config, pointing to the example', async () => {
     await expect(createActions({ dataDirectory: createEmptyDataDirectory() })).rejects.toThrow(/config\.example\.json/);
   });
