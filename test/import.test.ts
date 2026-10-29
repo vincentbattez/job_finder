@@ -92,6 +92,15 @@ describe('import of a Fiche de poste in Markdown', () => {
     expect(ficheDePoste).toBe(FICHE_DE_POSTE);
   });
 
+  it('locates the imported Offre in its ville with API Géo, to show it on the map', async () => {
+    const actions = await openActions(createFakeAiSession(extractionRun()));
+
+    const offre = await actions.importFicheDePoste({ candidatId: 'lea', markdown: FICHE_DE_POSTE });
+
+    // API Géo's answer recorded on 2026-10-29 for Lille
+    expect(offre).toMatchObject({ city: 'Lille', region: 'Hauts-de-France', latitude: 50.6311, longitude: 3.0468 });
+  });
+
   it('leaves empty each field the session did not find in the Fiche de poste', async () => {
     const markdown = '# Greffier placé – Tribunal judiciaire de Lille\n\nLe greffier assiste les magistrats.\n';
     const extraction = Object.fromEntries(Object.keys(EXTRACTION).map((field) => [field, null]));

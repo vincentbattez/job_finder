@@ -15,9 +15,11 @@ const TITLE = 'Greffier placé – Tribunal judiciaire de Grenoble';
 // again every two seconds
 const READY_TIMEOUT_MS = 15_000;
 
-test('imports a Fiche de poste dropped on the Offres, which then shows among them with its Recherche', async ({
+test('imports a Fiche de poste dropped on the Offres, which then shows in the list and on the map with its Recherche', async ({
   page,
 }) => {
+  // The tiles of the map come from OpenStreetMap over the internet: its points show without them
+  await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Léa');
   await page.getByRole('button', { name: 'Choisir' }).click();
@@ -34,6 +36,11 @@ test('imports a Fiche de poste dropped on the Offres, which then shows among the
   await expect(page.getByText(`Offre importée : ${TITLE}`)).toBeVisible();
   const row = page.getByRole('row', { name: new RegExp(TITLE) });
   await expect(row.getByRole('cell').last()).toHaveText('15/12/2026');
+  // Located in Grenoble by API Géo's recorded answer
+  const point = page
+    .getByRole('region', { name: 'Carte des Offres' })
+    .getByRole('button', { name: new RegExp(`^${TITLE} · import-`) });
+  await expect(point).toHaveAttribute('data-statut', 'a_traiter');
   await row.getByRole('link', { name: TITLE }).click();
   await expect(page.getByRole('region', { name: 'Recherche' }).getByRole('status')).toHaveText('Prêt', {
     timeout: READY_TIMEOUT_MS,
