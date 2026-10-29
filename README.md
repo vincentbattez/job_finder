@@ -74,7 +74,7 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 
 ## Code
 
-- `src/actions/` : la couche d'actions, seule source de vérité de chaque fonctionnalité. La CLI et le front ne font que l'appeler (ADR-0003). Les tests passent par elle.
+- `src/actions/` : la couche d'actions, seule source de vérité de chaque fonctionnalité. La CLI et le front ne font que l'appeler (ADR-0003). Les tests passent par elle. `index.ts` (`createActions`) réunit un fichier par fonctionnalité : `detect.ts` (la Détection, qui lit les modules de Source et ne peut donc pas être un module), `import-fiche-de-poste.ts`, `statut.ts`, `profil.ts`, `consignes.ts`, `edition.ts`, `jobs.ts` et `offres.ts`, sur ce que partage `context.ts`.
 - `src/cli/` : la CLI `jf`, qui relaie vers les actions.
 - `src/worker/` : le worker, qui relaie lui aussi vers les actions : il vide la file de jobs. Seul lui exécute les jobs, ce que vérifie `test/architecture.test.ts`.
 - `src/web/` : le front React Router, qui relaie lui aussi vers les actions, ouvertes une fois pour tout le serveur dans `acl/actions.server.ts`. `/design` montre ses composants avec des Offres d'exemple. Les couleurs, les polices et les espacements sont des tokens de `src/web/tokens.css`.
