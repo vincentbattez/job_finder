@@ -4,11 +4,13 @@ import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
 import {
   ARTEFACT_SCHEMA,
   DETECTION_SCHEMA,
+  OFFRE_FICHE_SCHEMA,
   type Candidat,
   type Detection,
   type DomainValue,
   type ModuleRun,
   type Offre,
+  type OffreFiche,
   type Version,
 } from '#/domain/index.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
@@ -21,6 +23,7 @@ import { createJobRunner, parseModule } from './run-job.ts';
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
 const CANDIDAT_INPUT_SCHEMA = z.object({ candidatId: z.string() });
+const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
 const MODULE_INPUT_SCHEMA = z.object({ module: z.string(), reference: z.string() });
 const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: ARTEFACT_SCHEMA });
 const VERSION_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
@@ -134,6 +137,24 @@ export async function createActions({
       const artefact = parseModule(module);
       const offre = await findOffre(reference);
       return runJob(await workspace.createJob(offre, artefact));
+    },
+
+    async readOffre(rawInput: unknown): Promise<OffreFiche> {
+      const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      const artefactList = await Promise.all(
+        ARTEFACT_SCHEMA.options.map(async (artefact) => {
+          const versionList = await workspace.listVersions(offre, artefact);
+          return {
+            artefact,
+            versionList: versionList.map((version) => ({
+              version,
+              documentList: workspace.readVersionDocuments(offre, version),
+            })),
+          };
+        }),
+      );
+      return OFFRE_FICHE_SCHEMA.parse({ offre, ficheDePoste: workspace.readFicheDePoste(offre), artefactList });
     },
 
     async listVersions(rawInput: unknown): Promise<Version[]> {

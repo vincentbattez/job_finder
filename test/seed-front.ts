@@ -1,0 +1,60 @@
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
+import { createActions } from '#/actions/index.ts';
+
+import { createFakeAiSession } from './fake-ai-session.ts';
+import { createRecordedFetch } from './recorded-http.ts';
+
+// Fills the data folder of the front's e2e tests, which playwright.config.ts names in
+// JF_DATA_DIRECTORY, through the actions and with the fakes of the external boundaries: the HTTP of
+// the PEP Source recorded on 2026-10-29 and the fake launch of Claude. Léa follows the attaché de
+// justice Offres, and the Béthune Offre 2026-2445600 has two Recherches, the first one retenue;
+// Camille has no Veille, hence no Offre.
+const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
+// The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
+if (!dataDirectory.startsWith(tmpdir())) {
+  throw new Error(`JF_DATA_DIRECTORY doit être un dossier temporaire, pas « ${dataDirectory} ».`);
+}
+const BETHUNE_REFERENCE = '2026-2445600';
+const NOTIFICATION = { channel: 'home-assistant', service: 'notify.mobile_app_test' };
+const CONFIG = {
+  defaultDelayMonths: 6,
+  candidatList: [
+    {
+      id: 'lea',
+      name: 'Léa',
+      notification: NOTIFICATION,
+      veilleList: [
+        {
+          id: 'attache-de-justice-hauts-de-france',
+          source: 'pep',
+          criteria: { title: 'attaché de justice' },
+          zone: { courtOfAppealList: ['Douai', 'Amiens'] },
+        },
+      ],
+    },
+    { id: 'camille', name: 'Camille', notification: NOTIFICATION, veilleList: [] },
+  ],
+};
+
+function recherche(title: string): string {
+  return `# ${title} : le tribunal pour enfants de Béthune\n\n## Sources\n\n- https://www.justice.fr/\n`;
+}
+
+rmSync(dataDirectory, { recursive: true, force: true });
+mkdirSync(dataDirectory, { recursive: true });
+writeFileSync(path.join(dataDirectory, 'config.json'), JSON.stringify(CONFIG));
+const actions = await createActions({
+  dataDirectory,
+  fetch: createRecordedFetch().fetch,
+  aiSession: createFakeAiSession(
+    { fileByName: { 'recherche.md': recherche('Recherche retenue') } },
+    { fileByName: { 'recherche.md': recherche('Recherche relancée') } },
+  ),
+});
+await actions.detect();
+await actions.runModule({ module: 'recherche', reference: BETHUNE_REFERENCE });
+await actions.runModule({ module: 'recherche', reference: BETHUNE_REFERENCE });
+await actions.retenirVersion({ reference: BETHUNE_REFERENCE, artefact: 'recherche', number: 1 });

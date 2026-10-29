@@ -24,7 +24,11 @@ test.describe('design system page', () => {
     const firstRow = table.getByRole('row').nth(1);
 
     await expect(table.getByRole('columnheader')).toHaveText(['Offre', 'Statut', 'Publiée le', 'Date limite']);
-    await expect(firstRow.getByRole('link')).toHaveAttribute('href', /^https:\/\//);
+    await expect(firstRow.getByRole('link', { name: '2026-0000101' })).toHaveAttribute('href', /^https:\/\//);
+    await expect(firstRow.getByRole('link', { name: /Attaché de justice/ })).toHaveAttribute(
+      'href',
+      '/offres/2026-0000101',
+    );
     await expect(firstRow.getByRole('cell')).toHaveText([/Attaché de justice/, 'À traiter', DATE, DATE]);
   });
 
@@ -39,7 +43,7 @@ test.describe('design system page', () => {
 
     await expect(fiche.getByRole('heading', { level: 3 })).toHaveText(/Attaché de justice/);
     await expect(fiche.getByRole('term')).toContainText(['Mail de candidature', 'Contact 1', 'Contact 2']);
-    await expect(fiche.getByRole('list', { name: 'Artefacts' }).getByRole('listitem')).toHaveText([
+    await expect(fiche.getByRole('region', { name: 'Artefacts' }).getByRole('listitem')).toHaveText([
       /^Recherche.*(Absent|En cours|Prêt|En échec)$/,
       /^Lettre.*(Absent|En cours|Prêt|En échec)$/,
       /^Fiche d’entretien.*(Absent|En cours|Prêt|En échec)$/,
