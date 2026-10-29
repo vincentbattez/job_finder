@@ -14,6 +14,15 @@ const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example
 // The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
+const RECHERCHE = '# Recherche : le tribunal pour enfants de Béthune\n\n## Sources\n\n- https://www.justice.fr/\n';
+
+const RECIPIENTS = {
+  to: { email: 'p.tj-bethune@justice.fr', source: 'applicationEmail' },
+  ccList: [{ email: 'sec.p.tj-bethune@justice.fr', source: 'contact2' }],
+  salutation: { text: 'Madame la Présidente,', source: 'contact1' },
+  justification: 'Le mail de candidature est celui de la présidence ; le contact 2 demande le secrétariat en copie.',
+};
+
 async function detectOffres(aiSession = createFakeAiSession()) {
   const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
   copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
@@ -40,9 +49,8 @@ describe('the fiche of an Offre', () => {
   });
 
   it('reads every Version of each Artefact with its files, and tells the Version retenue', async () => {
-    const recherche = '# Recherche : le tribunal pour enfants de Béthune\n\n## Sources\n\n- https://www.justice.fr/\n';
     const actions = await detectOffres(
-      createFakeAiSession({ fileByName: { 'recherche.md': recherche } }, { isSuccess: false }),
+      createFakeAiSession({ fileByName: { 'recherche.md': RECHERCHE } }, { isSuccess: false }),
     );
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
@@ -59,11 +67,30 @@ describe('the fiche of an Offre', () => {
     expect(artefactList[0]?.versionList).toMatchObject([
       {
         version: { number: 1, state: 'ready', isRetenue: true },
-        documentList: [{ fileName: 'recherche.md', markdown: recherche }],
+        documentList: [{ fileName: 'recherche.md', markdown: RECHERCHE }],
       },
       { version: { number: 2, state: 'failed', isRetenue: false }, documentList: [] },
     ]);
     expect(artefactList[1]?.versionList).toEqual([]);
+  });
+
+  it('reads the recipients the Lettre retenue recommends, none before it exists', async () => {
+    const actions = await detectOffres(
+      createFakeAiSession(
+        { fileByName: { 'recherche.md': RECHERCHE } },
+        { fileByName: { 'brouillon.md': 'Madame la Présidente,\n', 'destinataires.json': JSON.stringify(RECIPIENTS) } },
+      ),
+    );
+    await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await actions.runQueuedJobs();
+    const before = await actions.readOffre({ reference: REFERENCE });
+    await actions.runModule({ module: 'lettre', reference: REFERENCE });
+    await actions.runQueuedJobs();
+
+    const { recipients } = await actions.readOffre({ reference: REFERENCE });
+
+    expect(before.recipients).toBeNull();
+    expect(recipients).toEqual(RECIPIENTS);
   });
 
   it('refuses an unknown reference', async () => {

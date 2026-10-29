@@ -226,12 +226,17 @@ a:active {
   font-size: var(--text-sm);
 }
 
-/* The label beside its Artefacts, then the contacts beside the Fiche de poste */
+/* The label above its Artefacts, beside the contacts, the recipients and the Fiche de poste */
 .fiche {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   align-items: start;
   gap: var(--space-xl);
+}
+.fiche__column {
+  display: grid;
+  gap: var(--space-xl);
+  min-width: 0;
 }
 .fiche__part {
   display: grid;
@@ -310,6 +315,15 @@ a:active {
     0 18px 26px -16px color-mix(in oklab, var(--tint) 85%, transparent);
   font-weight: 500;
 }
+.artefact-list a {
+  white-space: nowrap;
+}
+/* Below 22rem two compartments would wrap their names: they stack */
+@media (max-width: 22rem) {
+  .artefact-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 [data-artefact] {
   --tint: var(--p-mon);
 }
@@ -336,6 +350,46 @@ a:active {
   margin: 0;
   overflow-wrap: break-word;
   min-width: 0;
+}
+
+/* Each recommendation names the raw contact it comes from, as a small tag after it */
+.recipients {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+}
+.recipients div {
+  display: grid;
+  gap: var(--space-3xs);
+}
+.recipients dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2xs) var(--space-xs);
+  margin: 0;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.recipients__source {
+  padding: 0 var(--space-xs);
+  border-radius: var(--radius-pill);
+  background: var(--color-paper-2);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+.recipients__justification {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+.fiche__poste summary {
+  color: var(--color-accent-deep);
+  font-weight: 500;
+  cursor: pointer;
+}
+.fiche__poste[open] summary {
+  margin-bottom: var(--space-sm);
 }
 
 .prose {

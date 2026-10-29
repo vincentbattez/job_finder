@@ -81,6 +81,13 @@ export async function createActions({
     return offre;
   }
 
+  // Those of the Lettre retenue, none before the Offre has one
+  async function findRecipients(offre: Offre): Promise<Recipients | null> {
+    const versionList = await workspace.listVersions(offre, 'lettre');
+    const version = versionList.find(({ isRetenue }) => isRetenue);
+    return version === undefined ? null : LETTRE_MODULE.readRecipients(workspace.versionDirectoryOf(offre, version));
+  }
+
   return {
     listCandidats(): Promise<Candidat[]> {
       return workspace.listCandidats();
@@ -246,7 +253,12 @@ export async function createActions({
           };
         }),
       );
-      return OFFRE_FICHE_SCHEMA.parse({ offre, ficheDePoste: workspace.readFicheDePoste(offre), artefactList });
+      return OFFRE_FICHE_SCHEMA.parse({
+        offre,
+        ficheDePoste: workspace.readFicheDePoste(offre),
+        artefactList,
+        recipients: await findRecipients(offre),
+      });
     },
 
     async listVersions(rawInput: unknown): Promise<Version[]> {
@@ -257,13 +269,11 @@ export async function createActions({
     // To whom the Lettre retenue recommends sending the application, and why
     async readRecipients(rawInput: unknown): Promise<Recipients> {
       const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
-      const offre = await findOffre(reference);
-      const versionList = await workspace.listVersions(offre, 'lettre');
-      const version = versionList.find(({ isRetenue }) => isRetenue);
-      if (version === undefined) {
+      const recipients = await findRecipients(await findOffre(reference));
+      if (recipients === null) {
         throw new Error(`L'Offre ${reference} n'a pas de Lettre retenue. La produire : jf run lettre ${reference}.`);
       }
-      return LETTRE_MODULE.readRecipients(workspace.versionDirectoryOf(offre, version));
+      return recipients;
     },
 
     async retenirVersion(rawInput: unknown): Promise<void> {

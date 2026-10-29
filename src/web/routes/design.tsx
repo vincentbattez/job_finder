@@ -44,6 +44,12 @@ const SAMPLE_FICHE: IOffreFiche = {
     { artefact: 'fiche_entretien', versionList: [sampleVersion(1, 'failed')] },
     { artefact: 'visualisation', versionList: [] },
   ],
+  recipients: {
+    to: { email: 'recrutement@example.org', source: 'applicationEmail' },
+    ccList: [],
+    salutation: { text: 'Madame, Monsieur,', source: null },
+    justification: 'Le mail de candidature est la seule adresse publiée ; aucun contact ne donne de nom.',
+  },
 };
 
 const SAMPLE_LETTRE = [

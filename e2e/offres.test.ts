@@ -67,9 +67,24 @@ test.describe('Offres of a Candidat', () => {
       'Madame Odile SIMART, présidente du Tribunal Judiciaire de Béthune',
       'secrétariat en copie : sec.p.tj-bethune@justice.fr',
     ]);
-    await expect(page.getByRole('region', { name: 'Fiche de poste' })).toContainText(
-      'La présente fiche de poste concerne une affectation auprès du tribunal pour enfants.',
-    );
+    // Long as published, the Fiche de poste stays folded below the Artefacts until it is opened
+    const ficheDePoste = page.getByRole('region', { name: 'Fiche de poste' });
+    await ficheDePoste.getByText('Lire la Fiche de poste').click();
+    await expect(
+      ficheDePoste.getByText('La présente fiche de poste concerne une affectation auprès du tribunal pour enfants.'),
+    ).toBeVisible();
+  });
+
+  test('shows the recipients the Lettre recommends, each with the field it comes from', async ({ page }) => {
+    await page.goto('/offres/2026-2445600');
+
+    const recipients = page.getByRole('region', { name: 'Destinataires recommandés' });
+    await expect(recipients.getByRole('definition')).toHaveText([
+      /^p\.tj-bethune@justice\.fr\s*Mail de candidature$/,
+      /^sec\.p\.tj-bethune@justice\.fr\s*Contact 2$/,
+      /^Madame la Présidente,\s*Contact 1$/,
+    ]);
+    await expect(recipients).toContainText('Le mail de candidature est celui de la présidence');
   });
 
   test('shows every Version of an Artefact and tells the Version retenue', async ({ page }) => {
@@ -81,7 +96,11 @@ test.describe('Offres of a Candidat', () => {
     await expect(recherche.getByRole('heading', { name: /^Recherche relancée/ })).toBeHidden();
     await recherche.locator('summary', { hasText: 'v2' }).click();
     await expect(recherche.getByRole('heading', { name: /^Recherche relancée/ })).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Lettre' })).toContainText('Aucune Version');
+    await expect(page.getByRole('region', { name: 'Lettre' }).locator('figcaption')).toHaveText([
+      'brouillon.md',
+      'lettre.md',
+    ]);
+    await expect(page.getByRole('region', { name: 'Fiche d’entretien' })).toContainText('Aucune Version');
   });
 
   test('copies the jf edit command of an Artefact', async ({ page, context }) => {
@@ -97,7 +116,7 @@ test.describe('Offres of a Candidat', () => {
         'jf edit 2026-2445600 recherche',
       );
     }).toPass();
-    await expect(page.getByRole('region', { name: 'Lettre' }).getByRole('code')).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Fiche d’entretien' }).getByRole('code')).toHaveCount(0);
   });
 
   test('fits a phone screen, the list as the fiche', async ({ page }) => {
@@ -110,6 +129,7 @@ test.describe('Offres of a Candidat', () => {
 
     await page.goto('/offres/2026-2445600');
     await page.locator('summary', { hasText: 'v2' }).click();
+    await page.getByText('Lire la Fiche de poste').click();
 
     expect(await findOverflowing(page)).toEqual([]);
   });

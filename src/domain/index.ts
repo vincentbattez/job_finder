@@ -162,13 +162,14 @@ const ARTEFACT_VERSIONS_SCHEMA = z.object({
   versionList: z.array(VERSION_DOCUMENTS_SCHEMA),
 });
 
-// What the fiche of an Offre shows: the Offre with its raw contacts, its Fiche de poste, and every
-// Version of each Artefact with its files
+// What the fiche of an Offre shows: the Offre with its raw contacts, its Fiche de poste, every
+// Version of each Artefact with its files, and the recipients its Lettre retenue recommends
 export const OFFRE_FICHE_SCHEMA = z
   .object({
     offre: OFFRE_SCHEMA,
     ficheDePoste: z.string(),
     artefactList: z.array(ARTEFACT_VERSIONS_SCHEMA),
+    recipients: RECIPIENTS_SCHEMA.nullable(),
   })
   .brand<'Domain'>();
 
