@@ -19,6 +19,13 @@ import {
 } from '#/domain/index.ts';
 import { BROUILLON_FILE_NAME, composeEditPrompt } from '#/edit/prompt.ts';
 import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
+import {
+  composeNouvelleOffreNotification,
+  composeRecherchePreteNotification,
+  HOME_ASSISTANT,
+  type INotification,
+  type INotificationChannel,
+} from '#/modules/notification/index.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
 import { assertLettreModifiable } from '#/statut/index.ts';
@@ -44,16 +51,19 @@ const FOLLOW_INTERVAL_MS = 1000;
 // so no business rule lives in either of them (ADR-0003). `satisfies` holds them to the
 // anti-corruption layer (ADR-0005): the input is whatever a user typed, so each action takes it
 // as unknown and parses it with Zod, and the output is nothing or domain values, so no raw data
-// reaches the CLI or the front. The tests pass a fake aiSession and a fake fetch for the HTTP of
-// the Sources, since Claude and the sites are external boundaries.
+// reaches the CLI or the front. The tests pass a fake aiSession, a fake fetch for the HTTP of the
+// Sources and a fake notificationChannel, since Claude, the sites and the phones are external
+// boundaries.
 export async function createActions({
   dataDirectory,
   aiSession = CLAUDE_CODE,
   fetch,
+  notificationChannel = HOME_ASSISTANT,
 }: {
   dataDirectory: string;
   aiSession?: IAiSession;
   fetch?: typeof globalThis.fetch;
+  notificationChannel?: INotificationChannel;
 }) {
   const workspace = await openWorkspace(dataDirectory);
   const pepSource = createPepSource(fetch);
@@ -81,6 +91,18 @@ export async function createActions({
     return offre;
   }
 
+  // Sends a notification to the Candidat of the Offre, on their channel (spec « Notification »). A
+  // notification that cannot be sent undoes and skips nothing: it comes back as the failure to report.
+  async function notify(offre: Offre, notification: INotification): Promise<string | undefined> {
+    try {
+      await notificationChannel.send(workspace.notificationTargetOf(offre.candidatId), notification);
+      return undefined;
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      return `Notification « ${notification.title} » de l'Offre ${offre.reference} non envoyée : ${reason}`;
+    }
+  }
+
   // Those of the Lettre retenue, none before the Offre has one
   async function findRecipients(offre: Offre): Promise<Recipients | null> {
     const versionList = await workspace.listVersions(offre, 'lettre');
@@ -99,6 +121,7 @@ export async function createActions({
     async detect(): Promise<Detection[]> {
       const veilleList = await workspace.listVeilles();
       const detectionList: Detection[] = [];
+      const notifiedOffreList: Offre[] = [];
       for (const veille of veilleList) {
         const { candidatId, source } = veille;
         const knownReferenceList = await workspace.listReferences(candidatId, source);
@@ -112,11 +135,13 @@ export async function createActions({
           const { fiche, isInZone } = await pepSource.readFiche(listedOffre.reference, veille.zone);
           const offre = await workspace.saveOffre({ candidatId, source, listedOffre, fiche, isInZone });
           newOffreList.push(offre);
-          // A new Offre in the Zone starts its Recherche, except the ones already online at the first
-          // launch (ADR-0003)
-          if (isInZone && !isFirstLaunch) {
-            await workspace.createJob(offre, 'recherche');
+          // A new Offre in the Zone starts its Recherche and is notified, except the ones already
+          // online at the first launch (ADR-0003)
+          if (!isInZone || isFirstLaunch) {
+            continue;
           }
+          await workspace.createJob(offre, 'recherche');
+          notifiedOffreList.push(offre);
         }
         detectionList.push(
           DETECTION_SCHEMA.parse({
@@ -127,6 +152,18 @@ export async function createActions({
             nearMissList,
           }),
         );
+      }
+      // Notified last, once every Offre is saved and its Recherche queued; a failure then fails the
+      // Détection, visibly in lpm, after every notification was tried
+      const failureList: string[] = [];
+      for (const offre of notifiedOffreList) {
+        const failure = await notify(offre, composeNouvelleOffreNotification(offre));
+        if (failure !== undefined) {
+          failureList.push(failure);
+        }
+      }
+      if (failureList.length > 0) {
+        throw new Error(failureList.join('\n'));
       }
       return detectionList;
     },
@@ -230,6 +267,13 @@ export async function createActions({
         try {
           const { job: finishedJob } = await runJob(job);
           jobList.push(finishedJob);
+          if (finishedJob.module === 'recherche' && finishedJob.state === 'done') {
+            const failure = await notify(finishedJob.offre, composeRecherchePreteNotification(finishedJob.offre));
+            // Logged, in lpm logs worker: lpm never restarts a stopped worker, and the job is done
+            if (failure !== undefined) {
+              process.stderr.write(`${failure}\n`);
+            }
+          }
         } catch (error) {
           // An error fails this job only, the one running, and the worker goes on with the queue
           jobList.push(...(await workspace.failRunningJobs(error instanceof Error ? error.message : String(error))));

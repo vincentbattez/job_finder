@@ -5,13 +5,14 @@ import path from 'node:path';
 import { createActions } from '#/actions/index.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 // Fills the data folder of the front's e2e tests, which playwright.config.ts names in
 // JF_DATA_DIRECTORY, through the actions and with the fakes of the external boundaries: the HTTP of
-// the PEP Source recorded on 2026-10-29 and the fake launch of Claude. Léa follows the attaché de
-// justice Offres, and the Béthune Offre 2026-2445600 has two Recherches, the first one retenue, and
-// a Lettre; Camille has no Veille, hence no Offre.
+// the PEP Source recorded on 2026-10-29, the fake launch of Claude and the fake notification
+// channel. Léa follows the attaché de justice Offres, and the Béthune Offre 2026-2445600 has two
+// Recherches, the first one retenue, and a Lettre; Camille has no Veille, hence no Offre.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 // The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
 if (!dataDirectory.startsWith(tmpdir())) {
@@ -57,6 +58,7 @@ writeFileSync(path.join(dataDirectory, 'config.json'), JSON.stringify(CONFIG));
 const actions = await createActions({
   dataDirectory,
   fetch: createRecordedFetch().fetch,
+  notificationChannel: createFakeNotificationChannel(),
   aiSession: createFakeAiSession(
     { fileByName: { 'recherche.md': recherche('Recherche retenue') } },
     { fileByName: { 'recherche.md': recherche('Recherche relancée') } },
