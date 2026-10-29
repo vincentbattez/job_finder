@@ -11,7 +11,8 @@ import { createRecordedFetch } from './recorded-http.ts';
 // JF_DATA_DIRECTORY, through the actions and with the fakes of the external boundaries: the HTTP of
 // the PEP Source recorded on 2026-10-29 and the fake launch of Claude. Léa follows the attaché de
 // justice Offres, and the Béthune Offre 2026-2445600 has two Recherches, the first one retenue, and
-// a Lettre; Camille has no Veille, hence no Offre.
+// a Lettre; the Melun Offres, past their Date limite, are Postulée, Archivée and À traiter; Camille
+// has no Veille, hence no Offre.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 // The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
 if (!dataDirectory.startsWith(tmpdir())) {
@@ -71,3 +72,5 @@ await actions.runQueuedJobs();
 await actions.retenirVersion({ reference: BETHUNE_REFERENCE, artefact: 'recherche', number: 1 });
 await actions.runModule({ module: 'lettre', reference: BETHUNE_REFERENCE });
 await actions.runQueuedJobs();
+await actions.changeStatus({ reference: '2026-2285305', status: 'postulee' });
+await actions.changeStatus({ reference: '2026-2290529', status: 'archivee' });
