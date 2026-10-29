@@ -227,6 +227,10 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       await prisma.$transaction(retainStatementList({ offreId: offre.id, artefact, number }));
     },
 
+    async setDetected({ id }: Veille): Promise<void> {
+      await prisma.veille.update({ where: { id }, data: { detectedAt: new Date() } });
+    },
+
     async listReferences(candidatId: string, source: string): Promise<string[]> {
       const offreList = await prisma.offre.findMany({ where: { candidatId, source }, select: { reference: true } });
       return z.array(z.string()).parse(offreList.map(({ reference }) => reference));
@@ -285,20 +289,23 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       );
     },
 
-    // The config is the source of truth, so its Candidats and Veilles replace the copied rows.
-    // Removing from the config a Candidat who still has Offres makes the launch fail, through the
-    // foreign key, instead of leaving them orphaned.
+    // The config is the source of truth, so its Candidats and Veilles replace the copied rows; a
+    // Veille keeps when a Détection of it last went through. Removing from the config a Candidat
+    // who still has Offres makes the launch fail, through the foreign key, instead of leaving them
+    // orphaned.
     async copyConfig(config: Config): Promise<void> {
       const veilleList = config.candidatList.flatMap((candidat) =>
         candidat.veilleList.map((veille) => ({ ...veille, candidatId: candidat.id })),
       );
       await prisma.$transaction([
-        prisma.veille.deleteMany(),
+        prisma.veille.deleteMany({ where: { id: { notIn: veilleList.map(({ id }) => id) } } }),
         prisma.candidat.deleteMany({ where: { id: { notIn: config.candidatList.map((candidat) => candidat.id) } } }),
         ...config.candidatList.map(({ id, name }) =>
           prisma.candidat.upsert({ where: { id }, create: { id, name }, update: { name } }),
         ),
-        prisma.veille.createMany({ data: veilleList }),
+        ...veilleList.map((veille) =>
+          prisma.veille.upsert({ where: { id: veille.id }, create: veille, update: veille }),
+        ),
       ]);
     },
   };

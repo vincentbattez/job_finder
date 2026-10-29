@@ -289,7 +289,8 @@ export async function createActions({
       for (const veille of veilleList) {
         const { candidatId, source } = veille;
         const knownReferenceList = await workspace.listReferences(candidatId, source);
-        const isFirstLaunch = knownReferenceList.length === 0;
+        // A first launch cut off goes on at the next Détection, still triggering nothing
+        const isFirstLaunch = veille.detectedAt === null;
         const { matchingList, nearMissList } = await pepSource.search(veille.criteria);
         const offreList = await workspace.listOffres(candidatId);
         const newOffreList: Offre[] = [];
@@ -319,6 +320,7 @@ export async function createActions({
             notificationList.push({ offre, notification: await startNewOffre(offre, republicationOf) });
           }
         }
+        await workspace.setDetected(veille);
         detectionList.push(
           DETECTION_SCHEMA.parse({
             veilleId: veille.id,

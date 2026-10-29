@@ -10,7 +10,8 @@ export type Candidat = z.infer<typeof CANDIDAT_SCHEMA>;
 
 const ZONE_SCHEMA = z.object({ courtOfAppealList: z.array(z.string()) });
 
-// Criteria and Zone are shaped by the Source; PEP is the only one so far
+// Criteria and Zone are shaped by the Source; PEP is the only one so far. detectedAt stays null
+// until a Détection of the Veille went through: until then, it is the first launch.
 export const VEILLE_SCHEMA = z
   .object({
     id: z.string(),
@@ -18,6 +19,7 @@ export const VEILLE_SCHEMA = z
     source: z.literal('pep'),
     criteria: z.object({ title: z.string() }),
     zone: ZONE_SCHEMA,
+    detectedAt: z.date().nullable(),
   })
   .brand<'Domain'>();
 

@@ -8,6 +8,7 @@ import { createActions, type Actions } from '#/actions/index.ts';
 import type { Detection, Offre } from '#/domain/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
+import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch, DSJ_FEED_URL, readRecordedFile } from './recorded-http.ts';
 
 // Every attaché de justice offer of the DSJ feed recorded on 2026-10-29, counted by hand from its
@@ -278,6 +279,30 @@ describe('a second detection', () => {
     const { requestedUrlList } = await detectTwice();
 
     expect(requestedUrlList).toEqual([DSJ_FEED_URL]);
+  });
+});
+
+describe('a first launch cut off mid-way', () => {
+  // The Offres saved before the cut stay, but the first launch is over only once a Détection of the
+  // Veille went through: the next one imports the rest without triggering anything either
+  it('ends with the next Détection, which triggers nothing for the Offres left', async () => {
+    const dataDirectory = createDataDirectory();
+    const cutFetch = createRecordedFetch({
+      'https://place-ep-recrute.talent-soft.com/offre-de-emploi/emploi_2445600.aspx': { body: '', status: 500 },
+    }).fetch;
+    const cutActions = await createActions({ dataDirectory, fetch: cutFetch });
+    await expect(cutActions.detect()).rejects.toThrow(/HTTP 500/);
+    const notificationChannel = createFakeNotificationChannel();
+    const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch, notificationChannel });
+
+    const detectionList = await actions.detect();
+
+    expect(detectionList).toMatchObject([{ isFirstLaunch: true }]);
+    expect(detectionList[0]?.newOffreList.map(({ reference }) => reference)).toContain('2026-2445609');
+    expect(notificationChannel.sentList).toEqual([]);
+    expect(await actions.runQueuedJobs()).toEqual([]);
+    const nextDetectionList = await actions.detect();
+    expect(nextDetectionList).toMatchObject([{ isFirstLaunch: false, newOffreList: [] }]);
   });
 });
 
