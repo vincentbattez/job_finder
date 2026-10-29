@@ -2,7 +2,7 @@ import { copyFileSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
 import type { Detection, Offre } from '#/domain/index.ts';
@@ -103,6 +103,16 @@ function createDataDirectory(): string {
   return dataDirectory;
 }
 
+// Expirée depends on the day: the clock stays on the day the responses were recorded
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-29T12:00:00Z'));
+});
+
+afterAll(() => {
+  vi.useRealTimers();
+});
+
 describe('detection on the responses recorded on 2026-10-29', () => {
   let dataDirectory: string;
   let actions: Actions;
@@ -157,6 +167,7 @@ describe('detection on the responses recorded on 2026-10-29', () => {
       contact2: 'secrétariat en copie : sec.p.tj-bethune@justice.fr',
       status: 'a_traiter',
       isInZone: true,
+      isExpiree: false,
     });
   });
 

@@ -9,7 +9,8 @@ mise install                                   # Node 26, lefthook, gitleaks, pu
 mise run init                                  # crée data/config.json depuis l'exemple, à adapter ensuite, et remplit dev-data/
 jf                                             # affiche l'aide
 jf detect                                      # cherche les nouvelles Offres de chaque Veille
-jf list lea                                    # liste les Offres d'un Candidat
+jf list lea                                    # liste les Offres d'un Candidat, avec leur statut et celles qui sont Expirées
+jf postuler 2026-2445600                       # passe une Offre en Postulée, ce qui fige sa Lettre ; jf archiver l'archive
 ```
 
 `jf` est sur le `PATH` dès que mise est actif dans le dossier du repo.
@@ -38,6 +39,7 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 - `src/workspace/` : l'accès au dossier de données (config, base, dossiers des Candidats). Seul son dossier `acl/` lit la config et la base. Le client Prisma est généré dans `generated/`, hors de git.
 - `src/ai-session/` : le lancement des sessions d'IA. Seul `acl/claude-code.ts` sait qu'elles tournent sur Claude Code ; les tests le remplacent par un faux.
 - `src/profil/` : le prompt fixe de `jf profil`.
+- `src/statut/` : les règles du statut d'une Offre : le calcul d'Expirée, et le gel de la Lettre retenue d'une Offre Postulée.
 - `src/modules/` : un dossier par module, avec un seul point d'entrée. Un module n'en importe jamais un autre, ce que vérifie `test/architecture.test.ts`.
 - `prisma/` : le schéma, les migrations et le seed.
 - `test/fixtures/pep/` : les réponses du site PEP enregistrées le 2026-10-29, que `test/recorded-http.ts` sert aux tests à la place du vrai site.
