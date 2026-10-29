@@ -54,6 +54,11 @@ export async function openWorkspace(dataDirectory: string) {
       return readMarkdownFiles(versionDirectoryOf(offre, version));
     },
 
+    // A correction by the Candidat changes the Version in place, without creating another one
+    writeVersionDocument(offre: Offre, version: Version, fileName: string, markdown: string): void {
+      writeFileSync(path.join(versionDirectoryOf(offre, version), fileName), markdown);
+    },
+
     // The Consignes with which a Candidat replaced the default ones of an Artefact, if any
     readConsignes(candidatId: string, artefact: Artefact): string | null {
       return readTextFile(path.join(candidatDirectoryOf(candidatId), 'consignes', `${artefact}.md`));
