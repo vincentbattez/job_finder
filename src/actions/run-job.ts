@@ -45,9 +45,9 @@ function findOutputProblem(aiModule: IAiModule, outputPath: string, content: str
   return formatError === undefined ? undefined : `Le fichier ${outputPath} est mal formé : ${formatError}.`;
 }
 
-// The one function that runs a job: in L1 the CLI calls it right after queuing the job, and the
-// worker will call it on each queued job (ADR-0003). The session gets the fixed part of the
-// module's prompt and the Candidat's Consignes, or the default ones; the Version keeps them.
+// The one function that runs a job: the worker calls it on each queued job (ADR-0003). The
+// session gets the fixed part of the module's prompt and the Candidat's Consignes, or the default
+// ones; the Version keeps them.
 export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
   return async function runJob(job: Job): Promise<ModuleRun> {
     const { offre, module } = job;
