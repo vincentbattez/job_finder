@@ -114,7 +114,7 @@ test.describe('Offres of a Candidat', () => {
     await expect(recherche.getByRole('code')).toHaveText('jf edit 2026-2445600 recherche');
     // A click before React hydrates the server-rendered page does nothing: click again until it copies
     await expect(async () => {
-      await recherche.getByRole('button', { name: 'Copier' }).click();
+      await recherche.getByRole('button', { name: 'Copier', exact: true }).click();
       expect(await page.evaluate(() => globalThis.navigator.clipboard.readText())).toBe(
         'jf edit 2026-2445600 recherche',
       );

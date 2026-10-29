@@ -1,10 +1,9 @@
-import { useId } from 'react';
-import { useFetcher } from 'react-router';
+import { useId, useState } from 'react';
+import { Form } from 'react-router';
 
 import { MarkdownEditor } from './markdown-editor.tsx';
 import { Markdown } from './markdown.tsx';
 import { ARTEFACT_LABEL_BY_ARTEFACT, type IArtefactVersions } from './offre-fiche.tsx';
-import { SaveStatus } from './save-status.tsx';
 
 // The shape of the listConsignes action, so the route passes its result as is
 export interface IModuleConsignes {
@@ -21,13 +20,13 @@ export function ConsignesOrigin({ hasCandidatConsignes }: Readonly<{ hasCandidat
 }
 
 // The Consignes of one module: the editor starts from the Candidat's own, or from the default ones
-// until they have some. Only the Consignes are here: the fixed part of the prompt stays in the
+// until they have some. The route remounts it when the Consignes change hands, so the editor shows
+// the ones now in effect. Only the Consignes are here: the fixed part of the prompt stays in the
 // code, out of reach (ADR-0003).
 export function ModuleConsignes({ module, defaultConsignes, candidatConsignes }: Readonly<IModuleConsignes>) {
   const headingId = useId();
-  // Each module saves on its own, without leaving the page
-  const fetcher = useFetcher<{ isSaved: boolean }>();
   const hasCandidatConsignes = candidatConsignes !== null;
+  const [draft, setDraft] = useState(candidatConsignes ?? defaultConsignes);
   return (
     <section className="artefact consignes" data-artefact={module} aria-labelledby={headingId}>
       <div className="consignes__head">
@@ -36,11 +35,9 @@ export function ModuleConsignes({ module, defaultConsignes, candidatConsignes }:
           {hasCandidatConsignes ? 'Vos Consignes' : 'Consignes par défaut'}
         </span>
       </div>
-      <fetcher.Form method="post">
+      <Form method="post" preventScrollReset>
         <input type="hidden" name="module" value={module} />
-        {/* Remounted when the Consignes change hands, so the editor shows the ones now in effect */}
         <MarkdownEditor
-          key={hasCandidatConsignes ? 'candidat' : 'defaut'}
           name="consignes"
           label={
             hasCandidatConsignes
@@ -48,19 +45,20 @@ export function ModuleConsignes({ module, defaultConsignes, candidatConsignes }:
               : 'Les Consignes par défaut, à modifier pour en faire les vôtres'
           }
           defaultValue={candidatConsignes ?? defaultConsignes}
+          onChange={setDraft}
         />
-        <div className="form-actions">
-          <button type="submit" name="intent" value="save" className="button button--primary">
+        <div className="edition">
+          <button type="submit" name="intent" value="save" className="button--primary">
             Enregistrer mes Consignes
           </button>
           {hasCandidatConsignes && (
-            <button type="submit" name="intent" value="delete" className="button">
+            <button type="submit" name="intent" value="delete">
               Revenir aux Consignes par défaut
             </button>
           )}
-          <SaveStatus state={fetcher.state} isSaved={fetcher.data?.isSaved === true} />
+          {draft !== (candidatConsignes ?? defaultConsignes) && <p role="status">Modifications non enregistrées</p>}
         </div>
-      </fetcher.Form>
+      </Form>
       {hasCandidatConsignes && (
         <details className="consignes__default">
           <summary>Voir les Consignes par défaut</summary>

@@ -38,7 +38,7 @@
 .candidat-menu select,
 .candidat-menu button,
 .command button,
-.button {
+.edition button {
   min-height: 40px;
   padding: 0 var(--space-sm);
   border: var(--rule-hair) solid var(--color-muted);
@@ -52,17 +52,17 @@
 }
 .candidat-menu select:hover,
 .command button:hover,
-.button:hover {
+.edition button:hover {
   background: var(--color-paper-2);
 }
 .candidat-menu button,
-.button--primary {
+.edition .button--primary {
   border-color: transparent;
   background: var(--color-accent);
   color: var(--color-accent-ink);
 }
 .candidat-menu button:hover,
-.button--primary:hover {
+.edition .button--primary:hover {
   background: var(--color-accent-deep);
 }
 
@@ -552,6 +552,28 @@ a:active {
 .document figcaption {
   color: var(--color-muted);
 }
+/* A missing fact the Lettre marks « [à compléter : …] »: a highlighter stroke, so that none is sent */
+.prose mark {
+  padding-inline: var(--space-3xs);
+  border-radius: var(--space-2xs);
+  background: var(--p-wed);
+  color: var(--color-ink);
+  font-weight: 500;
+}
+.edition {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+}
+.edition p {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+.document form {
+  display: grid;
+  gap: var(--space-sm);
+}
 
 @media (max-width: 60rem) {
   .editor,
@@ -597,28 +619,16 @@ a:active {
   }
 }
 
-/* A form saves its editor: the buttons, then what the last save did */
-.button {
-  white-space: nowrap;
-}
-.form-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-xs) var(--space-sm);
-  margin-top: var(--space-sm);
-}
-.form-actions [role='status'] {
-  color: var(--color-accent-deep);
-  font-size: var(--text-sm);
-  font-weight: 500;
-}
-
 /* Each file of the Profil, named as on disk */
 .profil-file {
   display: grid;
   gap: var(--space-sm);
   min-width: 0;
+}
+.profil-file form,
+.consignes form {
+  display: grid;
+  gap: var(--space-sm);
 }
 .profil-file h2 {
   font: var(--text-md) / 1.4 var(--font-outlier);

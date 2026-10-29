@@ -19,10 +19,10 @@ export async function action({ request }: ActionFunctionArgs) {
   const module = formData.get('module');
   if (formData.get('intent') === 'delete') {
     await ACTIONS.deleteConsignes({ candidatId: candidat.id, module });
-    return { isSaved: true };
+  } else {
+    await ACTIONS.saveConsignes({ candidatId: candidat.id, module, consignes: formData.get('consignes') });
   }
-  await ACTIONS.saveConsignes({ candidatId: candidat.id, module, consignes: formData.get('consignes') });
-  return { isSaved: true };
+  return redirect('/consignes');
 }
 
 export function meta() {
@@ -49,7 +49,10 @@ export default function Consignes() {
             </p>
           </div>
           {consignesList.map((consignes) => (
-            <ModuleConsignes key={consignes.module} {...consignes} />
+            <ModuleConsignes
+              key={`${consignes.module}-${consignes.candidatConsignes === null ? 'defaut' : 'candidat'}`}
+              {...consignes}
+            />
           ))}
         </>
       )}

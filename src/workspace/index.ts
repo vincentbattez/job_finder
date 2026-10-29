@@ -64,6 +64,20 @@ export async function openWorkspace(dataDirectory: string) {
       return readMarkdownFiles(versionDirectoryOf(offre, version));
     },
 
+    // A correction by the Candidat changes the Version in place, without creating another one
+    writeVersionDocument(offre: Offre, version: Version, fileName: string, markdown: string): void {
+      writeFileSync(path.join(versionDirectoryOf(offre, version), fileName), markdown);
+    },
+
+    // Where a Candidat receives their notifications, as their config names it
+    notificationTargetOf(candidatId: string): string {
+      const candidat = config.candidatList.find(({ id }) => id === candidatId);
+      if (candidat === undefined) {
+        throw new Error(`Candidat inconnu : ${candidatId}. « jf candidats » liste les Candidats.`);
+      }
+      return candidat.notification.service;
+    },
+
     // The Consignes with which a Candidat replaced the default ones of an Artefact, if any
     readConsignes(candidatId: string, artefact: Artefact): string | null {
       return readTextFile(path.join(consignesDirectoryOf(candidatId), `${artefact}.md`));

@@ -17,6 +17,8 @@ const SAMPLE_OFFRE = {
   applicationEmail: 'recrutement@example.org',
   contact1: 'Greffe du pôle civil, 03 00 00 00 00',
   contact2: null,
+  republicationOf: { reference: '2026-0000042' },
+  republicationList: [],
 } satisfies IOffreFiche['offre'];
 
 const SAMPLE_FICHE_DE_POSTE = [
@@ -39,6 +41,7 @@ function sampleVersion(number: number, state: 'running' | 'ready' | 'failed') {
       hasCandidatConsignes: number === 2,
       createdAt: new Date('2026-10-21'),
     },
+    isRetenable: false,
     documentList: [],
   };
 }

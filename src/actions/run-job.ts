@@ -76,13 +76,33 @@ export function listDefaultConsignes(): { module: Artefact; defaultConsignes: st
   });
 }
 
+// A Republication starts from the work done for the Offre it publishes again: the Version retenue
+// of each of its Artefacts (spec « Republication »)
+async function findRepublishedVersions(workspace: Workspace, { republicationOf, candidatId }: Offre) {
+  const offreList = republicationOf === null ? [] : await workspace.findOffres(republicationOf.reference);
+  const republishedOffre = offreList.find((candidate) => candidate.candidatId === candidatId);
+  if (republishedOffre === undefined) {
+    return [];
+  }
+  const versionList = await Promise.all(
+    ARTEFACT_SCHEMA.options.map((artefact) => findVersionRetenue(workspace, republishedOffre, artefact)),
+  );
+  return versionList
+    .filter((version) => version !== undefined)
+    .map((version): IReadVersion => ({ offre: republishedOffre, version }));
+}
+
 // What a job reads besides the Fiche de poste of its Offre: Versions, and folders outside the
-// Offre. Only the Lettre reads anything else so far: the Recherche retenue, the Profil, and the
-// Brouillon/Lettre pairs the Candidat sent, those of the Lettre retenue of each Postulée Offre
-// (spec « Modules IA »). Throws, before anything is written, when the module cannot run on the
-// Offre: a Lettre frozen by Postulée, or no Recherche retenue. The actions call it to refuse a job
-// up front, the runner again for a job queued before the Offre changed.
+// Offre. The Recherche of a Republication reads the Artefacts of the Offre it publishes again. The
+// Lettre reads the Recherche retenue, the Profil, and the Brouillon/Lettre pairs the Candidat sent,
+// those of the Lettre retenue of each Postulée Offre (spec « Modules IA »). Throws, before anything
+// is written, when the module cannot run on the Offre: a Lettre frozen by Postulée, or no Recherche
+// retenue. The actions call it to refuse a job up front, the runner again for a job queued before
+// the Offre changed.
 export async function findInputs(workspace: Workspace, offre: Offre, module: Artefact) {
+  if (module === 'recherche') {
+    return { versionList: await findRepublishedVersions(workspace, offre), directoryList: [] };
+  }
   if (module !== 'lettre') {
     return { versionList: [], directoryList: [] };
   }

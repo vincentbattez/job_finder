@@ -20,9 +20,12 @@ export async function action({ request }: ActionFunctionArgs) {
     return redirect('/profil');
   }
   const formData = await request.formData();
-  const fileName = formData.get('fileName');
-  await ACTIONS.saveProfilFile({ candidatId: candidat.id, fileName, markdown: formData.get('markdown') });
-  return { isSaved: true };
+  await ACTIONS.saveProfilFile({
+    candidatId: candidat.id,
+    fileName: formData.get('fileName'),
+    markdown: formData.get('markdown'),
+  });
+  return redirect('/profil');
 }
 
 export function meta() {

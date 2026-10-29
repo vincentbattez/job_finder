@@ -40,6 +40,7 @@ function formatAddress({ email, source }: Recipients['ccList'][number]): string 
 }
 
 function formatOffre(offre: Offre): string {
+  const { republicationOf, republicationList } = offre;
   return [
     offre.reference,
     offre.title,
@@ -47,6 +48,9 @@ function formatOffre(offre: Offre): string {
     offre.dateLimite?.toLocaleDateString('fr-FR', { timeZone: 'UTC' }) ?? '—',
     offre.isExpiree ? `${STATUT_LABEL_BY_STATUS[offre.status]}, Expirée` : STATUT_LABEL_BY_STATUS[offre.status],
     offre.isInZone ? 'Zone' : 'hors Zone',
+    // The link of a Republication, both ways, only on the Offres that have one
+    ...(republicationOf === null ? [] : [`Republication de ${republicationOf.reference}`]),
+    ...republicationList.map(({ reference }) => `Republiée en ${reference}`),
   ].join('\t');
 }
 

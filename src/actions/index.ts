@@ -10,6 +10,7 @@ import {
   MODULE_CONSIGNES_SCHEMA,
   OFFRE_FICHE_SCHEMA,
   PROFIL_FILE_SCHEMA,
+  type Artefact,
   type Candidat,
   type Detection,
   type DomainValue,
@@ -23,8 +24,17 @@ import {
 } from '#/domain/index.ts';
 import { BROUILLON_FILE_NAME, composeEditPrompt } from '#/edit/prompt.ts';
 import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
+import {
+  composeNouvelleOffreNotification,
+  composeRecherchePreteNotification,
+  composeRepublicationNotification,
+  HOME_ASSISTANT,
+  type INotification,
+  type INotificationChannel,
+} from '#/modules/notification/index.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
+import { findRepublishedOffre } from '#/republication/index.ts';
 import { assertLettreModifiable } from '#/statut/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
@@ -40,6 +50,7 @@ const CONSIGNES_MODULE_INPUT_SCHEMA = z.object({ module: z.string() });
 const CONSIGNES_INPUT_SCHEMA = CONSIGNES_MODULE_INPUT_SCHEMA.extend({ consignes: z.string() });
 const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: ARTEFACT_SCHEMA });
 const VERSION_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
+const DOCUMENT_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ fileName: z.string(), markdown: z.string() });
 const JOB_INPUT_SCHEMA = z.object({ jobId: z.coerce.number().int() });
 
 const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: z.enum(['postulee', 'archivee']) });
@@ -47,20 +58,86 @@ const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: z.enum(['p
 // How often a followed job is read again: a module runs for minutes
 const FOLLOW_INTERVAL_MS = 1000;
 
+// What the Candidat corrects by hand: a file of the Version retenue, in place (spec « Versions »).
+// Never a Brouillon, kept as the AI wrote it so that the tool learns from the corrections, never a
+// Visualisation, regenerated from the Fiche d'entretien, nor the Lettre of a Postulée Offre, the
+// one sent.
+function assertDocumentModifiable(
+  offre: Offre,
+  artefact: Artefact,
+  version: Version | undefined,
+  fileName: string,
+): asserts version is Version {
+  const { reference } = offre;
+  if (artefact === 'visualisation') {
+    throw new Error(
+      `La Visualisation ne se modifie pas à la main : elle reprend la Fiche d'entretien retenue. Corrigez celle-ci, puis relancez la Visualisation de l'Offre ${reference}.`,
+    );
+  }
+  if (artefact === 'lettre') {
+    assertLettreModifiable(offre);
+  }
+  if (version?.isRetenue !== true) {
+    throw new Error(`L'Offre ${reference} n'a pas de Version retenue de ${artefact} à modifier.`);
+  }
+  if (fileName === BROUILLON_FILE_NAME) {
+    throw new Error(
+      `Le Brouillon ne se modifie jamais : il garde ce que l'IA a écrit. Corrigez la Lettre de l'Offre ${reference}.`,
+    );
+  }
+}
+
+// Only a ready Version can become the Version retenue, and the Lettre of a Postulée Offre stays
+// the one sent (spec « Versions »)
+function assertRetenable(
+  offre: Offre,
+  artefact: Artefact,
+  version: Version | undefined,
+  number: number,
+): asserts version is Version {
+  const { reference } = offre;
+  if (artefact === 'lettre') {
+    assertLettreModifiable(offre);
+  }
+  if (version === undefined) {
+    throw new Error(`Version inconnue : ${artefact} v${String(number)} de l'Offre ${reference}.`);
+  }
+  if (version.state === 'ready') {
+    return;
+  }
+  const state = version.state === 'failed' ? 'en échec' : 'en cours';
+  throw new Error(
+    `La Version ${artefact} v${String(number)} de l'Offre ${reference} est ${state} : seule une Version prête peut être retenue.`,
+  );
+}
+
+// The front shows a control only where its action accepts it: the same check, read as a flag
+function isAccepted(check: () => void): boolean {
+  try {
+    check();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // The single entry point of every feature: the CLI and the front only call these actions,
 // so no business rule lives in either of them (ADR-0003). `satisfies` holds them to the
 // anti-corruption layer (ADR-0005): the input is whatever a user typed, so each action takes it
 // as unknown and parses it with Zod, and the output is nothing or domain values, so no raw data
-// reaches the CLI or the front. The tests pass a fake aiSession and a fake fetch for the HTTP of
-// the Sources, since Claude and the sites are external boundaries.
+// reaches the CLI or the front. The tests pass a fake aiSession, a fake fetch for the HTTP of the
+// Sources and a fake notificationChannel, since Claude, the sites and the phones are external
+// boundaries.
 export async function createActions({
   dataDirectory,
   aiSession = CLAUDE_CODE,
   fetch,
+  notificationChannel = HOME_ASSISTANT,
 }: {
   dataDirectory: string;
   aiSession?: IAiSession;
   fetch?: typeof globalThis.fetch;
+  notificationChannel?: INotificationChannel;
 }) {
   const workspace = await openWorkspace(dataDirectory);
   const pepSource = createPepSource(fetch);
@@ -88,11 +165,53 @@ export async function createActions({
     return offre;
   }
 
+  // Sends a notification to the Candidat of the Offre, on their channel (spec « Notification »). A
+  // notification that cannot be sent undoes and skips nothing: it comes back as the failure to report.
+  async function notify(offre: Offre, notification: INotification): Promise<string | undefined> {
+    try {
+      await notificationChannel.send(workspace.notificationTargetOf(offre.candidatId), notification);
+      return undefined;
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      return `Notification « ${notification.title} » de l'Offre ${offre.reference} non envoyée : ${reason}`;
+    }
+  }
+
+  // What a new Offre in the Zone starts: its Recherche, and the notification to send once the
+  // Détection is over (ADR-0003). The Republication of an Offre Postulée starts nothing: the
+  // Candidat decides whether to apply again (spec « Republication »).
+  async function startNewOffre(offre: Offre, republicationOf: Offre | undefined): Promise<INotification> {
+    if (republicationOf?.status === 'postulee') {
+      return composeRepublicationNotification(offre, republicationOf);
+    }
+    await workspace.createJob(offre, 'recherche');
+    return composeNouvelleOffreNotification(offre);
+  }
+
   // Those of the Lettre retenue, none before the Offre has one
   async function findRecipients(offre: Offre): Promise<Recipients | null> {
     const versionList = await workspace.listVersions(offre, 'lettre');
     const version = versionList.find(({ isRetenue }) => isRetenue);
     return version === undefined ? null : LETTRE_MODULE.readRecipients(workspace.versionDirectoryOf(offre, version));
+  }
+
+  // A Version as the fiche shows it: its files, and what the Candidat may do with them
+  function readFicheVersion(offre: Offre, version: Version) {
+    const { artefact, number, isRetenue } = version;
+    return {
+      version,
+      isRetenable:
+        !isRetenue &&
+        isAccepted(() => {
+          assertRetenable(offre, artefact, version, number);
+        }),
+      documentList: workspace.readVersionDocuments(offre, version).map((document) => ({
+        ...document,
+        isModifiable: isAccepted(() => {
+          assertDocumentModifiable(offre, artefact, version, document.fileName);
+        }),
+      })),
+    };
   }
 
   return {
@@ -106,23 +225,36 @@ export async function createActions({
     async detect(): Promise<Detection[]> {
       const veilleList = await workspace.listVeilles();
       const detectionList: Detection[] = [];
+      const notificationList: { offre: Offre; notification: INotification }[] = [];
       for (const veille of veilleList) {
         const { candidatId, source } = veille;
         const knownReferenceList = await workspace.listReferences(candidatId, source);
         const isFirstLaunch = knownReferenceList.length === 0;
         const { matchingList, nearMissList } = await pepSource.search(veille.criteria);
+        const offreList = await workspace.listOffres(candidatId);
         const newOffreList: Offre[] = [];
-        for (const listedOffre of matchingList) {
+        // Oldest first, as published: a Republication found by the same Détection as the Offre it
+        // publishes again, as on the first launch, is saved after it
+        const oldestFirstList = matchingList.toSorted((left, right) => left.reference.localeCompare(right.reference));
+        for (const listedOffre of oldestFirstList) {
           if (knownReferenceList.includes(listedOffre.reference)) {
             continue;
           }
           const { fiche, isInZone } = await pepSource.readFiche(listedOffre.reference, veille.zone);
-          const offre = await workspace.saveOffre({ candidatId, source, listedOffre, fiche, isInZone });
+          const republicationOf = findRepublishedOffre({ ...listedOffre, ...fiche }, offreList);
+          const offre = await workspace.saveOffre({
+            candidatId,
+            source,
+            listedOffre,
+            fiche,
+            isInZone,
+            republicationOf,
+          });
+          offreList.push(offre);
           newOffreList.push(offre);
-          // A new Offre in the Zone starts its Recherche, except the ones already online at the first
-          // launch (ADR-0003)
+          // The Offres already online at the first launch start nothing (ADR-0003)
           if (isInZone && !isFirstLaunch) {
-            await workspace.createJob(offre, 'recherche');
+            notificationList.push({ offre, notification: await startNewOffre(offre, republicationOf) });
           }
         }
         detectionList.push(
@@ -134,6 +266,18 @@ export async function createActions({
             nearMissList,
           }),
         );
+      }
+      // Notified last, once every Offre is saved and its Recherche queued; a failure then fails the
+      // Détection, visibly in lpm, after every notification was tried
+      const failureList: string[] = [];
+      for (const { offre, notification } of notificationList) {
+        const failure = await notify(offre, notification);
+        if (failure !== undefined) {
+          failureList.push(failure);
+        }
+      }
+      if (failureList.length > 0) {
+        throw new Error(failureList.join('\n'));
       }
       return detectionList;
     },
@@ -282,6 +426,13 @@ export async function createActions({
         try {
           const { job: finishedJob } = await runJob(job);
           jobList.push(finishedJob);
+          if (finishedJob.module === 'recherche' && finishedJob.state === 'done') {
+            const failure = await notify(finishedJob.offre, composeRecherchePreteNotification(finishedJob.offre));
+            // Logged, in lpm logs worker: lpm never restarts a stopped worker, and the job is done
+            if (failure !== undefined) {
+              process.stderr.write(`${failure}\n`);
+            }
+          }
         } catch (error) {
           // An error fails this job only, the one running, and the worker goes on with the queue
           jobList.push(...(await workspace.failRunningJobs(error instanceof Error ? error.message : String(error))));
@@ -298,10 +449,7 @@ export async function createActions({
           const versionList = await workspace.listVersions(offre, artefact);
           return {
             artefact,
-            versionList: versionList.map((version) => ({
-              version,
-              documentList: workspace.readVersionDocuments(offre, version),
-            })),
+            versionList: versionList.map((version) => readFicheVersion(offre, version)),
           };
         }),
       );
@@ -328,23 +476,28 @@ export async function createActions({
       return recipients;
     },
 
+    // The front's editor: the Candidat corrects a file of the Version retenue in place (spec « Versions »)
+    async saveDocument(rawInput: unknown): Promise<void> {
+      const { reference, artefact, fileName, markdown } = DOCUMENT_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      const versionList = await workspace.listVersions(offre, artefact);
+      const version = versionList.find(({ isRetenue }) => isRetenue);
+      assertDocumentModifiable(offre, artefact, version, fileName);
+      // The front sends the name back: nothing else than a file of the Version may be written
+      if (workspace.readVersionDocuments(offre, version).every((document) => document.fileName !== fileName)) {
+        throw new Error(
+          `« ${fileName} » n'est pas un fichier de la Version retenue de ${artefact} de l'Offre ${reference}.`,
+        );
+      }
+      workspace.writeVersionDocument(offre, version, fileName, markdown);
+    },
+
     async retenirVersion(rawInput: unknown): Promise<void> {
       const { reference, artefact, number } = VERSION_INPUT_SCHEMA.parse(rawInput);
       const offre = await findOffre(reference);
-      if (artefact === 'lettre') {
-        assertLettreModifiable(offre);
-      }
       const versionList = await workspace.listVersions(offre, artefact);
       const version = versionList.find((candidate) => candidate.number === number);
-      if (version === undefined) {
-        throw new Error(`Version inconnue : ${artefact} v${String(number)} de l'Offre ${reference}.`);
-      }
-      if (version.state !== 'ready') {
-        const state = version.state === 'failed' ? 'en échec' : 'en cours';
-        throw new Error(
-          `La Version ${artefact} v${String(number)} de l'Offre ${reference} est ${state} : seule une Version prête peut être retenue.`,
-        );
-      }
+      assertRetenable(offre, artefact, version, number);
       await workspace.retainVersion(offre, version);
     },
   } satisfies Record<string, (rawInput: unknown) => Promise<void> | Promise<DomainValue | DomainValue[]>>;

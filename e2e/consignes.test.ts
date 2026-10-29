@@ -33,18 +33,16 @@ test.describe('Consignes of a Candidat', () => {
     await openConsignesOfSacha(page);
     const lettre = page.getByRole('region', { name: 'Lettre' });
 
-    // Text typed before React hydrates the server-rendered page is lost: type again until it saves
+    // Typed before React hydrates the page, the change goes unnoticed: type again until it shows
     await expect(async () => {
       await lettre.getByRole('textbox').fill('Une lettre courte, au ton direct.\n');
-      await lettre.getByRole('button', { name: 'Enregistrer mes Consignes' }).click();
-      await expect(lettre.getByText('Vos Consignes', { exact: true })).toBeVisible({ timeout: 2000 });
+      await expect(lettre.getByText('Modifications non enregistrées')).toBeVisible({ timeout: 1000 });
     }).toPass();
+    await lettre.getByRole('button', { name: 'Enregistrer mes Consignes' }).click();
+    await expect(lettre.getByText('Vos Consignes', { exact: true })).toBeVisible();
     await lettre.getByRole('textbox').fill('Une lettre très courte.\n');
-    await Promise.all([
-      page.waitForResponse((response) => response.request().method() === 'POST'),
-      lettre.getByRole('button', { name: 'Enregistrer mes Consignes' }).click(),
-    ]);
-    await expect(lettre.getByRole('status')).toHaveText('Enregistré');
+    await lettre.getByRole('button', { name: 'Enregistrer mes Consignes' }).click();
+    await expect(lettre.getByText('Modifications non enregistrées')).toBeHidden();
     await page.reload();
     await expect(lettre.getByRole('textbox')).toHaveValue('Une lettre très courte.\n');
     await expect(

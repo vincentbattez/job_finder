@@ -1,9 +1,33 @@
-import type { Offre } from '#/domain/index.ts';
+import type { Artefact, Offre } from '#/domain/index.ts';
+
+interface IRecherchePromptInput {
+  offre: Offre;
+  outputDirectory: string;
+  readVersionList: { reference: string; artefact: Artefact; directory: string }[];
+}
+
+// A Republication starts from the Artefacts of the Offre it publishes again, so the work is not
+// done twice (spec « Republication »)
+function describeRepublishedOffre(readVersionList: IRecherchePromptInput['readVersionList']): string {
+  const [firstVersion] = readVersionList;
+  if (firstVersion === undefined) {
+    return '';
+  }
+  const folderList = readVersionList.map(({ directory }) => `- \`${directory}\``);
+  return `
+## L'Offre publiée auparavant
+
+Cette Offre est la Republication de l'Offre ${firstVersion.reference} : le même Poste, publié à nouveau. Les Artefacts retenus de cette Offre précédente sont dans ces dossiers, à lire avant de chercher :
+${folderList.join('\n')}
+
+Ne refais pas ce travail : pars de sa Recherche, vérifie ce que la Fiche de poste de cette Offre et l'actualité changent, et reprends ce qui reste vrai avec ses sources.
+`;
+}
 
 // The fixed part of the prompt of the Recherche: its objective, what it reads, what it writes and
 // where, and the rules no Consignes can lift (ADR-0003). The objective is fixed, the way to reach
 // it is left to the session and its Consignes. It runs in the folder of the Offre.
-export function composeRecherchePrompt({ offre, outputDirectory }: { offre: Offre; outputDirectory: string }): string {
+export function composeRecherchePrompt({ offre, outputDirectory, readVersionList }: IRecherchePromptInput): string {
   const outputPath = `${outputDirectory}/recherche.md`;
   return `Tu produis la Recherche d'une Offre d'emploi, pour le Candidat qui va y postuler. Écris en français.
 
@@ -20,7 +44,7 @@ export function composeRecherchePrompt({ offre, outputDirectory }: { offre: Offr
 - Annonce : ${offre.url ?? 'non précisée'}
 
 Le dossier courant est celui de l'Offre. Sa Fiche de poste, telle qu'elle a été publiée, est dans \`fiche-de-poste.md\` : lis-la en premier.
-
+${describeRepublishedOffre(readVersionList)}
 ## Ce que tu produis
 
 Un seul fichier Markdown : \`${outputPath}\`.
