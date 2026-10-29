@@ -45,6 +45,8 @@ export interface INewOffre {
   fiche: FicheDePoste;
   isInZone: boolean;
   republicationOf: Offre | undefined;
+  // Given by the Sources that read it, such as the Source Import Markdown
+  city?: string | null;
 }
 
 // Applies the pending migrations of prisma/migrations first, so the schema exists from the
@@ -232,6 +234,7 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       fiche,
       isInZone,
       republicationOf,
+      city = null,
     }: INewOffre): Promise<Offre> {
       const { reference, title, url, publishedAt } = listedOffre;
       const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = fiche;
@@ -240,6 +243,7 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
         await prisma.offre.create({
           data: {
             ...data,
+            city,
             applicationEmail,
             contact1,
             contact2,

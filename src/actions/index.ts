@@ -28,6 +28,7 @@ import {
   type INotification,
   type INotificationChannel,
 } from '#/modules/notification/index.ts';
+import { createImportSource } from '#/modules/source-import/index.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
 import { findRepublishedOffre } from '#/republication/index.ts';
@@ -39,6 +40,7 @@ import { createJobRunner, describeModule, findInputs, parseModule } from './run-
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
 const CANDIDAT_INPUT_SCHEMA = z.object({ candidatId: z.string() });
+const IMPORT_INPUT_SCHEMA = z.object({ markdown: z.string() });
 const MODULE_INPUT_SCHEMA = z.object({ module: z.string(), reference: z.string() });
 const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
 const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: ARTEFACT_SCHEMA });
@@ -136,6 +138,7 @@ export async function createActions({
 }) {
   const workspace = await openWorkspace(dataDirectory);
   const pepSource = createPepSource(fetch);
+  const importSource = createImportSource(aiSession);
   const runJob = createJobRunner(workspace, aiSession);
 
   async function findCandidat(rawInput: unknown): Promise<Candidat> {
@@ -275,6 +278,33 @@ export async function createActions({
         throw new Error(failureList.join('\n'));
       }
       return detectionList;
+    },
+
+    // A Fiche de poste in Markdown that the Candidat found elsewhere becomes one of their Offres,
+    // with the fields a Claude session reads in it (spec « Sources et Détection »). Importing the
+    // same file again gives back its Offre, without a second session nor a second Recherche.
+    async importFicheDePoste(rawInput: unknown): Promise<Offre> {
+      const candidat = await findCandidat(rawInput);
+      const { markdown } = IMPORT_INPUT_SCHEMA.parse(rawInput);
+      const reference = importSource.referenceOf(markdown);
+      const offreList = await workspace.listOffres(candidat.id);
+      const importedOffre = offreList.find((offre) => offre.reference === reference);
+      if (importedOffre !== undefined) {
+        return importedOffre;
+      }
+      const { listedOffre, fiche, city } = await importSource.extract(reference, markdown);
+      // Chosen by the Candidat, it starts its Recherche like a new Offre in the Zone (ADR-0003)
+      const offre = await workspace.saveOffre({
+        candidatId: candidat.id,
+        source: 'import',
+        listedOffre,
+        fiche,
+        city,
+        isInZone: true,
+        republicationOf: undefined,
+      });
+      await workspace.createJob(offre, 'recherche');
+      return offre;
     },
 
     async listOffres(rawInput: unknown): Promise<Offre[]> {
