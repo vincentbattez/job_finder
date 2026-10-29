@@ -251,6 +251,11 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
           process.stdout.write(`  ${reference}\t${title}\n`);
         }
       }
+      // What the Détection found is printed first; a notification not sent then fails the run in lpm
+      const failureList = detectionList.flatMap(({ notificationFailureList }) => notificationFailureList);
+      if (failureList.length > 0) {
+        throw new Error(failureList.join('\n'));
+      }
     },
   },
   import: {

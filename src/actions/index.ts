@@ -72,6 +72,12 @@ const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: z.enum(['p
 const ETAT_BY_VERSION_STATE = { running: 'en_cours', ready: 'pret', failed: 'en_echec' } as const;
 const ETAT_BY_JOB_STATE = { queued: 'en_cours', running: 'en_cours', done: 'pret', failed: 'en_echec' } as const;
 
+// What a Détection found for one Veille, and the notifications to send once every Veille is done
+interface IFoundOffres {
+  detection: Omit<z.input<typeof DETECTION_SCHEMA>, 'notificationFailureList'>;
+  notificationList: { offre: Offre; notification: INotification }[];
+}
+
 // How often a followed job is read again: a module runs for minutes
 const FOLLOW_INTERVAL_MS = 1000;
 
@@ -285,8 +291,7 @@ export async function createActions({
         await workspace.setLieu(offre, await locate(offre.city ?? readCity(offre.workplace)));
       }
       const veilleList = await workspace.listVeilles();
-      const detectionList: Detection[] = [];
-      const notificationList: { offre: Offre; notification: INotification }[] = [];
+      const foundList: IFoundOffres[] = [];
       for (const veille of veilleList) {
         const { candidatId, source } = veille;
         const knownReferenceList = await workspace.listReferences(candidatId, source);
@@ -295,6 +300,7 @@ export async function createActions({
         const { matchingList, nearMissList } = await pepSource.search(veille.criteria);
         const offreList = await workspace.listOffres(candidatId);
         const newOffreList: Offre[] = [];
+        const notificationList: { offre: Offre; notification: INotification }[] = [];
         // Oldest first, as published: a Republication found by the same Détection as the Offre it
         // publishes again, as on the first launch, is saved after it
         const oldestFirstList = matchingList.toSorted((left, right) => left.reference.localeCompare(right.reference));
@@ -322,27 +328,20 @@ export async function createActions({
           }
         }
         await workspace.setDetected(veille);
-        detectionList.push(
-          DETECTION_SCHEMA.parse({
-            veilleId: veille.id,
-            candidatId,
-            isFirstLaunch,
-            newOffreList,
-            nearMissList,
-          }),
+        foundList.push({
+          detection: { veilleId: veille.id, candidatId, isFirstLaunch, newOffreList, nearMissList },
+          notificationList,
+        });
+      }
+      // Notified last, once every Offre is saved and its Recherche queued. A notification not sent
+      // undoes nothing: it comes back with what the Détection found, which jf detect prints first.
+      const detectionList: Detection[] = [];
+      for (const { detection, notificationList } of foundList) {
+        const failureList = await Promise.all(
+          notificationList.map(({ offre, notification }) => notify(offre, notification)),
         );
-      }
-      // Notified last, once every Offre is saved and its Recherche queued; a failure then fails the
-      // Détection, visibly in lpm, after every notification was tried
-      const failureList: string[] = [];
-      for (const { offre, notification } of notificationList) {
-        const failure = await notify(offre, notification);
-        if (failure !== undefined) {
-          failureList.push(failure);
-        }
-      }
-      if (failureList.length > 0) {
-        throw new Error(failureList.join('\n'));
+        const notificationFailureList = failureList.filter((failure) => failure !== undefined);
+        detectionList.push(DETECTION_SCHEMA.parse({ ...detection, notificationFailureList }));
       }
       return detectionList;
     },

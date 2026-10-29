@@ -92,8 +92,8 @@ export const OFFRE_SCHEMA = z
 
 export type Offre = z.infer<typeof OFFRE_SCHEMA>;
 
-// What a Détection found for one Veille. On the first launch, the Offres already online are
-// imported without triggering anything.
+// What a Détection found for one Veille, and why each notification it could not send failed. On
+// the first launch, the Offres already online are imported without triggering anything.
 export const DETECTION_SCHEMA = z
   .object({
     veilleId: z.string(),
@@ -101,6 +101,7 @@ export const DETECTION_SCHEMA = z
     isFirstLaunch: z.boolean(),
     newOffreList: z.array(OFFRE_SCHEMA),
     nearMissList: z.array(LISTED_OFFRE_SCHEMA),
+    notificationFailureList: z.array(z.string()),
   })
   .brand<'Domain'>();
 

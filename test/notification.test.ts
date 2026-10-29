@@ -109,7 +109,7 @@ describe('the notification of a Recherche ready', () => {
 describe('a notification that cannot be sent', () => {
   const ERROR_MESSAGE = 'Home Assistant injoignable.';
 
-  it('fails the Détection only once every new Offre is saved and its Recherche queued', async () => {
+  it('reports each notification not sent with what the Détection found, once every new Offre is saved and its Recherche queued', async () => {
     const dataDirectory = createDataDirectory();
     const aiSession = createFakeAiSession(RECHERCHE, RECHERCHE);
     const earlierFetch = createRecordedFetch({
@@ -125,13 +125,15 @@ describe('a notification that cannot be sent', () => {
       notificationChannel,
     });
 
-    // Both notifications were tried: each failure is in the message
-    await expect(actions.detect()).rejects.toThrow(
-      new RegExp(
-        `${REFERENCE} non envoyée : ${ERROR_MESSAGE}[\\s\\S]*${OTHER_REFERENCE} non envoyée : ${ERROR_MESSAGE}`,
-      ),
-    );
+    const detectionList = await actions.detect();
 
+    // jf detect prints the new Offres, then each failure, and exits in error
+    expect(detectionList[0]?.newOffreList.map(({ reference }) => reference)).toEqual([REFERENCE, OTHER_REFERENCE]);
+    // Both notifications were tried
+    expect(detectionList[0]?.notificationFailureList).toEqual([
+      `Notification « Nouvelle Offre dans la Zone » de l'Offre ${REFERENCE} non envoyée : ${ERROR_MESSAGE}`,
+      `Notification « Nouvelle Offre dans la Zone » de l'Offre ${OTHER_REFERENCE} non envoyée : ${ERROR_MESSAGE}`,
+    ]);
     const offreList = await actions.listOffres({ candidatId: 'lea' });
     expect(offreList.map(({ reference }) => reference)).toEqual(expect.arrayContaining([REFERENCE, OTHER_REFERENCE]));
     // The worker, a process of its own, whose notifications go through
