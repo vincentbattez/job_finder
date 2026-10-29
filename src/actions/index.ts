@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { z } from 'zod/v4';
 
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
@@ -12,6 +14,7 @@ import {
   type Recipients,
   type Version,
 } from '#/domain/index.ts';
+import { BROUILLON_FILE_NAME, composeEditPrompt } from '#/edit/prompt.ts';
 import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
@@ -23,9 +26,9 @@ import { createJobRunner, findInputs, parseModule } from './run-job.ts';
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
 const CANDIDAT_INPUT_SCHEMA = z.object({ candidatId: z.string() });
-const OFFRE_INPUT_SCHEMA = z.object({ reference: z.string() });
-const MODULE_INPUT_SCHEMA = OFFRE_INPUT_SCHEMA.extend({ module: z.string() });
-const ARTEFACT_INPUT_SCHEMA = OFFRE_INPUT_SCHEMA.extend({ artefact: ARTEFACT_SCHEMA });
+const MODULE_INPUT_SCHEMA = z.object({ module: z.string(), reference: z.string() });
+const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
+const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: ARTEFACT_SCHEMA });
 const VERSION_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
 
 const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: z.enum(['postulee', 'archivee']) });
@@ -130,6 +133,41 @@ export async function createActions({
       });
     },
 
+    // What jf edit offers to edit: the Version retenue of each Artefact of an Offre
+    async listVersionsRetenues(rawInput: unknown): Promise<Version[]> {
+      const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      const versionList = await Promise.all(
+        ARTEFACT_SCHEMA.options.map((artefact) => workspace.listVersions(offre, artefact)),
+      );
+      return versionList.flat().filter(({ isRetenue }) => isRetenue);
+    },
+
+    // jf edit: a Claude Code session where the Candidat corrects the Version retenue in place,
+    // without creating a new Version nor ever touching a Brouillon (spec « Versions »)
+    async openArtefact(rawInput: unknown): Promise<void> {
+      const { reference, artefact } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      if (artefact === 'lettre') {
+        assertLettreModifiable(offre);
+      }
+      const versionList = await workspace.listVersions(offre, artefact);
+      const version = versionList.find(({ isRetenue }) => isRetenue);
+      if (version === undefined) {
+        throw new Error(
+          `L'Offre ${reference} n'a pas de Version retenue de ${artefact} à modifier : « jf run ${artefact} ${reference} » en produit une.`,
+        );
+      }
+      const candidat = await findCandidat({ candidatId: offre.candidatId });
+      const offreDirectory = workspace.offreDirectoryOf(offre);
+      const versionPath = path.relative(offreDirectory, workspace.versionDirectoryOf(offre, version));
+      aiSession.openInteractive({
+        prompt: composeEditPrompt({ candidat, offre, artefact, versionPath }),
+        directory: offreDirectory,
+        readOnlyPathList: [path.join(offreDirectory, '**', BROUILLON_FILE_NAME)],
+      });
+    },
+
     // Runs a module on an Offre, which creates a new Version of its Artefact. In L1 the job runs
     // right away, through the same function the worker will call (ADR-0003).
     async runModule(rawInput: unknown): Promise<ModuleRun> {
@@ -147,7 +185,7 @@ export async function createActions({
 
     // To whom the Lettre retenue recommends sending the application, and why
     async readRecipients(rawInput: unknown): Promise<Recipients> {
-      const { reference } = OFFRE_INPUT_SCHEMA.parse(rawInput);
+      const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
       const offre = await findOffre(reference);
       const versionList = await workspace.listVersions(offre, 'lettre');
       const version = versionList.find(({ isRetenue }) => isRetenue);

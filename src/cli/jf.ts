@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 
 import { createActions, type Actions } from '#/actions/index.ts';
@@ -46,6 +47,103 @@ function formatOffre(offre: Offre): string {
     offre.isExpiree ? `${STATUT_LABEL_BY_STATUS[offre.status]}, Expirée` : STATUT_LABEL_BY_STATUS[offre.status],
     offre.isInZone ? 'Zone' : 'hors Zone',
   ].join('\t');
+}
+
+const ARTEFACT_LABEL_BY_ARTEFACT: Record<Version['artefact'], string> = {
+  recherche: 'Recherche',
+  lettre: 'Lettre',
+  fiche_entretien: "Fiche d'entretien",
+  visualisation: 'Visualisation',
+};
+
+// The terminal where the Candidat answers, one line per question. Ctrl-C or Ctrl-D closes it,
+// which ends the answers instead of leaving a question pending forever.
+function openTerminal() {
+  const readline = createInterface({ input: process.stdin, output: process.stdout });
+  // Iterated from the start, so that no line typed ahead is lost
+  const lineIterator = readline[Symbol.asyncIterator]();
+  return {
+    async ask(question: string): Promise<string | undefined> {
+      readline.setPrompt(question);
+      readline.prompt();
+      const { done: isDone, value } = await lineIterator.next();
+      return isDone === true ? undefined : value;
+    },
+    close(): void {
+      readline.close();
+    },
+  };
+}
+
+type Terminal = ReturnType<typeof openTerminal>;
+
+interface IChoice<T> {
+  question: string;
+  itemList: T[];
+  label: (item: T) => string;
+  emptyMessage: string;
+}
+
+// A numbered list to pick from on the terminal; a single item needs no question
+async function choose<T>(terminal: Terminal, { question, itemList, label, emptyMessage }: IChoice<T>): Promise<T> {
+  const [firstItem, ...otherItemList] = itemList;
+  if (firstItem === undefined) {
+    throw new Error(emptyMessage);
+  }
+  if (otherItemList.length === 0) {
+    process.stdout.write(`${question} : ${label(firstItem)}\n`);
+    return firstItem;
+  }
+  for (const [index, item] of itemList.entries()) {
+    process.stdout.write(`${String(index + 1).padStart(3)}  ${label(item)}\n`);
+  }
+  const answer = await terminal.ask(`${question} (1 à ${String(itemList.length)}) : `);
+  if (answer === undefined) {
+    throw new Error('jf edit abandonné : aucun choix.');
+  }
+  const item = itemList[Number(answer) - 1];
+  if (item === undefined) {
+    throw new Error(`Choix invalide : ${answer}. Relancer jf edit.`);
+  }
+  return item;
+}
+
+async function chooseReference(actions: Actions, terminal: Terminal): Promise<string> {
+  const candidat = await choose(terminal, {
+    question: 'Candidat',
+    itemList: await actions.listCandidats(),
+    label: ({ name }) => name,
+    emptyMessage: 'Aucun Candidat : les déclarer dans data/config.json.',
+  });
+  const offre = await choose(terminal, {
+    question: 'Offre à modifier',
+    itemList: await actions.listOffres({ candidatId: candidat.id }),
+    label: formatOffre,
+    emptyMessage: `Aucune Offre pour ${candidat.name} : « jf detect » cherche les nouvelles Offres.`,
+  });
+  return offre.reference;
+}
+
+// The Offre then the Artefact, unless given, from a list: the Candidat has no reference to
+// remember (spec « Claude Code interactif »)
+async function chooseArtefact(actions: Actions, [givenReference, givenArtefact]: string[]) {
+  if (givenReference !== undefined && givenArtefact !== undefined) {
+    return { reference: givenReference, artefact: givenArtefact };
+  }
+  const terminal = openTerminal();
+  try {
+    const reference = givenReference ?? (await chooseReference(actions, terminal));
+    const version = await choose(terminal, {
+      question: 'Artefact à modifier',
+      itemList: await actions.listVersionsRetenues({ reference }),
+      label: ({ artefact, number }) => `${ARTEFACT_LABEL_BY_ARTEFACT[artefact]} (v${String(number)}, retenue)`,
+      emptyMessage: `L'Offre ${reference} n'a aucun Artefact à modifier : « jf run recherche ${reference} » produit sa Recherche.`,
+    });
+    return { reference, artefact: version.artefact };
+  } finally {
+    // Claude Code takes the terminal next
+    terminal.close();
+  }
 }
 
 function changeStatusCommand(status: 'postulee' | 'archivee', description: string): ICommand {
@@ -176,6 +274,13 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
         throw new Error('Usage : jf profil <candidat>. « jf candidats » liste les Candidats.');
       }
       await actions.openProfil({ candidatId });
+    },
+  },
+  edit: {
+    description:
+      'Modifie un Artefact avec Claude Code, Offre et Artefact proposés si absents : jf edit [<offre> [<artefact>]]',
+    run: async (actions, argumentList) => {
+      await actions.openArtefact(await chooseArtefact(actions, argumentList));
     },
   },
 };
