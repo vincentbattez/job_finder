@@ -43,6 +43,7 @@ Les règles génériques du code. Le pourquoi d'une décision est dans son ADR (
 ## Tests
 
 - Un test passe par les actions et vérifie ce qui s'observe : les Offres en base, les Artefacts sur disque, les jobs en file, les notifications envoyées.
+- Seule une règle qui a beaucoup de cas a aussi des tests unitaires, à côté de son code : le statut (`src/statut/`), la Republication (`src/republication/`), le titre d'une Veille (`src/modules/source-pep/title.ts`) et la ville d'un lieu d'affectation (`src/geo/city.ts`).
 - Seules les frontières externes sont simulées : le HTTP des Sources (avec des réponses enregistrées), le lancement de Claude et le canal de notification.
 - Chaque règle d'architecture a un projet fixture qui la viole, pour prouver qu'elle attrape bien quelque chose.
 
