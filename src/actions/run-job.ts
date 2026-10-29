@@ -3,15 +3,7 @@ import path from 'node:path';
 
 import type { IAiModule } from '#/ai-module/index.ts';
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
-import {
-  ARTEFACT_SCHEMA,
-  MODULE_RUN_SCHEMA,
-  type Artefact,
-  type Job,
-  type ModuleRun,
-  type Offre,
-  type Version,
-} from '#/domain/index.ts';
+import { ARTEFACT_SCHEMA, type Artefact, type Job, type Offre, type Version } from '#/domain/index.ts';
 import { FICHE_ENTRETIEN_MODULE } from '#/modules/fiche-entretien/index.ts';
 import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import { RECHERCHE_MODULE } from '#/modules/recherche/index.ts';
@@ -182,7 +174,7 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
     return formatError === undefined ? undefined : `Le fichier ${outputPath} est mal formé : ${formatError}.`;
   }
 
-  return async function runJob(job: Job & { module: Artefact }): Promise<ModuleRun> {
+  return async function runJob(job: Job & { module: Artefact }): Promise<{ job: Job; version: Version }> {
     const { offre, module } = job;
     const aiModule = AI_MODULE_BY_ARTEFACT[module];
     const { versionList: inputList, directoryList } = await findInputs(workspace, offre, module);
@@ -226,7 +218,7 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
     if (isReady) {
       aiModule.completeVersion?.(outputDirectory);
     }
-    const finished = await workspace.finishJob(
+    return workspace.finishJob(
       { job, version },
       {
         isReady,
@@ -234,6 +226,5 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
         sessionId: session.sessionId,
       },
     );
-    return MODULE_RUN_SCHEMA.parse({ ...finished, filePath: path.join(outputDirectory, aiModule.fileName) });
   };
 }

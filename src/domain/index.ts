@@ -171,13 +171,6 @@ export const JOB_SCHEMA = z
 
 export type Job = z.infer<typeof JOB_SCHEMA>;
 
-// What a job leaves: the job, the Version it produced and the path of that Version's file
-export const MODULE_RUN_SCHEMA = z
-  .object({ job: JOB_SCHEMA, version: VERSION_SCHEMA, filePath: z.string() })
-  .brand<'Domain'>();
-
-export type ModuleRun = z.infer<typeof MODULE_RUN_SCHEMA>;
-
 // The field of the Offre a recommendation comes from, as published: the mail de candidature or a
 // contact
 const CONTACT_FIELD_SCHEMA = z.enum(['applicationEmail', 'contact1', 'contact2']);
