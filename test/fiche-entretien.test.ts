@@ -159,9 +159,12 @@ describe("the prompt of the Fiche d'entretien", () => {
     const { version } = await runModule(actions, 'fiche');
 
     const { fixedPrompt, consignes } = aiSession.headlessSessionList[1] ?? {};
+    // The plan is the default Consignes': the Candidat's own may organise the Fiche otherwise
     for (const section of ['À réviser', 'Moyens mnémotechniques', 'Présentez-vous', 'Questions probables']) {
-      expect(fixedPrompt).toContain(`\`## ${section}\``);
+      expect(consignes).toContain(`## ${section}`);
+      expect(fixedPrompt).not.toContain(`## ${section}`);
     }
+    expect(fixedPrompt).toContain('titre de niveau 1');
     expect(fixedPrompt).toContain("N'invente jamais un fait sur le Candidat");
     expect(fixedPrompt).toContain('`[à compléter : …]`');
     expect(consignes).toBe(FICHE_ENTRETIEN_DEFAULT_CONSIGNES);
@@ -179,13 +182,24 @@ describe("the prompt of the Fiche d'entretien", () => {
     const { version } = await runModule(actions, 'fiche');
 
     expect(aiSession.headlessSessionList[1]?.consignes).toBe(consignes);
-    expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain('`## Présentez-vous`');
+    expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain("N'invente jamais un fait sur le Candidat");
     expect(version?.consignes).toBe(consignes);
   });
 
-  it('fails the Version of a Fiche that lacks one of its sections', async () => {
-    const withoutQuestions = FICHE_ENTRETIEN.replace('## Questions probables', '## Questions');
-    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, ficheRun(withoutQuestions)));
+  it('accepts a Fiche organised otherwise, as Consignes of the Candidat may ask', async () => {
+    const tenQuestions = '# Fiche d’entretien\n\n## Dix questions\n\n- Pourquoi ce poste ?\n';
+    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, ficheRun(tenQuestions)));
+    await runModule(actions, 'recherche');
+
+    const { state, version } = await runModule(actions, 'fiche');
+
+    expect(state).toBe('done');
+    expect(version?.state).toBe('ready');
+  });
+
+  it('fails the Version of a Fiche without a title', async () => {
+    const withoutTitle = FICHE_ENTRETIEN.replace(/^# .*\n/, '');
+    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, ficheRun(withoutTitle)));
     await runModule(actions, 'recherche');
 
     const { state, version, log } = await runModule(actions, 'fiche');
@@ -193,7 +207,7 @@ describe("the prompt of the Fiche d'entretien", () => {
     expect(state).toBe('failed');
     expect(version?.state).toBe('failed');
     expect(log).toContain(
-      "Le fichier fiche_entretien/v1/fiche-entretien.md est mal formé : il n'a pas de section « ## Questions probables ».",
+      'Le fichier fiche_entretien/v1/fiche-entretien.md est mal formé : il ne commence pas par un titre de niveau 1 (« # »).',
     );
   });
 });

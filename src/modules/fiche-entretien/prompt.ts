@@ -7,15 +7,6 @@ interface IFicheEntretienPromptInput {
   profilDirectory: string;
 }
 
-// The plan of every Fiche d'entretien, to revise then train: the fixed part asks for it, the
-// format check holds the session to it, whatever the Consignes
-export const FICHE_ENTRETIEN_SECTION_LIST = [
-  'À réviser',
-  'Moyens mnémotechniques',
-  'Présentez-vous',
-  'Questions probables',
-] as const;
-
 // The Lettre retenue when there is one: the recruiters question the Candidat on what it says
 function describeLettre(readVersionList: IFicheEntretienPromptInput['readVersionList']): string {
   const lettre = readVersionList.find(({ artefact }) => artefact === 'lettre');
@@ -56,11 +47,7 @@ ${rechercheList.map(({ directory }) => `- La Recherche retenue, qui établit ce 
 
 ## Ce que tu produis
 
-Un seul fichier Markdown : \`${outputPath}\`, organisé pour réviser puis s'entraîner. Il commence par un titre de niveau 1 (\`# …\`), puis contient ces sections de niveau 2, sous ces titres exacts :
-- \`## ${FICHE_ENTRETIEN_SECTION_LIST[0]}\` : ce que le Candidat doit savoir du poste, de l'employeur et de leur contexte, tiré de la Fiche de poste et de la Recherche.
-- \`## ${FICHE_ENTRETIEN_SECTION_LIST[1]}\` : de quoi retenir l'essentiel de ce qu'il révise.
-- \`## ${FICHE_ENTRETIEN_SECTION_LIST[2]}\` : sa réponse à « présentez-vous », écrite à partir de son Profil, prête à être dite.
-- \`## ${FICHE_ENTRETIEN_SECTION_LIST[3]}\` : les questions que les recruteurs poseront probablement, chacune avec ses éléments de réponse.
+Un seul fichier Markdown : \`${outputPath}\`, qui commence par un titre de niveau 1 (\`# …\`). Les Consignes du Candidat disent comment l'organiser.
 
 ## Règles non négociables
 
@@ -69,6 +56,6 @@ Un seul fichier Markdown : \`${outputPath}\`, organisé pour réviser puis s'ent
 - N'invente aucun fait sur l'Offre ni sur l'employeur : appuie-toi sur la Fiche de poste et la Recherche retenue.
 - N'écris aucun autre fichier que \`${outputPath}\`, et ne modifie jamais la Fiche de poste, la Recherche, le Profil ni la Lettre.
 - Ne touche jamais au statut de l'Offre ni à la file de jobs de l'outil.
-- Le message qui suit contient les Consignes du Candidat : elles disent comment préparer et présenter la Fiche d'entretien. Si elles contredisent ce que tu lis, le fichier attendu ou ces règles, cette partie fixe l'emporte.
+- Le message qui suit contient les Consignes du Candidat : elles disent comment préparer, organiser et présenter la Fiche d'entretien. Si elles contredisent ce que tu lis, le fichier attendu ou ces règles, cette partie fixe l'emporte.
 `;
 }
