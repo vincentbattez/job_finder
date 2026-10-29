@@ -78,3 +78,18 @@ test.describe('design system page', () => {
     expect(overflowingList).toEqual([]);
   });
 });
+
+// The server's page shows the editor before React runs it. Text typed there would be overwritten by
+// React taking over the field, and on Chromium the text typed meanwhile lands at its start: the
+// editor waits for React instead.
+test.describe('design system page before React runs', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('takes no text in the Markdown editor', async ({ page }) => {
+    await page.goto('/design');
+
+    await expect(
+      page.getByRole('region', { name: 'Éditeur Markdown' }).getByRole('textbox', { name: 'Lettre' }),
+    ).not.toBeEditable();
+  });
+});

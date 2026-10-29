@@ -9,8 +9,8 @@ function subscribe() {
   return unsubscribe;
 }
 
-// A form that posts to a route answering only React must wait for React to run the page: posted
-// before, it would open that route's raw answer
+// What needs React waits for it to run the page: a form that posts to a route answering only React
+// would open that route's raw answer, and React taking over an editor would reset the text typed
 export function useIsHydrated(): boolean {
   return useSyncExternalStore(
     subscribe,
