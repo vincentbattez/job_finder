@@ -116,11 +116,8 @@ describe("fiche d'entretien", () => {
 
     const profilDirectory = path.join(dataDirectory, 'candidats/lea/profil');
     const session = aiSession.headlessSessionList.at(-1);
-    expect(session?.readDirectoryList).toEqual([
-      profilDirectory,
-      path.join(offreDirectory, 'recherche/v1'),
-      path.join(offreDirectory, 'lettre/v1'),
-    ]);
+    // The folder of the Offre is the session's own: only the folders outside it are added
+    expect(session?.readDirectoryList).toEqual([profilDirectory]);
     expect(session?.fixedPrompt).toContain('`fiche-de-poste.md`');
     expect(session?.fixedPrompt).toContain(`\`${path.join(offreDirectory, 'recherche/v1/recherche.md')}\``);
     expect(session?.fixedPrompt).toContain(`\`${profilDirectory}\``);
@@ -133,17 +130,14 @@ describe("fiche d'entretien", () => {
 
   it('runs without a Lettre, and tells the session there is none', async () => {
     const aiSession = createFakeAiSession(RECHERCHE_RUN, ficheRun());
-    const { actions, dataDirectory, offreDirectory } = await detectOffres(aiSession);
+    const { actions, dataDirectory } = await detectOffres(aiSession);
     await runModule(actions, 'recherche');
 
     const { state, version } = await runModule(actions, 'fiche');
 
     expect(state).toBe('done');
     const session = aiSession.headlessSessionList.at(-1);
-    expect(session?.readDirectoryList).toEqual([
-      path.join(dataDirectory, 'candidats/lea/profil'),
-      path.join(offreDirectory, 'recherche/v1'),
-    ]);
+    expect(session?.readDirectoryList).toEqual([path.join(dataDirectory, 'candidats/lea/profil')]);
     expect(session?.fixedPrompt).toContain("Le Candidat n'a pas de Lettre pour cette Offre");
     expect(session?.fixedPrompt).not.toContain('lettre.md');
     expect(version?.inputList).toEqual([{ artefact: 'recherche', number: 1, offre: { reference: REFERENCE } }]);

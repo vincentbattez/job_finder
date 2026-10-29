@@ -131,11 +131,8 @@ describe('lettre', () => {
     const profilDirectory = path.join(dataDirectory, 'candidats/lea/profil');
     const sentDirectory = path.join(dataDirectory, 'candidats/lea/offres', SENT_DIRECTORY_NAME, 'lettre/v1');
     const session = aiSession.headlessSessionList.at(-1);
-    expect(session?.readDirectoryList).toEqual([
-      profilDirectory,
-      path.join(offreDirectory, 'recherche/v1'),
-      sentDirectory,
-    ]);
+    // The folder of the Offre is the session's own: only the folders outside it are added
+    expect(session?.readDirectoryList).toEqual([profilDirectory, sentDirectory]);
     expect(session?.fixedPrompt).toContain('`fiche-de-poste.md`');
     expect(session?.fixedPrompt).toContain(`\`${path.join(offreDirectory, 'recherche/v1/recherche.md')}\``);
     expect(session?.fixedPrompt).toContain(`\`${profilDirectory}\``);

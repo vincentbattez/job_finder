@@ -89,7 +89,8 @@ describe('visualisation', () => {
     });
     expect(readFileSync(path.join(offreDirectory, 'visualisation/v1/visualisation.html'), 'utf8')).toBe(VISUALISATION);
     const session = aiSession.headlessSessionList.at(-1);
-    expect(session?.readDirectoryList).toEqual([path.join(offreDirectory, 'fiche_entretien/v1')]);
+    // The Fiche d'entretien is in the folder of the Offre, the session's own
+    expect(session?.readDirectoryList).toEqual([]);
     expect(session?.fixedPrompt).toContain(`\`${path.join(offreDirectory, 'fiche_entretien/v1/fiche-entretien.md')}\``);
     const versionList = await actions.listVersions({ reference: REFERENCE, artefact: 'visualisation' });
     expect(versionList.map(({ number, isRetenue }) => ({ number, isRetenue }))).toEqual([

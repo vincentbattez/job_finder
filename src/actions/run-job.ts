@@ -208,7 +208,13 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
       fixedPrompt,
       consignes,
       directory: offreDirectory,
-      readDirectoryList: [...directoryList, ...readVersionList.map(({ directory }) => directory)],
+      // The session runs in the folder of the Offre: only the folders outside it are added
+      readDirectoryList: [
+        ...directoryList,
+        ...readVersionList
+          .map(({ directory }) => directory)
+          .filter((directory) => path.relative(offreDirectory, directory).startsWith('..')),
+      ],
       outputDirectory,
     });
     const problem = session.isSuccess
