@@ -15,16 +15,19 @@ jf postuler 2026-2445600                       # passe une Offre en Postulée, c
 jf run recherche 2026-2445600                  # met en file une nouvelle Version de la Recherche d'une Offre ; --wait attend que le worker l'ait produite
 jf run lettre 2026-2445600                     # met en file une nouvelle Version de la Lettre, sur la Recherche retenue
 jf destinataires 2026-2445600                  # affiche à qui adresser la candidature, selon la Lettre retenue
-jf versions 2026-2445600 recherche             # liste les Versions d'un Artefact
+jf versions 2026-2445600 recherche             # liste les Versions d'un Artefact, chacune avec l'origine de ses Consignes : par défaut ou du Candidat
 jf retenir 2026-2445600 recherche 1            # change la Version retenue
 jf edit 2026-2445600 recherche                 # corrige la Version retenue d'un Artefact avec Claude Code ; sans argument, propose les Offres puis l'Artefact
+jf consignes lea                               # dit, pour chaque module, si le Candidat suit les Consignes par défaut ou les siennes
+jf consignes lea lettre                        # affiche les Consignes que suit la Lettre ; « defaut » affiche celles par défaut
+jf consignes lea lettre remplacer < c.md       # remplace les Consignes de la Lettre par celles du fichier ; « supprimer » revient à celles par défaut
 ```
 
 `jf` est sur le `PATH` dès que mise est actif dans le dossier du repo.
 
 ## Front
 
-Le front, service lpm `web` déclaré dans `.lpm.yml` (`mise run web`), sert les Offres de `data/` sur le port 5180, sans authentification : il n'est joignable qu'en LAN et via WireGuard, jamais depuis internet (ADR-0002). On l'ouvre par l'adresse IP du Mac mini ou par son nom `.local`, par exemple `http://mac-mini-vincent.local:5180`. Le Candidat se choisit dans le menu du haut, mémorisé par un cookie ; la fiche de chaque Offre montre ses contacts bruts, les destinataires recommandés par la Lettre retenue, la Fiche de poste et toutes les Versions de chaque Artefact, avec la commande `jf edit` à copier.
+Le front, service lpm `web` déclaré dans `.lpm.yml` (`mise run web`), sert les Offres de `data/` sur le port 5180, sans authentification : il n'est joignable qu'en LAN et via WireGuard, jamais depuis internet (ADR-0002). On l'ouvre par l'adresse IP du Mac mini ou par son nom `.local`, par exemple `http://mac-mini-vincent.local:5180`. Le Candidat se choisit dans le menu du haut, mémorisé par un cookie ; la fiche de chaque Offre montre ses contacts bruts, les destinataires recommandés par la Lettre retenue, la Fiche de poste et toutes les Versions de chaque Artefact, avec la commande `jf edit` à copier et les Consignes qui ont produit chaque Version. La page Profil modifie les fichiers du Profil du Candidat ; la page Consignes montre les Consignes par défaut de chaque module, et y crée, modifie ou supprime celles du Candidat. La partie fixe des prompts n'y apparaît pas : elle reste dans le code.
 
 Sur la fiche, chaque Artefact montre son état (absent, en cours, prêt, en échec) et le bouton de son module : il met le job en file, comme `jf run`, et le worker l'exécute. Le bouton attend tant qu'il manque au module une entrée, par exemple une Recherche retenue pour la Lettre, et dit laquelle. L'état se met à jour tout seul jusqu'à ce que le job soit fini. La liste des Offres a un bouton « Lancer une Détection », la même action que `jf detect`, qui dit ce qu'elle a trouvé pour chaque Veille. Comme le worker, le front lit `.env` pour les notifications.
 

@@ -104,7 +104,11 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
     // with the Versions it reads
     async startJob(
       { id, module, offre }: Job,
-      { consignes, inputList }: { consignes: string; inputList: { offre: Offre; version: Version }[] },
+      {
+        consignes,
+        hasCandidatConsignes,
+        inputList,
+      }: { consignes: string; hasCandidatConsignes: boolean; inputList: { offre: Offre; version: Version }[] },
     ): Promise<Version> {
       const { _max: max } = await prisma.version.aggregate({
         where: { offreId: offre.id, artefact: module },
@@ -119,6 +123,7 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
             number: (max.number ?? 0) + 1,
             state: 'running',
             consignes,
+            hasCandidatConsignes,
             jobId: id,
             inputList: {
               connect: inputList.map(({ offre: { id: offreId }, version: { artefact, number } }) => ({

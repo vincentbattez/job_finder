@@ -4,6 +4,7 @@ import {
   Link,
   Links,
   Meta,
+  NavLink,
   Outlet,
   Scripts,
   ScrollRestoration,
@@ -47,6 +48,13 @@ export function Layout({ children }: Readonly<{ children: ReactNode }>) {
             <Link to="/" className="wordmark">
               Job Finder
             </Link>
+            <nav className="topbar__nav" aria-label="Pages">
+              <NavLink to="/" end>
+                Offres
+              </NavLink>
+              <NavLink to="/profil">Profil</NavLink>
+              <NavLink to="/consignes">Consignes</NavLink>
+            </nav>
             {candidatData !== undefined && <CandidatMenu {...candidatData} />}
           </div>
         </header>

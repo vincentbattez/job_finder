@@ -92,6 +92,15 @@ export const ARTEFACT_SCHEMA = z.enum(['recherche', 'lettre', 'fiche_entretien',
 
 export type Artefact = z.infer<typeof ARTEFACT_SCHEMA>;
 
+// The Consignes of a module for a Candidat: the default ones, kept in the repo, and the ones the
+// Candidat replaced them with, if any. The fixed part of the prompt is not among them: no one
+// changes it (ADR-0003).
+export const MODULE_CONSIGNES_SCHEMA = z
+  .object({ module: ARTEFACT_SCHEMA, defaultConsignes: z.string(), candidatConsignes: z.string().nullable() })
+  .brand<'Domain'>();
+
+export type ModuleConsignes = z.infer<typeof MODULE_CONSIGNES_SCHEMA>;
+
 // A Version that another Version read as input, of its own Offre or of another one
 const READ_VERSION_SCHEMA = z.object({
   artefact: ARTEFACT_SCHEMA,
@@ -108,6 +117,7 @@ export const VERSION_SCHEMA = z
     isRetenue: z.boolean(),
     state: z.enum(['running', 'ready', 'failed']),
     consignes: z.string(),
+    hasCandidatConsignes: z.boolean(),
     inputList: z.array(READ_VERSION_SCHEMA),
     createdAt: z.date(),
   })
@@ -161,6 +171,11 @@ export type Recipients = z.infer<typeof RECIPIENTS_SCHEMA>;
 // A Markdown file of a Version, such as the Brouillon or the Lettre of a Lettre Version, and whether
 // the Candidat may correct it by hand
 const DOCUMENT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string(), isModifiable: z.boolean() });
+
+// A Markdown file of the Profil of a Candidat, such as faits.md or cv.md
+export const PROFIL_FILE_SCHEMA = z.object({ fileName: z.string(), markdown: z.string() }).brand<'Domain'>();
+
+export type ProfilFile = z.infer<typeof PROFIL_FILE_SCHEMA>;
 
 // isRetenable: whether the Candidat may make it the Version retenue
 const VERSION_DOCUMENTS_SCHEMA = z.object({
