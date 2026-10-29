@@ -25,9 +25,23 @@ function formatOffre(offre: Offre): string {
     offre.title,
     offre.workplace ?? '—',
     offre.dateLimite?.toLocaleDateString('fr-FR', { timeZone: 'UTC' }) ?? '—',
-    STATUT_LABEL_BY_STATUS[offre.status],
+    offre.isExpiree ? `${STATUT_LABEL_BY_STATUS[offre.status]}, Expirée` : STATUT_LABEL_BY_STATUS[offre.status],
     offre.isInZone ? 'Zone' : 'hors Zone',
   ].join('\t');
+}
+
+function changeStatusCommand(status: 'postulee' | 'archivee', description: string): ICommand {
+  const name = status === 'postulee' ? 'postuler' : 'archiver';
+  return {
+    description: `${description} : jf ${name} <offre>`,
+    run: async (actions, [reference]) => {
+      if (reference === undefined) {
+        throw new Error(`Usage : jf ${name} <offre>. « jf list <candidat> » liste les Offres.`);
+      }
+      await actions.changeStatus({ reference, status });
+      process.stdout.write(`${reference} : ${STATUT_LABEL_BY_STATUS[status]}\n`);
+    },
+  };
 }
 
 // The CLI only relays to the actions: no business rule here (ADR-0003)
@@ -75,6 +89,8 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       }
     },
   },
+  postuler: changeStatusCommand('postulee', 'Passe une Offre en Postulée, avec ou sans Lettre, et fige sa Lettre'),
+  archiver: changeStatusCommand('archivee', 'Passe une Offre en Archivée'),
   profil: {
     description: "Complète le Profil d'un Candidat avec Claude Code : jf profil <candidat>",
     run: async (actions, [candidatId]) => {

@@ -10,6 +10,8 @@ export type Actions = Awaited<ReturnType<typeof createActions>>;
 
 const CANDIDAT_INPUT_SCHEMA = z.object({ candidatId: z.string() });
 
+const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: z.enum(['postulee', 'archivee']) });
+
 // The single entry point of every feature: the CLI and the front only call these actions,
 // so no business rule lives in either of them (ADR-0003). `satisfies` holds them to the
 // anti-corruption layer (ADR-0005): the input is whatever a user typed, so each action takes it
@@ -36,6 +38,18 @@ export async function createActions({
       throw new Error(`Candidat inconnu : ${candidatId}. « jf candidats » liste les Candidats.`);
     }
     return candidat;
+  }
+
+  async function findOffre(reference: string): Promise<Offre> {
+    const [offre, ...otherOffreList] = await workspace.findOffres(reference);
+    if (offre === undefined) {
+      throw new Error(`Offre inconnue : ${reference}. « jf list <candidat> » liste les Offres.`);
+    }
+    // Two Candidats may follow the same Source: a reference alone then names several Offres
+    if (otherOffreList.length > 0) {
+      throw new Error(`Plusieurs Offres ont la référence ${reference}, chez des Candidats différents.`);
+    }
+    return offre;
   }
 
   return {
@@ -77,6 +91,16 @@ export async function createActions({
     async listOffres(rawInput: unknown): Promise<Offre[]> {
       const candidat = await findCandidat(rawInput);
       return workspace.listOffres(candidat.id);
+    },
+
+    async changeStatus(rawInput: unknown): Promise<void> {
+      const { reference, status } = STATUS_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      // Leaving Postulée would unfreeze the Lettre retenue, the one that was sent (spec « Versions »)
+      if (status !== 'postulee' && offre.status === 'postulee') {
+        throw new Error(`L'Offre ${reference} est Postulée et le reste : sa Lettre retenue est celle envoyée.`);
+      }
+      await workspace.setStatus(reference, status);
     },
 
     async openProfil(rawInput: unknown): Promise<void> {
