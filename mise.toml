@@ -1,0 +1,53 @@
+[settings]
+experimental = true # required for [hooks]
+
+[tools]
+node = "26"
+lefthook = "2"
+gitleaks = "8"
+
+[env]
+_.path = ["{{config_root}}/bin", "{{config_root}}/node_modules/.bin"]
+
+[hooks]
+postinstall = "npm install && lefthook install"
+
+[tasks.init]
+description = "Create data/config.json from config.example.json if it is missing"
+run = "mkdir -p data && { [ -f data/config.json ] || cp config.example.json data/config.json; }"
+
+[tasks."lint:ts"]
+description = "Lint with ESLint"
+run = "eslint ."
+
+[tasks."lint:format"]
+description = "Check formatting with Prettier"
+run = "prettier --check ."
+
+[tasks."lint:dead-code"]
+description = "Find unused files, exports and dependencies with Knip"
+run = "knip"
+
+[tasks.lint]
+description = "Run all linters"
+depends = ["lint:ts", "lint:format", "lint:dead-code"]
+
+[tasks.typecheck]
+description = "Type-check with TypeScript"
+run = "tsc"
+
+[tasks."test:unit"]
+description = "Run the Vitest suite (actions and architecture)"
+run = "vitest run"
+
+[tasks."test:e2e"]
+description = "Run the Playwright end-to-end tests"
+run = "playwright test --pass-with-no-tests"
+
+[tasks.test]
+description = "Run all tests"
+depends = ["test:unit", "test:e2e"]
+
+[tasks.ci]
+description = "Full CI pipeline locally"
+depends = ["lint", "typecheck", "test"]

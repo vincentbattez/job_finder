@@ -2,3 +2,8 @@
 .env
 .env.*
 !.env.example
+mise.local.toml
+node_modules/
+/data/
+playwright-report/
+test-results/

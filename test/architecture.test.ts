@@ -1,0 +1,59 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
+import { projectFiles, projectSlices } from 'archunit';
+import { describe, expect, it } from 'vitest';
+
+const ROOT_TSCONFIG_PATH = path.join(import.meta.dirname, '..', 'tsconfig.json');
+
+// Each folder of src/modules is a module. A diagram without any arrow turns every dependency
+// between two modules into a violation (ADR-0003).
+function findCrossModuleImports(tsconfigPath: string) {
+  return projectSlices(tsconfigPath)
+    .definedBy('src/modules/(**)/')
+    .should()
+    .adhereToDiagram('@startuml\n@enduml')
+    .check();
+}
+
+function createProject(fileContentByPath: Record<string, string>): string {
+  const projectDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-architecture-'));
+  const tsconfigPath = path.join(projectDirectory, 'tsconfig.json');
+  writeFileSync(tsconfigPath, JSON.stringify({ extends: ROOT_TSCONFIG_PATH, include: ['src'] }));
+  for (const [filePath, content] of Object.entries(fileContentByPath)) {
+    mkdirSync(path.dirname(path.join(projectDirectory, filePath)), { recursive: true });
+    writeFileSync(path.join(projectDirectory, filePath), content);
+  }
+  return tsconfigPath;
+}
+
+describe('architecture', () => {
+  it('catches a module importing another module', async () => {
+    const tsconfigPath = createProject({
+      'src/modules/lettre/index.ts':
+        "import { recherche } from '#/modules/recherche/index.ts';\nexport const lettre = recherche;\n",
+      'src/modules/recherche/index.ts': 'export const recherche = 1;\n',
+    });
+
+    expect(await findCrossModuleImports(tsconfigPath)).toHaveLength(1);
+  });
+
+  it('has no module importing another module', async () => {
+    expect(await findCrossModuleImports(ROOT_TSCONFIG_PATH)).toEqual([]);
+  });
+
+  it('lets the CLI reach the features only through the actions', async () => {
+    const rule = projectFiles(ROOT_TSCONFIG_PATH)
+      .inFolder('src/cli/**')
+      .shouldNot()
+      .dependOnFiles()
+      .inPath(/^src\/(?!actions\/|cli\/)/);
+
+    expect(await rule.check()).toEqual([]);
+  });
+
+  it('has no import cycle', async () => {
+    expect(await projectFiles(ROOT_TSCONFIG_PATH).inFolder('src/**').should().haveNoCycles().check()).toEqual([]);
+  });
+});
