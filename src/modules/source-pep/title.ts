@@ -11,9 +11,8 @@ const WORD_SEPARATOR = String.raw`\s+`;
 // Titles that name the job without being it, such as the head of a team of attachés de justice
 const EXCLUDED_TITLE_LIST = ['chef du pole'];
 
-// Recognizes the titles of a Veille's criteria, whatever their case, accents or inclusive writing.
-// A title that shares the criteria's first word without matching is a near miss: listing those
-// reveals a new way of writing the title.
+// A near miss shares the criteria's first word without matching: listing those reveals a new way
+// of writing the title (ADR-0001)
 export function createTitleMatcher(criteriaTitle: string): (title: string) => TitleMatch {
   const wordList = foldText(criteriaTitle).split(/\s+/);
   const wordPatternList = wordList.map((word) => word + INCLUSIVE_SUFFIX);

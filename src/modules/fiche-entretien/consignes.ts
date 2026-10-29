@@ -1,6 +1,5 @@
-// The default Consignes of the Fiche d'entretien, its plan included: a Candidat may replace them
-// entirely with their own, in candidats/<id>/consignes/fiche_entretien.md of the data folder, and
-// organise the Fiche otherwise. The fixed part of the prompt stays.
+// The plan is here, not in the fixed part, so that the Candidat's own Consignes may organise the
+// Fiche otherwise (ADR-0003)
 export const FICHE_ENTRETIEN_DEFAULT_CONSIGNES = `Prépare le Candidat à l'entretien de cette Offre précise, pas à un entretien en général. Il relira la Fiche d'entretien la veille et s'entraînera à voix haute avec elle : préfère les listes courtes et les faits précis aux longs paragraphes.
 
 Organise la Fiche d'entretien pour réviser puis s'entraîner, sous ces sections de niveau 2, avec ces titres exacts :

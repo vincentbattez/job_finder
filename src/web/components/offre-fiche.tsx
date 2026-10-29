@@ -60,9 +60,7 @@ const NON_PRECISE = <span className="missing">Non précisé</span>;
 // A mail written in free text, as Avesnes publishes it, stays as published rather than a broken link
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 
-// The fiche is a page of its own, or one sample among others on /design. The label and its
-// Artefacts on one side; on the other, to whom to write and the Fiche de poste, folded since it is
-// long as published. The children go at the foot of the label, below its statut.
+// A page of its own, or a sample on /design; the Fiche de poste is folded, long as published
 export function OffreFiche({
   fiche,
   isPage = false,

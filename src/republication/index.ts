@@ -29,9 +29,8 @@ function posteOf(title: string, workplace: string | null): string {
     .join(' ');
 }
 
-// The Offre that a new Offre publishes again, among the earlier ones of its Candidat: same
-// workplace, same mail and same Poste in the title, the service telling apart the Postes of one
-// juridiction. The latest one when the Poste was published several times.
+// The service in the title tells apart the Postes of one juridiction, which share workplace and
+// mail; the latest Offre when the Poste was published several times
 export function findRepublishedOffre<T extends IComparedOffre>(offre: IComparedOffre, offreList: T[]): T | undefined {
   return offreList
     .filter(

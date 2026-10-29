@@ -91,9 +91,8 @@ interface IFoundOffres {
 // How often a followed job is read again: a module runs for minutes
 const FOLLOW_INTERVAL_MS = 1000;
 
-// What the Candidat corrects by hand, in the front or with jf edit: the Version retenue, in place
-// (spec « Versions »). Never a Visualisation, regenerated from the Fiche d'entretien, nor the
-// Lettre of a Postulée Offre, the one sent.
+// Only the Version retenue is corrected by hand, in place: never a Visualisation, regenerated from
+// the Fiche d'entretien, nor a Lettre frozen once sent
 function assertArtefactModifiable(
   offre: Offre,
   artefact: Artefact,
@@ -130,8 +129,7 @@ function assertDocumentModifiable(
   }
 }
 
-// Only a ready Version can become the Version retenue, and the Lettre of a Postulée Offre stays
-// the one sent (spec « Versions »)
+// Only a ready Version can become the Version retenue, and a Lettre frozen once sent stays retenue
 function assertRetenable(
   offre: Offre,
   artefact: Artefact,
@@ -164,13 +162,8 @@ function isAccepted(check: () => void): boolean {
   }
 }
 
-// The single entry point of every feature: the CLI and the front only call these actions,
-// so no business rule lives in either of them (ADR-0003). `satisfies` holds them to the
-// anti-corruption layer (ADR-0005): the input is whatever a user typed, so each action takes it
-// as unknown and parses it with Zod, and the output is nothing or domain values, so no raw data
-// reaches the CLI or the front. The tests pass a fake aiSession, a fake fetch for the HTTP of the
-// Sources and of API Géo, and a fake notificationChannel, since Claude, the sites and the phones are
-// external boundaries.
+// The single entry point of every feature, so no business rule lives in the CLI or the front
+// (ADR-0003); `satisfies` holds each action to unknown input and domain output (ADR-0005)
 export async function createActions({
   dataDirectory,
   aiSession = CLAUDE_CODE,
@@ -212,16 +205,14 @@ export async function createActions({
     return offre;
   }
 
-  // API Géo turns a ville into its commune, with région and coordinates (spec « Coordonnées »). A
-  // ville it does not know stays as read, without coordinates.
+  // A ville API Géo does not know stays as read, without coordinates, to be located again later
   async function locate(city: string | null): Promise<Lieu> {
     const lieu = city === null ? null : await apiGeo.findLieu(city);
     return lieu ?? LIEU_SCHEMA.parse({ city, region: null, latitude: null, longitude: null });
   }
 
-  // The job of an imported Offre: Claude reads the fields of its Fiche de poste, which fill the Offre,
-  // located like a detected one, then its Recherche is queued. Throws when the extraction fails, which
-  // fails the job and leaves the Offre as it was.
+  // The extraction job of an imported Offre (ADR-0003); a failure throws, which fails the job and
+  // leaves the Offre as imported
   async function runExtraction(job: Job): Promise<{ job: Job }> {
     const { offre } = job;
     const { title, ficheDePoste, city, session } = await importSource.extract(
@@ -236,8 +227,7 @@ export async function createActions({
     return { job: await workspace.finishJobWithoutVersion(job, { log: session.log, sessionId: session.sessionId }) };
   }
 
-  // Sends a notification to the Candidat of the Offre, on their channel (spec « Notification »). A
-  // notification that cannot be sent undoes and skips nothing: it comes back as the failure to report.
+  // A notification not sent undoes and skips nothing: it comes back as the failure to report
   async function notify(offre: Offre, notification: INotification): Promise<string | undefined> {
     try {
       await notificationChannel.send(workspace.notificationTargetOf(offre.candidatId), notification);
@@ -248,10 +238,8 @@ export async function createActions({
     }
   }
 
-  // What a new Offre starts past the first launch: in the Zone, its Recherche and the notification
-  // to send once the Détection is over (ADR-0003). The Republication of an Offre once Postulée
-  // starts no Recherche but is notified whatever the Zone: the Candidat, who applied to the Poste,
-  // decides whether to apply again.
+  // In the Zone, a new Offre gets its Recherche (ADR-0003). The Republication of an Offre once
+  // Postulée gets none whatever the Zone: the Candidat, who applied already, decides.
   async function startNewOffre(offre: Offre, republicationOf: Offre | undefined): Promise<INotification | undefined> {
     if (republicationOf !== undefined && hasBeenPostulee(republicationOf)) {
       return composeRepublicationPostuleeNotification(offre, republicationOf);
@@ -265,7 +253,6 @@ export async function createActions({
       : composeRepublicationNotification(offre, republicationOf);
   }
 
-  // The Consignes of a module, the default ones and those the Candidat replaced them with
   function readModuleConsignes(candidatId: string, module: Artefact): ModuleConsignes {
     return MODULE_CONSIGNES_SCHEMA.parse({
       module,
@@ -274,13 +261,11 @@ export async function createActions({
     });
   }
 
-  // Those of the Lettre retenue, none before the Offre has one
   async function findRecipients(offre: Offre): Promise<Recipients | null> {
     const version = await findVersionRetenue(workspace, offre, 'lettre');
     return version === undefined ? null : LETTRE_MODULE.readRecipients(workspace.versionDirectoryOf(offre, version));
   }
 
-  // A Version as the fiche shows it: its files, and what the Candidat may do with them
   function readFicheVersion(offre: Offre, version: Version) {
     const { artefact, number, isRetenue } = version;
     return {
@@ -304,12 +289,10 @@ export async function createActions({
       return workspace.listCandidats();
     },
 
-    // Reads the Source of each Veille and records the Offres never seen before, with their Fiche
-    // de poste. An Offre is known by its reference, never by its publication date, which the site
-    // changes (ADR-0001). The first launch imports the Offres already online.
+    // An Offre is known by its reference, never by its publication date, which the site changes
+    // (ADR-0001)
     async detect(): Promise<Detection[]> {
-      // The Offres saved before they had a ville, or whose ville API Géo did not know, are
-      // located again
+      // The Offres saved before they had a ville, or whose ville API Géo did not know
       const unlocatedOffreList = await workspace.listUnlocatedOffres();
       for (const offre of unlocatedOffreList) {
         await workspace.setLieu(offre, await locate(offre.city ?? readCity(offre.workplace)));
@@ -371,10 +354,8 @@ export async function createActions({
       return detectionList;
     },
 
-    // A Fiche de poste in Markdown that the Candidat found elsewhere becomes one of their Offres at
-    // once, named after its file, and the job of its extraction is queued: the worker has Claude
-    // read its fields (spec « Sources et Détection », ADR-0003). Importing the same file again gives
-    // back that job, without another Offre nor another job.
+    // The worker reads the fields of the Fiche de poste (ADR-0003); importing the same file again
+    // gives back its job, without another Offre nor another job
     async importFicheDePoste(rawInput: unknown): Promise<Job> {
       const candidat = await findCandidat(rawInput);
       const { fileName, markdown } = IMPORT_INPUT_SCHEMA.parse(rawInput);
@@ -440,35 +421,32 @@ export async function createActions({
       workspace.saveProfilFile(candidat.id, fileName, markdown);
     },
 
-    // The Consignes of each module, the default ones and those the Candidat replaced them with
     async listConsignes(rawInput: unknown): Promise<ModuleConsignes[]> {
       const candidat = await findCandidat(rawInput);
       return ARTEFACT_SCHEMA.options.map((module) => readModuleConsignes(candidat.id, module));
     },
 
-    // Those of one module, named by its Artefact or its alias, as jf run names it
+    // Named by its Artefact or its alias, as jf run names it
     async readConsignes(rawInput: unknown): Promise<ModuleConsignes> {
       const candidat = await findCandidat(rawInput);
       const { module } = CONSIGNES_MODULE_INPUT_SCHEMA.parse(rawInput);
       return readModuleConsignes(candidat.id, parseModule(module));
     },
 
-    // The Candidat's Consignes replace the default ones of the module, for its next Versions. The
-    // fixed part of its prompt stays, so they cannot lift its rules (ADR-0003).
+    // The fixed part of the prompt stays, so the Candidat's Consignes cannot lift its rules (ADR-0003)
     async saveConsignes(rawInput: unknown): Promise<void> {
       const candidat = await findCandidat(rawInput);
       const { module, consignes } = CONSIGNES_INPUT_SCHEMA.parse(rawInput);
       workspace.saveConsignes(candidat.id, parseModule(module), consignes);
     },
 
-    // The module goes back to its default Consignes
     async deleteConsignes(rawInput: unknown): Promise<void> {
       const candidat = await findCandidat(rawInput);
       const { module } = CONSIGNES_MODULE_INPUT_SCHEMA.parse(rawInput);
       workspace.deleteConsignes(candidat.id, parseModule(module));
     },
 
-    // What jf edit offers to edit: the Version retenue of each Artefact of an Offre that it accepts
+    // The Versions retenues jf edit offers, those it accepts
     async listVersionsRetenues(rawInput: unknown): Promise<Version[]> {
       const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
       const offre = await findOffre(reference);
@@ -482,8 +460,7 @@ export async function createActions({
       );
     },
 
-    // jf edit: a Claude Code session where the Candidat corrects the Version retenue in place,
-    // without creating a new Version nor ever touching a Brouillon (spec « Versions »)
+    // The Brouillon stays read-only, so that the tool learns from the Candidat's corrections
     async openArtefact(rawInput: unknown): Promise<void> {
       const { reference, ...input } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
       const artefact = parseArtefact(input.artefact);
@@ -500,8 +477,8 @@ export async function createActions({
       });
     },
 
-    // Launches a module on an Offre: it only queues its job. The worker runs it, so restarting
-    // the front never stops a Claude session (ADR-0003).
+    // Only queues the job: the worker runs it, so restarting the front never stops a session
+    // (ADR-0003)
     async runModule(rawInput: unknown): Promise<Job> {
       const { module, reference } = MODULE_INPUT_SCHEMA.parse(rawInput);
       // The extraction of an imported Offre runs again after a failure
@@ -520,7 +497,6 @@ export async function createActions({
       return workspace.createJob(offre, artefact);
     },
 
-    // Waits until the worker has run the job, and returns it with the Version it produced
     async followJob(rawInput: unknown): Promise<Job> {
       const { jobId } = JOB_INPUT_SCHEMA.parse(rawInput);
       for (;;) {
@@ -537,16 +513,14 @@ export async function createActions({
       }
     },
 
-    // At the worker's start, a job still running was cut off by the worker's stop: it fails, with
-    // its Version, which frees the queue. Launching the module again makes a new Version.
+    // At the worker's start, a running job was cut off by its stop: failing it frees the queue
     async failInterruptedJobs(): Promise<Job[]> {
       return workspace.failRunningJobs(
         "Interrompu : le worker s'est arrêté pendant ce job. Relancer le module en crée une nouvelle Version.",
       );
     },
 
-    // The worker's turn: runs the queued jobs one at a time, oldest first, until the queue is empty.
-    // Each job of an AI module creates a new Version of its Artefact.
+    // One job at a time, a single Claude session (ADR-0003)
     async runQueuedJobs(): Promise<Job[]> {
       const jobList: Job[] = [];
       for (let job = await workspace.claimNextJob(); job !== null; job = await workspace.claimNextJob()) {
@@ -579,8 +553,7 @@ export async function createActions({
         ARTEFACT_SCHEMA.options.map(async (artefact) => {
           const versionList = await workspace.listVersions(offre, artefact);
           const versionRetenue = await findVersionRetenue(workspace, offre, artefact);
-          // A queued job has no Version yet, while the worker runs another one (ADR-0003): it is
-          // already en cours
+          // A queued job has no Version yet, while the worker runs another one (ADR-0003)
           const isQueued = jobList.some(({ module, state }) => module === artefact && state === 'queued');
           const state = isQueued ? 'running' : versionList.at(-1)?.state;
           return {
@@ -610,7 +583,6 @@ export async function createActions({
       return workspace.listVersions(await findOffre(reference), parseArtefact(artefact));
     },
 
-    // The page of a Visualisation Version, for the front to show
     async readVisualisation(rawInput: unknown): Promise<Visualisation> {
       const { reference, number } = VISUALISATION_INPUT_SCHEMA.parse(rawInput);
       const offre = await findOffre(reference);
@@ -632,7 +604,6 @@ export async function createActions({
       return VISUALISATION_SCHEMA.parse({ html });
     },
 
-    // To whom the Lettre retenue recommends sending the application, and why
     async readRecipients(rawInput: unknown): Promise<Recipients> {
       const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
       const recipients = await findRecipients(await findOffre(reference));
@@ -642,7 +613,6 @@ export async function createActions({
       return recipients;
     },
 
-    // The front's editor: the Candidat corrects a file of the Version retenue in place (spec « Versions »)
     async saveDocument(rawInput: unknown): Promise<void> {
       const { reference, fileName, markdown, ...input } = DOCUMENT_INPUT_SCHEMA.parse(rawInput);
       const artefact = parseArtefact(input.artefact);

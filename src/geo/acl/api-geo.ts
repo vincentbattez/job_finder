@@ -20,7 +20,7 @@ function normalize(name: string): string {
   return wordListOf(name).join(' ');
 }
 
-// API Géo, the State's directory of communes (spec « Coordonnées »): no key, no AI
+// API Géo, the State's directory of communes: no key, and no AI that could invent a place
 export function createApiGeo(httpFetch: typeof fetch = fetch) {
   return {
     // The commune named like the ville, the most populated one when several are. Its search is

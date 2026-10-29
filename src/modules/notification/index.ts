@@ -8,9 +8,7 @@ export interface INotification {
   message: string;
 }
 
-// The channels are interchangeable, and each Candidat has their own (ADR-0003): the target is
-// where that Candidat receives the notifications, as the config names it. The tests replace the
-// channel with a fake.
+// The channels are interchangeable, each Candidat with their own target (ADR-0003)
 export interface INotificationChannel {
   send(target: string, notification: INotification): Promise<void>;
 }
@@ -30,7 +28,7 @@ function dateLimiteOf({ dateLimite }: Offre): string {
   return `Date limite : ${dateLimite === null ? 'non précisée' : DATE_LIMITE_FORMAT.format(dateLimite)}`;
 }
 
-// One composer per notified event (spec « Notification »)
+// One composer per notified event
 export function composeNouvelleOffreNotification(offre: Offre): INotification {
   return {
     title: 'Nouvelle Offre dans la Zone',

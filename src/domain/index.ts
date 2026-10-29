@@ -1,10 +1,7 @@
 import { z } from 'zod/v4';
 
-// The domain types: past the anti-corruption layers, the code only handles these (ADR-0005).
-// Every object schema ends with .brand<'Domain'>(): only a value parsed by a domain schema carries
-// the brand, so a database row or an API response cannot pass for a domain value. z.object drops
-// the fields the domain does not know. An enum stays unbranded: its brand would forbid writing
-// 'lettre' in the code and indexing a Record by it, while the object holding it carries the brand.
+// The brand marks a value parsed by a domain schema, so that a raw row cannot pass for one
+// (ADR-0005); an enum stays unbranded, so that its literals can be written in the code
 export const CANDIDAT_SCHEMA = z.object({ id: z.string(), name: z.string() }).brand<'Domain'>();
 
 export type Candidat = z.infer<typeof CANDIDAT_SCHEMA>;
@@ -99,7 +96,7 @@ export const OFFRE_SCHEMA = z
     postuleeAt: z.date().nullable(),
     isInZone: z.boolean(),
     isExpiree: z.boolean(),
-    // The Offre it publishes again, and the Offres that publish it again (spec « Republication »)
+    // The Offre it publishes again, and the Offres that publish it again
     republicationOf: LINKED_OFFRE_SCHEMA.nullable(),
     republicationList: z.array(LINKED_OFFRE_SCHEMA),
   })
@@ -126,9 +123,7 @@ export const ARTEFACT_SCHEMA = z.enum(['recherche', 'lettre', 'fiche_entretien',
 
 export type Artefact = z.infer<typeof ARTEFACT_SCHEMA>;
 
-// The Consignes of a module for a Candidat: the default ones, kept in the repo, and the ones the
-// Candidat replaced them with, if any. The fixed part of the prompt is not among them: no one
-// changes it (ADR-0003).
+// The fixed part of the prompt is not among the Consignes: no one changes it (ADR-0003)
 export const MODULE_CONSIGNES_SCHEMA = z
   .object({ module: ARTEFACT_SCHEMA, defaultConsignes: z.string(), candidatConsignes: z.string().nullable() })
   .brand<'Domain'>();
@@ -159,9 +154,8 @@ export const VERSION_SCHEMA = z
 
 export type Version = z.infer<typeof VERSION_SCHEMA>;
 
-// A job runs a module on an Offre: an AI module, named after the Artefact it produces, whose Version
-// exists once the job runs, or the extraction of the fields of an imported Fiche de poste, which
-// fills the Offre itself
+// An AI module is named after the Artefact it produces; the extraction fills the imported Offre
+// itself, without a Version
 const MODULE_SCHEMA = z.enum([...ARTEFACT_SCHEMA.options, 'extraction']);
 
 export type Module = z.infer<typeof MODULE_SCHEMA>;
@@ -186,9 +180,8 @@ const CONTACT_FIELD_SCHEMA = z.enum(['applicationEmail', 'contact1', 'contact2']
 
 const ADDRESS_SCHEMA = z.object({ email: z.email(), source: CONTACT_FIELD_SCHEMA });
 
-// To whom the Lettre recommends sending the application, and why: the recipient (null when no
-// field gives an address), the copies and the salutation, each with the field it comes from. A
-// generic salutation comes from no field.
+// Each address and the salutation keep the field they come from, so that none is invented; a
+// generic salutation comes from no field
 export const RECIPIENTS_SCHEMA = z
   .object({
     to: ADDRESS_SCHEMA.nullable(),
@@ -218,7 +211,7 @@ const VERSION_DOCUMENTS_SCHEMA = z.object({
   documentList: z.array(DOCUMENT_SCHEMA),
 });
 
-// What the front shows of an Artefact at a glance (spec « Front »)
+// What the front shows of an Artefact at a glance
 const ETAT_SCHEMA = z.enum(['absent', 'en_cours', 'pret', 'en_echec']);
 
 const ARTEFACT_VERSIONS_SCHEMA = z.object({

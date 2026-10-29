@@ -10,8 +10,8 @@ interface IEditedArtefact {
   versionPath: string;
 }
 
-// The prompt of jf edit stays fixed: no Consignes replace it (spec #1, Modules IA). The session
-// runs in the Offre folder, so "le dossier courant" is the Offre.
+// Fixed, with no Consignes to replace it (ADR-0003); the session runs in the Offre folder, its
+// « dossier courant »
 export function composeEditPrompt({ candidat: { name }, offre, artefact, versionPath }: IEditedArtefact): string {
   // Every Artefact is feminine
   const artefactName = `la ${ARTEFACT_LABEL_BY_ARTEFACT[artefact]}`;

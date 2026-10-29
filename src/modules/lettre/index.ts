@@ -31,9 +31,8 @@ function findRecipientsError(json: string, offre: Offre): string | undefined {
     : `l'adresse ${invented.email} ne figure pas dans le champ ${invented.source} de l'Offre`;
 }
 
-// The Lettre of an Offre: a headless Claude session writes the Brouillon and the recommended
-// recipients (ADR-0003). A Version is a pair: the Brouillon, never modified, and the Lettre the
-// Candidat corrects (spec « Versions »).
+// A Version is a pair: the Brouillon, never modified, so that the tool learns from the corrections
+// of the Lettre, its copy
 export const LETTRE_MODULE = {
   fileName: LETTRE_FILE_NAME,
   outputFileList: [{ name: BROUILLON_FILE_NAME }, { name: RECIPIENTS_FILE_NAME, findFormatError: findRecipientsError }],

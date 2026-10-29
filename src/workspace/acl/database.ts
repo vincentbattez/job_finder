@@ -52,9 +52,8 @@ export interface INewOffre {
   lieu: Lieu;
 }
 
-// Applies the pending migrations of prisma/migrations first, so the schema exists from the
-// first launch and follows every upgrade. Prisma never leaves this file: every row read is
-// parsed into a domain type (ADR-0005).
+// Migrates first, so the schema exists from the first launch and follows every upgrade (ADR-0004);
+// Prisma never leaves this file (ADR-0005)
 export function openDatabase(databasePath: string, defaultDelayMonths: number) {
   const url = `file:${databasePath}`;
   execFileSync(process.execPath, [PRISMA_CLI_PATH, 'migrate', 'deploy'], {
@@ -303,10 +302,8 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       );
     },
 
-    // The config is the source of truth, so its Candidats and Veilles replace the copied rows; a
-    // Veille keeps when a Détection of it last went through. Removing from the config a Candidat
-    // who still has Offres makes the launch fail, through the foreign key, instead of leaving them
-    // orphaned.
+    // The config is the source of truth, except when a Veille's Détection last went through; a
+    // Candidat removed with Offres left fails the launch on the foreign key rather than orphan them
     async copyConfig(config: Config): Promise<void> {
       const veilleList = config.candidatList.flatMap((candidat) =>
         candidat.veilleList.map((veille) => ({ ...veille, candidatId: candidat.id })),

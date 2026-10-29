@@ -1,7 +1,7 @@
 import type { Candidat } from '#/domain/index.ts';
 
-// The prompt of jf profil stays fixed: no Consignes replace it (spec #1, Modules IA). The session
-// runs in the Profil folder, so "le dossier courant" is the Profil.
+// Fixed, with no Consignes to replace it (ADR-0003); the session runs in the Profil folder, its
+// « dossier courant »
 export function composeProfilPrompt({ name }: Candidat): string {
   return `Tu aides ${name} à compléter son Profil de Candidat. Parle en français.
 

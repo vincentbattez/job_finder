@@ -11,9 +11,7 @@ function describeLettre(readVersionList: IPromptInput['readVersionList']): strin
     : `La Lettre retenue, celle que le Candidat a envoyée ou va envoyer : \`${lettre.filePath}\`. Les recruteurs l'auront lue : prépare les questions qu'ils poseront sur ce qu'il y a écrit.`;
 }
 
-// The fixed part of the prompt of the Fiche d'entretien: its objective, what it reads, what it
-// writes and where, and the rules no Consignes can lift (ADR-0003). It runs in the folder of the
-// Offre.
+// The fixed part: its objective, inputs and output, and the rules no Consignes can lift (ADR-0003)
 export function composeFicheEntretienPrompt({
   offre,
   outputDirectory,

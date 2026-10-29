@@ -21,10 +21,8 @@ export function ConsignesOrigin({ hasCandidatConsignes }: Readonly<{ hasCandidat
   );
 }
 
-// The Consignes of one module: the editor starts from the Candidat's own, or from the default ones
-// until they have some. The route remounts it when the Consignes change hands, so the editor shows
-// the ones now in effect. Only the Consignes are here: the fixed part of the prompt stays in the
-// code, out of reach (ADR-0003).
+// The route remounts it when the Consignes change hands, so the editor shows those in effect; the
+// fixed part of the prompt stays in the code, out of reach (ADR-0003)
 export function ModuleConsignes({ module, defaultConsignes, candidatConsignes }: Readonly<IModuleConsignes>) {
   const headingId = useId();
   const hasCandidatConsignes = candidatConsignes !== null;

@@ -12,9 +12,8 @@ export interface IInteractiveSession {
   readOnlyPathList?: string[];
 }
 
-// The two parts of a module's prompt (ADR-0003): the fixed part, then the Consignes. The session
-// reads in its directory and in the other folders it is given, and may write only in its output
-// folder.
+// The fixed part of a module's prompt, then its Consignes (ADR-0003); the session writes only in
+// its output folder
 export interface IHeadlessSession {
   fixedPrompt: string;
   consignes: string;
@@ -74,11 +73,8 @@ function readResult(output: string, exitCode: number | null): SessionResult {
 // The only file that knows the AI runs on Claude Code, through the subscription and never an API
 // key (ADR-0003): the rest of the app sees an IAiSession, which the tests replace with a fake.
 export const CLAUDE_CODE: IAiSession = {
-  // The fixed prompt goes into the system prompt so the Candidat does not see it as their own
-  // message; the opening line only gets Claude to speak first. The manual mode, whatever the
-  // user's settings say, shows the Candidat each file edit and waits for their consent.
-  // A confined session has no shell that could get round its read-only paths, no web, nothing
-  // outside its directory, and none of the user's CLAUDE.md, hooks or MCP servers.
+  // The prompt goes into the system prompt, not the Candidat's messages; the manual mode asks their
+  // consent to each edit, and a confined session has no shell that could get round its read-only paths
   openInteractive({ prompt, directory, readOnlyPathList }) {
     const confinementList =
       readOnlyPathList === undefined
@@ -112,10 +108,8 @@ export const CLAUDE_CODE: IAiSession = {
     }
   },
 
-  // The fixed part goes into the system prompt, above the Consignes sent as the message, so that
-  // no Consignes can lift its rules. The safe mode leaves out the user's CLAUDE.md, hooks, skills
-  // and MCP servers; dontAsk refuses any tool not listed, so the session reads, searches the web
-  // and writes only in its output folder. Never fails: a session that cannot run is a failed one.
+  // The fixed part goes into the system prompt so that no Consignes can lift its rules (ADR-0003);
+  // dontAsk refuses any tool not listed. A session that cannot run is a failed one, never a throw.
   async runHeadless({ fixedPrompt, consignes, directory, readDirectoryList, outputDirectory }) {
     const argumentList = [
       '-p',

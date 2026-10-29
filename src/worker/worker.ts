@@ -17,9 +17,7 @@ function formatJob({ id, module, offre, state, version, log }: Job): string {
   return `job ${String(id)}, ${artefact} de l'Offre ${offre.reference} : ${outcome}\n`;
 }
 
-// The lpm service `worker`: runs the queued jobs, one Claude session at a time, in its own
-// process, so restarting the front never stops a session (ADR-0003). It only relays to the
-// actions.
+// In its own process, so restarting the front never stops a session (ADR-0003)
 async function work(): Promise<never> {
   const actions = await createActions({ dataDirectory: DATA_DIRECTORY });
   const interruptedJobList = await actions.failInterruptedJobs();

@@ -1,6 +1,5 @@
-// Where a fact is missing, the Lettre module writes a « [à compléter : …] » marker rather than
-// inventing it (spec « Lettre »): each marker stands out wherever a document shows, so that none
-// is sent. The capture keeps the markers in the split, at the odd indexes.
+// A « [à compléter : …] » marker stands where a fact is missing, so that none is sent unnoticed.
+// The capture keeps the markers in the split, at the odd indexes.
 const MARKER_SPLIT_PATTERN = /(\[à compléter\s*:[^\]]*\])/iu;
 
 // The few fields of a node of the HTML tree react-markdown builds (hast) that the markers touch

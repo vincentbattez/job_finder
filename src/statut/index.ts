@@ -24,8 +24,7 @@ function findLastDay(
   return FRANCE_DAY_FORMAT.format(lastDay);
 }
 
-// Expirée is computed, never stored, whatever the statut (spec « Statut »). An Offre without any
-// date never expires.
+// Computed, never stored, since it depends on the day; an Offre without any date never expires
 export function isExpiree(
   offre: Pick<Offre, 'dateLimite' | 'publishedAt'>,
   now: Date,
@@ -76,9 +75,7 @@ export function assertStatutChange(offre: OffreStatut, statut: Statut): void {
   );
 }
 
-// Why the Lettre retenue can no longer change, undefined while it can: once the Offre was
-// Postulée, it is the one sent, even once the Offre is Archivée. It is then never edited,
-// regenerated or swapped for another Version.
+// Once the Offre was Postulée, the Lettre retenue is the one sent, even once the Offre is Archivée
 export function findLettreFreeze(offre: OffreStatut): string | undefined {
   return hasBeenPostulee(offre)
     ? `L'Offre ${offre.reference} a été Postulée : sa Lettre retenue est figée telle qu'envoyée. Elle ne se modifie plus, ne se régénère plus et ne se remplace plus par une autre Version.`

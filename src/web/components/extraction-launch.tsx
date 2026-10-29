@@ -5,9 +5,7 @@ import { EtatBadge, type Etat } from './badge.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
 
-// The extraction of an imported Offre, which the worker runs: Claude reads the fields of its Fiche
-// de poste. Its état, read again until the worker is done, and after a failure, why and a button to
-// run it again.
+// The worker runs the extraction in its own process (ADR-0003), so its état is read again until done
 export function ExtractionLaunch({ reference, etat, log }: Readonly<{ reference: string; etat: Etat; log: string }>) {
   const fetcher = useFetcher<{ error: string | null }>();
   const isHydrated = useIsHydrated();

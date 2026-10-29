@@ -1,8 +1,7 @@
 import type { Artefact, Offre } from '#/domain/index.ts';
 
-// What the fixed part of a prompt names: the folder of the Version, relative to the folder of the
-// Offre where the session runs, and the absolute folders of what it reads, with the file of each
-// Version read
+// The output folder is relative to the Offre's folder, where the session runs; what it reads is
+// named by absolute paths
 export interface IPromptInput {
   offre: Offre;
   outputDirectory: string;

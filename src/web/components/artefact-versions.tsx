@@ -13,8 +13,7 @@ import { ETAT_BY_VERSION_STATE, type IArtefactVersions } from './offre-fiche.tsx
 
 type VersionDocuments = IArtefactVersions['versionList'][number];
 
-// What a Version holds: the page of a ready Visualisation, in a frame that runs none of its scripts
-// (spec « Front »), else its Markdown files
+// A Visualisation shows in a frame that runs none of its scripts: the page comes from an AI session
 function VersionFiles({
   reference,
   artefact,

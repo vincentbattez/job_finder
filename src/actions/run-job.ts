@@ -54,8 +54,7 @@ export function findDefaultConsignes(module: Artefact): string {
   return AI_MODULE_BY_ARTEFACT[module].defaultConsignes;
 }
 
-// A Republication starts from the work done for the Offre it publishes again: the Version retenue
-// of each of its Artefacts
+// A Republication starts from the work done for the Offre it publishes again
 async function findRepublishedVersions(workspace: Workspace, { republicationOf, candidatId }: Offre) {
   const offreList = republicationOf === null ? [] : await workspace.findOffres(republicationOf.reference);
   const republishedOffre = offreList.find((candidate) => candidate.candidatId === candidatId);
@@ -64,7 +63,6 @@ async function findRepublishedVersions(workspace: Workspace, { republicationOf, 
     : findVersionsRetenues(workspace, republishedOffre, ARTEFACT_SCHEMA.options);
 }
 
-// The Version retenue of each Artefact that has one
 async function findVersionsRetenues(
   workspace: Workspace,
   offre: Offre,
@@ -74,7 +72,7 @@ async function findVersionsRetenues(
   return versionList.filter((version) => version !== undefined).map((version) => ({ offre, version }));
 }
 
-// The Version retenue of the Artefact for each Offre of the Candidat once Postulée: what they sent
+// Those of the Offres once Postulée: what the Candidat sent
 async function findSentVersions(workspace: Workspace, { candidatId }: Offre, artefact: Artefact) {
   const offreList = await workspace.listOffres(candidatId);
   const sentList = await Promise.all(
@@ -118,18 +116,15 @@ function wordRefusal(refusal: Refusal, offre: Offre, module: Artefact, isForFron
     : `${reason}. La produire d'abord : jf run ${missingArtefact} ${offre.reference}.`;
 }
 
-// The Version retenue of an Artefact the Candidat sends, the Lettre, is frozen once the Offre was
-// Postulée
+// What the Candidat sends, the Lettre, is frozen once the Offre was Postulée
 export function assertNotFrozen(offre: Offre, artefact: Artefact): void {
   if (AI_MODULE_BY_ARTEFACT[artefact].isFrozenOncePostulee === true) {
     assertLettreModifiable(offre);
   }
 }
 
-// What a job reads besides the Fiche de poste of its Offre, as its module declares: Versions, and
-// folders outside the Offre. Throws, before anything is written, when the module cannot run on the
-// Offre: the actions call it to refuse a job up front, the runner again for a job queued before the
-// Offre changed.
+// Throws before anything is written: the actions refuse a job up front, the runner a job queued
+// before the Offre changed
 export async function findInputs(workspace: Workspace, offre: Offre, module: Artefact) {
   const refusal = await findRefusal(workspace, offre, module);
   if (refusal !== undefined) {
@@ -146,16 +141,14 @@ export async function findInputs(workspace: Workspace, offre: Offre, module: Art
   return { versionList, directoryList };
 }
 
-// The module of an Artefact as the fiche of an Offre offers it: why it cannot run on the Offre now,
-// from the very checks of a launch
+// The fiche offers a module with the very checks of a launch
 export async function describeModule(workspace: Workspace, offre: Offre, artefact: Artefact) {
   const refusal = await findRefusal(workspace, offre, artefact);
   return { refusal: refusal === undefined ? null : wordRefusal(refusal, offre, artefact, true) };
 }
 
-// The one function that runs a job: the worker calls it on each queued job (ADR-0003). The
-// session gets the fixed part of the module's prompt and the Candidat's Consignes, or the default
-// ones; the Version keeps them.
+// The worker runs each queued job with it (ADR-0003); the Version keeps the Consignes it was made
+// with, so that two Versions compare
 export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
   // A Version is ready only once each of its files exists, is not empty and has the module's format
   function findOutputProblem(

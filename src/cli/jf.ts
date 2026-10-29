@@ -123,8 +123,7 @@ async function chooseReference(actions: Actions, terminal: Terminal): Promise<st
   return offre.reference;
 }
 
-// The Offre then the Artefact, unless given, from a list: the Candidat has no reference to
-// remember (spec « Claude Code interactif »)
+// From a list, unless given: the Candidat has no reference to remember
 async function chooseArtefact(actions: Actions, [givenReference, givenArtefact]: string[]) {
   if (givenReference !== undefined && givenArtefact !== undefined) {
     return { reference: givenReference, artefact: givenArtefact };

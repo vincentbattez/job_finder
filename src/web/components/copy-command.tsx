@@ -1,8 +1,7 @@
 import { useState } from 'react';
 
-// The front is served over plain http on the LAN and through WireGuard (ADR-0002), where browsers
-// withhold the Clipboard API: the text is selected in a hidden field and copied the way every
-// browser still allows, then the focus goes back to the button
+// Over plain http on the LAN (ADR-0002), browsers withhold the Clipboard API: a hidden field is
+// copied the way every browser still allows
 function copyText(text: string): void {
   const focusedElement = document.activeElement;
   const field = document.createElement('textarea');

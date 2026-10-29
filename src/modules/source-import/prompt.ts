@@ -1,7 +1,6 @@
 import { FICHE_DE_POSTE_FILE_NAME } from '#/domain/index.ts';
 
-// The whole prompt of the extraction is fixed: no Candidat can replace it (spec « Modules IA »). It
-// runs in the folder of the Offre.
+// The whole prompt is fixed, with no Consignes: the extraction only copies fields (ADR-0003)
 export function composeExtractionPrompt(extractionPath: string): string {
   return `Tu relèves les champs d'une Fiche de poste, une offre d'emploi que le Candidat a trouvée lui-même et importée dans l'outil. Le dossier courant est celui de l'Offre : sa Fiche de poste est dans \`${FICHE_DE_POSTE_FILE_NAME}\`. Lis-la en entier.
 
