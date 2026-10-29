@@ -28,11 +28,13 @@ test.describe('map of the Offres', () => {
     await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
   });
 
-  test('shows a point per located Offre, the Archivées aside', async ({ page }) => {
+  test('shows a point per Offre of the list', async ({ page }) => {
     await chooseLea(page);
 
-    // 81 Offres, one of them Archivée
-    await expect(findPoints(page)).toHaveCount(80);
+    // Other tests may add Offres to the shared data: the list tells how many there are now
+    const offreCount = (await page.getByRole('row').count()) - 1;
+    expect(offreCount).toBeGreaterThanOrEqual(80);
+    await expect(findPoints(page)).toHaveCount(offreCount);
   });
 
   test('opens the fiche of an Offre on a click on its point', async ({ page }) => {
