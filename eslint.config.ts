@@ -55,7 +55,7 @@ export default defineConfig(
         'error',
         { selector: 'default', format: ['camelCase'] },
         { selector: 'import', format: ['camelCase', 'PascalCase'] },
-        // React components
+        // React tells a component from an HTML tag by its capital letter
         { selector: 'function', format: ['camelCase', 'PascalCase'] },
         { selector: 'variable', format: ['camelCase', 'UPPER_CASE'] },
         {

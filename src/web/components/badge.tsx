@@ -1,18 +1,20 @@
-export const STATUT_LIST = ['a_traiter', 'postulee', 'expiree', 'archivee'] as const;
+export type Statut = 'a_traiter' | 'postulee' | 'archivee';
 
-export type Statut = (typeof STATUT_LIST)[number];
-
-const STATUT_LABEL_BY_STATUT: Record<Statut, string> = {
+const STATUT_LABEL_BY_STATUT: Record<Statut | 'expiree', string> = {
   a_traiter: 'À traiter',
   postulee: 'Postulée',
   expiree: 'Expirée',
   archivee: 'Archivée',
 };
 
-export function StatutBadge({ statut }: Readonly<{ statut: Statut }>) {
+// Expirée comes from the Date limite, whatever the statut (GLOSSARY.md). Like the map of issue
+// #20, the badge shows it only in place of À traiter: a Postulée Offre stays green past its
+// Date limite.
+export function StatutBadge({ statut, isExpiree }: Readonly<{ statut: Statut; isExpiree: boolean }>) {
+  const shownStatut = statut === 'a_traiter' && isExpiree ? 'expiree' : statut;
   return (
-    <span className="badge" data-statut={statut}>
-      {STATUT_LABEL_BY_STATUT[statut]}
+    <span className="badge" data-statut={shownStatut}>
+      {STATUT_LABEL_BY_STATUT[shownStatut]}
     </span>
   );
 }

@@ -55,7 +55,7 @@ test.describe('design system page', () => {
     await expect(editor.getByRole('heading', { name: 'Objet de la lettre' })).toBeVisible();
   });
 
-  // Léa reads the front on her phone through the VPN. overflow-x: clip hides a horizontal
+  // Léa reads the front on her phone through the VPN (ADR-0002). overflow-x: clip hides a horizontal
   // scrollbar, so the check is that nothing runs past the right edge, where it would be cut off.
   test('fits a phone screen', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });

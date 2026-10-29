@@ -1,9 +1,9 @@
-import { ETAT_LIST, EtatBadge, STATUT_LIST, StatutBadge } from '#/web/components/badge.tsx';
+import { ETAT_LIST, EtatBadge, StatutBadge, type Statut } from '#/web/components/badge.tsx';
 import { MarkdownEditor } from '#/web/components/markdown-editor.tsx';
 import { OffreFiche, type IOffreFiche } from '#/web/components/offre-fiche.tsx';
 import { OffreList, type IOffreRow } from '#/web/components/offre-list.tsx';
 
-// Sample values that read as samples: the front reads the real Offres through the actions
+// Sample values that read as samples: the real Offres reach the front through the actions (ADR-0003)
 const SAMPLE_OFFRE: IOffreFiche = {
   reference: '2026-0000101',
   title: 'Attaché de justice (F/H), pôle civil',
@@ -11,6 +11,7 @@ const SAMPLE_OFFRE: IOffreFiche = {
   workplace: 'Tribunal judiciaire de Béthune',
   employer: 'Cour d’appel de Douai',
   statut: 'a_traiter',
+  isExpiree: false,
   publishedAt: new Date('2026-10-20'),
   dateLimite: new Date('2026-11-19'),
   applicationEmail: 'recrutement@example.org',
@@ -48,15 +49,17 @@ const SAMPLE_OFFRE_LIST: IOffreRow[] = [
     url: 'https://example.org/offres/2026-0000102',
     workplace: 'Tribunal judiciaire de Boulogne-sur-Mer',
     statut: 'postulee',
-    publishedAt: new Date('2026-10-02'),
-    dateLimite: new Date('2026-11-06'),
+    isExpiree: true,
+    publishedAt: new Date('2026-09-25'),
+    dateLimite: new Date('2026-10-23'),
   },
   {
     reference: '2026-0000103',
     title: 'Attaché de justice (F/H), pôle mineurs',
     url: 'https://example.org/offres/2026-0000103',
     workplace: 'Tribunal judiciaire d’Avesnes-sur-Helpe',
-    statut: 'expiree',
+    statut: 'a_traiter',
+    isExpiree: true,
     publishedAt: new Date('2026-09-14'),
     dateLimite: new Date('2026-10-15'),
   },
@@ -66,9 +69,18 @@ const SAMPLE_OFFRE_LIST: IOffreRow[] = [
     url: 'https://example.org/offres/2026-0000104',
     workplace: 'Tribunal judiciaire d’Amiens',
     statut: 'archivee',
+    isExpiree: false,
     publishedAt: new Date('2026-09-30'),
     dateLimite: null,
   },
+];
+
+// Each look of the badge: Expirée shows in place of À traiter
+const STATUT_SAMPLE_LIST: { statut: Statut; isExpiree: boolean }[] = [
+  { statut: 'a_traiter', isExpiree: false },
+  { statut: 'postulee', isExpiree: false },
+  { statut: 'a_traiter', isExpiree: true },
+  { statut: 'archivee', isExpiree: false },
 ];
 
 export function meta() {
@@ -88,9 +100,9 @@ export default function Design() {
       <section aria-labelledby="statuts">
         <h2 id="statuts">Statuts d’une Offre</h2>
         <ul className="badge-list">
-          {STATUT_LIST.map((statut) => (
-            <li key={statut}>
-              <StatutBadge statut={statut} />
+          {STATUT_SAMPLE_LIST.map(({ statut, isExpiree }) => (
+            <li key={`${statut}-${String(isExpiree)}`}>
+              <StatutBadge statut={statut} isExpiree={isExpiree} />
             </li>
           ))}
         </ul>

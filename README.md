@@ -45,7 +45,7 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 | `mise run typecheck`  | TypeScript                                                         |
 | `mise run test:unit`  | Vitest : les actions et l'architecture                             |
 | `mise run test:e2e`   | Playwright : les parcours du front                                 |
-| `mise run web`        | Lance le front en développement, joignable en LAN et via WireGuard |
+| `mise run web`        | Lance le front en développement, ouvert au réseau local (ADR-0002) |
 | `mise run db:migrate` | Crée une migration depuis le schéma et l'applique à `dev-data/`    |
 | `mise run db:seed`    | Remplace les Offres de `dev-data/` par des Offres factices         |
 | `mise run db:reset`   | Recrée la base de `dev-data/` depuis les migrations, puis la seed  |

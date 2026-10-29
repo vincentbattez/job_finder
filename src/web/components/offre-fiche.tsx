@@ -25,9 +25,7 @@ export interface IOffreFiche extends IOffreRow {
   etatByArtefact: Record<Artefact, Etat>;
 }
 
-function Contact({ contact }: Readonly<{ contact: string | null }>) {
-  return contact === null ? <span className="missing">Non précisé</span> : contact;
-}
+const NON_PRECISE = <span className="missing">Non précisé</span>;
 
 export function OffreFiche({ offre }: Readonly<{ offre: IOffreFiche }>) {
   const artefactsId = useId();
@@ -36,7 +34,7 @@ export function OffreFiche({ offre }: Readonly<{ offre: IOffreFiche }>) {
       <header className="fiche__label">
         <div className="fiche__title">
           <h3>{offre.title}</h3>
-          <StatutBadge statut={offre.statut} />
+          <StatutBadge statut={offre.statut} isExpiree={offre.isExpiree} />
         </div>
         <p>
           {offre.workplace}, {offre.employer}
@@ -80,7 +78,7 @@ export function OffreFiche({ offre }: Readonly<{ offre: IOffreFiche }>) {
             <dt>Mail de candidature</dt>
             <dd>
               {offre.applicationEmail === null ? (
-                <Contact contact={null} />
+                NON_PRECISE
               ) : (
                 <a href={`mailto:${offre.applicationEmail}`}>{offre.applicationEmail}</a>
               )}
@@ -88,15 +86,11 @@ export function OffreFiche({ offre }: Readonly<{ offre: IOffreFiche }>) {
           </div>
           <div>
             <dt>Contact 1</dt>
-            <dd>
-              <Contact contact={offre.contact1} />
-            </dd>
+            <dd>{offre.contact1 ?? NON_PRECISE}</dd>
           </div>
           <div>
             <dt>Contact 2</dt>
-            <dd>
-              <Contact contact={offre.contact2} />
-            </dd>
+            <dd>{offre.contact2 ?? NON_PRECISE}</dd>
           </div>
         </dl>
       </div>
