@@ -1,0 +1,59 @@
+import { useId } from 'react';
+
+import { EtatBadge } from './badge.tsx';
+import { CopyCommand } from './copy-command.tsx';
+import { DateText } from './date.tsx';
+import { Markdown } from './markdown.tsx';
+import { ARTEFACT_LABEL_BY_ARTEFACT, ETAT_BY_VERSION_STATE, type IArtefactVersions } from './offre-fiche.tsx';
+
+// Every Version of an Artefact, oldest first: the Version retenue opens, the others stay folded
+export function ArtefactVersions({
+  reference,
+  artefact,
+  versionList,
+}: Readonly<IArtefactVersions & { reference: string }>) {
+  const headingId = useId();
+  return (
+    <section className="artefact" id={artefact} data-artefact={artefact} aria-labelledby={headingId}>
+      <h2 id={headingId}>{ARTEFACT_LABEL_BY_ARTEFACT[artefact]}</h2>
+      {/* jf edit works on the Version retenue */}
+      {versionList.some(({ version }) => version.isRetenue) && (
+        <CopyCommand command={`jf edit ${reference} ${artefact}`} />
+      )}
+      {versionList.length === 0 ? (
+        <p className="missing">Aucune Version pour l’instant.</p>
+      ) : (
+        <ol className="version-list">
+          {versionList.map(({ version, documentList }) => (
+            <li key={version.number}>
+              <details open={version.isRetenue}>
+                <summary>
+                  <span className="reference">v{version.number}</span>
+                  <EtatBadge etat={ETAT_BY_VERSION_STATE[version.state]} />
+                  {version.isRetenue && (
+                    <span className="badge" data-retenue>
+                      Retenue
+                    </span>
+                  )}
+                  <span className="date">
+                    <DateText date={version.createdAt} />
+                  </span>
+                </summary>
+                {documentList.length === 0 ? (
+                  <p className="missing">Aucun fichier dans cette Version.</p>
+                ) : (
+                  documentList.map(({ fileName, markdown }) => (
+                    <figure key={fileName} className="document">
+                      <figcaption className="reference">{fileName}</figcaption>
+                      <Markdown markdown={markdown} />
+                    </figure>
+                  ))
+                )}
+              </details>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}

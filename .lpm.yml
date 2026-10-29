@@ -1,6 +1,11 @@
 # The lpm config versioned with the repo. The worker runs the queued jobs, one Claude session at a
 # time, in its own process: restarting the front never stops a session (ADR-0003).
 services:
+  # The front, without authentication: reachable on the LAN and through WireGuard, never from
+  # internet (ADR-0002)
+  web:
+    cmd: mise run web
+    port: 5180
   worker: mise run worker
 jobs:
   # The daily Détection (ADR-0003). Run in a login shell from the repo root, where mise puts `jf` on

@@ -5,7 +5,9 @@ import type { Artefact, Offre, Version } from '#/domain/index.ts';
 
 import { loadConfig } from './acl/config.ts';
 import { openDatabase, type INewOffre } from './acl/database.ts';
-import { readTextFile } from './acl/files.ts';
+import { readMarkdownFiles, readTextFile } from './acl/files.ts';
+
+const FICHE_DE_POSTE_FILE_NAME = 'fiche-de-poste.md';
 
 function slugify(text: string): string {
   return text
@@ -35,15 +37,21 @@ export async function openWorkspace(dataDirectory: string) {
     return path.join(candidatDirectoryOf(candidatId), 'offres', `${reference}-${slugify(title)}`);
   }
 
+  // Each Version of an Artefact has its own folder, so a new launch never overwrites the others
+  function versionDirectoryOf(offre: Offre, { artefact, number }: Version): string {
+    return path.join(offreDirectoryOf(offre), artefact, `v${String(number)}`);
+  }
+
   return {
     ...database,
     profilDirectoryOf,
     offreDirectoryOf,
+    versionDirectoryOf,
     readTextFile,
 
-    // Each Version of an Artefact has its own folder, so a new launch never overwrites the others
-    versionDirectoryOf(offre: Offre, { artefact, number }: Version): string {
-      return path.join(offreDirectoryOf(offre), artefact, `v${String(number)}`);
+    // The Markdown files of a Version, such as the Brouillon and the Lettre of a Lettre Version
+    readVersionDocuments(offre: Offre, version: Version) {
+      return readMarkdownFiles(versionDirectoryOf(offre, version));
     },
 
     // Where a Candidat receives their notifications, as their config names it
@@ -64,8 +72,17 @@ export async function openWorkspace(dataDirectory: string) {
     async saveOffre(newOffre: INewOffre): Promise<Offre> {
       const offreDirectory = offreDirectoryOf({ candidatId: newOffre.candidatId, ...newOffre.listedOffre });
       mkdirSync(offreDirectory, { recursive: true });
-      writeFileSync(path.join(offreDirectory, 'fiche-de-poste.md'), newOffre.fiche.markdown);
+      writeFileSync(path.join(offreDirectory, FICHE_DE_POSTE_FILE_NAME), newOffre.fiche.markdown);
       return database.createOffre(newOffre);
+    },
+
+    readFicheDePoste(offre: Offre): string {
+      const filePath = path.join(offreDirectoryOf(offre), FICHE_DE_POSTE_FILE_NAME);
+      const ficheDePoste = readTextFile(filePath);
+      if (ficheDePoste === null) {
+        throw new Error(`Fiche de poste introuvable pour l'Offre ${offre.reference} : ${filePath}`);
+      }
+      return ficheDePoste;
     },
   };
 }

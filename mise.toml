@@ -35,8 +35,8 @@ description = "Recreate the dev-data/ database from the migrations, then seed it
 run = ["mkdir -p dev-data && prisma migrate reset --force", "mise run db:seed"]
 
 [tasks.web]
-description = "Start the front in development mode, open to the local network (ADR-0002)"
-run = "react-router dev --host"
+description = "Serve the front of data/ on port 5180, open to the LAN and WireGuard: the lpm service web (ADR-0002)"
+run = "react-router dev --host --port 5180 --strictPort"
 
 [tasks.worker]
 description = "Run the queued jobs of data/, one Claude session at a time: the lpm service worker (ADR-0003)"
