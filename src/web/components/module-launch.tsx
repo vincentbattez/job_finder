@@ -17,9 +17,6 @@ export function ModuleLaunch({
   const isHydrated = useIsHydrated();
   const isRunning = etat === 'en_cours';
   useRevalidateWhile(isRunning);
-  if (module === null) {
-    return null;
-  }
   const error = fetcher.data?.error ?? null;
   return (
     <fetcher.Form method="post" action="/run" className="module-launch">

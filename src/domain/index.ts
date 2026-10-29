@@ -221,8 +221,8 @@ const ARTEFACT_VERSIONS_SCHEMA = z.object({
   artefact: ARTEFACT_SCHEMA,
   // En cours from the moment its job is queued, then that of its latest Version; absent before any
   etat: ETAT_SCHEMA,
-  // The module that produces it, null while none does: why it cannot run now, null when it can
-  module: z.object({ refusal: z.string().nullable() }).nullable(),
+  // The module that produces it: why it cannot run now, null when it can
+  module: z.object({ refusal: z.string().nullable() }),
   // Whether jf edit opens it now: it has a Version retenue, and is neither a Visualisation nor the
   // Lettre of a Postulée Offre
   isEditable: z.boolean(),

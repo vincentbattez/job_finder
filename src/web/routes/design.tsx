@@ -68,11 +68,17 @@ const SAMPLE_FICHE: IOffreFiche = {
     {
       artefact: 'fiche_entretien',
       etat: 'en_echec',
-      module: null,
+      module: { refusal: null },
       isEditable: false,
       versionList: [sampleVersion(1, 'failed')],
     },
-    { artefact: 'visualisation', etat: 'absent', module: null, isEditable: false, versionList: [] },
+    {
+      artefact: 'visualisation',
+      etat: 'absent',
+      module: { refusal: 'Il faut d’abord une Fiche d’entretien retenue.' },
+      isEditable: false,
+      versionList: [],
+    },
   ],
   recipients: {
     to: { email: 'recrutement@example.org', source: 'applicationEmail' },

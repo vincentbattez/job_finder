@@ -71,19 +71,18 @@ const ARTEFACT_LABEL_BY_ARTEFACT: Record<Artefact, string> = {
   visualisation: 'Visualisation',
 };
 
-const AI_MODULE_BY_ARTEFACT: Partial<Record<Artefact, IAiModule>> = {
+const AI_MODULE_BY_ARTEFACT: Record<Artefact, IAiModule> = {
   recherche: RECHERCHE_MODULE,
   lettre: LETTRE_MODULE,
   fiche_entretien: FICHE_ENTRETIEN_MODULE,
   visualisation: VISUALISATION_MODULE,
 };
 
-// The modules available so far, each named after the Artefact it produces, or by its alias
+// The modules, each named after the Artefact it produces, or by its alias
 export function parseModule(name: string): Artefact {
-  const artefact = ARTEFACT_SCHEMA.options.find((candidate) => {
-    const aiModule = AI_MODULE_BY_ARTEFACT[candidate];
-    return aiModule !== undefined && (name === candidate || name === aiModule.alias);
-  });
+  const artefact = ARTEFACT_SCHEMA.options.find(
+    (candidate) => name === candidate || name === AI_MODULE_BY_ARTEFACT[candidate].alias,
+  );
   if (artefact === undefined) {
     const nameList = Object.entries(AI_MODULE_BY_ARTEFACT).map(([candidate, aiModule]) => aiModule.alias ?? candidate);
     throw new Error(`Module inconnu : ${name}. Modules : ${nameList.join(', ')}.`);
@@ -91,13 +90,8 @@ export function parseModule(name: string): Artefact {
   return artefact;
 }
 
-// The default Consignes of each module available, in the order of the Artefacts: a module added
-// to AI_MODULE_BY_ARTEFACT shows up in the front and the CLI by itself
-export function listDefaultConsignes(): { module: Artefact; defaultConsignes: string }[] {
-  return ARTEFACT_SCHEMA.options.flatMap((module) => {
-    const aiModule = AI_MODULE_BY_ARTEFACT[module];
-    return aiModule === undefined ? [] : { module, defaultConsignes: aiModule.defaultConsignes };
-  });
+export function findDefaultConsignes(module: Artefact): string {
+  return AI_MODULE_BY_ARTEFACT[module].defaultConsignes;
 }
 
 // A Republication starts from the work done for the Offre it publishes again: the Version retenue
@@ -129,7 +123,7 @@ export async function findInputs(workspace: Workspace, offre: Offre, module: Art
     assertLettreModifiable(offre);
   }
   const aiModule = AI_MODULE_BY_ARTEFACT[module];
-  const requiredArtefactList = aiModule?.requiredArtefactList ?? [];
+  const requiredArtefactList = aiModule.requiredArtefactList ?? [];
   const requiredList: IReadVersion[] = [];
   for (const artefact of requiredArtefactList) {
     const version = await findVersionRetenue(workspace, offre, artefact);
@@ -142,13 +136,13 @@ export async function findInputs(workspace: Workspace, offre: Offre, module: Art
     requiredList.push({ offre, version });
   }
   const optionalList = await Promise.all(
-    (aiModule?.optionalArtefactList ?? []).map((artefact) => findVersionRetenue(workspace, offre, artefact)),
+    (aiModule.optionalArtefactList ?? []).map((artefact) => findVersionRetenue(workspace, offre, artefact)),
   );
   const offreVersionList = [
     ...requiredList,
     ...optionalList.filter((version) => version !== undefined).map((version) => ({ offre, version })),
   ];
-  const directoryList = aiModule?.isReadingProfil === true ? [workspace.profilDirectoryOf(offre.candidatId)] : [];
+  const directoryList = aiModule.isReadingProfil === true ? [workspace.profilDirectoryOf(offre.candidatId)] : [];
   if (module === 'recherche') {
     return { versionList: [...offreVersionList, ...(await findRepublishedVersions(workspace, offre))], directoryList };
   }
@@ -166,12 +160,9 @@ export async function findInputs(workspace: Workspace, offre: Offre, module: Art
   return { versionList: [...offreVersionList, ...sentList], directoryList };
 }
 
-// The module of an Artefact as the fiche of an Offre offers it: null while no module produces the
-// Artefact, else why it cannot run on the Offre now, from the very checks of a launch
+// The module of an Artefact as the fiche of an Offre offers it: why it cannot run on the Offre now,
+// from the very checks of a launch
 export async function describeModule(workspace: Workspace, offre: Offre, artefact: Artefact) {
-  if (AI_MODULE_BY_ARTEFACT[artefact] === undefined) {
-    return null;
-  }
   try {
     await findInputs(workspace, offre, artefact);
     return { refusal: null };
@@ -202,9 +193,6 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
   return async function runJob(job: Job & { module: Artefact }): Promise<ModuleRun> {
     const { offre, module } = job;
     const aiModule = AI_MODULE_BY_ARTEFACT[module];
-    if (aiModule === undefined) {
-      throw new Error(`Module pas encore disponible : ${module}.`);
-    }
     const { versionList: inputList, directoryList } = await findInputs(workspace, offre, module);
     const candidatConsignes = workspace.readConsignes(offre.candidatId, module);
     const consignes = candidatConsignes ?? aiModule.defaultConsignes;

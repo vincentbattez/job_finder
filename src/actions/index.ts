@@ -49,7 +49,7 @@ import { assertLettreModifiable, assertStatutChange, hasBeenPostulee, listNextSt
 import { messageOf } from '#/text/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
-import { createJobRunner, describeModule, findInputs, listDefaultConsignes, parseModule } from './run-job.ts';
+import { createJobRunner, describeModule, findDefaultConsignes, findInputs, parseModule } from './run-job.ts';
 
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
@@ -257,6 +257,15 @@ export async function createActions({
       : composeRepublicationNotification(offre, republicationOf);
   }
 
+  // The Consignes of a module, the default ones and those the Candidat replaced them with
+  function readModuleConsignes(candidatId: string, module: Artefact): ModuleConsignes {
+    return MODULE_CONSIGNES_SCHEMA.parse({
+      module,
+      defaultConsignes: findDefaultConsignes(module),
+      candidatConsignes: workspace.readConsignes(candidatId, module),
+    });
+  }
+
   // Those of the Lettre retenue, none before the Offre has one
   async function findRecipients(offre: Offre): Promise<Recipients | null> {
     const versionList = await workspace.listVersions(offre, 'lettre');
@@ -427,13 +436,7 @@ export async function createActions({
     // The Consignes of each module, the default ones and those the Candidat replaced them with
     async listConsignes(rawInput: unknown): Promise<ModuleConsignes[]> {
       const candidat = await findCandidat(rawInput);
-      return listDefaultConsignes().map(({ module, defaultConsignes }) =>
-        MODULE_CONSIGNES_SCHEMA.parse({
-          module,
-          defaultConsignes,
-          candidatConsignes: workspace.readConsignes(candidat.id, module),
-        }),
-      );
+      return ARTEFACT_SCHEMA.options.map((module) => readModuleConsignes(candidat.id, module));
     },
 
     // The Candidat's Consignes replace the default ones of the module, for its next Versions. The
