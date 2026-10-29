@@ -36,7 +36,7 @@ Le front, service lpm `web` déclaré dans `.lpm.yml` (`mise run web`), sert les
 
 Sur la fiche, chaque Artefact montre son état (absent, en cours, prêt, en échec) et le bouton de son module : il met le job en file, comme `jf run`, et le worker l'exécute. Le bouton attend tant qu'il manque au module une entrée, par exemple une Recherche retenue pour la Lettre, et dit laquelle. L'état se met à jour tout seul jusqu'à ce que le job soit fini. La liste des Offres a un bouton « Lancer une Détection », la même action que `jf detect`, qui dit ce qu'elle a trouvé pour chaque Veille. Une Fiche de poste en Markdown glissée sur la liste, ou choisie avec « Importer une Fiche de poste », devient aussitôt une Offre, au nom de son fichier, comme avec `jf import` ; sa fiche suit l'extraction de ses champs par le worker, et la relance après un échec. Comme le worker, le front lit `.env` pour les notifications.
 
-`JF_DATA_DIRECTORY` sert le front sur un autre dossier : `JF_DATA_DIRECTORY=dev-data mise run web` pour les Offres factices.
+Pour développer, `mise run web:dev` sert le front de `dev-data/`, les Offres factices de `mise run db:seed`, sur le port 5181 de cette machine seulement, sans `.env` : aucune notification ne part. `JF_DATA_DIRECTORY` nomme ce dossier.
 
 ## Worker
 
@@ -105,6 +105,7 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 | `mise run test:unit`  | Vitest : les actions et l'architecture                            |
 | `mise run test:e2e`   | Playwright : les parcours du front                                |
 | `mise run web`        | Sert le front de `data/` sur le port 5180 : le service lpm `web`  |
+| `mise run web:dev`    | Sert le front de `dev-data/` sur le port 5181, pour développer    |
 | `mise run worker`     | Lance le worker sur `data/` : le service lpm `worker`             |
 | `mise run db:migrate` | Crée une migration depuis le schéma et l'applique à `dev-data/`   |
 | `mise run db:seed`    | Remplace les Offres de `dev-data/` par des Offres factices        |
