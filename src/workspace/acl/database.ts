@@ -5,7 +5,16 @@ import { fileURLToPath } from 'node:url';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { z } from 'zod/v4';
 
-import { CANDIDAT_SCHEMA, type Candidat } from '#/domain/index.ts';
+import {
+  CANDIDAT_SCHEMA,
+  OFFRE_SCHEMA,
+  VEILLE_SCHEMA,
+  type Candidat,
+  type FicheDePoste,
+  type ListedOffre,
+  type Offre,
+  type Veille,
+} from '#/domain/index.ts';
 import { PrismaClient } from '#/workspace/generated/client.ts';
 
 import type { Config } from './config.ts';
@@ -13,7 +22,13 @@ import type { Config } from './config.ts';
 const ROOT_DIRECTORY = path.join(import.meta.dirname, '..', '..', '..');
 const PRISMA_CLI_PATH = fileURLToPath(import.meta.resolve('prisma/build/index.js'));
 
-export type Database = ReturnType<typeof openDatabase>;
+export interface INewOffre {
+  candidatId: string;
+  source: string;
+  listedOffre: ListedOffre;
+  fiche: FicheDePoste;
+  isInZone: boolean;
+}
 
 // Applies the pending migrations of prisma/migrations first, so the schema exists from the
 // first launch and follows every upgrade. Prisma never leaves this file: every row read is
@@ -30,6 +45,30 @@ export function openDatabase(databasePath: string) {
   return {
     async listCandidats(): Promise<Candidat[]> {
       return z.array(CANDIDAT_SCHEMA).parse(await prisma.candidat.findMany({ orderBy: { name: 'asc' } }));
+    },
+
+    async listVeilles(): Promise<Veille[]> {
+      return z.array(VEILLE_SCHEMA).parse(await prisma.veille.findMany({ orderBy: { id: 'asc' } }));
+    },
+
+    async listOffres(candidatId: string): Promise<Offre[]> {
+      return z
+        .array(OFFRE_SCHEMA)
+        .parse(await prisma.offre.findMany({ where: { candidatId }, orderBy: { reference: 'desc' } }));
+    },
+
+    async listReferences(candidatId: string, source: string): Promise<string[]> {
+      const offreList = await prisma.offre.findMany({ where: { candidatId, source }, select: { reference: true } });
+      return z.array(z.string()).parse(offreList.map(({ reference }) => reference));
+    },
+
+    async createOffre({ candidatId, source, listedOffre, fiche, isInZone }: INewOffre): Promise<Offre> {
+      const { reference, title, url, publishedAt } = listedOffre;
+      const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = fiche;
+      const data = { candidatId, source, reference, title, url, publishedAt, dateLimite, employer, workplace };
+      return OFFRE_SCHEMA.parse(
+        await prisma.offre.create({ data: { ...data, applicationEmail, contact1, contact2, isInZone } }),
+      );
     },
 
     // The config is the source of truth, so its Candidats and Veilles replace the copied rows.

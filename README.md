@@ -8,6 +8,8 @@ Veille d'offres d'emploi et préparation des candidatures. Vocabulaire : `GLOSSA
 mise install                                   # Node 26, lefthook, gitleaks, puis npm install (et prisma generate) et les git hooks
 mise run init                                  # crée data/config.json depuis l'exemple, à adapter ensuite, et remplit dev-data/
 jf                                             # affiche l'aide
+jf detect                                      # cherche les nouvelles Offres de chaque Veille
+jf list lea                                    # liste les Offres d'un Candidat
 ```
 
 `jf` est sur le `PATH` dès que mise est actif dans le dossier du repo.
@@ -18,7 +20,8 @@ Tout vit dans `data/`, hors de git et sans sauvegarde :
 
 - `config.json` : les Candidats, leurs Veilles et leur cible de notification, et le délai par défaut. Le modèle versionné est `config.example.json` ;
 - `job_finder.sqlite` : la base, migrée à chaque lancement ;
-- `candidats/<id>/profil/` : le Profil de chaque Candidat, en fichiers Markdown.
+- `candidats/<id>/profil/` : le Profil de chaque Candidat, en fichiers Markdown ;
+- `candidats/<id>/offres/<référence>-<titre>/` : un dossier par Offre, avec sa Fiche de poste (`fiche-de-poste.md`) sauvegardée dès la Détection.
 
 `dev-data/` a la même forme, avec des Offres factices pour le développement. Les commandes Prisma et les tasks `db:` ne touchent qu'à lui.
 
@@ -35,6 +38,7 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 - `src/workspace/` : l'accès au dossier de données (config, base, dossiers des Candidats). Seul son dossier `acl/` lit la config et la base. Le client Prisma est généré dans `generated/`, hors de git.
 - `src/modules/` : un dossier par module, avec un seul point d'entrée. Un module n'en importe jamais un autre, ce que vérifie `test/architecture.test.ts`.
 - `prisma/` : le schéma, les migrations et le seed.
+- `test/fixtures/pep/` : les réponses du site PEP enregistrées le 2026-10-29, que `test/recorded-http.ts` sert aux tests à la place du vrai site.
 
 ## Commandes
 
