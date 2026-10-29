@@ -10,7 +10,6 @@ import {
   LIEU_SCHEMA,
   MODULE_CONSIGNES_SCHEMA,
   OFFRE_FICHE_SCHEMA,
-  PROFIL_FILE_SCHEMA,
   STATUT_SCHEMA,
   VISUALISATION_SCHEMA,
   type Artefact,
@@ -19,10 +18,10 @@ import {
   type DomainValue,
   type Job,
   type Lieu,
+  type MarkdownFile,
   type ModuleConsignes,
   type Offre,
   type OffreFiche,
-  type ProfilFile,
   type Recipients,
   type Version,
   type Visualisation,
@@ -225,10 +224,12 @@ export async function createActions({
   // fails the job and leaves the Offre as it was.
   async function runExtraction(job: Job): Promise<{ job: Job }> {
     const { offre } = job;
-    const { title, fiche, city, session } = await importSource.extract(
-      workspace.offreDirectoryOf(offre),
-      workspace.readFicheDePoste(offre),
-    );
+    const {
+      title,
+      ficheDePoste: fiche,
+      city,
+      session,
+    } = await importSource.extract(workspace.offreDirectoryOf(offre), workspace.readFicheDePoste(offre));
     // A Fiche de poste without a title keeps the name of its file: nothing is invented
     const lieu = await locate(city);
     const filledOffre = await workspace.fillOffre(offre, { title: title ?? offre.title, fiche, lieu });
@@ -423,9 +424,9 @@ export async function createActions({
       });
     },
 
-    async listProfilFiles(rawInput: unknown): Promise<ProfilFile[]> {
+    async listProfilFiles(rawInput: unknown): Promise<MarkdownFile[]> {
       const candidat = await findCandidat(rawInput);
-      return z.array(PROFIL_FILE_SCHEMA).parse(workspace.readProfilFiles(candidat.id));
+      return workspace.readProfilFiles(candidat.id);
     },
 
     async saveProfilFile(rawInput: unknown): Promise<void> {

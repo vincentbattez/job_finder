@@ -194,14 +194,16 @@ export const RECIPIENTS_SCHEMA = z
 
 export type Recipients = z.infer<typeof RECIPIENTS_SCHEMA>;
 
-// A Markdown file of a Version, such as the Brouillon or the Lettre of a Lettre Version, and whether
-// the Candidat may correct it by hand
-const DOCUMENT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string(), isModifiable: z.boolean() });
+// A Markdown file of the data folder: of the Profil of a Candidat, such as faits.md or cv.md, or of a
+// Version, such as the Brouillon or the Lettre of a Lettre Version
+const MARKDOWN_FILE_SHAPE = { fileName: z.string(), markdown: z.string() };
 
-// A Markdown file of the Profil of a Candidat, such as faits.md or cv.md
-export const PROFIL_FILE_SCHEMA = z.object({ fileName: z.string(), markdown: z.string() }).brand<'Domain'>();
+export const MARKDOWN_FILE_SCHEMA = z.object(MARKDOWN_FILE_SHAPE).brand<'Domain'>();
 
-export type ProfilFile = z.infer<typeof PROFIL_FILE_SCHEMA>;
+export type MarkdownFile = z.infer<typeof MARKDOWN_FILE_SCHEMA>;
+
+// A Markdown file of a Version, and whether the Candidat may correct it by hand
+const DOCUMENT_SCHEMA = z.object({ ...MARKDOWN_FILE_SHAPE, isModifiable: z.boolean() });
 
 // isRetenable: whether the Candidat may make it the Version retenue
 const VERSION_DOCUMENTS_SCHEMA = z.object({
@@ -242,6 +244,21 @@ export const OFFRE_FICHE_SCHEMA = z
   .brand<'Domain'>();
 
 export type OffreFiche = z.infer<typeof OFFRE_FICHE_SCHEMA>;
+
+// How a headless AI session ended: its id, to resume it, and what it said, kept as the job's log
+export const SESSION_RESULT_SCHEMA = z
+  .object({ isSuccess: z.boolean(), sessionId: z.string().nullable(), log: z.string() })
+  .brand<'Domain'>();
+
+export type SessionResult = z.infer<typeof SESSION_RESULT_SCHEMA>;
+
+// The fields an AI session read in an imported Fiche de poste: its title and its ville, null when it
+// gives none, and its Fiche de poste
+export const EXTRACTION_SCHEMA = z
+  .object({ title: z.string().nullable(), city: z.string().nullable(), ficheDePoste: FICHE_DE_POSTE_SCHEMA })
+  .brand<'Domain'>();
+
+export type Extraction = z.infer<typeof EXTRACTION_SCHEMA>;
 
 // The HTML page of a Visualisation Version, which the front shows in a sandboxed frame
 export const VISUALISATION_SCHEMA = z.object({ html: z.string() }).brand<'Domain'>();

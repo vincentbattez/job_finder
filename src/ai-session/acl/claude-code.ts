@@ -2,6 +2,7 @@ import { spawn, spawnSync } from 'node:child_process';
 
 import { z } from 'zod/v4';
 
+import { SESSION_RESULT_SCHEMA, type SessionResult } from '#/domain/index.ts';
 import { messageOf } from '#/text/index.ts';
 
 export interface IInteractiveSession {
@@ -22,15 +23,9 @@ export interface IHeadlessSession {
   outputDirectory: string;
 }
 
-export interface IHeadlessResult {
-  isSuccess: boolean;
-  sessionId: string | null;
-  log: string;
-}
-
 export interface IAiSession {
   openInteractive(session: IInteractiveSession): void;
-  runHeadless(session: IHeadlessSession): Promise<IHeadlessResult>;
+  runHeadless(session: IHeadlessSession): Promise<SessionResult>;
 }
 
 // What would bill an API key or another provider instead of the subscription, or tell claude it
@@ -59,20 +54,20 @@ const CLAUDE_RESULT_SCHEMA = z.object({
   result: z.string().default(''),
 });
 
-function readResult(output: string, exitCode: number | null): IHeadlessResult {
+function readResult(output: string, exitCode: number | null): SessionResult {
   try {
     const result = CLAUDE_RESULT_SCHEMA.parse(JSON.parse(output));
-    return {
+    return SESSION_RESULT_SCHEMA.parse({
       isSuccess: exitCode === 0 && !result.is_error && result.subtype === 'success',
       sessionId: result.session_id,
       log: result.result === '' ? result.subtype : result.result,
-    };
+    });
   } catch {
-    return {
+    return SESSION_RESULT_SCHEMA.parse({
       isSuccess: false,
       sessionId: null,
       log: `Claude Code s'est arrêté (code ${String(exitCode)}) : ${output}`,
-    };
+    });
   }
 }
 
@@ -161,7 +156,7 @@ export const CLAUDE_CODE: IAiSession = {
     } catch (error) {
       const message = messageOf(error);
       const log = `Impossible de lancer Claude Code (${message}). Installer « claude » et s'y connecter.`;
-      return { isSuccess: false, sessionId: null, log };
+      return SESSION_RESULT_SCHEMA.parse({ isSuccess: false, sessionId: null, log });
     }
   },
 };

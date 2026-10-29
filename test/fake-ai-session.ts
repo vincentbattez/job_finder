@@ -2,7 +2,8 @@ import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { setTimeout } from 'node:timers/promises';
 
-import type { IHeadlessResult, IHeadlessSession, IInteractiveSession } from '#/ai-session/acl/claude-code.ts';
+import type { IHeadlessSession, IInteractiveSession } from '#/ai-session/acl/claude-code.ts';
+import { SESSION_RESULT_SCHEMA, type SessionResult } from '#/domain/index.ts';
 
 interface IPlannedRun {
   fileByName?: Record<string, string>;
@@ -34,7 +35,7 @@ export function createFakeAiSession(...plannedRunList: IPlannedRun[]) {
     openInteractive(session: IInteractiveSession): void {
       interactiveSessionList.push(session);
     },
-    async runHeadless(session: IHeadlessSession): Promise<IHeadlessResult> {
+    async runHeadless(session: IHeadlessSession): Promise<SessionResult> {
       headlessSessionList.push(session);
       const sessionId = `fake-session-${String(headlessSessionList.length)}`;
       const { fileByName = {}, isSuccess = true, isInterrupted = false, errorMessage } = plannedRunList.shift() ?? {};
@@ -54,7 +55,7 @@ export function createFakeAiSession(...plannedRunList: IPlannedRun[]) {
         writeFileSync(path.join(session.outputDirectory, fileName), content);
       }
       const log = isSuccess ? 'La Recherche est écrite.' : 'Claude Code a rencontré une erreur.';
-      return { isSuccess, sessionId, log };
+      return SESSION_RESULT_SCHEMA.parse({ isSuccess, sessionId, log });
     },
   };
 }
