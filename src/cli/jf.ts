@@ -4,6 +4,8 @@ import { parseArgs } from 'node:util';
 
 import { createActions, type Actions } from '#/actions/index.ts';
 
+import { readTextFile } from './acl/files.ts';
+
 const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
 
 // Through the actions only: the CLI never reaches the domain directly (ADR-0003)
@@ -104,22 +106,26 @@ async function choose<T>(terminal: Terminal, { question, itemList, label, emptyM
   }
   const answer = await terminal.ask(`${question} (1 à ${String(itemList.length)}) : `);
   if (answer === undefined) {
-    throw new Error('jf edit abandonné : aucun choix.');
+    throw new Error('Abandonné : aucun choix.');
   }
   const item = itemList[Number(answer) - 1];
   if (item === undefined) {
-    throw new Error(`Choix invalide : ${answer}. Relancer jf edit.`);
+    throw new Error(`Choix invalide : ${answer}. Relancer la commande.`);
   }
   return item;
 }
 
-async function chooseReference(actions: Actions, terminal: Terminal): Promise<string> {
-  const candidat = await choose(terminal, {
+async function chooseCandidat(actions: Actions, terminal: Terminal) {
+  return choose(terminal, {
     question: 'Candidat',
     itemList: await actions.listCandidats(),
     label: ({ name }) => name,
     emptyMessage: 'Aucun Candidat : les déclarer dans data/config.json.',
   });
+}
+
+async function chooseReference(actions: Actions, terminal: Terminal): Promise<string> {
+  const candidat = await chooseCandidat(actions, terminal);
   const offre = await choose(terminal, {
     question: 'Offre à modifier',
     itemList: await actions.listOffres({ candidatId: candidat.id }),
@@ -245,6 +251,46 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
           process.stdout.write(`  ${reference}\t${title}\n`);
         }
       }
+    },
+  },
+  import: {
+    description:
+      "Importe une Fiche de poste en Markdown trouvée ailleurs : le worker en relève les champs avec Claude Code, puis met sa Recherche en file ; Candidat proposé si absent, --wait attend l'extraction : jf import <fichier> [<candidat>] [--wait]",
+    run: async (actions, [filePath, givenCandidatId], { isWaiting }) => {
+      if (filePath === undefined) {
+        throw new Error(
+          'Usage : jf import <fichier> [<candidat>] [--wait], par exemple jf import offre-greffier.md lea.',
+        );
+      }
+      const markdown = readTextFile(filePath);
+      let candidatId = givenCandidatId;
+      if (candidatId === undefined) {
+        const terminal = openTerminal();
+        try {
+          ({ id: candidatId } = await chooseCandidat(actions, terminal));
+        } finally {
+          terminal.close();
+        }
+      }
+      const job = await actions.importFicheDePoste({ candidatId, fileName: path.basename(filePath), markdown });
+      const { reference } = job.offre;
+      process.stdout.write(`Offre ${reference} importée, extraction de ses champs en file (job ${String(job.id)}).\n`);
+      if (!isWaiting) {
+        process.stdout.write(
+          `Le worker la lance, puis met sa Recherche en file. « jf list ${candidatId} » la montre.\n`,
+        );
+        return;
+      }
+      process.stdout.write('Attente du worker (service lpm worker) : Claude Code relève les champs…\n');
+      const { state, offre, log } = await actions.followJob({ jobId: job.id });
+      if (state === 'failed') {
+        throw new Error(
+          `Extraction des champs de l'Offre ${reference} en échec :\n${log}\nRelancer : jf run extraction ${reference}`,
+        );
+      }
+      process.stdout.write(
+        `${formatOffre(offre)}\nSa Recherche est en file : « jf versions ${reference} recherche » la suit.\n`,
+      );
     },
   },
   list: {

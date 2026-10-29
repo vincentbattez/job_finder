@@ -22,6 +22,19 @@ if (!dataDirectory.startsWith(tmpdir())) {
 // d'entretien and its Visualisation in their format, and a Lettre whose recipients come from no
 // field of the Offre, so they hold for any of them
 const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
+  // The fields of test/fixtures/import/greffier-grenoble.md, the Fiche de poste e2e/import.test.ts drops
+  extraction: {
+    'extraction.json': JSON.stringify({
+      title: 'Greffier placé – Tribunal judiciaire de Grenoble',
+      employer: 'Ministère de la Justice – Tribunal judiciaire de Grenoble',
+      workplace: 'Place Firmin Gautier, 38000 Grenoble',
+      city: 'Grenoble',
+      dateLimite: '2026-12-15',
+      applicationEmail: 'greffe.tj-grenoble@justice.fr',
+      contact1: null,
+      contact2: null,
+    }),
+  },
   recherche: { 'recherche.md': '# Recherche factice\n\n## Sources\n\n- https://www.justice.fr/\n' },
   lettre: {
     'brouillon.md':
@@ -56,12 +69,18 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
 // Long enough for the front to show the Artefact en cours before it is ready
 const SESSION_DURATION_MS = 1000;
 
-// A session's module is the Artefact its Version folder belongs to: <offre>/<artefact>/v<n>
+// A session's module is the Artefact its Version folder belongs to: <offre>/<artefact>/v<n>. The
+// extraction of an imported Offre writes in a folder of its own: <offre>/extraction
+// (src/modules/source-import).
+function moduleOf({ outputDirectory }: IHeadlessSession): string {
+  return path.basename(outputDirectory) === 'extraction' ? 'extraction' : path.basename(path.dirname(outputDirectory));
+}
+
 const aiSession = {
   ...createFakeAiSession(),
   async runHeadless(session: IHeadlessSession) {
     await setTimeout(SESSION_DURATION_MS);
-    const module = path.basename(path.dirname(session.outputDirectory));
+    const module = moduleOf(session);
     return createFakeAiSession({ fileByName: FILE_BY_NAME_BY_MODULE[module] ?? {} }).runHeadless(session);
   },
 };

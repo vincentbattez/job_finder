@@ -23,9 +23,10 @@ export const VEILLE_SCHEMA = z
 
 export type Veille = z.infer<typeof VEILLE_SCHEMA>;
 
-// An Offre as a Source lists it, before its detail page is read
+// An Offre as a Source lists it, before its detail page is read. An imported Fiche de poste has
+// neither link nor publication date.
 export const LISTED_OFFRE_SCHEMA = z
-  .object({ reference: z.string(), title: z.string(), url: z.string(), publishedAt: z.date() })
+  .object({ reference: z.string(), title: z.string(), url: z.string().nullable(), publishedAt: z.date().nullable() })
   .brand<'Domain'>();
 
 export type ListedOffre = z.infer<typeof LISTED_OFFRE_SCHEMA>;
@@ -67,6 +68,7 @@ export const OFFRE_SCHEMA = z
     ...LIEU_SHAPE,
     id: z.int(),
     candidatId: z.string(),
+    source: z.string(),
     reference: z.string(),
     title: z.string(),
     url: z.string().nullable(),
@@ -139,12 +141,17 @@ export const VERSION_SCHEMA = z
 
 export type Version = z.infer<typeof VERSION_SCHEMA>;
 
-// A job runs a module on an Offre; a module is named after the Artefact it produces. Its Version
-// exists once the job runs.
+// A job runs a module on an Offre: an AI module, named after the Artefact it produces, whose Version
+// exists once the job runs, or the extraction of the fields of an imported Fiche de poste, which
+// fills the Offre itself
+const MODULE_SCHEMA = z.enum([...ARTEFACT_SCHEMA.options, 'extraction']);
+
+export type Module = z.infer<typeof MODULE_SCHEMA>;
+
 export const JOB_SCHEMA = z
   .object({
     id: z.int(),
-    module: ARTEFACT_SCHEMA,
+    module: MODULE_SCHEMA,
     offre: OFFRE_SCHEMA,
     state: z.enum(['queued', 'running', 'done', 'failed']),
     log: z.string(),
@@ -221,6 +228,9 @@ export const OFFRE_FICHE_SCHEMA = z
     ficheDePoste: z.string(),
     artefactList: z.array(ARTEFACT_VERSIONS_SCHEMA),
     recipients: RECIPIENTS_SCHEMA.nullable(),
+    // That of its latest extraction job, null for an Offre that was not imported; the log says why
+    // it failed
+    extraction: z.object({ etat: ETAT_SCHEMA, log: z.string() }).nullable(),
   })
   .brand<'Domain'>();
 

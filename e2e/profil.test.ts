@@ -14,11 +14,8 @@ test.describe('Profil of a Candidat', () => {
     await expect(page.getByRole('heading', { level: 2 })).toHaveText(['cv.md', 'faits.md']);
     const faits = page.getByRole('region', { name: 'faits.md' });
     await expect(faits.getByRole('textbox')).toHaveValue('# Faits\n\n## Mobilité\n\n- Lille et alentours\n');
-    // Typed before React hydrates the page, the change goes unnoticed: type again until it shows
-    await expect(async () => {
-      await faits.getByRole('textbox').fill('# Faits\n\n## Mobilité\n\n- Lille, Arras et Béthune\n');
-      await expect(faits.getByText('Modifications non enregistrées')).toBeVisible({ timeout: 1000 });
-    }).toPass();
+    await faits.getByRole('textbox').fill('# Faits\n\n## Mobilité\n\n- Lille, Arras et Béthune\n');
+    await expect(faits.getByText('Modifications non enregistrées')).toBeVisible();
     await faits.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(faits.getByText('Modifications non enregistrées')).toBeHidden();
     await page.reload();

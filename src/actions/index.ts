@@ -38,6 +38,7 @@ import {
   type INotification,
   type INotificationChannel,
 } from '#/modules/notification/index.ts';
+import { createImportSource } from '#/modules/source-import/index.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
 import { VISUALISATION_MODULE } from '#/modules/visualisation/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
@@ -50,6 +51,7 @@ import { createJobRunner, describeModule, findInputs, listDefaultConsignes, pars
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
 const CANDIDAT_INPUT_SCHEMA = z.object({ candidatId: z.string() });
+const IMPORT_INPUT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string() });
 const MODULE_INPUT_SCHEMA = z.object({ module: z.string(), reference: z.string() });
 const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
 const PROFIL_FILE_INPUT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string() });
@@ -64,6 +66,7 @@ const VISUALISATION_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({ number: z.coe
 const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: z.enum(['postulee', 'archivee']) });
 
 const ETAT_BY_VERSION_STATE = { running: 'en_cours', ready: 'pret', failed: 'en_echec' } as const;
+const ETAT_BY_JOB_STATE = { queued: 'en_cours', running: 'en_cours', done: 'pret', failed: 'en_echec' } as const;
 
 // How often a followed job is read again: a module runs for minutes
 const FOLLOW_INTERVAL_MS = 1000;
@@ -164,6 +167,7 @@ export async function createActions({
   const workspace = await openWorkspace(dataDirectory);
   const pepSource = createPepSource(fetch);
   const apiGeo = createApiGeo(fetch);
+  const importSource = createImportSource(aiSession);
   const runJob = createJobRunner(workspace, aiSession);
 
   async function findCandidat(rawInput: unknown): Promise<Candidat> {
@@ -193,6 +197,22 @@ export async function createActions({
   async function locate(city: string | null): Promise<Lieu> {
     const lieu = city === null ? null : await apiGeo.findLieu(city);
     return lieu ?? LIEU_SCHEMA.parse({ city, region: null, latitude: null, longitude: null });
+  }
+
+  // The job of an imported Offre: Claude reads the fields of its Fiche de poste, which fill the Offre,
+  // located like a detected one, then its Recherche is queued. Throws when the extraction fails, which
+  // fails the job and leaves the Offre as it was.
+  async function runExtraction(job: Job): Promise<{ job: Job }> {
+    const { offre } = job;
+    const { title, fiche, city, session } = await importSource.extract(
+      workspace.offreDirectoryOf(offre),
+      workspace.readFicheDePoste(offre),
+    );
+    // A Fiche de poste without a title keeps the name of its file: nothing is invented
+    const lieu = await locate(city);
+    const filledOffre = await workspace.fillOffre(offre, { title: title ?? offre.title, fiche, lieu });
+    await workspace.createJob(filledOffre, 'recherche');
+    return { job: await workspace.finishJobWithoutVersion(job, { log: session.log, sessionId: session.sessionId }) };
   }
 
   // Sends a notification to the Candidat of the Offre, on their channel (spec « Notification »). A
@@ -320,6 +340,36 @@ export async function createActions({
       return detectionList;
     },
 
+    // A Fiche de poste in Markdown that the Candidat found elsewhere becomes one of their Offres at
+    // once, named after its file, and the job of its extraction is queued: the worker has Claude
+    // read its fields (spec « Sources et Détection », ADR-0003). Importing the same file again gives
+    // back that job, without another Offre nor another job.
+    async importFicheDePoste(rawInput: unknown): Promise<Job> {
+      const candidat = await findCandidat(rawInput);
+      const { fileName, markdown } = IMPORT_INPUT_SCHEMA.parse(rawInput);
+      const { listedOffre, fiche } = importSource.list(fileName, markdown);
+      const offreList = await workspace.listOffres(candidat.id);
+      const importedOffre = offreList.find(({ reference }) => reference === listedOffre.reference);
+      if (importedOffre !== undefined) {
+        const jobList = await workspace.listJobs(importedOffre);
+        const extractionJob = jobList.findLast(({ module }) => module === 'extraction');
+        if (extractionJob !== undefined) {
+          return extractionJob;
+        }
+      }
+      const offre = await workspace.saveOffre({
+        candidatId: candidat.id,
+        source: 'import',
+        listedOffre,
+        fiche,
+        lieu: await locate(null),
+        // Chosen by the Candidat, it starts its Recherche like a new Offre in the Zone (ADR-0003)
+        isInZone: true,
+        republicationOf: undefined,
+      });
+      return workspace.createJob(offre, 'extraction');
+    },
+
     async listOffres(rawInput: unknown): Promise<Offre[]> {
       const candidat = await findCandidat(rawInput);
       return workspace.listOffres(candidat.id);
@@ -424,6 +474,16 @@ export async function createActions({
     // the front never stops a Claude session (ADR-0003).
     async runModule(rawInput: unknown): Promise<Job> {
       const { module, reference } = MODULE_INPUT_SCHEMA.parse(rawInput);
+      // The extraction of an imported Offre runs again after a failure
+      if (module === 'extraction') {
+        const offre = await findOffre(reference);
+        if (offre.source !== 'import') {
+          throw new Error(
+            `L'Offre ${reference} n'a pas été importée : ses champs viennent de sa Source, sans extraction.`,
+          );
+        }
+        return workspace.createJob(offre, 'extraction');
+      }
       const artefact = parseModule(module);
       const offre = await findOffre(reference);
       await findInputs(workspace, offre, artefact);
@@ -453,13 +513,15 @@ export async function createActions({
       );
     },
 
-    // The worker's turn: runs the queued jobs one at a time, oldest first, each creating a new
-    // Version of its Artefact, until the queue is empty
+    // The worker's turn: runs the queued jobs one at a time, oldest first, until the queue is empty.
+    // Each job of an AI module creates a new Version of its Artefact.
     async runQueuedJobs(): Promise<Job[]> {
       const jobList: Job[] = [];
       for (let job = await workspace.claimNextJob(); job !== null; job = await workspace.claimNextJob()) {
         try {
-          const { job: finishedJob } = await runJob(job);
+          const { module } = job;
+          const { job: finishedJob } =
+            module === 'extraction' ? await runExtraction(job) : await runJob({ ...job, module });
           jobList.push(finishedJob);
           if (finishedJob.module === 'recherche' && finishedJob.state === 'done') {
             const failure = await notify(finishedJob.offre, composeRecherchePreteNotification(finishedJob.offre));
@@ -480,6 +542,7 @@ export async function createActions({
       const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
       const offre = await findOffre(reference);
       const jobList = await workspace.listJobs(offre);
+      const extractionJob = jobList.findLast(({ module }) => module === 'extraction');
       const artefactList = await Promise.all(
         ARTEFACT_SCHEMA.options.map(async (artefact) => {
           const versionList = await workspace.listVersions(offre, artefact);
@@ -507,6 +570,8 @@ export async function createActions({
         ficheDePoste: workspace.readFicheDePoste(offre),
         artefactList,
         recipients: await findRecipients(offre),
+        extraction:
+          extractionJob === undefined ? null : { etat: ETAT_BY_JOB_STATE[extractionJob.state], log: extractionJob.log },
       });
     },
 

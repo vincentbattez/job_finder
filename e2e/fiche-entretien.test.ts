@@ -46,11 +46,8 @@ test('launches the Fiche d’entretien once the Offre has a Recherche retenue, t
   const document = fiche.getByRole('figure', { name: 'fiche-entretien.md' });
   const editor = document.getByRole('textbox', { name: 'Markdown' });
   await expect(document.locator('mark')).toHaveText(['[à compléter : diplôme]']);
-  // Typed before React hydrates the page, the text would not reach the preview: type again until it does
-  await expect(async () => {
-    await editor.fill(CORRECTED_FICHE);
-    await expect(document.getByText('Modifications non enregistrées')).toBeVisible({ timeout: 1000 });
-  }).toPass();
+  await editor.fill(CORRECTED_FICHE);
+  await expect(document.getByText('Modifications non enregistrées')).toBeVisible();
   await document.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(document.getByText('Modifications non enregistrées')).toBeHidden();
   await page.reload();
