@@ -13,6 +13,7 @@ import {
 } from '#/domain/index.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
+import { assertLettreModifiable } from '#/statut/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
 import { createJobRunner, parseModule } from './run-job.ts';
@@ -143,6 +144,9 @@ export async function createActions({
     async retenirVersion(rawInput: unknown): Promise<void> {
       const { reference, artefact, number } = VERSION_INPUT_SCHEMA.parse(rawInput);
       const offre = await findOffre(reference);
+      if (artefact === 'lettre') {
+        assertLettreModifiable(offre);
+      }
       const versionList = await workspace.listVersions(offre, artefact);
       const version = versionList.find((candidate) => candidate.number === number);
       if (version === undefined) {

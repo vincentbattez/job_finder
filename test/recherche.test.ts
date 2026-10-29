@@ -192,6 +192,16 @@ describe('a Recherche that fails', () => {
     ]);
   });
 
+  // A Postulée Offre keeps the Lettre that was sent (spec « Versions »)
+  it('refuses to change the Lettre retenue of a Postulée Offre', async () => {
+    const { actions } = await detectOffres(createFakeAiSession());
+    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+
+    await expect(actions.retenirVersion({ reference: REFERENCE, artefact: 'lettre', number: 1 })).rejects.toThrow(
+      /L'Offre 2026-2445600 est Postulée : sa Lettre retenue est figée/,
+    );
+  });
+
   it('refuses to retain a Version « en échec »', async () => {
     const { actions } = await detectOffres(createFakeAiSession({}));
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
