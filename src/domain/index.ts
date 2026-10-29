@@ -86,6 +86,15 @@ export const ARTEFACT_SCHEMA = z.enum(['recherche', 'lettre', 'fiche_entretien',
 
 export type Artefact = z.infer<typeof ARTEFACT_SCHEMA>;
 
+// The Consignes of a module for a Candidat: the default ones, kept in the repo, and the ones the
+// Candidat replaced them with, if any. The fixed part of the prompt is not among them: no one
+// changes it (ADR-0003).
+export const MODULE_CONSIGNES_SCHEMA = z
+  .object({ module: ARTEFACT_SCHEMA, defaultConsignes: z.string(), candidatConsignes: z.string().nullable() })
+  .brand<'Domain'>();
+
+export type ModuleConsignes = z.infer<typeof MODULE_CONSIGNES_SCHEMA>;
+
 // A Version that another Version read as input, of its own Offre or of another one
 const READ_VERSION_SCHEMA = z.object({
   artefact: ARTEFACT_SCHEMA,
@@ -102,6 +111,7 @@ export const VERSION_SCHEMA = z
     isRetenue: z.boolean(),
     state: z.enum(['running', 'ready', 'failed']),
     consignes: z.string(),
+    hasCandidatConsignes: z.boolean(),
     inputList: z.array(READ_VERSION_SCHEMA),
     createdAt: z.date(),
   })

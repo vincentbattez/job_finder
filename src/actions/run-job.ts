@@ -67,6 +67,15 @@ export function parseModule(name: string): Artefact {
   return artefact.data;
 }
 
+// The default Consignes of each module available, in the order of the Artefacts: a module added
+// to AI_MODULE_BY_ARTEFACT shows up in the front and the CLI by itself
+export function listDefaultConsignes(): { module: Artefact; defaultConsignes: string }[] {
+  return ARTEFACT_SCHEMA.options.flatMap((module) => {
+    const aiModule = AI_MODULE_BY_ARTEFACT[module];
+    return aiModule === undefined ? [] : { module, defaultConsignes: aiModule.defaultConsignes };
+  });
+}
+
 // What a job reads besides the Fiche de poste of its Offre: Versions, and folders outside the
 // Offre. Only the Lettre reads anything else so far: the Recherche retenue, the Profil, and the
 // Brouillon/Lettre pairs the Candidat sent, those of the Lettre retenue of each Postulée Offre
@@ -125,8 +134,10 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
       throw new Error(`Module pas encore disponible : ${module}.`);
     }
     const { versionList: inputList, directoryList } = await findInputs(workspace, offre, module);
-    const consignes = workspace.readConsignes(offre.candidatId, module) ?? aiModule.defaultConsignes;
-    const version = await workspace.startJob(job, { consignes, inputList });
+    const candidatConsignes = workspace.readConsignes(offre.candidatId, module);
+    const consignes = candidatConsignes ?? aiModule.defaultConsignes;
+    const hasCandidatConsignes = candidatConsignes !== null;
+    const version = await workspace.startJob(job, { consignes, hasCandidatConsignes, inputList });
     const offreDirectory = workspace.offreDirectoryOf(offre);
     const outputDirectory = workspace.versionDirectoryOf(offre, version);
     mkdirSync(outputDirectory, { recursive: true });

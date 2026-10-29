@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import type { Artefact, Offre, Version } from '#/domain/index.ts';
@@ -27,6 +27,7 @@ export async function openWorkspace(dataDirectory: string) {
   await database.copyConfig(config);
   const candidatDirectoryOf = (candidatId: string): string => path.join(dataDirectory, 'candidats', candidatId);
   const profilDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'profil');
+  const consignesDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'consignes');
   for (const candidat of config.candidatList) {
     mkdirSync(profilDirectoryOf(candidat.id), { recursive: true });
   }
@@ -56,7 +57,16 @@ export async function openWorkspace(dataDirectory: string) {
 
     // The Consignes with which a Candidat replaced the default ones of an Artefact, if any
     readConsignes(candidatId: string, artefact: Artefact): string | null {
-      return readTextFile(path.join(candidatDirectoryOf(candidatId), 'consignes', `${artefact}.md`));
+      return readTextFile(path.join(consignesDirectoryOf(candidatId), `${artefact}.md`));
+    },
+
+    saveConsignes(candidatId: string, artefact: Artefact, consignes: string): void {
+      mkdirSync(consignesDirectoryOf(candidatId), { recursive: true });
+      writeFileSync(path.join(consignesDirectoryOf(candidatId), `${artefact}.md`), consignes);
+    },
+
+    deleteConsignes(candidatId: string, artefact: Artefact): void {
+      rmSync(path.join(consignesDirectoryOf(candidatId), `${artefact}.md`), { force: true });
     },
 
     // The Fiche de poste is written first, so an Offre in the database always has it

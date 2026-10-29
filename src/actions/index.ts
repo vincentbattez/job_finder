@@ -7,11 +7,13 @@ import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
 import {
   ARTEFACT_SCHEMA,
   DETECTION_SCHEMA,
+  MODULE_CONSIGNES_SCHEMA,
   OFFRE_FICHE_SCHEMA,
   type Candidat,
   type Detection,
   type DomainValue,
   type Job,
+  type ModuleConsignes,
   type Offre,
   type OffreFiche,
   type Recipients,
@@ -24,13 +26,15 @@ import { composeProfilPrompt } from '#/profil/prompt.ts';
 import { assertLettreModifiable } from '#/statut/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
-import { createJobRunner, findInputs, parseModule } from './run-job.ts';
+import { createJobRunner, findInputs, listDefaultConsignes, parseModule } from './run-job.ts';
 
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
 const CANDIDAT_INPUT_SCHEMA = z.object({ candidatId: z.string() });
 const MODULE_INPUT_SCHEMA = z.object({ module: z.string(), reference: z.string() });
 const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
+const CONSIGNES_MODULE_INPUT_SCHEMA = z.object({ module: z.string() });
+const CONSIGNES_INPUT_SCHEMA = CONSIGNES_MODULE_INPUT_SCHEMA.extend({ consignes: z.string() });
 const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: ARTEFACT_SCHEMA });
 const VERSION_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
 const JOB_INPUT_SCHEMA = z.object({ jobId: z.coerce.number().int() });
@@ -152,6 +156,33 @@ export async function createActions({
         prompt: composeProfilPrompt(candidat),
         directory: workspace.profilDirectoryOf(candidat.id),
       });
+    },
+
+    // The Consignes of each module, the default ones and those the Candidat replaced them with
+    async listConsignes(rawInput: unknown): Promise<ModuleConsignes[]> {
+      const candidat = await findCandidat(rawInput);
+      return listDefaultConsignes().map(({ module, defaultConsignes }) =>
+        MODULE_CONSIGNES_SCHEMA.parse({
+          module,
+          defaultConsignes,
+          candidatConsignes: workspace.readConsignes(candidat.id, module),
+        }),
+      );
+    },
+
+    // The Candidat's Consignes replace the default ones of the module, for its next Versions. The
+    // fixed part of its prompt stays, so they cannot lift its rules (ADR-0003).
+    async saveConsignes(rawInput: unknown): Promise<void> {
+      const candidat = await findCandidat(rawInput);
+      const { module, consignes } = CONSIGNES_INPUT_SCHEMA.parse(rawInput);
+      workspace.saveConsignes(candidat.id, parseModule(module), consignes);
+    },
+
+    // The module goes back to its default Consignes
+    async deleteConsignes(rawInput: unknown): Promise<void> {
+      const candidat = await findCandidat(rawInput);
+      const { module } = CONSIGNES_MODULE_INPUT_SCHEMA.parse(rawInput);
+      workspace.deleteConsignes(candidat.id, parseModule(module));
     },
 
     // What jf edit offers to edit: the Version retenue of each Artefact of an Offre
