@@ -11,7 +11,7 @@ Les règles génériques du code. Le pourquoi d'une décision est dans son ADR (
 
 ## Architecture
 
-- **Actions.** Chaque fonctionnalité est une action de `src/actions/`. La CLI et le front relaient vers elle, sans règle métier (ADR-0003). **(CI pour la CLI)**
+- **Actions.** Chaque fonctionnalité est une action de `src/actions/`. La CLI et le front relaient vers elle, sans règle métier (ADR-0003). **(CI)**
 - **Modules.** Un module vit dans son dossier de `src/modules/`, avec un seul point d'entrée et ses prompts dans des fichiers à part. Il échange avec les autres modules par les Artefacts sur disque et par la base, sans les importer (ADR-0003). **(CI)**
 - Les imports forment un graphe sans cycle. **(CI)**
 - Toute l'application vit dans `src/`.
@@ -29,7 +29,7 @@ Les règles génériques du code. Le pourquoi d'une décision est dans son ADR (
 
 - Node exécute le TypeScript sans build, donc seule la syntaxe effaçable est permise. Une énumération s'écrit en union de littéraux ou en `z.enum`. **(CI)**
 - Un import passe par l'alias `#/` ou reste dans le dossier courant (`./`), avec son extension `.ts`. **(CI)**
-- Les exports sont nommés. Seules les configs d'outils exportent par défaut. **(CI)**
+- Les exports sont nommés. Seules les configs d'outils et les modules de route de React Router, qui l'exigent, exportent par défaut. **(CI)**
 - Pour le nommage, `eslint.config.ts` fait foi : un tableau finit en `List`, un booléen commence par `is` ou `has`, une interface par `I`, et les constantes de module sont en `UPPER_CASE`. **(CI)**
 - Les identifiants et les messages reprennent les termes de `GLOSSARY.md`, en français : `Candidat`, `listCandidats`, `veilleList`.
 - Le code, les commentaires et les commits sont en anglais. Les messages à l'utilisateur, le README, les ADR et le glossaire sont en français.

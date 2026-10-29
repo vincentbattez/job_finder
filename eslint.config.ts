@@ -7,7 +7,17 @@ import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  { ignores: ['data/', 'dev-data/', 'src/workspace/generated/', 'playwright-report/', 'test-results/'] },
+  {
+    ignores: [
+      'data/',
+      'dev-data/',
+      'src/workspace/generated/',
+      'playwright-report/',
+      'test-results/',
+      '.react-router/',
+      'build/',
+    ],
+  },
   js.configs.recommended,
   tseslint.configs.strictTypeChecked,
   unicorn.configs.recommended,
@@ -45,6 +55,8 @@ export default defineConfig(
         'error',
         { selector: 'default', format: ['camelCase'] },
         { selector: 'import', format: ['camelCase', 'PascalCase'] },
+        // React components
+        { selector: 'function', format: ['camelCase', 'PascalCase'] },
         { selector: 'variable', format: ['camelCase', 'UPPER_CASE'] },
         {
           selector: 'variable',
@@ -67,6 +79,11 @@ export default defineConfig(
   {
     // Tools load their config through a default export
     files: ['*.config.ts'],
+    rules: { 'no-restricted-exports': 'off' },
+  },
+  {
+    // React Router loads the route config and each route module through a default export
+    files: ['src/web/root.tsx', 'src/web/routes.ts', 'src/web/routes/*.{ts,tsx}'],
     rules: { 'no-restricted-exports': 'off' },
   },
   prettier,
