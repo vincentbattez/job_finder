@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { z } from 'zod/v4';
 
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
@@ -11,6 +13,7 @@ import {
   type Offre,
   type Version,
 } from '#/domain/index.ts';
+import { BROUILLON_FILE_NAME, composeEditPrompt } from '#/edit/prompt.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
 import { assertLettreModifiable } from '#/statut/index.ts';
@@ -22,6 +25,7 @@ export type Actions = Awaited<ReturnType<typeof createActions>>;
 
 const CANDIDAT_INPUT_SCHEMA = z.object({ candidatId: z.string() });
 const MODULE_INPUT_SCHEMA = z.object({ module: z.string(), reference: z.string() });
+const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
 const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: ARTEFACT_SCHEMA });
 const VERSION_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
 
@@ -124,6 +128,41 @@ export async function createActions({
       aiSession.openInteractive({
         prompt: composeProfilPrompt(candidat),
         directory: workspace.profilDirectoryOf(candidat.id),
+      });
+    },
+
+    // What jf edit offers to edit: the Version retenue of each Artefact of an Offre
+    async listVersionsRetenues(rawInput: unknown): Promise<Version[]> {
+      const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      const versionList = await Promise.all(
+        ARTEFACT_SCHEMA.options.map((artefact) => workspace.listVersions(offre, artefact)),
+      );
+      return versionList.flat().filter(({ isRetenue }) => isRetenue);
+    },
+
+    // jf edit: a Claude Code session where the Candidat corrects the Version retenue in place,
+    // without creating a new Version nor ever touching a Brouillon (spec « Versions »)
+    async openArtefact(rawInput: unknown): Promise<void> {
+      const { reference, artefact } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      if (artefact === 'lettre') {
+        assertLettreModifiable(offre);
+      }
+      const versionList = await workspace.listVersions(offre, artefact);
+      const version = versionList.find(({ isRetenue }) => isRetenue);
+      if (version === undefined) {
+        throw new Error(
+          `L'Offre ${reference} n'a pas de Version retenue de ${artefact} à modifier : « jf run ${artefact} ${reference} » en produit une.`,
+        );
+      }
+      const candidat = await findCandidat({ candidatId: offre.candidatId });
+      const offreDirectory = workspace.offreDirectoryOf(offre);
+      const versionPath = path.relative(offreDirectory, workspace.versionDirectoryOf(offre, version));
+      aiSession.openInteractive({
+        prompt: composeEditPrompt({ candidat, offre, artefact, versionPath }),
+        directory: offreDirectory,
+        readOnlyPathList: [path.join(offreDirectory, '**', BROUILLON_FILE_NAME)],
       });
     },
 
