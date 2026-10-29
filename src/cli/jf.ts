@@ -9,6 +9,7 @@ const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
 // Through the actions only: the CLI never reaches the domain directly (ADR-0003)
 type Offre = Awaited<ReturnType<Actions['listOffres']>>[number];
 type Version = Awaited<ReturnType<Actions['listVersions']>>[number];
+type Recipients = Awaited<ReturnType<Actions['readRecipients']>>;
 
 interface ICommand {
   description: string;
@@ -26,6 +27,16 @@ const VERSION_STATE_LABEL_BY_STATE: Record<Version['state'], string> = {
   ready: 'prête',
   failed: 'en échec',
 };
+
+const FIELD_LABEL_BY_SOURCE: Record<Recipients['ccList'][number]['source'], string> = {
+  applicationEmail: 'mail de candidature',
+  contact1: 'contact 1',
+  contact2: 'contact 2',
+};
+
+function formatAddress({ email, source }: Recipients['ccList'][number]): string {
+  return `${email} (${FIELD_LABEL_BY_SOURCE[source]})`;
+}
 
 function formatOffre(offre: Offre): string {
   return [
@@ -196,7 +207,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
   },
   run: {
     description:
-      "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run recherche <offre> [--wait]",
+      "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run recherche|lettre <offre> [--wait]",
     run: async (actions, [module, reference], { isWaiting }) => {
       if (module === undefined || reference === undefined) {
         throw new Error('Usage : jf run <module> <offre> [--wait], par exemple jf run recherche 2026-2445600.');
@@ -214,6 +225,23 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
         throw new Error(`${name} en échec :\n${log}\nRelancer : jf run ${module} ${reference}`);
       }
       process.stdout.write(`${name} prête et retenue. « jf versions ${reference} ${module} » liste ses Versions.\n`);
+    },
+  },
+  destinataires: {
+    description: 'Affiche à qui adresser la candidature, selon la Lettre retenue : jf destinataires <offre>',
+    run: async (actions, [reference]) => {
+      if (reference === undefined) {
+        throw new Error('Usage : jf destinataires <offre>, par exemple jf destinataires 2026-2445600.');
+      }
+      const { to, ccList, salutation, justification } = await actions.readRecipients({ reference });
+      const salutationSource = salutation.source === null ? '' : ` (${FIELD_LABEL_BY_SOURCE[salutation.source]})`;
+      const lineList = [
+        `Destinataire : ${to === null ? "aucune adresse dans l'Offre" : formatAddress(to)}`,
+        `Copie : ${ccList.length === 0 ? 'aucune' : ccList.map((address) => formatAddress(address)).join(', ')}`,
+        `Formule d'appel : ${salutation.text}${salutationSource}`,
+        `Justification : ${justification}`,
+      ];
+      process.stdout.write(`${lineList.join('\n')}\n`);
     },
   },
   versions: {
