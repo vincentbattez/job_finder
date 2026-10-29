@@ -11,6 +11,7 @@ import {
   MODULE_CONSIGNES_SCHEMA,
   OFFRE_FICHE_SCHEMA,
   PROFIL_FILE_SCHEMA,
+  VISUALISATION_SCHEMA,
   type Artefact,
   type Candidat,
   type Detection,
@@ -23,6 +24,7 @@ import {
   type ProfilFile,
   type Recipients,
   type Version,
+  type Visualisation,
 } from '#/domain/index.ts';
 import { BROUILLON_FILE_NAME, composeEditPrompt } from '#/edit/prompt.ts';
 import { createApiGeo } from '#/geo/acl/api-geo.ts';
@@ -37,6 +39,7 @@ import {
   type INotificationChannel,
 } from '#/modules/notification/index.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
+import { VISUALISATION_MODULE } from '#/modules/visualisation/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
 import { findRepublishedOffre } from '#/republication/index.ts';
 import { assertLettreModifiable } from '#/statut/index.ts';
@@ -56,6 +59,7 @@ const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: ARTEFA
 const VERSION_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
 const DOCUMENT_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ fileName: z.string(), markdown: z.string() });
 const JOB_INPUT_SCHEMA = z.object({ jobId: z.coerce.number().int() });
+const VISUALISATION_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
 
 const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: z.enum(['postulee', 'archivee']) });
 
@@ -64,15 +68,13 @@ const ETAT_BY_VERSION_STATE = { running: 'en_cours', ready: 'pret', failed: 'en_
 // How often a followed job is read again: a module runs for minutes
 const FOLLOW_INTERVAL_MS = 1000;
 
-// What the Candidat corrects by hand: a file of the Version retenue, in place (spec « Versions »).
-// Never a Brouillon, kept as the AI wrote it so that the tool learns from the corrections, never a
-// Visualisation, regenerated from the Fiche d'entretien, nor the Lettre of a Postulée Offre, the
-// one sent.
-function assertDocumentModifiable(
+// What the Candidat corrects by hand, in the front or with jf edit: the Version retenue, in place
+// (spec « Versions »). Never a Visualisation, regenerated from the Fiche d'entretien, nor the
+// Lettre of a Postulée Offre, the one sent.
+function assertArtefactModifiable(
   offre: Offre,
   artefact: Artefact,
   version: Version | undefined,
-  fileName: string,
 ): asserts version is Version {
   const { reference } = offre;
   if (artefact === 'visualisation') {
@@ -84,8 +86,22 @@ function assertDocumentModifiable(
     assertLettreModifiable(offre);
   }
   if (version?.isRetenue !== true) {
-    throw new Error(`L'Offre ${reference} n'a pas de Version retenue de ${artefact} à modifier.`);
+    throw new Error(
+      `L'Offre ${reference} n'a pas de Version retenue de ${artefact} à modifier : « jf run ${artefact} ${reference} » en produit une.`,
+    );
   }
+}
+
+// A file of the Version retenue, except a Brouillon, kept as the AI wrote it so that the tool learns
+// from the corrections
+function assertDocumentModifiable(
+  offre: Offre,
+  artefact: Artefact,
+  version: Version | undefined,
+  fileName: string,
+): asserts version is Version {
+  const { reference } = offre;
+  assertArtefactModifiable(offre, artefact, version);
   if (fileName === BROUILLON_FILE_NAME) {
     throw new Error(
       `Le Brouillon ne se modifie jamais : il garde ce que l'IA a écrit. Corrigez la Lettre de l'Offre ${reference}.`,
@@ -372,14 +388,18 @@ export async function createActions({
       workspace.deleteConsignes(candidat.id, parseModule(module));
     },
 
-    // What jf edit offers to edit: the Version retenue of each Artefact of an Offre
+    // What jf edit offers to edit: the Version retenue of each Artefact of an Offre that it accepts
     async listVersionsRetenues(rawInput: unknown): Promise<Version[]> {
       const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
       const offre = await findOffre(reference);
       const versionList = await Promise.all(
         ARTEFACT_SCHEMA.options.map((artefact) => workspace.listVersions(offre, artefact)),
       );
-      return versionList.flat().filter(({ isRetenue }) => isRetenue);
+      return versionList.flat().filter((version) =>
+        isAccepted(() => {
+          assertArtefactModifiable(offre, version.artefact, version);
+        }),
+      );
     },
 
     // jf edit: a Claude Code session where the Candidat corrects the Version retenue in place,
@@ -387,16 +407,9 @@ export async function createActions({
     async openArtefact(rawInput: unknown): Promise<void> {
       const { reference, artefact } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
       const offre = await findOffre(reference);
-      if (artefact === 'lettre') {
-        assertLettreModifiable(offre);
-      }
       const versionList = await workspace.listVersions(offre, artefact);
       const version = versionList.find(({ isRetenue }) => isRetenue);
-      if (version === undefined) {
-        throw new Error(
-          `L'Offre ${reference} n'a pas de Version retenue de ${artefact} à modifier : « jf run ${artefact} ${reference} » en produit une.`,
-        );
-      }
+      assertArtefactModifiable(offre, artefact, version);
       const candidat = await findCandidat({ candidatId: offre.candidatId });
       const offreDirectory = workspace.offreDirectoryOf(offre);
       const versionPath = path.relative(offreDirectory, workspace.versionDirectoryOf(offre, version));
@@ -478,6 +491,13 @@ export async function createActions({
             artefact,
             etat: state === undefined ? 'absent' : ETAT_BY_VERSION_STATE[state],
             module: await describeModule(workspace, offre, artefact),
+            isEditable: isAccepted(() => {
+              assertArtefactModifiable(
+                offre,
+                artefact,
+                versionList.find(({ isRetenue }) => isRetenue),
+              );
+            }),
             versionList: versionList.map((version) => readFicheVersion(offre, version)),
           };
         }),
@@ -493,6 +513,26 @@ export async function createActions({
     async listVersions(rawInput: unknown): Promise<Version[]> {
       const { reference, artefact } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
       return workspace.listVersions(await findOffre(reference), artefact);
+    },
+
+    // The page of a Visualisation Version, for the front to show
+    async readVisualisation(rawInput: unknown): Promise<Visualisation> {
+      const { reference, number } = VISUALISATION_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      const versionList = await workspace.listVersions(offre, 'visualisation');
+      const version = versionList.find((candidate) => candidate.number === number);
+      if (version === undefined) {
+        throw new Error(`Version inconnue : visualisation v${String(number)} de l'Offre ${reference}.`);
+      }
+      const html = workspace.readTextFile(
+        path.join(workspace.versionDirectoryOf(offre, version), VISUALISATION_MODULE.fileName),
+      );
+      if (html === null) {
+        throw new Error(
+          `La Visualisation v${String(number)} de l'Offre ${reference} n'a pas de page : relancez la Visualisation.`,
+        );
+      }
+      return VISUALISATION_SCHEMA.parse({ html });
     },
 
     // To whom the Lettre retenue recommends sending the application, and why

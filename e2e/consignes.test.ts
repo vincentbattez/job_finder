@@ -15,13 +15,18 @@ test.describe('Consignes of a Candidat', () => {
   test('shows the default Consignes of each module, and never the fixed part as editable', async ({ page }) => {
     await openConsignesOfSacha(page);
 
-    await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Recherche', 'Lettre', 'Fiche d’entretien']);
+    await expect(page.getByRole('heading', { level: 2 })).toHaveText([
+      'Recherche',
+      'Lettre',
+      'Fiche d’entretien',
+      'Visualisation',
+    ]);
     const lettre = page.getByRole('region', { name: 'Lettre' });
     await expect(lettre.getByText('Consignes par défaut', { exact: true })).toBeVisible();
     await expect(lettre.getByRole('textbox')).toHaveValue(/^Écris une lettre de motivation d'une page/);
     // The fixed part of every prompt holds this rule: no field of the page carries it
     const textboxList = await page.getByRole('textbox').all();
-    expect(textboxList).toHaveLength(3);
+    expect(textboxList).toHaveLength(4);
     for (const textbox of textboxList) {
       await expect(textbox).not.toHaveValue(/N'invente jamais un fait/);
     }

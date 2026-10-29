@@ -51,15 +51,28 @@ const SAMPLE_FICHE: IOffreFiche = {
   offre: SAMPLE_OFFRE,
   ficheDePoste: SAMPLE_FICHE_DE_POSTE,
   artefactList: [
-    { artefact: 'recherche', etat: 'pret', module: { refusal: null }, versionList: [sampleVersion(1, 'ready')] },
+    {
+      artefact: 'recherche',
+      etat: 'pret',
+      module: { refusal: null },
+      isEditable: true,
+      versionList: [sampleVersion(1, 'ready')],
+    },
     {
       artefact: 'lettre',
       etat: 'en_cours',
       module: { refusal: null },
+      isEditable: true,
       versionList: [sampleVersion(1, 'ready'), sampleVersion(2, 'running')],
     },
-    { artefact: 'fiche_entretien', etat: 'en_echec', module: null, versionList: [sampleVersion(1, 'failed')] },
-    { artefact: 'visualisation', etat: 'absent', module: null, versionList: [] },
+    {
+      artefact: 'fiche_entretien',
+      etat: 'en_echec',
+      module: null,
+      isEditable: false,
+      versionList: [sampleVersion(1, 'failed')],
+    },
+    { artefact: 'visualisation', etat: 'absent', module: null, isEditable: false, versionList: [] },
   ],
   recipients: {
     to: { email: 'recrutement@example.org', source: 'applicationEmail' },

@@ -261,7 +261,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
   },
   run: {
     description:
-      "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run recherche|lettre|fiche <offre> [--wait]",
+      "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run recherche|lettre|fiche|visualisation <offre> [--wait]",
     run: async (actions, [module, reference], { isWaiting }) => {
       if (module === undefined || reference === undefined) {
         throw new Error('Usage : jf run <module> <offre> [--wait], par exemple jf run recherche 2026-2445600.');
