@@ -19,7 +19,7 @@ test('launches the Visualisation of the Fiche d’entretien retenue, shows it in
 }) => {
   await page.goto(`/offres/${REFERENCE}`);
   const visualisation = page.getByRole('region', { name: 'Visualisation' });
-  await expect(visualisation).toContainText(`L'Offre ${REFERENCE} n'a pas de Fiche d'entretien retenue`);
+  await expect(visualisation).toContainText(`L'Offre ${REFERENCE} n'a pas de Fiche d’entretien retenue`);
   await expect(visualisation.getByRole('button', { name: 'Lancer la Visualisation' })).toBeDisabled();
   await launch(page.getByRole('region', { name: 'Recherche' }), 'Recherche');
   await launch(page.getByRole('region', { name: 'Fiche d’entretien' }), 'Fiche d’entretien');
