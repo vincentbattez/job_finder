@@ -41,6 +41,7 @@ export const LETTRE_MODULE = {
   composePrompt: composeLettrePrompt,
   // The Lettre builds on the Recherche retenue of its Offre
   requiredArtefactList: ['recherche'] as const,
+  isReadingProfil: true,
 
   // The Lettre starts as a copy of the Brouillon, which becomes read-only: no correction, in the
   // front or with jf edit, can reach it
