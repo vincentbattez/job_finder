@@ -80,12 +80,13 @@ describe('the modules the fiche of an Offre offers', () => {
     expect(before).toMatchObject({
       recherche: { refusal: null },
       lettre: { refusal: /^L'Offre 2026-2445600 n'a pas de Recherche retenue/ },
-      fiche_entretien: null,
+      fiche_entretien: { refusal: /^L'Offre 2026-2445600 n'a pas de Recherche retenue/ },
       visualisation: null,
     });
     expect(await readModuleByArtefact(actions)).toMatchObject({
       recherche: { refusal: null },
       lettre: { refusal: null },
+      fiche_entretien: { refusal: null },
     });
   });
 
@@ -99,6 +100,8 @@ describe('the modules the fiche of an Offre offers', () => {
     expect(await readModuleByArtefact(actions)).toMatchObject({
       recherche: { refusal: null },
       lettre: { refusal: /est Postulée : sa Lettre retenue est figée/ },
+      // The interview comes after the application
+      fiche_entretien: { refusal: null },
     });
   });
 });

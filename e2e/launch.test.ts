@@ -23,8 +23,6 @@ test.describe('launching the modules of an Offre', () => {
     await expect(lettre.locator('summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
     await expect(lettre.locator('figcaption')).toHaveText(['brouillon.md', 'lettre.md']);
     await expect(page.locator('.artefact-list [data-artefact="lettre"]')).toContainText('Prêt');
-    // No module produces the Fiche d'entretien yet
-    await expect(page.getByRole('region', { name: 'Fiche d’entretien' }).getByRole('button')).toHaveCount(0);
   });
 
   test('relaunches a failed Recherche, which lets the Lettre run', async ({ page }) => {

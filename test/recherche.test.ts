@@ -142,14 +142,14 @@ describe('a launch refused', () => {
     expect(aiSession.headlessSessionList).toEqual([]);
   });
 
-  it.each(['fiche_entretien', 'inconnu'])(
+  it.each(['visualisation', 'inconnu'])(
     'refuses the module « %s », not available, without launching Claude',
     async (module) => {
       const aiSession = createFakeAiSession();
       const { actions } = await detectOffres(aiSession);
 
       await expect(actions.runModule({ module, reference: REFERENCE })).rejects.toThrow(
-        new RegExp(String.raw`Module inconnu : ${module}\. Modules : recherche, lettre\.`),
+        new RegExp(String.raw`Module inconnu : ${module}\. Modules : recherche, lettre, fiche\.`),
       );
       expect(aiSession.headlessSessionList).toEqual([]);
     },
