@@ -11,5 +11,6 @@ export default [
   route('consignes', 'routes/consignes.tsx'),
   route('run', 'routes/run.ts'),
   route('detect', 'routes/detect.ts'),
+  route('import', 'routes/import.ts'),
   route('design', 'routes/design.tsx'),
 ] satisfies RouteConfig;

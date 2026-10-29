@@ -1,7 +1,7 @@
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import type { Artefact, Offre, Version } from '#/domain/index.ts';
+import type { Artefact, FicheDePoste, Lieu, Offre, Version } from '#/domain/index.ts';
 
 import { loadConfig } from './acl/config.ts';
 import { openDatabase, type INewOffre } from './acl/database.ts';
@@ -98,6 +98,13 @@ export async function openWorkspace(dataDirectory: string) {
       mkdirSync(offreDirectory, { recursive: true });
       writeFileSync(path.join(offreDirectory, FICHE_DE_POSTE_FILE_NAME), newOffre.fiche.markdown);
       return database.createOffre(newOffre);
+    },
+
+    // The folder of an Offre is named after its title: it follows a new title
+    async fillOffre(offre: Offre, fields: { title: string; fiche: FicheDePoste; lieu: Lieu }): Promise<Offre> {
+      const filledOffre = await database.fillOffre(offre, fields);
+      renameSync(offreDirectoryOf(offre), offreDirectoryOf(filledOffre));
+      return filledOffre;
     },
 
     readFicheDePoste(offre: Offre): string {
