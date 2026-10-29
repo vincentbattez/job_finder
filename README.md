@@ -10,6 +10,7 @@ mise run init                                  # crée data/config.json depuis l
 cp .env.example .env                           # puis y renseigner l'URL et le token de Home Assistant, pour les notifications
 jf                                             # affiche l'aide
 jf detect                                      # cherche les nouvelles Offres de chaque Veille
+jf import offre.md lea                         # importe une Fiche de poste en Markdown trouvée ailleurs : Claude en relève les champs, puis sa Recherche est mise en file
 jf list lea                                    # liste les Offres d'un Candidat, avec leur statut et celles qui sont Expirées
 jf postuler 2026-2445600                       # passe une Offre en Postulée, ce qui fige sa Lettre ; jf archiver l'archive
 jf run recherche 2026-2445600                  # met en file une nouvelle Version de la Recherche d'une Offre ; --wait attend que le worker l'ait produite
@@ -29,7 +30,7 @@ jf consignes lea lettre remplacer < c.md       # remplace les Consignes de la Le
 
 Le front, service lpm `web` déclaré dans `.lpm.yml` (`mise run web`), sert les Offres de `data/` sur le port 5180, sans authentification : il n'est joignable qu'en LAN et via WireGuard, jamais depuis internet (ADR-0002). On l'ouvre par l'adresse IP du Mac mini ou par son nom `.local`, par exemple `http://mac-mini-vincent.local:5180`. Le Candidat se choisit dans le menu du haut, mémorisé par un cookie ; la fiche de chaque Offre montre ses contacts bruts, les destinataires recommandés par la Lettre retenue, la Fiche de poste et toutes les Versions de chaque Artefact, avec la commande `jf edit` à copier et les Consignes qui ont produit chaque Version. La page Profil modifie les fichiers du Profil du Candidat ; la page Consignes montre les Consignes par défaut de chaque module, et y crée, modifie ou supprime celles du Candidat. La partie fixe des prompts n'y apparaît pas : elle reste dans le code.
 
-Sur la fiche, chaque Artefact montre son état (absent, en cours, prêt, en échec) et le bouton de son module : il met le job en file, comme `jf run`, et le worker l'exécute. Le bouton attend tant qu'il manque au module une entrée, par exemple une Recherche retenue pour la Lettre, et dit laquelle. L'état se met à jour tout seul jusqu'à ce que le job soit fini. La liste des Offres a un bouton « Lancer une Détection », la même action que `jf detect`, qui dit ce qu'elle a trouvé pour chaque Veille. Comme le worker, le front lit `.env` pour les notifications.
+Sur la fiche, chaque Artefact montre son état (absent, en cours, prêt, en échec) et le bouton de son module : il met le job en file, comme `jf run`, et le worker l'exécute. Le bouton attend tant qu'il manque au module une entrée, par exemple une Recherche retenue pour la Lettre, et dit laquelle. L'état se met à jour tout seul jusqu'à ce que le job soit fini. La liste des Offres a un bouton « Lancer une Détection », la même action que `jf detect`, qui dit ce qu'elle a trouvé pour chaque Veille. Une Fiche de poste en Markdown glissée sur la liste, ou choisie avec « Importer une Fiche de poste », devient une Offre comme avec `jf import`. Comme le worker, le front lit `.env` pour les notifications.
 
 `JF_DATA_DIRECTORY` sert le front sur un autre dossier : `JF_DATA_DIRECTORY=dev-data mise run web` pour les Offres factices.
 
@@ -80,6 +81,7 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 - `src/edit/` : le prompt fixe de `jf edit`, qui ouvre une session dans le dossier de l'Offre, sans shell ni web, où aucun Brouillon ne peut être modifié.
 - `src/statut/` : les règles du statut d'une Offre : le calcul d'Expirée, et le gel de la Lettre retenue d'une Offre Postulée.
 - `src/modules/` : un dossier par module, avec un seul point d'entrée. Un module n'en importe jamais un autre, ce que vérifie `test/architecture.test.ts`. Un module IA, comme `recherche/`, a sa partie fixe du prompt dans `prompt.ts` et ses Consignes par défaut dans `consignes.ts`.
+- `src/modules/source-import/` : la Source Import Markdown. Une session Claude sans interface, au prompt fixe, relève dans un dossier temporaire les champs de la Fiche de poste importée ; `acl/extraction.ts` refuse toute valeur que la Fiche ne contient pas telle quelle. La référence de l'Offre vient du contenu du fichier : importer deux fois le même fichier redonne la même Offre.
 - `src/modules/notification/` : le texte de chaque notification, et l'interface commune aux canaux. Seul `acl/home-assistant.ts` sait appeler Home Assistant.
 - `prisma/` : le schéma, les migrations et le seed.
 - `test/fixtures/pep/` : les réponses du site PEP enregistrées le 2026-10-29, que `test/recorded-http.ts` sert aux tests à la place du vrai site.
