@@ -109,7 +109,8 @@ export const VERSION_SCHEMA = z
 
 export type Version = z.infer<typeof VERSION_SCHEMA>;
 
-// A job runs a module on an Offre; a module is named after the Artefact it produces
+// A job runs a module on an Offre; a module is named after the Artefact it produces. Its Version
+// exists once the job runs.
 export const JOB_SCHEMA = z
   .object({
     id: z.int(),
@@ -118,6 +119,7 @@ export const JOB_SCHEMA = z
     state: z.enum(['queued', 'running', 'done', 'failed']),
     log: z.string(),
     sessionId: z.string().nullable(),
+    version: VERSION_SCHEMA.nullable(),
   })
   .brand<'Domain'>();
 

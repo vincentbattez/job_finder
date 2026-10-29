@@ -13,7 +13,7 @@ type Recipients = Awaited<ReturnType<Actions['readRecipients']>>;
 
 interface ICommand {
   description: string;
-  run: (actions: Actions, argumentList: string[]) => Promise<void>;
+  run: (actions: Actions, argumentList: string[], option: { isWaiting: boolean }) => Promise<void>;
 }
 
 const STATUT_LABEL_BY_STATUS: Record<Offre['status'], string> = {
@@ -206,21 +206,25 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     },
   },
   run: {
-    description: "Produit une nouvelle Version d'un Artefact avec Claude Code : jf run recherche|lettre <offre>",
-    run: async (actions, [module, reference]) => {
+    description:
+      "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run recherche|lettre <offre> [--wait]",
+    run: async (actions, [module, reference], { isWaiting }) => {
       if (module === undefined || reference === undefined) {
-        throw new Error('Usage : jf run <module> <offre>, par exemple jf run recherche 2026-2445600.');
+        throw new Error('Usage : jf run <module> <offre> [--wait], par exemple jf run recherche 2026-2445600.');
       }
-      process.stdout.write(
-        `${module} de l'Offre ${reference} : lancement de Claude Code, qui peut prendre plusieurs minutes…\n`,
-      );
-      const { job, version, filePath } = await actions.runModule({ module, reference });
-      if (job.state === 'failed') {
-        throw new Error(
-          `${module} v${String(version.number)} en échec :\n${job.log}\nRelancer : jf run ${module} ${reference}`,
-        );
+      const queuedJob = await actions.runModule({ module, reference });
+      process.stdout.write(`${module} de l'Offre ${reference} en file (job ${String(queuedJob.id)}).\n`);
+      if (!isWaiting) {
+        process.stdout.write(`Le worker la produira. « jf versions ${reference} ${module} » suit ses Versions.\n`);
+        return;
       }
-      process.stdout.write(`${module} v${String(version.number)} prête et retenue : ${filePath}\n`);
+      process.stdout.write('Attente du worker (service lpm worker) : Claude Code peut prendre plusieurs minutes…\n');
+      const { state, version, log } = await actions.followJob({ jobId: queuedJob.id });
+      const name = version === null ? module : `${module} v${String(version.number)}`;
+      if (state === 'failed') {
+        throw new Error(`${name} en échec :\n${log}\nRelancer : jf run ${module} ${reference}`);
+      }
+      process.stdout.write(`${name} prête et retenue. « jf versions ${reference} ${module} » liste ses Versions.\n`);
     },
   },
   destinataires: {
@@ -302,7 +306,7 @@ const HELP = [
 
 async function run(): Promise<void> {
   const { values, positionals: positionalList } = parseArgs({
-    options: { help: { type: 'boolean', short: 'h' } },
+    options: { help: { type: 'boolean', short: 'h' }, wait: { type: 'boolean' } },
     allowPositionals: true,
   });
   const [commandName, ...argumentList] = positionalList;
@@ -314,7 +318,9 @@ async function run(): Promise<void> {
   if (command === undefined) {
     throw new Error(`Commande inconnue : ${commandName}. « jf help » liste les commandes.`);
   }
-  await command.run(await createActions({ dataDirectory: DATA_DIRECTORY }), argumentList);
+  await command.run(await createActions({ dataDirectory: DATA_DIRECTORY }), argumentList, {
+    isWaiting: values.wait === true,
+  });
 }
 
 try {

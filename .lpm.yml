@@ -1,0 +1,4 @@
+# The lpm config versioned with the repo. The worker runs the queued jobs, one Claude session at a
+# time, in its own process: restarting the front never stops a session (ADR-0003).
+services:
+  worker: mise run worker

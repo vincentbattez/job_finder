@@ -38,6 +38,10 @@ run = ["mkdir -p dev-data && prisma migrate reset --force", "mise run db:seed"]
 description = "Start the front in development mode, open to the local network (ADR-0002)"
 run = "react-router dev --host"
 
+[tasks.worker]
+description = "Run the queued jobs of data/, one Claude session at a time: the lpm service worker (ADR-0003)"
+run = "node src/worker/worker.ts"
+
 [tasks."lint:ts"]
 description = "Lint with ESLint"
 run = "eslint ."

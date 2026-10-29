@@ -35,6 +35,7 @@ const LETTRE = {
   },
 };
 
+// Launching a module only queues its job: each test then lets the worker run the queue
 async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
   const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
   copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
@@ -49,6 +50,7 @@ describe('edit', () => {
     const { actions, offreDirectory } = await detectOffres(aiSession);
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await actions.runQueuedJobs();
     await actions.retenirVersion({ reference: REFERENCE, artefact: 'recherche', number: 1 });
 
     await actions.openArtefact({ reference: REFERENCE, artefact: 'recherche' });
@@ -62,6 +64,7 @@ describe('edit', () => {
     const aiSession = createFakeAiSession(RECHERCHE);
     const { actions } = await detectOffres(aiSession);
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await actions.runQueuedJobs();
 
     await actions.openArtefact({ reference: REFERENCE, artefact: 'recherche' });
 
@@ -79,6 +82,7 @@ describe('edit', () => {
     const aiSession = createFakeAiSession(RECHERCHE);
     const { actions, offreDirectory } = await detectOffres(aiSession);
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await actions.runQueuedJobs();
 
     await actions.openArtefact({ reference: REFERENCE, artefact: 'recherche' });
 
@@ -92,8 +96,10 @@ describe('edit', () => {
     const aiSession = createFakeAiSession(RECHERCHE, LETTRE, LETTRE);
     const { actions, offreDirectory } = await detectOffres(aiSession);
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await actions.runQueuedJobs();
     await actions.runModule({ module: 'lettre', reference: REFERENCE });
     await actions.runModule({ module: 'lettre', reference: REFERENCE });
+    await actions.runQueuedJobs();
     await actions.retenirVersion({ reference: REFERENCE, artefact: 'lettre', number: 1 });
 
     await actions.openArtefact({ reference: REFERENCE, artefact: 'lettre' });
@@ -129,6 +135,7 @@ describe('an edit refused', () => {
     for (let run = 0; run < runCount; run += 1) {
       await actions.runModule({ module: 'recherche', reference: REFERENCE });
     }
+    await actions.runQueuedJobs();
 
     await expect(actions.openArtefact({ reference: REFERENCE, artefact: 'recherche' })).rejects.toThrow(
       "L'Offre 2026-2445600 n'a pas de Version retenue de recherche à modifier : « jf run recherche 2026-2445600 » en produit une.",
@@ -142,6 +149,7 @@ describe('the Artefacts to edit', () => {
     const { actions } = await detectOffres(createFakeAiSession(RECHERCHE, RECHERCHE));
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await actions.runQueuedJobs();
     await actions.retenirVersion({ reference: REFERENCE, artefact: 'recherche', number: 1 });
 
     const versionList = await actions.listVersionsRetenues({ reference: REFERENCE });
