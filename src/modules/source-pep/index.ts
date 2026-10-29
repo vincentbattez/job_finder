@@ -1,15 +1,11 @@
 import type { Veille } from '#/domain/index.ts';
+import { wordListOf } from '#/text/index.ts';
 
 import { readFeed, readFiche } from './acl/talent-soft.ts';
 import { createTitleMatcher } from './title.ts';
 
 function normalizeCourtOfAppeal(name: string): string {
-  return name
-    .normalize('NFD')
-    .replaceAll(/\p{M}/gu, '')
-    .toUpperCase()
-    .replaceAll(/[^A-Z]+/g, ' ')
-    .trim();
+  return wordListOf(name).join(' ');
 }
 
 // The Source PEP: Place de l'Emploi Public, read through the feed of the DSJ (ADR-0001)

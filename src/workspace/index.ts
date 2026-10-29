@@ -2,6 +2,7 @@ import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import type { Artefact, FicheDePoste, Lieu, Offre, Version } from '#/domain/index.ts';
+import { wordListOf } from '#/text/index.ts';
 
 import { loadConfig } from './acl/config.ts';
 import { openDatabase, type INewOffre } from './acl/database.ts';
@@ -10,12 +11,7 @@ import { readMarkdownFiles, readTextFile } from './acl/files.ts';
 const FICHE_DE_POSTE_FILE_NAME = 'fiche-de-poste.md';
 
 function slugify(text: string): string {
-  return text
-    .normalize('NFD')
-    .replaceAll(/\p{M}/gu, '')
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, '-')
-    .replaceAll(/^-|-$/g, '');
+  return wordListOf(text).join('-');
 }
 
 // Opens the data folder: reads its config, migrates the database and copies the config into it,
