@@ -41,6 +41,7 @@ model Offre {
   employer          String?
   workplace         String?
   city              String?
+  region            String?
   latitude          Float?
   longitude         Float?
   applicationEmail  String?

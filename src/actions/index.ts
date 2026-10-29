@@ -7,6 +7,7 @@ import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
 import {
   ARTEFACT_SCHEMA,
   DETECTION_SCHEMA,
+  LIEU_SCHEMA,
   MODULE_CONSIGNES_SCHEMA,
   OFFRE_FICHE_SCHEMA,
   PROFIL_FILE_SCHEMA,
@@ -15,6 +16,7 @@ import {
   type Detection,
   type DomainValue,
   type Job,
+  type Lieu,
   type ModuleConsignes,
   type Offre,
   type OffreFiche,
@@ -23,6 +25,8 @@ import {
   type Version,
 } from '#/domain/index.ts';
 import { BROUILLON_FILE_NAME, composeEditPrompt } from '#/edit/prompt.ts';
+import { createApiGeo } from '#/geo/acl/api-geo.ts';
+import { readCity } from '#/geo/city.ts';
 import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import {
   composeNouvelleOffreNotification,
@@ -128,8 +132,8 @@ function isAccepted(check: () => void): boolean {
 // anti-corruption layer (ADR-0005): the input is whatever a user typed, so each action takes it
 // as unknown and parses it with Zod, and the output is nothing or domain values, so no raw data
 // reaches the CLI or the front. The tests pass a fake aiSession, a fake fetch for the HTTP of the
-// Sources and a fake notificationChannel, since Claude, the sites and the phones are external
-// boundaries.
+// Sources and of API Géo, and a fake notificationChannel, since Claude, the sites and the phones are
+// external boundaries.
 export async function createActions({
   dataDirectory,
   aiSession = CLAUDE_CODE,
@@ -143,6 +147,7 @@ export async function createActions({
 }) {
   const workspace = await openWorkspace(dataDirectory);
   const pepSource = createPepSource(fetch);
+  const apiGeo = createApiGeo(fetch);
   const runJob = createJobRunner(workspace, aiSession);
 
   async function findCandidat(rawInput: unknown): Promise<Candidat> {
@@ -165,6 +170,13 @@ export async function createActions({
       throw new Error(`Plusieurs Offres ont la référence ${reference}, chez des Candidats différents.`);
     }
     return offre;
+  }
+
+  // API Géo turns a ville into its commune, with région and coordinates (spec « Coordonnées »). A
+  // ville it does not know stays as read, without coordinates.
+  async function locate(city: string | null): Promise<Lieu> {
+    const lieu = city === null ? null : await apiGeo.findLieu(city);
+    return lieu ?? LIEU_SCHEMA.parse({ city, region: null, latitude: null, longitude: null });
   }
 
   // Sends a notification to the Candidat of the Offre, on their channel (spec « Notification »). A
@@ -225,6 +237,12 @@ export async function createActions({
     // de poste. An Offre is known by its reference, never by its publication date, which the site
     // changes (ADR-0001). The first launch imports the Offres already online.
     async detect(): Promise<Detection[]> {
+      // The Offres saved before they had a ville, or whose ville API Géo did not know, are
+      // located again
+      const unlocatedOffreList = await workspace.listUnlocatedOffres();
+      for (const offre of unlocatedOffreList) {
+        await workspace.setLieu(offre, await locate(offre.city ?? readCity(offre.workplace)));
+      }
       const veilleList = await workspace.listVeilles();
       const detectionList: Detection[] = [];
       const notificationList: { offre: Offre; notification: INotification }[] = [];
@@ -244,6 +262,7 @@ export async function createActions({
           }
           const { fiche, isInZone } = await pepSource.readFiche(listedOffre.reference, veille.zone);
           const republicationOf = findRepublishedOffre({ ...listedOffre, ...fiche }, offreList);
+          const lieu = await locate(readCity(fiche.workplace));
           const offre = await workspace.saveOffre({
             candidatId,
             source,
@@ -251,6 +270,7 @@ export async function createActions({
             fiche,
             isInZone,
             republicationOf,
+            lieu,
           });
           offreList.push(offre);
           newOffreList.push(offre);

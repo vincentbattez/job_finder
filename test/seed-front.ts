@@ -12,7 +12,8 @@ import { createRecordedFetch } from './recorded-http.ts';
 // JF_DATA_DIRECTORY, through the actions and with the fakes of the external boundaries: the HTTP of
 // the PEP Source recorded on 2026-10-29, the fake launch of Claude and the fake notification
 // channel. Léa follows the attaché de justice Offres, and the Béthune Offre 2026-2445600 has two
-// Recherches, the first one retenue, and a Lettre; Camille has no Veille, hence no Offre. The tests
+// Recherches, the first one retenue, and a Lettre; the Melun Offres, past their Date limite, are
+// Postulée, Archivée and À traiter; Camille has no Veille, hence no Offre. The tests
 // that change data work on Offres of their own: Bastia 2026-2426147 (a Recherche and a Lettre to
 // correct), Versailles 2026-2409178 (two Recherches), Rennes 2026-2420931 (a Recherche, ready for
 // its Lettre) and Narbonne 2026-2412591 (a Recherche en échec). Sacha, without Veille either, has
@@ -131,3 +132,6 @@ await actions.saveConsignes({ candidatId: 'lea', module: 'recherche', consignes:
 await actions.runModule({ module: 'recherche', reference: CONSIGNES_REFERENCE });
 await actions.runQueuedJobs();
 await actions.deleteConsignes({ candidatId: 'lea', module: 'recherche' });
+
+await actions.changeStatus({ reference: '2026-2285305', status: 'postulee' });
+await actions.changeStatus({ reference: '2026-2290529', status: 'archivee' });
