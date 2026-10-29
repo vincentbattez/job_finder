@@ -18,6 +18,8 @@ export default defineConfig(
     plugins: { 'unused-imports': unusedImports },
     rules: {
       '@typescript-eslint/consistent-type-imports': 'error',
+      // A domain value is only obtained by parsing it, never asserted (ADR-0005)
+      '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
       // SQLite and JSON both use null for a missing value
       'unicorn/no-null': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
