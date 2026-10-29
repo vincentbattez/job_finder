@@ -6,12 +6,13 @@ import { createActions } from '#/actions/index.ts';
 import type { IHeadlessSession } from '#/ai-session/acl/claude-code.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 // In the e2e tests, vite.config.ts serves this module in place of src/web/acl/actions.server.ts, and
 // test/e2e-worker.ts runs its queued jobs: the front and the worker work on the temporary data
 // folder of playwright.config.ts, with the fakes of the external boundaries. No real Claude
-// session, no real site.
+// session, no real site, no real notification.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 if (!dataDirectory.startsWith(tmpdir())) {
   throw new Error(`JF_DATA_DIRECTORY doit être un dossier temporaire, pas « ${dataDirectory} ».`);
@@ -46,4 +47,9 @@ const aiSession = {
   },
 };
 
-export const ACTIONS = await createActions({ dataDirectory, aiSession, fetch: createRecordedFetch().fetch });
+export const ACTIONS = await createActions({
+  dataDirectory,
+  aiSession,
+  fetch: createRecordedFetch().fetch,
+  notificationChannel: createFakeNotificationChannel(),
+});

@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { createActions } from '#/actions/index.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
@@ -39,7 +40,13 @@ const LETTRE = {
 async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
   const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
   copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  const actions = await createActions({ dataDirectory, aiSession, fetch: createRecordedFetch().fetch });
+  const notificationChannel = createFakeNotificationChannel();
+  const actions = await createActions({
+    dataDirectory,
+    aiSession,
+    fetch: createRecordedFetch().fetch,
+    notificationChannel,
+  });
   await actions.detect();
   return { actions, offreDirectory: path.join(dataDirectory, 'candidats/lea/offres', OFFRE_DIRECTORY_NAME) };
 }
