@@ -17,7 +17,8 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     command: `node test/seed-front.ts && react-router dev --port ${PORT} --strictPort`,
-    env: { JF_DATA_DIRECTORY: DATA_DIRECTORY },
+    // Even when the shell exports them: the front never sends a real notification in the tests
+    env: { JF_DATA_DIRECTORY: DATA_DIRECTORY, HOME_ASSISTANT_URL: '', HOME_ASSISTANT_TOKEN: '' },
     url: `${BASE_URL}/design`,
     // A server already running on the port may read data/: always start the one seeded above
     reuseExistingServer: false,
