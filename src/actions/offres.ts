@@ -69,9 +69,12 @@ export function createOffreActions({ workspace, findCandidat, findOffre }: Actio
         ARTEFACT_SCHEMA.options.map(async (artefact) => {
           const versionList = await workspace.listVersions(offre, artefact);
           const versionRetenue = await findVersionRetenue(workspace, offre, artefact);
-          // A queued job has no Version yet, while the worker runs another one (ADR-0003)
-          const isQueued = jobList.some(({ module, state }) => module === artefact && state === 'queued');
-          const state = isQueued ? 'running' : versionList.at(-1)?.state;
+          // A queued job has no Version yet, while the worker runs another one (ADR-0003), and a
+          // claimed job has none until the worker starts it: both are already en cours
+          const isPending = jobList.some(
+            ({ module, state }) => module === artefact && (state === 'queued' || state === 'running'),
+          );
+          const state = isPending ? 'running' : versionList.at(-1)?.state;
           return {
             artefact,
             etat: state === undefined ? 'absent' : ETAT_BY_VERSION_STATE[state],
