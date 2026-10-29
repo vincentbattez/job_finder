@@ -57,4 +57,6 @@ const actions = await createActions({
 await actions.detect();
 await actions.runModule({ module: 'recherche', reference: BETHUNE_REFERENCE });
 await actions.runModule({ module: 'recherche', reference: BETHUNE_REFERENCE });
+// The worker's turn, which the e2e tests take here rather than in a worker process
+await actions.runQueuedJobs();
 await actions.retenirVersion({ reference: BETHUNE_REFERENCE, artefact: 'recherche', number: 1 });

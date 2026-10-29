@@ -1,3 +1,6 @@
+import path from 'node:path';
+import { setTimeout } from 'node:timers/promises';
+
 import { z } from 'zod/v4';
 
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
@@ -8,27 +11,34 @@ import {
   type Candidat,
   type Detection,
   type DomainValue,
-  type ModuleRun,
+  type Job,
   type Offre,
   type OffreFiche,
+  type Recipients,
   type Version,
 } from '#/domain/index.ts';
+import { BROUILLON_FILE_NAME, composeEditPrompt } from '#/edit/prompt.ts';
+import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
 import { composeProfilPrompt } from '#/profil/prompt.ts';
 import { assertLettreModifiable } from '#/statut/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
-import { createJobRunner, parseModule } from './run-job.ts';
+import { createJobRunner, findInputs, parseModule } from './run-job.ts';
 
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
 const CANDIDAT_INPUT_SCHEMA = z.object({ candidatId: z.string() });
-const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
 const MODULE_INPUT_SCHEMA = z.object({ module: z.string(), reference: z.string() });
+const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
 const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: ARTEFACT_SCHEMA });
 const VERSION_INPUT_SCHEMA = ARTEFACT_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
+const JOB_INPUT_SCHEMA = z.object({ jobId: z.coerce.number().int() });
 
 const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: z.enum(['postulee', 'archivee']) });
+
+// How often a followed job is read again: a module runs for minutes
+const FOLLOW_INTERVAL_MS = 1000;
 
 // The single entry point of every feature: the CLI and the front only call these actions,
 // so no business rule lives in either of them (ADR-0003). `satisfies` holds them to the
@@ -85,6 +95,7 @@ export async function createActions({
       for (const veille of veilleList) {
         const { candidatId, source } = veille;
         const knownReferenceList = await workspace.listReferences(candidatId, source);
+        const isFirstLaunch = knownReferenceList.length === 0;
         const { matchingList, nearMissList } = await pepSource.search(veille.criteria);
         const newOffreList: Offre[] = [];
         for (const listedOffre of matchingList) {
@@ -92,13 +103,19 @@ export async function createActions({
             continue;
           }
           const { fiche, isInZone } = await pepSource.readFiche(listedOffre.reference, veille.zone);
-          newOffreList.push(await workspace.saveOffre({ candidatId, source, listedOffre, fiche, isInZone }));
+          const offre = await workspace.saveOffre({ candidatId, source, listedOffre, fiche, isInZone });
+          newOffreList.push(offre);
+          // A new Offre in the Zone starts its Recherche, except the ones already online at the first
+          // launch (ADR-0003)
+          if (isInZone && !isFirstLaunch) {
+            await workspace.createJob(offre, 'recherche');
+          }
         }
         detectionList.push(
           DETECTION_SCHEMA.parse({
             veilleId: veille.id,
             candidatId,
-            isFirstLaunch: knownReferenceList.length === 0,
+            isFirstLaunch,
             newOffreList,
             nearMissList,
           }),
@@ -130,13 +147,88 @@ export async function createActions({
       });
     },
 
-    // Runs a module on an Offre, which creates a new Version of its Artefact. In L1 the job runs
-    // right away, through the same function the worker will call (ADR-0003).
-    async runModule(rawInput: unknown): Promise<ModuleRun> {
+    // What jf edit offers to edit: the Version retenue of each Artefact of an Offre
+    async listVersionsRetenues(rawInput: unknown): Promise<Version[]> {
+      const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      const versionList = await Promise.all(
+        ARTEFACT_SCHEMA.options.map((artefact) => workspace.listVersions(offre, artefact)),
+      );
+      return versionList.flat().filter(({ isRetenue }) => isRetenue);
+    },
+
+    // jf edit: a Claude Code session where the Candidat corrects the Version retenue in place,
+    // without creating a new Version nor ever touching a Brouillon (spec « Versions »)
+    async openArtefact(rawInput: unknown): Promise<void> {
+      const { reference, artefact } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      if (artefact === 'lettre') {
+        assertLettreModifiable(offre);
+      }
+      const versionList = await workspace.listVersions(offre, artefact);
+      const version = versionList.find(({ isRetenue }) => isRetenue);
+      if (version === undefined) {
+        throw new Error(
+          `L'Offre ${reference} n'a pas de Version retenue de ${artefact} à modifier : « jf run ${artefact} ${reference} » en produit une.`,
+        );
+      }
+      const candidat = await findCandidat({ candidatId: offre.candidatId });
+      const offreDirectory = workspace.offreDirectoryOf(offre);
+      const versionPath = path.relative(offreDirectory, workspace.versionDirectoryOf(offre, version));
+      aiSession.openInteractive({
+        prompt: composeEditPrompt({ candidat, offre, artefact, versionPath }),
+        directory: offreDirectory,
+        readOnlyPathList: [path.join(offreDirectory, '**', BROUILLON_FILE_NAME)],
+      });
+    },
+
+    // Launches a module on an Offre: it only queues its job. The worker runs it, so restarting
+    // the front never stops a Claude session (ADR-0003).
+    async runModule(rawInput: unknown): Promise<Job> {
       const { module, reference } = MODULE_INPUT_SCHEMA.parse(rawInput);
       const artefact = parseModule(module);
       const offre = await findOffre(reference);
-      return runJob(await workspace.createJob(offre, artefact));
+      await findInputs(workspace, offre, artefact);
+      return workspace.createJob(offre, artefact);
+    },
+
+    // Waits until the worker has run the job, and returns it with the Version it produced
+    async followJob(rawInput: unknown): Promise<Job> {
+      const { jobId } = JOB_INPUT_SCHEMA.parse(rawInput);
+      for (;;) {
+        const job = await workspace.findJob(jobId);
+        if (job === null) {
+          throw new Error(`Job inconnu : ${String(jobId)}.`);
+        }
+        if (job.state === 'done' || job.state === 'failed') {
+          return job;
+        }
+        await setTimeout(FOLLOW_INTERVAL_MS);
+      }
+    },
+
+    // At the worker's start, a job still running was cut off by the worker's stop: it fails, with
+    // its Version, which frees the queue. Launching the module again makes a new Version.
+    async failInterruptedJobs(): Promise<Job[]> {
+      return workspace.failRunningJobs(
+        "Interrompu : le worker s'est arrêté pendant ce job. Relancer le module en crée une nouvelle Version.",
+      );
+    },
+
+    // The worker's turn: runs the queued jobs one at a time, oldest first, each creating a new
+    // Version of its Artefact, until the queue is empty
+    async runQueuedJobs(): Promise<Job[]> {
+      const jobList: Job[] = [];
+      for (let job = await workspace.claimNextJob(); job !== null; job = await workspace.claimNextJob()) {
+        try {
+          const { job: finishedJob } = await runJob(job);
+          jobList.push(finishedJob);
+        } catch (error) {
+          // An error fails this job only, the one running, and the worker goes on with the queue
+          jobList.push(...(await workspace.failRunningJobs(error instanceof Error ? error.message : String(error))));
+        }
+      }
+      return jobList;
     },
 
     async readOffre(rawInput: unknown): Promise<OffreFiche> {
@@ -160,6 +252,18 @@ export async function createActions({
     async listVersions(rawInput: unknown): Promise<Version[]> {
       const { reference, artefact } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
       return workspace.listVersions(await findOffre(reference), artefact);
+    },
+
+    // To whom the Lettre retenue recommends sending the application, and why
+    async readRecipients(rawInput: unknown): Promise<Recipients> {
+      const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
+      const offre = await findOffre(reference);
+      const versionList = await workspace.listVersions(offre, 'lettre');
+      const version = versionList.find(({ isRetenue }) => isRetenue);
+      if (version === undefined) {
+        throw new Error(`L'Offre ${reference} n'a pas de Lettre retenue. La produire : jf run lettre ${reference}.`);
+      }
+      return LETTRE_MODULE.readRecipients(workspace.versionDirectoryOf(offre, version));
     },
 
     async retenirVersion(rawInput: unknown): Promise<void> {

@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 
 import { createActions, type Actions } from '#/actions/index.ts';
@@ -8,10 +9,11 @@ const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
 // Through the actions only: the CLI never reaches the domain directly (ADR-0003)
 type Offre = Awaited<ReturnType<Actions['listOffres']>>[number];
 type Version = Awaited<ReturnType<Actions['listVersions']>>[number];
+type Recipients = Awaited<ReturnType<Actions['readRecipients']>>;
 
 interface ICommand {
   description: string;
-  run: (actions: Actions, argumentList: string[]) => Promise<void>;
+  run: (actions: Actions, argumentList: string[], option: { isWaiting: boolean }) => Promise<void>;
 }
 
 const STATUT_LABEL_BY_STATUS: Record<Offre['status'], string> = {
@@ -26,6 +28,16 @@ const VERSION_STATE_LABEL_BY_STATE: Record<Version['state'], string> = {
   failed: 'en échec',
 };
 
+const FIELD_LABEL_BY_SOURCE: Record<Recipients['ccList'][number]['source'], string> = {
+  applicationEmail: 'mail de candidature',
+  contact1: 'contact 1',
+  contact2: 'contact 2',
+};
+
+function formatAddress({ email, source }: Recipients['ccList'][number]): string {
+  return `${email} (${FIELD_LABEL_BY_SOURCE[source]})`;
+}
+
 function formatOffre(offre: Offre): string {
   return [
     offre.reference,
@@ -35,6 +47,103 @@ function formatOffre(offre: Offre): string {
     offre.isExpiree ? `${STATUT_LABEL_BY_STATUS[offre.status]}, Expirée` : STATUT_LABEL_BY_STATUS[offre.status],
     offre.isInZone ? 'Zone' : 'hors Zone',
   ].join('\t');
+}
+
+const ARTEFACT_LABEL_BY_ARTEFACT: Record<Version['artefact'], string> = {
+  recherche: 'Recherche',
+  lettre: 'Lettre',
+  fiche_entretien: "Fiche d'entretien",
+  visualisation: 'Visualisation',
+};
+
+// The terminal where the Candidat answers, one line per question. Ctrl-C or Ctrl-D closes it,
+// which ends the answers instead of leaving a question pending forever.
+function openTerminal() {
+  const readline = createInterface({ input: process.stdin, output: process.stdout });
+  // Iterated from the start, so that no line typed ahead is lost
+  const lineIterator = readline[Symbol.asyncIterator]();
+  return {
+    async ask(question: string): Promise<string | undefined> {
+      readline.setPrompt(question);
+      readline.prompt();
+      const { done: isDone, value } = await lineIterator.next();
+      return isDone === true ? undefined : value;
+    },
+    close(): void {
+      readline.close();
+    },
+  };
+}
+
+type Terminal = ReturnType<typeof openTerminal>;
+
+interface IChoice<T> {
+  question: string;
+  itemList: T[];
+  label: (item: T) => string;
+  emptyMessage: string;
+}
+
+// A numbered list to pick from on the terminal; a single item needs no question
+async function choose<T>(terminal: Terminal, { question, itemList, label, emptyMessage }: IChoice<T>): Promise<T> {
+  const [firstItem, ...otherItemList] = itemList;
+  if (firstItem === undefined) {
+    throw new Error(emptyMessage);
+  }
+  if (otherItemList.length === 0) {
+    process.stdout.write(`${question} : ${label(firstItem)}\n`);
+    return firstItem;
+  }
+  for (const [index, item] of itemList.entries()) {
+    process.stdout.write(`${String(index + 1).padStart(3)}  ${label(item)}\n`);
+  }
+  const answer = await terminal.ask(`${question} (1 à ${String(itemList.length)}) : `);
+  if (answer === undefined) {
+    throw new Error('jf edit abandonné : aucun choix.');
+  }
+  const item = itemList[Number(answer) - 1];
+  if (item === undefined) {
+    throw new Error(`Choix invalide : ${answer}. Relancer jf edit.`);
+  }
+  return item;
+}
+
+async function chooseReference(actions: Actions, terminal: Terminal): Promise<string> {
+  const candidat = await choose(terminal, {
+    question: 'Candidat',
+    itemList: await actions.listCandidats(),
+    label: ({ name }) => name,
+    emptyMessage: 'Aucun Candidat : les déclarer dans data/config.json.',
+  });
+  const offre = await choose(terminal, {
+    question: 'Offre à modifier',
+    itemList: await actions.listOffres({ candidatId: candidat.id }),
+    label: formatOffre,
+    emptyMessage: `Aucune Offre pour ${candidat.name} : « jf detect » cherche les nouvelles Offres.`,
+  });
+  return offre.reference;
+}
+
+// The Offre then the Artefact, unless given, from a list: the Candidat has no reference to
+// remember (spec « Claude Code interactif »)
+async function chooseArtefact(actions: Actions, [givenReference, givenArtefact]: string[]) {
+  if (givenReference !== undefined && givenArtefact !== undefined) {
+    return { reference: givenReference, artefact: givenArtefact };
+  }
+  const terminal = openTerminal();
+  try {
+    const reference = givenReference ?? (await chooseReference(actions, terminal));
+    const version = await choose(terminal, {
+      question: 'Artefact à modifier',
+      itemList: await actions.listVersionsRetenues({ reference }),
+      label: ({ artefact, number }) => `${ARTEFACT_LABEL_BY_ARTEFACT[artefact]} (v${String(number)}, retenue)`,
+      emptyMessage: `L'Offre ${reference} n'a aucun Artefact à modifier : « jf run recherche ${reference} » produit sa Recherche.`,
+    });
+    return { reference, artefact: version.artefact };
+  } finally {
+    // Claude Code takes the terminal next
+    terminal.close();
+  }
 }
 
 function changeStatusCommand(status: 'postulee' | 'archivee', description: string): ICommand {
@@ -97,21 +206,42 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     },
   },
   run: {
-    description: "Produit une nouvelle Version d'un Artefact avec Claude Code : jf run recherche <offre>",
-    run: async (actions, [module, reference]) => {
+    description:
+      "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run recherche|lettre <offre> [--wait]",
+    run: async (actions, [module, reference], { isWaiting }) => {
       if (module === undefined || reference === undefined) {
-        throw new Error('Usage : jf run <module> <offre>, par exemple jf run recherche 2026-2445600.');
+        throw new Error('Usage : jf run <module> <offre> [--wait], par exemple jf run recherche 2026-2445600.');
       }
-      process.stdout.write(
-        `${module} de l'Offre ${reference} : lancement de Claude Code, qui peut prendre plusieurs minutes…\n`,
-      );
-      const { job, version, filePath } = await actions.runModule({ module, reference });
-      if (job.state === 'failed') {
-        throw new Error(
-          `${module} v${String(version.number)} en échec :\n${job.log}\nRelancer : jf run ${module} ${reference}`,
-        );
+      const queuedJob = await actions.runModule({ module, reference });
+      process.stdout.write(`${module} de l'Offre ${reference} en file (job ${String(queuedJob.id)}).\n`);
+      if (!isWaiting) {
+        process.stdout.write(`Le worker la produira. « jf versions ${reference} ${module} » suit ses Versions.\n`);
+        return;
       }
-      process.stdout.write(`${module} v${String(version.number)} prête et retenue : ${filePath}\n`);
+      process.stdout.write('Attente du worker (service lpm worker) : Claude Code peut prendre plusieurs minutes…\n');
+      const { state, version, log } = await actions.followJob({ jobId: queuedJob.id });
+      const name = version === null ? module : `${module} v${String(version.number)}`;
+      if (state === 'failed') {
+        throw new Error(`${name} en échec :\n${log}\nRelancer : jf run ${module} ${reference}`);
+      }
+      process.stdout.write(`${name} prête et retenue. « jf versions ${reference} ${module} » liste ses Versions.\n`);
+    },
+  },
+  destinataires: {
+    description: 'Affiche à qui adresser la candidature, selon la Lettre retenue : jf destinataires <offre>',
+    run: async (actions, [reference]) => {
+      if (reference === undefined) {
+        throw new Error('Usage : jf destinataires <offre>, par exemple jf destinataires 2026-2445600.');
+      }
+      const { to, ccList, salutation, justification } = await actions.readRecipients({ reference });
+      const salutationSource = salutation.source === null ? '' : ` (${FIELD_LABEL_BY_SOURCE[salutation.source]})`;
+      const lineList = [
+        `Destinataire : ${to === null ? "aucune adresse dans l'Offre" : formatAddress(to)}`,
+        `Copie : ${ccList.length === 0 ? 'aucune' : ccList.map((address) => formatAddress(address)).join(', ')}`,
+        `Formule d'appel : ${salutation.text}${salutationSource}`,
+        `Justification : ${justification}`,
+      ];
+      process.stdout.write(`${lineList.join('\n')}\n`);
     },
   },
   versions: {
@@ -150,6 +280,13 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       await actions.openProfil({ candidatId });
     },
   },
+  edit: {
+    description:
+      'Modifie un Artefact avec Claude Code, Offre et Artefact proposés si absents : jf edit [<offre> [<artefact>]]',
+    run: async (actions, argumentList) => {
+      await actions.openArtefact(await chooseArtefact(actions, argumentList));
+    },
+  },
 };
 
 const COMMAND_LINE_LIST = [
@@ -169,7 +306,7 @@ const HELP = [
 
 async function run(): Promise<void> {
   const { values, positionals: positionalList } = parseArgs({
-    options: { help: { type: 'boolean', short: 'h' } },
+    options: { help: { type: 'boolean', short: 'h' }, wait: { type: 'boolean' } },
     allowPositionals: true,
   });
   const [commandName, ...argumentList] = positionalList;
@@ -181,7 +318,9 @@ async function run(): Promise<void> {
   if (command === undefined) {
     throw new Error(`Commande inconnue : ${commandName}. « jf help » liste les commandes.`);
   }
-  await command.run(await createActions({ dataDirectory: DATA_DIRECTORY }), argumentList);
+  await command.run(await createActions({ dataDirectory: DATA_DIRECTORY }), argumentList, {
+    isWaiting: values.wait === true,
+  });
 }
 
 try {

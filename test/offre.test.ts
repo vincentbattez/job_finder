@@ -46,6 +46,7 @@ describe('the fiche of an Offre', () => {
     );
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await actions.runQueuedJobs();
 
     const { artefactList } = await actions.readOffre({ reference: REFERENCE });
 

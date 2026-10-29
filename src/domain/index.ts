@@ -86,8 +86,12 @@ export const ARTEFACT_SCHEMA = z.enum(['recherche', 'lettre', 'fiche_entretien',
 
 export type Artefact = z.infer<typeof ARTEFACT_SCHEMA>;
 
-// A Version that another Version read as input
-const READ_VERSION_SCHEMA = z.object({ artefact: ARTEFACT_SCHEMA, number: z.int() });
+// A Version that another Version read as input, of its own Offre or of another one
+const READ_VERSION_SCHEMA = z.object({
+  artefact: ARTEFACT_SCHEMA,
+  number: z.int(),
+  offre: z.object({ reference: z.string() }),
+});
 
 // Each launch of a module creates a new Version, which keeps the Consignes it was produced with
 // and the Versions it read
@@ -105,7 +109,8 @@ export const VERSION_SCHEMA = z
 
 export type Version = z.infer<typeof VERSION_SCHEMA>;
 
-// A job runs a module on an Offre; a module is named after the Artefact it produces
+// A job runs a module on an Offre; a module is named after the Artefact it produces. Its Version
+// exists once the job runs.
 export const JOB_SCHEMA = z
   .object({
     id: z.int(),
@@ -114,6 +119,7 @@ export const JOB_SCHEMA = z
     state: z.enum(['queued', 'running', 'done', 'failed']),
     log: z.string(),
     sessionId: z.string().nullable(),
+    version: VERSION_SCHEMA.nullable(),
   })
   .brand<'Domain'>();
 
@@ -125,6 +131,26 @@ export const MODULE_RUN_SCHEMA = z
   .brand<'Domain'>();
 
 export type ModuleRun = z.infer<typeof MODULE_RUN_SCHEMA>;
+
+// The field of the Offre a recommendation comes from, as published: the mail de candidature or a
+// contact
+const CONTACT_FIELD_SCHEMA = z.enum(['applicationEmail', 'contact1', 'contact2']);
+
+const ADDRESS_SCHEMA = z.object({ email: z.email(), source: CONTACT_FIELD_SCHEMA });
+
+// To whom the Lettre recommends sending the application, and why: the recipient (null when no
+// field gives an address), the copies and the salutation, each with the field it comes from. A
+// generic salutation comes from no field.
+export const RECIPIENTS_SCHEMA = z
+  .object({
+    to: ADDRESS_SCHEMA.nullable(),
+    ccList: z.array(ADDRESS_SCHEMA),
+    salutation: z.object({ text: z.string().min(1), source: CONTACT_FIELD_SCHEMA.nullable() }),
+    justification: z.string().min(1),
+  })
+  .brand<'Domain'>();
+
+export type Recipients = z.infer<typeof RECIPIENTS_SCHEMA>;
 
 // A Markdown file of a Version, such as the Brouillon or the Lettre of a Lettre Version
 const DOCUMENT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string() });

@@ -5,14 +5,18 @@ import { z } from 'zod/v4';
 export interface IInteractiveSession {
   prompt: string;
   directory: string;
+  // Given, the session is confined to its directory, and may never change these paths or globs
+  readOnlyPathList?: string[];
 }
 
 // The two parts of a module's prompt (ADR-0003): the fixed part, then the Consignes. The session
-// reads in its directory and may write only in its output folder.
+// reads in its directory and in the other folders it is given, and may write only in its output
+// folder.
 export interface IHeadlessSession {
   fixedPrompt: string;
   consignes: string;
   directory: string;
+  readDirectoryList: string[];
   outputDirectory: string;
 }
 
@@ -76,8 +80,26 @@ export const CLAUDE_CODE: IAiSession = {
   // The fixed prompt goes into the system prompt so the Candidat does not see it as their own
   // message; the opening line only gets Claude to speak first. The manual mode, whatever the
   // user's settings say, shows the Candidat each file edit and waits for their consent.
-  openInteractive({ prompt, directory }) {
-    const argumentList = ['--permission-mode', 'manual', '--append-system-prompt', prompt, 'Bonjour !'];
+  // A confined session has no shell that could get round its read-only paths, no web, nothing
+  // outside its directory, and none of the user's CLAUDE.md, hooks or MCP servers.
+  openInteractive({ prompt, directory, readOnlyPathList }) {
+    const confinementList =
+      readOnlyPathList === undefined
+        ? []
+        : [
+            '--restricted',
+            '--safe-mode',
+            // An absolute path takes a double slash in a permission rule
+            ...readOnlyPathList.flatMap((readOnlyPath) => ['--disallowedTools', `Edit(/${readOnlyPath})`]),
+          ];
+    const argumentList = [
+      ...confinementList,
+      '--permission-mode',
+      'manual',
+      '--append-system-prompt',
+      prompt,
+      'Bonjour !',
+    ];
     const { status, error } = spawnSync('claude', argumentList, {
       cwd: directory,
       env: subscriptionEnvironment(),
@@ -95,7 +117,7 @@ export const CLAUDE_CODE: IAiSession = {
   // no Consignes can lift its rules. The safe mode leaves out the user's CLAUDE.md, hooks, skills
   // and MCP servers; dontAsk refuses any tool not listed, so the session reads, searches the web
   // and writes only in its output folder. Never fails: a session that cannot run is a failed one.
-  async runHeadless({ fixedPrompt, consignes, directory, outputDirectory }) {
+  async runHeadless({ fixedPrompt, consignes, directory, readDirectoryList, outputDirectory }) {
     const argumentList = [
       '-p',
       '--output-format',
@@ -113,6 +135,7 @@ export const CLAUDE_CODE: IAiSession = {
       'WebFetch',
       // An absolute path takes a double slash in a permission rule
       `Edit(/${outputDirectory}/**)`,
+      ...readDirectoryList.flatMap((readDirectory) => ['--add-dir', readDirectory]),
       '--append-system-prompt',
       fixedPrompt,
     ];

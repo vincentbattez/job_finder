@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { createActions } from '#/actions/index.ts';
+import { createActions, type Actions } from '#/actions/index.ts';
 import { RECHERCHE_DEFAULT_CONSIGNES } from '#/modules/recherche/consignes.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
@@ -38,17 +38,23 @@ async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
   };
 }
 
+// Launching a module queues its job, which the worker runs (ADR-0003)
+async function runRecherche(actions: Actions) {
+  const { id } = await actions.runModule({ module: 'recherche', reference: REFERENCE });
+  await actions.runQueuedJobs();
+  return actions.followJob({ jobId: id });
+}
+
 describe('recherche', () => {
   it('produces the Recherche of an Offre as its first Version, retained', async () => {
     const aiSession = createFakeAiSession({ fileByName: { 'recherche.md': RECHERCHE } });
     const { actions, offreDirectory } = await detectOffres(aiSession);
 
-    const { job, version, filePath } = await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    const job = await runRecherche(actions);
 
     expect(job).toMatchObject({ module: 'recherche', state: 'done', sessionId: 'fake-session-1' });
-    expect(version).toMatchObject({ artefact: 'recherche', number: 1, state: 'ready', isRetenue: true });
-    expect(filePath).toBe(path.join(offreDirectory, 'recherche/v1/recherche.md'));
-    expect(readFileSync(filePath, 'utf8')).toBe(RECHERCHE);
+    expect(job.version).toMatchObject({ artefact: 'recherche', number: 1, state: 'ready', isRetenue: true });
+    expect(readFileSync(path.join(offreDirectory, 'recherche/v1/recherche.md'), 'utf8')).toBe(RECHERCHE);
   });
 
   it('creates a new Version at each launch without overwriting the previous ones, and retains the latest', async () => {
@@ -59,8 +65,8 @@ describe('recherche', () => {
     );
     const { actions, offreDirectory } = await detectOffres(aiSession);
 
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await runRecherche(actions);
+    await runRecherche(actions);
 
     const versionList = await actions.listVersions({ reference: REFERENCE, artefact: 'recherche' });
     expect(versionList.map(({ number, isRetenue }) => ({ number, isRetenue }))).toEqual([
@@ -74,8 +80,8 @@ describe('recherche', () => {
   it('retains the Version the Candidat chooses', async () => {
     const recherche = { fileByName: { 'recherche.md': RECHERCHE } };
     const { actions } = await detectOffres(createFakeAiSession(recherche, recherche));
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await runRecherche(actions);
+    await runRecherche(actions);
 
     await actions.retenirVersion({ reference: REFERENCE, artefact: 'recherche', number: '1' });
 
@@ -90,7 +96,7 @@ describe('recherche', () => {
     const aiSession = createFakeAiSession({ fileByName: { 'recherche.md': RECHERCHE } });
     const { actions, offreDirectory } = await detectOffres(aiSession);
 
-    const { version } = await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    const { version } = await runRecherche(actions);
 
     expect(aiSession.headlessSessionList).toHaveLength(1);
     expect(aiSession.headlessSessionList[0]).toMatchObject({
@@ -110,11 +116,11 @@ describe('recherche', () => {
     mkdirSync(path.join(dataDirectory, 'candidats/lea/consignes'));
     writeFileSync(path.join(dataDirectory, 'candidats/lea/consignes/recherche.md'), consignes);
 
-    const { version } = await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    const { version } = await runRecherche(actions);
 
     expect(aiSession.headlessSessionList[0]?.consignes).toBe(consignes);
     expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain("N'invente jamais un fait.");
-    expect(version.consignes).toBe(consignes);
+    expect(version?.consignes).toBe(consignes);
   });
 });
 
@@ -129,14 +135,14 @@ describe('a launch refused', () => {
     expect(aiSession.headlessSessionList).toEqual([]);
   });
 
-  it.each(['lettre', 'inconnu'])(
+  it.each(['fiche_entretien', 'inconnu'])(
     'refuses the module « %s », not available, without launching Claude',
     async (module) => {
       const aiSession = createFakeAiSession();
       const { actions } = await detectOffres(aiSession);
 
       await expect(actions.runModule({ module, reference: REFERENCE })).rejects.toThrow(
-        new RegExp(String.raw`Module inconnu : ${module}\. Modules : recherche\.`),
+        new RegExp(String.raw`Module inconnu : ${module}\. Modules : recherche, lettre\.`),
       );
       expect(aiSession.headlessSessionList).toEqual([]);
     },
@@ -164,21 +170,21 @@ describe('a Recherche that fails', () => {
   ])('puts the Version and the job « en échec » when $problem', async ({ plannedRun, log }) => {
     const { actions } = await detectOffres(createFakeAiSession(plannedRun));
 
-    const { job, version } = await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    const job = await runRecherche(actions);
 
     expect(job.state).toBe('failed');
     expect(job.log).toMatch(log);
-    expect(version).toMatchObject({ number: 1, state: 'failed', isRetenue: false });
+    expect(job.version).toMatchObject({ number: 1, state: 'failed', isRetenue: false });
   });
 
   it('keeps the Version retenue when a new launch fails, and can be launched again', async () => {
     const recherche = { fileByName: { 'recherche.md': RECHERCHE } };
     const { actions } = await detectOffres(createFakeAiSession(recherche, {}, recherche));
 
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await runRecherche(actions);
+    await runRecherche(actions);
     const afterFailureVersionList = await actions.listVersions({ reference: REFERENCE, artefact: 'recherche' });
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await runRecherche(actions);
 
     expect(afterFailureVersionList.map(({ number, state, isRetenue }) => ({ number, state, isRetenue }))).toEqual([
       { number: 1, state: 'ready', isRetenue: true },
@@ -204,7 +210,7 @@ describe('a Recherche that fails', () => {
 
   it('refuses to retain a Version « en échec »', async () => {
     const { actions } = await detectOffres(createFakeAiSession({}));
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await runRecherche(actions);
 
     await expect(actions.retenirVersion({ reference: REFERENCE, artefact: 'recherche', number: 1 })).rejects.toThrow(
       /recherche v1 de l'Offre 2026-2445600 est en échec/,
