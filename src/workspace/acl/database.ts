@@ -28,8 +28,8 @@ import type { Config } from './config.ts';
 const ROOT_DIRECTORY = path.join(import.meta.dirname, '..', '..', '..');
 const PRISMA_CLI_PATH = fileURLToPath(import.meta.resolve('prisma/build/index.js'));
 
-const JOB_INCLUDE = { offre: true };
 const VERSION_INCLUDE = { inputList: { select: { artefact: true, number: true } } };
+const JOB_INCLUDE = { offre: true, version: { include: VERSION_INCLUDE } };
 
 export interface INewOffre {
   candidatId: string;
@@ -97,7 +97,14 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       const [, version] = await prisma.$transaction([
         prisma.job.update({ where: { id }, data: { state: 'running' } }),
         prisma.version.create({
-          data: { offreId: offre.id, artefact: module, number: (max.number ?? 0) + 1, state: 'running', consignes },
+          data: {
+            offreId: offre.id,
+            artefact: module,
+            number: (max.number ?? 0) + 1,
+            state: 'running',
+            consignes,
+            jobId: id,
+          },
           include: VERSION_INCLUDE,
         }),
       ]);
@@ -124,6 +131,42 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
           }),
         ),
       };
+    },
+
+    async findJob(id: number): Promise<Job | null> {
+      const job = await prisma.job.findUnique({ where: { id }, include: JOB_INCLUDE });
+      return job === null ? null : JOB_SCHEMA.parse(job);
+    },
+
+    // The oldest queued job, now running, unless a job is already running: a single Claude session
+    // at a time (ADR-0003). One statement, so SQLite claims it atomically, even for two workers.
+    async claimNextJob(): Promise<Job | null> {
+      const claimedList = z.array(z.object({ id: z.int() })).parse(
+        await prisma.$queryRaw`
+          UPDATE "Job" SET "state" = 'running'
+          WHERE "id" = (SELECT "id" FROM "Job" WHERE "state" = 'queued' ORDER BY "id" LIMIT 1)
+            AND NOT EXISTS (SELECT 1 FROM "Job" WHERE "state" = 'running')
+          RETURNING "id"`,
+      );
+      const [claimed] = claimedList;
+      return claimed === undefined
+        ? null
+        : JOB_SCHEMA.parse(await prisma.job.findUniqueOrThrow({ where: { id: claimed.id }, include: JOB_INCLUDE }));
+    },
+
+    // Fails the running jobs and their Versions, keeping the reason in the job's log
+    async failRunningJobs(log: string): Promise<Job[]> {
+      const runningList = await prisma.job.findMany({ where: { state: 'running' }, select: { id: true } });
+      const idList = runningList.map(({ id }) => id);
+      await prisma.$transaction([
+        prisma.version.updateMany({ where: { jobId: { in: idList } }, data: { state: 'failed' } }),
+        prisma.job.updateMany({ where: { id: { in: idList } }, data: { state: 'failed', log } }),
+      ]);
+      return z
+        .array(JOB_SCHEMA)
+        .parse(
+          await prisma.job.findMany({ where: { id: { in: idList } }, include: JOB_INCLUDE, orderBy: { id: 'asc' } }),
+        );
     },
 
     async listVersions(offre: Offre, artefact: Artefact): Promise<Version[]> {

@@ -78,6 +78,9 @@ model Version {
   inputList  Version[]    @relation("Input")
   readByList Version[]    @relation("Input")
   createdAt  DateTime     @default(now())
+  // The job that produced this Version, so a job can be followed to its Version
+  job        Job?         @relation(fields: [jobId], references: [id])
+  jobId      Int?         @unique
 
   @@unique([offreId, artefact, number])
 }
@@ -103,6 +106,7 @@ model Job {
   state     JobState @default(queued)
   log       String   @default("")
   sessionId String?
+  version   Version?
 }
 
 enum JobState {
