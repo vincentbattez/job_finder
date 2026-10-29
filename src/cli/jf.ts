@@ -7,7 +7,7 @@ const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
 
 interface ICommand {
   description: string;
-  run: (actions: Actions) => Promise<void>;
+  run: (actions: Actions, argumentList: string[]) => Promise<void>;
 }
 
 // The CLI only relays to the actions: no business rule here (ADR-0003)
@@ -19,6 +19,15 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       for (const candidat of candidatList) {
         process.stdout.write(`${candidat.id}\t${candidat.name}\n`);
       }
+    },
+  },
+  profil: {
+    description: "Complète le Profil d'un Candidat avec Claude Code : jf profil <candidat>",
+    run: async (actions, [candidatId]) => {
+      if (candidatId === undefined) {
+        throw new Error('Usage : jf profil <candidat>. « jf candidats » liste les Candidats.');
+      }
+      await actions.openProfil({ candidatId });
     },
   },
 };
@@ -43,7 +52,7 @@ async function run(): Promise<void> {
     options: { help: { type: 'boolean', short: 'h' } },
     allowPositionals: true,
   });
-  const [commandName] = positionalList;
+  const [commandName, ...argumentList] = positionalList;
   if (commandName === undefined || commandName === 'help' || values.help === true) {
     process.stdout.write(HELP);
     return;
@@ -52,7 +61,7 @@ async function run(): Promise<void> {
   if (command === undefined) {
     throw new Error(`Commande inconnue : ${commandName}. « jf help » liste les commandes.`);
   }
-  await command.run(await createActions({ dataDirectory: DATA_DIRECTORY }));
+  await command.run(await createActions({ dataDirectory: DATA_DIRECTORY }), argumentList);
 }
 
 try {
