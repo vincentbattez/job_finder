@@ -1,5 +1,7 @@
 import { useId, type ReactNode } from 'react';
 
+import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/actions/labels.ts';
+
 import { EtatBadge, StatutBadge, type Etat } from './badge.tsx';
 import { DateText } from './date.tsx';
 import { Markdown } from './markdown.tsx';
@@ -8,13 +10,6 @@ import { Recipients, type IRecipients } from './recipients.tsx';
 import { RepublicationFacts, type IRepublication } from './republication.tsx';
 
 type Artefact = 'recherche' | 'lettre' | 'fiche_entretien' | 'visualisation';
-
-export const ARTEFACT_LABEL_BY_ARTEFACT: Record<Artefact, string> = {
-  recherche: 'Recherche',
-  lettre: 'Lettre',
-  fiche_entretien: 'Fiche d’entretien',
-  visualisation: 'Visualisation',
-};
 
 type VersionState = 'running' | 'ready' | 'failed';
 
@@ -27,8 +22,8 @@ export const ETAT_BY_VERSION_STATE: Record<VersionState, Etat> = {
 export interface IArtefactVersions {
   artefact: Artefact;
   etat: Etat;
-  // The module that produces the Artefact, if any yet, and why it cannot run now
-  module: { refusal: string | null } | null;
+  // The module that produces the Artefact, and why it cannot run now
+  module: { refusal: string | null };
   // Given by the action: jf edit opens its Version retenue
   isEditable: boolean;
   versionList: {
@@ -37,6 +32,7 @@ export interface IArtefactVersions {
       state: VersionState;
       isRetenue: boolean;
       hasCandidatConsignes: boolean;
+      consignes: string;
       createdAt: Date;
     };
     isRetenable: boolean;
@@ -64,9 +60,7 @@ const NON_PRECISE = <span className="missing">Non précisé</span>;
 // A mail written in free text, as Avesnes publishes it, stays as published rather than a broken link
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 
-// The fiche is a page of its own, or one sample among others on /design. The label and its
-// Artefacts on one side; on the other, to whom to write and the Fiche de poste, folded since it is
-// long as published. The children go at the foot of the label, below its statut.
+// A page of its own, or a sample on /design; the Fiche de poste is folded, long as published
 export function OffreFiche({
   fiche,
   isPage = false,
@@ -85,7 +79,7 @@ export function OffreFiche({
         <header className="fiche__label">
           <div className="fiche__title">
             <TITLE_TAG>{offre.title}</TITLE_TAG>
-            <StatutBadge statut={offre.status} isExpiree={offre.isExpiree} />
+            <StatutBadge statut={offre.statut} isExpiree={offre.isExpiree} />
           </div>
           <p>{[offre.workplace, offre.employer].filter(Boolean).join(', ')}</p>
           <dl className="fiche__facts">

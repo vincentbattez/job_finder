@@ -10,7 +10,7 @@ datasource db {
 }
 
 // Candidats and Veilles are copied from data/config.json at every launch: the config is
-// their source of truth, never edit these rows.
+// their source of truth, never edit these rows, except Veille.detectedAt, which only jf writes.
 model Candidat {
   id         String   @id
   name       String
@@ -19,13 +19,16 @@ model Candidat {
 }
 
 model Veille {
-  id         String   @id
-  candidat   Candidat @relation(fields: [candidatId], references: [id])
+  id         String    @id
+  candidat   Candidat  @relation(fields: [candidatId], references: [id])
   candidatId String
   source     String
   // Shaped by the Source
   criteria   Json
   zone       Json
+  // When a Détection of this Veille last went through; null during its first launch, which may take
+  // several Détections when one is cut off
+  detectedAt DateTime?
 }
 
 model Offre {
@@ -47,7 +50,10 @@ model Offre {
   applicationEmail  String?
   contact1          String?
   contact2          String?
-  status            OffreStatus @default(a_traiter)
+  statut            OffreStatut @default(a_traiter) @map("status")
+  // When the Offre was first marked Postulée: its Lettre retenue, the one sent, stays frozen even
+  // once it is Archivée
+  postuleeAt        DateTime?
   republicationOf   Offre?      @relation("Republication", fields: [republicationOfId], references: [id])
   republicationOfId Int?
   republicationList Offre[]     @relation("Republication")
@@ -59,7 +65,7 @@ model Offre {
   @@unique([candidatId, source, reference])
 }
 
-enum OffreStatus {
+enum OffreStatut {
   a_traiter
   postulee
   archivee

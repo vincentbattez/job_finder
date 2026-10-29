@@ -13,7 +13,8 @@ jf detect                                      # cherche les nouvelles Offres de
 jf import offre.md lea                         # importe une Fiche de poste en Markdown trouvée ailleurs : le worker en relève les champs avec Claude, puis met sa Recherche en file ; --wait attend l'extraction
 jf run extraction import-1a2b3c4d5e            # relance l'extraction des champs d'une Offre importée, après un échec
 jf list lea                                    # liste les Offres d'un Candidat, avec leur statut et celles qui sont Expirées
-jf postuler 2026-2445600                       # passe une Offre en Postulée, ce qui fige sa Lettre ; jf archiver l'archive
+jf postuler 2026-2445600                       # passe une Offre en Postulée, ce qui fige sa Lettre pour de bon : Postulée ne s'annule jamais
+jf archiver 2026-2445600                       # archive une Offre, Postulée ou non ; jf postuler la remet en Postulée si elle l'a été, jf traiter sinon la remet À traiter
 jf run recherche 2026-2445600                  # met en file une nouvelle Version de la Recherche d'une Offre ; --wait attend que le worker l'ait produite
 jf run lettre 2026-2445600                     # met en file une nouvelle Version de la Lettre, sur la Recherche retenue
 jf run fiche 2026-2445600                      # met en file une nouvelle Version de la Fiche d'entretien, sur la Recherche retenue, et la Lettre retenue s'il y en a une
@@ -31,11 +32,11 @@ jf consignes lea lettre remplacer < c.md       # remplace les Consignes de la Le
 
 ## Front
 
-Le front, service lpm `web` déclaré dans `.lpm.yml` (`mise run web`), sert les Offres de `data/` sur le port 5180, sans authentification : il n'est joignable qu'en LAN et via WireGuard, jamais depuis internet (ADR-0002). On l'ouvre par l'adresse IP du Mac mini ou par son nom `.local`, par exemple `http://mac-mini-vincent.local:5180`. Le Candidat se choisit dans le menu du haut, mémorisé par un cookie ; la fiche de chaque Offre montre ses contacts bruts, les destinataires recommandés par la Lettre retenue, la Fiche de poste et toutes les Versions de chaque Artefact, avec la commande `jf edit` à copier et les Consignes qui ont produit chaque Version. La Visualisation s'y lit dans un cadre isolé, qui n'exécute aucun script et ne charge rien de l'extérieur ; on la relance, sans jamais la modifier à la main. La page Profil modifie les fichiers du Profil du Candidat ; la page Consignes montre les Consignes par défaut de chaque module, et y crée, modifie ou supprime celles du Candidat. La partie fixe des prompts n'y apparaît pas : elle reste dans le code.
+Le front, service lpm `web` déclaré dans `.lpm.yml` (`mise run web`), sert les Offres de `data/` sur le port 5180, sans authentification : il n'est joignable qu'en LAN et via WireGuard, jamais depuis internet (ADR-0002). On l'ouvre par l'adresse IP du Mac mini ou par son nom `.local`, par exemple `http://mac-mini-vincent.local:5180`. Le Candidat se choisit dans le menu du haut, mémorisé par un cookie ; la fiche de chaque Offre montre ses contacts bruts, les destinataires recommandés par la Lettre retenue, la Fiche de poste et toutes les Versions de chaque Artefact, avec la commande `jf edit` à copier et les Consignes qui ont produit chaque Version : leur origine, et leur texte replié, pour comparer deux Versions. La Visualisation s'y lit dans un cadre isolé, qui n'exécute aucun script et ne charge rien de l'extérieur ; on la relance, sans jamais la modifier à la main. La page Profil modifie les fichiers du Profil du Candidat ; la page Consignes montre les Consignes par défaut de chaque module, et y crée, modifie ou supprime celles du Candidat. La partie fixe des prompts n'y apparaît pas : elle reste dans le code.
 
 Sur la fiche, chaque Artefact montre son état (absent, en cours, prêt, en échec) et le bouton de son module : il met le job en file, comme `jf run`, et le worker l'exécute. Le bouton attend tant qu'il manque au module une entrée, par exemple une Recherche retenue pour la Lettre, et dit laquelle. L'état se met à jour tout seul jusqu'à ce que le job soit fini. La liste des Offres a un bouton « Lancer une Détection », la même action que `jf detect`, qui dit ce qu'elle a trouvé pour chaque Veille. Une Fiche de poste en Markdown glissée sur la liste, ou choisie avec « Importer une Fiche de poste », devient aussitôt une Offre, au nom de son fichier, comme avec `jf import` ; sa fiche suit l'extraction de ses champs par le worker, et la relance après un échec. Comme le worker, le front lit `.env` pour les notifications.
 
-`JF_DATA_DIRECTORY` sert le front sur un autre dossier : `JF_DATA_DIRECTORY=dev-data mise run web` pour les Offres factices.
+Pour développer, `mise run web:dev` sert le front de `dev-data/`, les Offres factices de `mise run db:seed`, sur le port 5181 de cette machine seulement, sans `.env` : aucune notification ne part. `JF_DATA_DIRECTORY` nomme ce dossier.
 
 ## Worker
 
@@ -50,9 +51,10 @@ L'automation lpm `detect`, déclarée dans `.lpm.yml`, lance `jf detect` chaque 
 Le Candidat est notifié sur son téléphone :
 
 - d'une nouvelle Offre dans sa Zone, avec son titre, sa juridiction et sa Date limite. Rien n'est envoyé au premier lancement, ni quand la Détection ne trouve rien ;
+- de la Republication d'une Offre : dans sa Zone, en nommant l'Offre qu'elle publie à nouveau ; quelle que soit la Zone quand cette Offre a été Postulée, et aucune Recherche n'est alors lancée ;
 - d'une Recherche prête, quand le worker l'a produite.
 
-Le seul canal est Home Assistant. La cible de chaque Candidat est le service `notify.mobile_app_*` de son téléphone, dans `data/config.json`. L'URL de Home Assistant et un token longue durée (profil Home Assistant, onglet Sécurité) vont dans `.env`, hors de git, sur le modèle de `.env.example`. `jf` et le worker le lisent au lancement. Une notification qui ne part pas n'empêche rien : la Détection enregistre d'abord toutes les nouvelles Offres et met leur Recherche en file, puis échoue avec un message qui dit quoi vérifier. Le worker, lui, ne s'arrête pas : il écrit l'échec dans son log (`lpm logs worker`) et continue la file.
+Le seul canal est Home Assistant. La cible de chaque Candidat est le service `notify.mobile_app_*` de son téléphone, dans `data/config.json`. L'URL de Home Assistant et un token longue durée (profil Home Assistant, onglet Sécurité) vont dans `.env`, hors de git, sur le modèle de `.env.example`. `jf` et le worker le lisent au lancement. Une notification qui ne part pas n'empêche rien : la Détection enregistre d'abord toutes les nouvelles Offres et met leur Recherche en file ; `jf detect` affiche alors ce qu'elle a trouvé, puis chaque notification non envoyée avec ce qu'il faut vérifier, et sort en erreur. Le worker, lui, ne s'arrête pas : il écrit l'échec dans son log (`lpm logs worker`) et continue la file.
 
 ## Données
 
@@ -61,7 +63,7 @@ Tout vit dans `data/`, hors de git et sans sauvegarde :
 - `config.json` : les Candidats, leurs Veilles et leur cible de notification, et le délai par défaut. Le modèle versionné est `config.example.json` ;
 - `job_finder.sqlite` : la base, migrée à chaque lancement ;
 - `candidats/<id>/profil/` : le Profil de chaque Candidat, en fichiers Markdown : `faits.md`, `cv.md` et une `lettre-<employeur>-<année>.md` par lettre passée. `jf profil <candidat>` les écrit et les complète au fil d'une session Claude Code interactive ;
-- `candidats/<id>/offres/<référence>-<titre>/` : un dossier par Offre, avec sa Fiche de poste (`fiche-de-poste.md`) sauvegardée dès la Détection, et un dossier par Version de chaque Artefact, par exemple `recherche/v2/recherche.md`. Une Version de la Lettre (`lettre/v<n>/`) contient le Brouillon (`brouillon.md`, en lecture seule), la Lettre à corriger (`lettre.md`, d'abord sa copie) et les destinataires recommandés (`destinataires.json`). Une Version de la Fiche d'entretien (`fiche_entretien/v<n>/fiche-entretien.md`) a toujours les sections « À réviser », « Moyens mnémotechniques », « Présentez-vous » et « Questions probables ». Une Version de la Visualisation (`visualisation/v<n>/visualisation.html`) est une page HTML autonome, sans script ;
+- `candidats/<id>/offres/<référence>-<titre>/` : un dossier par Offre, avec sa Fiche de poste (`fiche-de-poste.md`) sauvegardée dès la Détection, et un dossier par Version de chaque Artefact, par exemple `recherche/v2/recherche.md`. Une Version de la Lettre (`lettre/v<n>/`) contient le Brouillon (`brouillon.md`, en lecture seule), la Lettre à corriger (`lettre.md`, d'abord sa copie) et les destinataires recommandés (`destinataires.json`). Une Version de la Fiche d'entretien (`fiche_entretien/v<n>/fiche-entretien.md`) commence par un titre ; ses Consignes par défaut l'organisent en « À réviser », « Moyens mnémotechniques », « Présentez-vous » et « Questions probables », et celles du Candidat peuvent l'organiser autrement. Une Version de la Visualisation (`visualisation/v<n>/visualisation.html`) est une page HTML autonome, sans script ;
 - `candidats/<id>/consignes/<artefact>.md` : les Consignes d'un module que le Candidat a remplacées, par exemple `recherche.md`. Sans ce fichier, le module suit ses Consignes par défaut.
 
 `dev-data/` a la même forme, avec des Offres factices pour le développement. Les commandes Prisma et les tasks `db:` ne touchent qu'à lui.
@@ -72,7 +74,7 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 
 ## Code
 
-- `src/actions/` : la couche d'actions, seule source de vérité de chaque fonctionnalité. La CLI et le front ne font que l'appeler (ADR-0003). Les tests passent par elle.
+- `src/actions/` : la couche d'actions, seule source de vérité de chaque fonctionnalité. La CLI et le front ne font que l'appeler (ADR-0003). Les tests passent par elle. `index.ts` (`createActions`) réunit un fichier par fonctionnalité : `detect.ts` (la Détection, qui lit les modules de Source et ne peut donc pas être un module), `import-fiche-de-poste.ts`, `statut.ts`, `profil.ts`, `consignes.ts`, `edition.ts`, `jobs.ts` et `offres.ts`, sur ce que partage `context.ts`.
 - `src/cli/` : la CLI `jf`, qui relaie vers les actions.
 - `src/worker/` : le worker, qui relaie lui aussi vers les actions : il vide la file de jobs. Seul lui exécute les jobs, ce que vérifie `test/architecture.test.ts`.
 - `src/web/` : le front React Router, qui relaie lui aussi vers les actions, ouvertes une fois pour tout le serveur dans `acl/actions.server.ts`. `/design` montre ses composants avec des Offres d'exemple. Les couleurs, les polices et les espacements sont des tokens de `src/web/tokens.css`.
@@ -82,7 +84,7 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 - `src/actions/run-job.ts` : l'exécution d'un job d'un module IA : la Version, le prompt en deux parties (partie fixe et Consignes), la vérification du fichier produit et la Version retenue.
 - `src/profil/` : le prompt fixe de `jf profil`.
 - `src/edit/` : le prompt fixe de `jf edit`, qui ouvre une session dans le dossier de l'Offre, sans shell ni web, où aucun Brouillon ne peut être modifié.
-- `src/statut/` : les règles du statut d'une Offre : le calcul d'Expirée, et le gel de la Lettre retenue d'une Offre Postulée.
+- `src/statut/` : les règles du statut d'une Offre : les statuts où elle peut passer, le calcul d'Expirée, et le gel de la Lettre retenue d'une Offre qui a été Postulée.
 - `src/modules/` : un dossier par module, avec un seul point d'entrée. Un module n'en importe jamais un autre, ce que vérifie `test/architecture.test.ts`. Un module IA, comme `recherche/`, a sa partie fixe du prompt dans `prompt.ts` et ses Consignes par défaut dans `consignes.ts`.
 - `src/modules/source-import/` : la Source Import Markdown. L'import enregistre l'Offre et met en file l'extraction de ses champs ; le worker la lance comme un module, dans une session Claude sans interface au prompt fixe, qui écrit `extraction/extraction.json` dans le dossier de l'Offre. `acl/extraction.ts` refuse toute valeur que la Fiche de poste ne contient pas telle quelle. Les champs remplissent l'Offre, dont le dossier suit le nouveau titre, puis sa Recherche est mise en file. La référence de l'Offre vient du contenu du fichier : importer deux fois le même fichier redonne la même Offre, sans nouveau job.
 - `src/modules/notification/` : le texte de chaque notification, et l'interface commune aux canaux. Seul `acl/home-assistant.ts` sait appeler Home Assistant.
@@ -103,6 +105,7 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 | `mise run test:unit`  | Vitest : les actions et l'architecture                            |
 | `mise run test:e2e`   | Playwright : les parcours du front                                |
 | `mise run web`        | Sert le front de `data/` sur le port 5180 : le service lpm `web`  |
+| `mise run web:dev`    | Sert le front de `dev-data/` sur le port 5181, pour développer    |
 | `mise run worker`     | Lance le worker sur `data/` : le service lpm `worker`             |
 | `mise run db:migrate` | Crée une migration depuis le schéma et l'applique à `dev-data/`   |
 | `mise run db:seed`    | Remplace les Offres de `dev-data/` par des Offres factices        |

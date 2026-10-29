@@ -1,26 +1,25 @@
 import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import type { Artefact, FicheDePoste, Lieu, Offre, Version } from '#/domain/index.ts';
+import {
+  FICHE_DE_POSTE_FILE_NAME,
+  type Artefact,
+  type FicheDePoste,
+  type Lieu,
+  type Offre,
+  type Version,
+} from '#/domain/index.ts';
+import { wordListOf } from '#/text/index.ts';
 
 import { loadConfig } from './acl/config.ts';
 import { openDatabase, type INewOffre } from './acl/database.ts';
 import { readMarkdownFiles, readTextFile } from './acl/files.ts';
 
-const FICHE_DE_POSTE_FILE_NAME = 'fiche-de-poste.md';
-
 function slugify(text: string): string {
-  return text
-    .normalize('NFD')
-    .replaceAll(/\p{M}/gu, '')
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, '-')
-    .replaceAll(/^-|-$/g, '');
+  return wordListOf(text).join('-');
 }
 
-// Opens the data folder: reads its config, migrates the database and copies the config into it,
-// and creates each Candidat's Profil folder on first launch. Safe to call on every launch. The
-// config and the database are only read in acl/: only domain types come out (ADR-0005).
+// Safe to call on every launch; the config and the database are only read in acl/ (ADR-0005)
 export async function openWorkspace(dataDirectory: string) {
   const config = loadConfig(path.join(dataDirectory, 'config.json'));
   const database = openDatabase(path.join(dataDirectory, 'job_finder.sqlite'), config.defaultDelayMonths);
@@ -96,12 +95,12 @@ export async function openWorkspace(dataDirectory: string) {
     async saveOffre(newOffre: INewOffre): Promise<Offre> {
       const offreDirectory = offreDirectoryOf({ candidatId: newOffre.candidatId, ...newOffre.listedOffre });
       mkdirSync(offreDirectory, { recursive: true });
-      writeFileSync(path.join(offreDirectory, FICHE_DE_POSTE_FILE_NAME), newOffre.fiche.markdown);
+      writeFileSync(path.join(offreDirectory, FICHE_DE_POSTE_FILE_NAME), newOffre.ficheDePoste.markdown);
       return database.createOffre(newOffre);
     },
 
     // The folder of an Offre is named after its title: it follows a new title
-    async fillOffre(offre: Offre, fields: { title: string; fiche: FicheDePoste; lieu: Lieu }): Promise<Offre> {
+    async fillOffre(offre: Offre, fields: { title: string; ficheDePoste: FicheDePoste; lieu: Lieu }): Promise<Offre> {
       const filledOffre = await database.fillOffre(offre, fields);
       renameSync(offreDirectoryOf(offre), offreDirectoryOf(filledOffre));
       return filledOffre;
@@ -111,7 +110,9 @@ export async function openWorkspace(dataDirectory: string) {
       const filePath = path.join(offreDirectoryOf(offre), FICHE_DE_POSTE_FILE_NAME);
       const ficheDePoste = readTextFile(filePath);
       if (ficheDePoste === null) {
-        throw new Error(`Fiche de poste introuvable pour l'Offre ${offre.reference} : ${filePath}`);
+        throw new Error(
+          `Fiche de poste introuvable pour l'Offre ${offre.reference} : ${filePath}. La remettre à cet emplacement, d'où l'outil la lit.`,
+        );
       }
       return ficheDePoste;
     },

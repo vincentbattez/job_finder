@@ -103,7 +103,7 @@ function readField(html: string, id: string): string | null {
 }
 
 // The fields are read by their element ids, stable across offers (ADR-0001)
-export async function readFiche(reference: string, httpFetch: typeof fetch = fetch): Promise<FicheDePoste> {
+export async function readFicheDePoste(reference: string, httpFetch: typeof fetch = fetch): Promise<FicheDePoste> {
   const url = `${ORIGIN}/offre-de-emploi/emploi_${reference.slice('AAAA-'.length)}.aspx`;
   const html = await get(httpFetch, url);
   const content = /id="contenu-ficheoffre"[^>]*>([\s\S]*?)<div class="ts-offer-page__cta is-bottom/.exec(html)?.[1];

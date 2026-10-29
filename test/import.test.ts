@@ -1,16 +1,11 @@
-import { copyFileSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
 
+import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // A Fiche de poste found elsewhere than on the Sources the Veilles read
 const FICHE_DE_POSTE = `# Greffier placé – Tribunal judiciaire de Lille
@@ -60,8 +55,7 @@ function extractionRun(extraction: Record<string, unknown> = EXTRACTION) {
 }
 
 async function openActions(aiSession: ReturnType<typeof createFakeAiSession>) {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
+  const dataDirectory = createDataDirectory();
   return createActions({
     dataDirectory,
     aiSession,
@@ -93,7 +87,9 @@ describe('import of a Fiche de poste in Markdown', () => {
       title: FILE_NAME,
       employer: null,
       url: null,
-      status: 'a_traiter',
+      statut: 'a_traiter',
+      // No Zone of a Veille holds it: the import queues its Recherche whatever the Zone
+      isInZone: false,
     });
     const { ficheDePoste, extraction } = await actions.readOffre({ reference: job.offre.reference });
     expect(ficheDePoste).toBe(FICHE_DE_POSTE);
@@ -207,6 +203,23 @@ describe('import of a Fiche de poste in Markdown', () => {
       contact2: null,
       isExpiree: false,
     });
+  });
+
+  // An imported Fiche de poste is published, for the tool, the day it is imported
+  it('makes an Offre without a Date limite Expirée once its import plus the default delay is over', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date('2026-10-29T12:00:00Z'));
+      const actions = await openActions(createFakeAiSession(extractionRun(EMPTY_EXTRACTION)));
+      const { fiche } = await importThenRunWorker(actions, 'Le greffier assiste les magistrats du tribunal.\n');
+      expect(fiche.offre).toMatchObject({ publishedAt: new Date('2026-10-29T12:00:00Z'), isExpiree: false });
+
+      vi.setSystemTime(new Date('2027-05-01T12:00:00Z'));
+
+      expect(await actions.listOffres({ candidatId: 'lea' })).toMatchObject([{ isExpiree: true }]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('refuses a field the Fiche de poste does not contain as is, which Claude invented', async () => {

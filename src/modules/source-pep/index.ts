@@ -1,15 +1,11 @@
 import type { Veille } from '#/domain/index.ts';
+import { wordListOf } from '#/text/index.ts';
 
-import { readFeed, readFiche } from './acl/talent-soft.ts';
+import { readFeed, readFicheDePoste } from './acl/talent-soft.ts';
 import { createTitleMatcher } from './title.ts';
 
 function normalizeCourtOfAppeal(name: string): string {
-  return name
-    .normalize('NFD')
-    .replaceAll(/\p{M}/gu, '')
-    .toUpperCase()
-    .replaceAll(/[^A-Z]+/g, ' ')
-    .trim();
+  return wordListOf(name).join(' ');
 }
 
 // The Source PEP: Place de l'Emploi Public, read through the feed of the DSJ (ADR-0001)
@@ -27,11 +23,12 @@ export function createPepSource(httpFetch?: typeof fetch) {
 
     // Downloads the detail page of an Offre. The Zone is read in the employing court of appeal,
     // never in the department the offer shows, which is sometimes wrong (ADR-0001).
-    async readFiche(reference: string, zone: Veille['zone']) {
-      const fiche = await readFiche(reference, httpFetch);
-      const courtOfAppeal = fiche.courtOfAppeal === null ? null : normalizeCourtOfAppeal(fiche.courtOfAppeal);
+    async readFicheDePoste(reference: string, zone: Veille['zone']) {
+      const ficheDePoste = await readFicheDePoste(reference, httpFetch);
+      const courtOfAppeal =
+        ficheDePoste.courtOfAppeal === null ? null : normalizeCourtOfAppeal(ficheDePoste.courtOfAppeal);
       const isInZone = zone.courtOfAppealList.some((name) => normalizeCourtOfAppeal(name) === courtOfAppeal);
-      return { fiche, isInZone };
+      return { ficheDePoste, isInZone };
     },
   };
 }

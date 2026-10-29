@@ -1,17 +1,13 @@
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { createActions, type Actions } from '#/actions/index.ts';
+import { type Actions } from '#/actions/index.ts';
 import { LETTRE_DEFAULT_CONSIGNES } from '#/modules/lettre/consignes.ts';
 
+import { detectOffres as detectRecordedOffres, LEA_OFFRES_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
-import { createRecordedFetch } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // Béthune, tribunal pour enfants: mail p.tj-bethune@justice.fr, contact 1 the présidente, contact 2
 // « secrétariat en copie : sec.p.tj-bethune@justice.fr » (responses recorded on 2026-10-29)
@@ -65,21 +61,8 @@ const UNSENT_RECIPIENTS = {
 };
 
 async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  const notificationChannel = createFakeNotificationChannel();
-  const actions = await createActions({
-    dataDirectory,
-    aiSession,
-    fetch: createRecordedFetch().fetch,
-    notificationChannel,
-  });
-  await actions.detect();
-  return {
-    actions,
-    dataDirectory,
-    offreDirectory: path.join(dataDirectory, 'candidats/lea/offres', OFFRE_DIRECTORY_NAME),
-  };
+  const { actions, dataDirectory } = await detectRecordedOffres(aiSession);
+  return { actions, dataDirectory, offreDirectory: path.join(dataDirectory, LEA_OFFRES_PATH, OFFRE_DIRECTORY_NAME) };
 }
 
 // Launching a module queues its job, which the worker runs (ADR-0003)
@@ -136,7 +119,7 @@ describe('lettre', () => {
     const { actions, dataDirectory, offreDirectory } = await detectOffres(aiSession);
     await runModule(actions, 'recherche', SENT_REFERENCE);
     await runModule(actions, 'lettre', SENT_REFERENCE);
-    await actions.changeStatus({ reference: SENT_REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: SENT_REFERENCE, statut: 'postulee' });
     await runModule(actions, 'recherche', UNSENT_REFERENCE);
     await runModule(actions, 'lettre', UNSENT_REFERENCE);
     await runModule(actions, 'recherche', REFERENCE);
@@ -148,11 +131,8 @@ describe('lettre', () => {
     const profilDirectory = path.join(dataDirectory, 'candidats/lea/profil');
     const sentDirectory = path.join(dataDirectory, 'candidats/lea/offres', SENT_DIRECTORY_NAME, 'lettre/v1');
     const session = aiSession.headlessSessionList.at(-1);
-    expect(session?.readDirectoryList).toEqual([
-      profilDirectory,
-      path.join(offreDirectory, 'recherche/v1'),
-      sentDirectory,
-    ]);
+    // The folder of the Offre is the session's own: only the folders outside it are added
+    expect(session?.readDirectoryList).toEqual([profilDirectory, sentDirectory]);
     expect(session?.fixedPrompt).toContain('`fiche-de-poste.md`');
     expect(session?.fixedPrompt).toContain(`\`${path.join(offreDirectory, 'recherche/v1/recherche.md')}\``);
     expect(session?.fixedPrompt).toContain(`\`${profilDirectory}\``);
@@ -304,10 +284,10 @@ describe('a Lettre refused', () => {
     const { actions } = await detectOffres(aiSession);
     await runModule(actions, 'recherche', REFERENCE);
     await runModule(actions, 'lettre', REFERENCE);
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     await expect(actions.runModule({ module: 'lettre', reference: REFERENCE })).rejects.toThrow(
-      /L'Offre 2026-2445600 est Postulée : sa Lettre retenue est figée/,
+      /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/,
     );
     expect(aiSession.headlessSessionList).toHaveLength(2);
     const versionList = await actions.listVersions({ reference: REFERENCE, artefact: 'lettre' });
@@ -321,14 +301,14 @@ describe('a Lettre refused', () => {
     const { actions } = await detectOffres(aiSession);
     await runModule(actions, 'recherche', REFERENCE);
     const { id } = await actions.runModule({ module: 'lettre', reference: REFERENCE });
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     await actions.runQueuedJobs();
 
     expect(await actions.followJob({ jobId: id })).toMatchObject({
       state: 'failed',
       version: null,
-      log: /L'Offre 2026-2445600 est Postulée : sa Lettre retenue est figée/,
+      log: /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/,
     });
     expect(aiSession.headlessSessionList).toHaveLength(1);
     expect(await actions.listVersions({ reference: REFERENCE, artefact: 'lettre' })).toEqual([]);

@@ -1,6 +1,7 @@
 import { z } from 'zod/v4';
 
 import { LIEU_SCHEMA, type Lieu } from '#/domain/index.ts';
+import { wordListOf } from '#/text/index.ts';
 
 const ORIGIN = 'https://geo.api.gouv.fr';
 
@@ -16,15 +17,10 @@ const COMMUNE_SCHEMA = z.object({
 
 // Accents, case and hyphens set aside: « BOULOGNE SUR MER » is Boulogne-sur-Mer
 function normalize(name: string): string {
-  return name
-    .normalize('NFD')
-    .replaceAll(/\p{M}/gu, '')
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, ' ')
-    .trim();
+  return wordListOf(name).join(' ');
 }
 
-// API Géo, the State's directory of communes (spec « Coordonnées »): no key, no AI
+// API Géo, the State's directory of communes: no key, and no AI that could invent a place
 export function createApiGeo(httpFetch: typeof fetch = fetch) {
   return {
     // The commune named like the ville, the most populated one when several are. Its search is

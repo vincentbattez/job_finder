@@ -1,39 +1,24 @@
-import type { Artefact, Offre } from '#/domain/index.ts';
+import type { IPromptInput } from '#/ai-module/index.ts';
+import { FICHE_DE_POSTE_FILE_NAME } from '#/domain/index.ts';
 
-interface IFicheEntretienPromptInput {
-  offre: Offre;
-  outputDirectory: string;
-  readVersionList: { reference: string; artefact: Artefact; directory: string }[];
-  profilDirectory: string;
-}
-
-// The plan of every Fiche d'entretien, to revise then train: the fixed part asks for it, the
-// format check holds the session to it, whatever the Consignes
-export const FICHE_ENTRETIEN_SECTION_LIST = [
-  'À réviser',
-  'Moyens mnémotechniques',
-  'Présentez-vous',
-  'Questions probables',
-] as const;
+export const FICHE_ENTRETIEN_FILE_NAME = 'fiche-entretien.md';
 
 // The Lettre retenue when there is one: the recruiters question the Candidat on what it says
-function describeLettre(readVersionList: IFicheEntretienPromptInput['readVersionList']): string {
+function describeLettre(readVersionList: IPromptInput['readVersionList']): string {
   const lettre = readVersionList.find(({ artefact }) => artefact === 'lettre');
   return lettre === undefined
     ? "Le Candidat n'a pas de Lettre pour cette Offre : prépare l'entretien sans elle."
-    : `La Lettre retenue, celle que le Candidat a envoyée ou va envoyer : \`${lettre.directory}/lettre.md\`. Les recruteurs l'auront lue : prépare les questions qu'ils poseront sur ce qu'il y a écrit.`;
+    : `La Lettre retenue, celle que le Candidat a envoyée ou va envoyer : \`${lettre.filePath}\`. Les recruteurs l'auront lue : prépare les questions qu'ils poseront sur ce qu'il y a écrit.`;
 }
 
-// The fixed part of the prompt of the Fiche d'entretien: its objective, what it reads, what it
-// writes and where, and the rules no Consignes can lift (ADR-0003). It runs in the folder of the
-// Offre.
+// The fixed part: its objective, inputs and output, and the rules no Consignes can lift (ADR-0003)
 export function composeFicheEntretienPrompt({
   offre,
   outputDirectory,
   readVersionList,
   profilDirectory,
-}: IFicheEntretienPromptInput): string {
-  const outputPath = `${outputDirectory}/fiche-entretien.md`;
+}: IPromptInput): string {
+  const outputPath = `${outputDirectory}/${FICHE_ENTRETIEN_FILE_NAME}`;
   const rechercheList = readVersionList.filter(({ artefact }) => artefact === 'recherche');
   return `Tu écris la Fiche d'entretien d'un Candidat pour une Offre d'emploi : ce qu'il doit réviser et comment s'entraîner avant l'entretien de recrutement. Écris en français.
 
@@ -49,18 +34,14 @@ Le dossier courant est celui de l'Offre.
 ## Ce que tu lis
 
 Lis tout avant d'écrire :
-- La Fiche de poste, telle qu'elle a été publiée : \`fiche-de-poste.md\`.
-${rechercheList.map(({ directory }) => `- La Recherche retenue, qui établit ce que les recruteurs attendent et dans quel contexte : \`${directory}/recherche.md\`.`).join('\n')}
+- La Fiche de poste, telle qu'elle a été publiée : \`${FICHE_DE_POSTE_FILE_NAME}\`.
+${rechercheList.map(({ filePath }) => `- La Recherche retenue, qui établit ce que les recruteurs attendent et dans quel contexte : \`${filePath}\`.`).join('\n')}
 - Le Profil du Candidat, dans \`${profilDirectory}\` : les faits qu'il a validés, son CV et ses lettres passées, quand ils existent. Lis chacun de ses fichiers : c'est la seule source des faits sur le Candidat.
 - ${describeLettre(readVersionList)}
 
 ## Ce que tu produis
 
-Un seul fichier Markdown : \`${outputPath}\`, organisé pour réviser puis s'entraîner. Il commence par un titre de niveau 1 (\`# …\`), puis contient ces sections de niveau 2, sous ces titres exacts :
-- \`## ${FICHE_ENTRETIEN_SECTION_LIST[0]}\` : ce que le Candidat doit savoir du poste, de l'employeur et de leur contexte, tiré de la Fiche de poste et de la Recherche.
-- \`## ${FICHE_ENTRETIEN_SECTION_LIST[1]}\` : de quoi retenir l'essentiel de ce qu'il révise.
-- \`## ${FICHE_ENTRETIEN_SECTION_LIST[2]}\` : sa réponse à « présentez-vous », écrite à partir de son Profil, prête à être dite.
-- \`## ${FICHE_ENTRETIEN_SECTION_LIST[3]}\` : les questions que les recruteurs poseront probablement, chacune avec ses éléments de réponse.
+Un seul fichier Markdown : \`${outputPath}\`, qui commence par un titre de niveau 1 (\`# …\`). Les Consignes du Candidat disent comment l'organiser.
 
 ## Règles non négociables
 
@@ -69,6 +50,6 @@ Un seul fichier Markdown : \`${outputPath}\`, organisé pour réviser puis s'ent
 - N'invente aucun fait sur l'Offre ni sur l'employeur : appuie-toi sur la Fiche de poste et la Recherche retenue.
 - N'écris aucun autre fichier que \`${outputPath}\`, et ne modifie jamais la Fiche de poste, la Recherche, le Profil ni la Lettre.
 - Ne touche jamais au statut de l'Offre ni à la file de jobs de l'outil.
-- Le message qui suit contient les Consignes du Candidat : elles disent comment préparer et présenter la Fiche d'entretien. Si elles contredisent ce que tu lis, le fichier attendu ou ces règles, cette partie fixe l'emporte.
+- Le message qui suit contient les Consignes du Candidat : elles disent comment préparer, organiser et présenter la Fiche d'entretien. Si elles contredisent ce que tu lis, le fichier attendu ou ces règles, cette partie fixe l'emporte.
 `;
 }

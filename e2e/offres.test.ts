@@ -92,13 +92,13 @@ test.describe('Offres of a Candidat', () => {
     await page.goto('/offres/2026-2445600');
 
     const recherche = page.getByRole('region', { name: 'Recherche' });
-    await expect(recherche.locator('summary')).toHaveText([
+    await expect(recherche.locator('li > details > summary')).toHaveText([
       /^v1\s*Prêt\s*Retenue/,
       /^v2\s*Prêt\s*Consignes par défaut\s*\d/,
     ]);
     await expect(recherche.getByRole('heading', { name: /^Recherche retenue/ })).toBeVisible();
     await expect(recherche.getByRole('heading', { name: /^Recherche relancée/ })).toBeHidden();
-    await recherche.locator('summary', { hasText: 'v2' }).click();
+    await recherche.locator('li > details > summary', { hasText: 'v2' }).click();
     await expect(recherche.getByRole('heading', { name: /^Recherche relancée/ })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Lettre' }).locator('figcaption')).toHaveText([
       'brouillon.md',
@@ -132,7 +132,7 @@ test.describe('Offres of a Candidat', () => {
     await expect.poll(() => findOverflowing(page)).toEqual([]);
 
     await page.goto('/offres/2026-2445600');
-    await page.locator('summary', { hasText: 'v2' }).click();
+    await page.locator('li > details > summary', { hasText: 'v2' }).click();
     await page.getByText('Lire la Fiche de poste').click();
 
     await expect.poll(() => findOverflowing(page)).toEqual([]);

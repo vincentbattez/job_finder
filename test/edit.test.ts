@@ -1,16 +1,9 @@
-import { copyFileSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { createActions } from '#/actions/index.ts';
-
+import { detectOffres as detectRecordedOffres, LEA_OFFRES_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
-import { createRecordedFetch } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -38,17 +31,8 @@ const LETTRE = {
 
 // Launching a module only queues its job: each test then lets the worker run the queue
 async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  const notificationChannel = createFakeNotificationChannel();
-  const actions = await createActions({
-    dataDirectory,
-    aiSession,
-    fetch: createRecordedFetch().fetch,
-    notificationChannel,
-  });
-  await actions.detect();
-  return { actions, offreDirectory: path.join(dataDirectory, 'candidats/lea/offres', OFFRE_DIRECTORY_NAME) };
+  const { actions, dataDirectory } = await detectRecordedOffres(aiSession);
+  return { actions, offreDirectory: path.join(dataDirectory, LEA_OFFRES_PATH, OFFRE_DIRECTORY_NAME) };
 }
 
 describe('edit', () => {
@@ -125,10 +109,10 @@ describe('an edit refused', () => {
   it('refuses to edit the Lettre of a Postulée Offre, saying why, without opening a session', async () => {
     const aiSession = createFakeAiSession();
     const { actions } = await detectOffres(aiSession);
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     await expect(actions.openArtefact({ reference: REFERENCE, artefact: 'lettre' })).rejects.toThrow(
-      /L'Offre 2026-2445600 est Postulée : sa Lettre retenue est figée telle qu'envoyée/,
+      /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée telle qu'envoyée/,
     );
     expect(aiSession.interactiveSessionList).toEqual([]);
   });

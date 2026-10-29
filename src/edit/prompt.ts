@@ -1,14 +1,6 @@
-import type { Artefact, Candidat, Offre } from '#/domain/index.ts';
-
-// The Brouillon of a Lettre Version, next to the Lettre the Candidat corrects
-export const BROUILLON_FILE_NAME = 'brouillon.md';
-
-const ARTEFACT_NAME_BY_ARTEFACT: Record<Artefact, string> = {
-  recherche: 'la Recherche',
-  lettre: 'la Lettre',
-  fiche_entretien: "la Fiche d'entretien",
-  visualisation: 'la Visualisation',
-};
+import { FICHE_DE_POSTE_FILE_NAME, type Artefact, type Candidat, type Offre } from '#/domain/index.ts';
+import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/domain/labels.ts';
+import { BROUILLON_FILE_NAME, LETTRE_MODULE } from '#/modules/lettre/index.ts';
 
 interface IEditedArtefact {
   candidat: Candidat;
@@ -18,17 +10,18 @@ interface IEditedArtefact {
   versionPath: string;
 }
 
-// The prompt of jf edit stays fixed: no Consignes replace it (spec #1, Modules IA). The session
-// runs in the Offre folder, so "le dossier courant" is the Offre.
+// Fixed, with no Consignes to replace it (ADR-0003); the session runs in the Offre folder, its
+// « dossier courant »
 export function composeEditPrompt({ candidat: { name }, offre, artefact, versionPath }: IEditedArtefact): string {
-  const artefactName = ARTEFACT_NAME_BY_ARTEFACT[artefact];
+  // Every Artefact is feminine
+  const artefactName = `la ${ARTEFACT_LABEL_BY_ARTEFACT[artefact]}`;
   const lettreFiles =
     artefact === 'lettre'
-      ? ` La Lettre à corriger est \`${versionPath}/lettre.md\`, et \`${versionPath}/${BROUILLON_FILE_NAME}\` est son Brouillon, ce que l'IA avait écrit.`
+      ? ` La Lettre à corriger est \`${versionPath}/${LETTRE_MODULE.fileName}\`, et \`${versionPath}/${BROUILLON_FILE_NAME}\` est son Brouillon, ce que l'IA avait écrit.`
       : '';
   return `Tu aides ${name} à modifier ${artefactName} de l'Offre ${offre.reference}, « ${offre.title} ». Parle en français.
 
-Le dossier courant est celui de cette Offre : \`fiche-de-poste.md\` est sa Fiche de poste, et chaque Artefact y a un dossier par Version, numérotées \`v1\`, \`v2\`…
+Le dossier courant est celui de cette Offre : \`${FICHE_DE_POSTE_FILE_NAME}\` est sa Fiche de poste, et chaque Artefact y a un dossier par Version, numérotées \`v1\`, \`v2\`…
 
 Tu modifies la Version retenue de ${artefactName}, le dossier \`${versionPath}/\` : c'est sur elle que l'outil s'appuie ensuite.${lettreFiles}
 

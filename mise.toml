@@ -39,6 +39,12 @@ description = "Serve the front of data/ on port 5180, open to the LAN and WireGu
 # .env holds the Home Assistant settings of the notifications, which the Détection button sends
 run = "node --env-file-if-exists=.env node_modules/@react-router/dev/bin.cjs dev --host --port 5180 --strictPort"
 
+[tasks."web:dev"]
+description = "Serve the front of dev-data/, the fake Offres of development, on port 5181 of this machine only"
+# Never .env: a Détection from dev-data/ sends no notification to a real phone
+env = { JF_DATA_DIRECTORY = "dev-data" }
+run = "node node_modules/@react-router/dev/bin.cjs dev --port 5181 --strictPort"
+
 [tasks.worker]
 description = "Run the queued jobs of data/, one Claude session at a time: the lpm service worker (ADR-0003)"
 # .env holds the Home Assistant settings of the notifications

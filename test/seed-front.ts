@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { createActions } from '#/actions/index.ts';
+import type { IHeadlessSession } from '#/ai-session/acl/claude-code.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
@@ -81,6 +82,31 @@ function rechercheRun(title: string) {
   return { fileByName: { 'recherche.md': `# ${title}\n\n## Sources\n\n- https://www.justice.fr/\n` } };
 }
 
+// What the fake Claude writes for each Version, by its Offre, Artefact and number, whatever the
+// order the jobs run in
+const RUN_BY_VERSION: Record<string, Parameters<typeof createFakeAiSession>[number]> = {
+  [`${BETHUNE_REFERENCE} recherche v1`]: { fileByName: { 'recherche.md': recherche('Recherche retenue') } },
+  [`${BETHUNE_REFERENCE} recherche v2`]: { fileByName: { 'recherche.md': recherche('Recherche relancée') } },
+  [`${BETHUNE_REFERENCE} lettre v1`]: {
+    fileByName: { 'brouillon.md': 'Madame la Présidente,\n', 'destinataires.json': JSON.stringify(RECIPIENTS) },
+  },
+  [`${BASTIA_REFERENCE} recherche v1`]: rechercheRun('Recherche : la cour d’appel de Bastia'),
+  [`${BASTIA_REFERENCE} lettre v1`]: BASTIA_LETTRE,
+  [`${VERSAILLES_REFERENCE} recherche v1`]: rechercheRun('Recherche première : le pôle civil du TJ de Versailles'),
+  [`${VERSAILLES_REFERENCE} recherche v2`]: rechercheRun('Recherche relancée : le pôle civil du TJ de Versailles'),
+  [`${RENNES_REFERENCE} recherche v1`]: rechercheRun('Recherche : la JIRS du TJ de Rennes'),
+  [`${NARBONNE_REFERENCE} recherche v1`]: { isSuccess: false },
+  [`${CONSIGNES_REFERENCE} recherche v1`]: rechercheRun('Recherche par défaut : le TJ de Pontoise'),
+  [`${CONSIGNES_REFERENCE} recherche v2`]: rechercheRun('Recherche selon Léa : le TJ de Pontoise'),
+};
+
+// A session writes in <offre>/<artefact>/v<n>, the folder of its Offre starting with its reference
+function versionOf({ outputDirectory }: IHeadlessSession): string {
+  const artefactDirectory = path.dirname(outputDirectory);
+  const reference = path.basename(path.dirname(artefactDirectory)).slice(0, BETHUNE_REFERENCE.length);
+  return `${reference} ${path.basename(artefactDirectory)} ${path.basename(outputDirectory)}`;
+}
+
 rmSync(dataDirectory, { recursive: true, force: true });
 mkdirSync(dataDirectory, { recursive: true });
 writeFileSync(path.join(dataDirectory, 'config.json'), JSON.stringify(CONFIG));
@@ -88,19 +114,11 @@ const actions = await createActions({
   dataDirectory,
   fetch: createRecordedFetch().fetch,
   notificationChannel: createFakeNotificationChannel(),
-  aiSession: createFakeAiSession(
-    { fileByName: { 'recherche.md': recherche('Recherche retenue') } },
-    { fileByName: { 'recherche.md': recherche('Recherche relancée') } },
-    { fileByName: { 'brouillon.md': 'Madame la Présidente,\n', 'destinataires.json': JSON.stringify(RECIPIENTS) } },
-    rechercheRun('Recherche : la cour d’appel de Bastia'),
-    rechercheRun('Recherche première : le pôle civil du TJ de Versailles'),
-    rechercheRun('Recherche relancée : le pôle civil du TJ de Versailles'),
-    BASTIA_LETTRE,
-    rechercheRun('Recherche : la JIRS du TJ de Rennes'),
-    { isSuccess: false },
-    rechercheRun('Recherche par défaut : le TJ de Pontoise'),
-    rechercheRun('Recherche selon Léa : le TJ de Pontoise'),
-  ),
+  aiSession: {
+    ...createFakeAiSession(),
+    runHeadless: (session: IHeadlessSession) =>
+      createFakeAiSession(RUN_BY_VERSION[versionOf(session)] ?? {}).runHeadless(session),
+  },
 });
 await actions.detect();
 await actions.runModule({ module: 'recherche', reference: BETHUNE_REFERENCE });
@@ -133,5 +151,5 @@ await actions.runModule({ module: 'recherche', reference: CONSIGNES_REFERENCE })
 await actions.runQueuedJobs();
 await actions.deleteConsignes({ candidatId: 'lea', module: 'recherche' });
 
-await actions.changeStatus({ reference: '2026-2285305', status: 'postulee' });
-await actions.changeStatus({ reference: '2026-2290529', status: 'archivee' });
+await actions.changeStatut({ reference: '2026-2285305', statut: 'postulee' });
+await actions.changeStatut({ reference: '2026-2290529', statut: 'archivee' });

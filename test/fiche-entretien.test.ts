@@ -1,17 +1,13 @@
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { createActions, type Actions } from '#/actions/index.ts';
+import { type Actions } from '#/actions/index.ts';
 import { FICHE_ENTRETIEN_DEFAULT_CONSIGNES } from '#/modules/fiche-entretien/consignes.ts';
 
+import { detectOffres as detectRecordedOffres, LEA_OFFRES_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
-import { createRecordedFetch } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -62,20 +58,8 @@ function ficheRun(markdown = FICHE_ENTRETIEN) {
 }
 
 async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  const actions = await createActions({
-    dataDirectory,
-    aiSession,
-    fetch: createRecordedFetch().fetch,
-    notificationChannel: createFakeNotificationChannel(),
-  });
-  await actions.detect();
-  return {
-    actions,
-    dataDirectory,
-    offreDirectory: path.join(dataDirectory, 'candidats/lea/offres', OFFRE_DIRECTORY_NAME),
-  };
+  const { actions, dataDirectory } = await detectRecordedOffres(aiSession);
+  return { actions, dataDirectory, offreDirectory: path.join(dataDirectory, LEA_OFFRES_PATH, OFFRE_DIRECTORY_NAME) };
 }
 
 // Launching a module queues its job, which the worker runs (ADR-0003)
@@ -113,7 +97,7 @@ describe("fiche d'entretien", () => {
     const launch = actions.runModule({ module: 'fiche', reference: REFERENCE });
 
     await expect(launch).rejects.toThrow(
-      "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Fiche d'entretien. La produire d'abord : jf run recherche 2026-2445600.",
+      "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Fiche d’entretien. La produire d'abord : jf run recherche 2026-2445600.",
     );
     expect(await actions.runQueuedJobs()).toEqual([]);
   });
@@ -126,17 +110,14 @@ describe("fiche d'entretien", () => {
     await runModule(actions, 'recherche');
     await actions.retenirVersion({ reference: REFERENCE, artefact: 'recherche', number: 1 });
     await runModule(actions, 'lettre');
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     const { version } = await runModule(actions, 'fiche');
 
     const profilDirectory = path.join(dataDirectory, 'candidats/lea/profil');
     const session = aiSession.headlessSessionList.at(-1);
-    expect(session?.readDirectoryList).toEqual([
-      profilDirectory,
-      path.join(offreDirectory, 'recherche/v1'),
-      path.join(offreDirectory, 'lettre/v1'),
-    ]);
+    // The folder of the Offre is the session's own: only the folders outside it are added
+    expect(session?.readDirectoryList).toEqual([profilDirectory]);
     expect(session?.fixedPrompt).toContain('`fiche-de-poste.md`');
     expect(session?.fixedPrompt).toContain(`\`${path.join(offreDirectory, 'recherche/v1/recherche.md')}\``);
     expect(session?.fixedPrompt).toContain(`\`${profilDirectory}\``);
@@ -149,17 +130,14 @@ describe("fiche d'entretien", () => {
 
   it('runs without a Lettre, and tells the session there is none', async () => {
     const aiSession = createFakeAiSession(RECHERCHE_RUN, ficheRun());
-    const { actions, dataDirectory, offreDirectory } = await detectOffres(aiSession);
+    const { actions, dataDirectory } = await detectOffres(aiSession);
     await runModule(actions, 'recherche');
 
     const { state, version } = await runModule(actions, 'fiche');
 
     expect(state).toBe('done');
     const session = aiSession.headlessSessionList.at(-1);
-    expect(session?.readDirectoryList).toEqual([
-      path.join(dataDirectory, 'candidats/lea/profil'),
-      path.join(offreDirectory, 'recherche/v1'),
-    ]);
+    expect(session?.readDirectoryList).toEqual([path.join(dataDirectory, 'candidats/lea/profil')]);
     expect(session?.fixedPrompt).toContain("Le Candidat n'a pas de Lettre pour cette Offre");
     expect(session?.fixedPrompt).not.toContain('lettre.md');
     expect(version?.inputList).toEqual([{ artefact: 'recherche', number: 1, offre: { reference: REFERENCE } }]);
@@ -175,9 +153,12 @@ describe("the prompt of the Fiche d'entretien", () => {
     const { version } = await runModule(actions, 'fiche');
 
     const { fixedPrompt, consignes } = aiSession.headlessSessionList[1] ?? {};
+    // The plan is the default Consignes': the Candidat's own may organise the Fiche otherwise
     for (const section of ['À réviser', 'Moyens mnémotechniques', 'Présentez-vous', 'Questions probables']) {
-      expect(fixedPrompt).toContain(`\`## ${section}\``);
+      expect(consignes).toContain(`## ${section}`);
+      expect(fixedPrompt).not.toContain(`## ${section}`);
     }
+    expect(fixedPrompt).toContain('titre de niveau 1');
     expect(fixedPrompt).toContain("N'invente jamais un fait sur le Candidat");
     expect(fixedPrompt).toContain('`[à compléter : …]`');
     expect(consignes).toBe(FICHE_ENTRETIEN_DEFAULT_CONSIGNES);
@@ -195,13 +176,24 @@ describe("the prompt of the Fiche d'entretien", () => {
     const { version } = await runModule(actions, 'fiche');
 
     expect(aiSession.headlessSessionList[1]?.consignes).toBe(consignes);
-    expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain('`## Présentez-vous`');
+    expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain("N'invente jamais un fait sur le Candidat");
     expect(version?.consignes).toBe(consignes);
   });
 
-  it('fails the Version of a Fiche that lacks one of its sections', async () => {
-    const withoutQuestions = FICHE_ENTRETIEN.replace('## Questions probables', '## Questions');
-    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, ficheRun(withoutQuestions)));
+  it('accepts a Fiche organised otherwise, as Consignes of the Candidat may ask', async () => {
+    const tenQuestions = '# Fiche d’entretien\n\n## Dix questions\n\n- Pourquoi ce poste ?\n';
+    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, ficheRun(tenQuestions)));
+    await runModule(actions, 'recherche');
+
+    const { state, version } = await runModule(actions, 'fiche');
+
+    expect(state).toBe('done');
+    expect(version?.state).toBe('ready');
+  });
+
+  it('fails the Version of a Fiche without a title', async () => {
+    const withoutTitle = FICHE_ENTRETIEN.replace(/^# .*\n/, '');
+    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, ficheRun(withoutTitle)));
     await runModule(actions, 'recherche');
 
     const { state, version, log } = await runModule(actions, 'fiche');
@@ -209,7 +201,7 @@ describe("the prompt of the Fiche d'entretien", () => {
     expect(state).toBe('failed');
     expect(version?.state).toBe('failed');
     expect(log).toContain(
-      "Le fichier fiche_entretien/v1/fiche-entretien.md est mal formé : il n'a pas de section « ## Questions probables ».",
+      'Le fichier fiche_entretien/v1/fiche-entretien.md est mal formé : il ne commence pas par un titre de niveau 1 (« # »).',
     );
   });
 });
@@ -252,7 +244,7 @@ describe("correcting the Fiche d'entretien", () => {
 
     const [session] = aiSession.interactiveSessionList;
     expect(session?.directory).toBe(offreDirectory);
-    expect(session?.prompt).toContain("Tu aides Léa à modifier la Fiche d'entretien de l'Offre 2026-2445600");
+    expect(session?.prompt).toContain("Tu aides Léa à modifier la Fiche d’entretien de l'Offre 2026-2445600");
     expect(session?.prompt).toContain('`fiche_entretien/v1/`');
     expect(session?.prompt).not.toContain('fiche_entretien/v2');
   });

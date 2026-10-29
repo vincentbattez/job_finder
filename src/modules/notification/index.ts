@@ -8,9 +8,7 @@ export interface INotification {
   message: string;
 }
 
-// The channels are interchangeable, and each Candidat has their own (ADR-0003): the target is
-// where that Candidat receives the notifications, as the config names it. The tests replace the
-// channel with a fake.
+// The channels are interchangeable, each Candidat with their own target (ADR-0003)
 export interface INotificationChannel {
   send(target: string, notification: INotification): Promise<void>;
 }
@@ -30,7 +28,7 @@ function dateLimiteOf({ dateLimite }: Offre): string {
   return `Date limite : ${dateLimite === null ? 'non précisée' : DATE_LIMITE_FORMAT.format(dateLimite)}`;
 }
 
-// One composer per notified event (spec « Notification »)
+// One composer per notified event
 export function composeNouvelleOffreNotification(offre: Offre): INotification {
   return {
     title: 'Nouvelle Offre dans la Zone',
@@ -38,8 +36,21 @@ export function composeNouvelleOffreNotification(offre: Offre): INotification {
   };
 }
 
-// The Candidat already applied to the Offre published again: they decide whether to apply again
+// A Republication in the Zone, whose Recherche starts from that of the Offre it publishes again
 export function composeRepublicationNotification(offre: Offre, republishedOffre: Offre): INotification {
+  return {
+    title: 'Republication dans la Zone',
+    message: [
+      offre.title,
+      juridictionOf(offre),
+      `Republication de l'Offre ${republishedOffre.reference} : sa Recherche part de celle de cette Offre`,
+      dateLimiteOf(offre),
+    ].join('\n'),
+  };
+}
+
+// The Candidat already applied to the Offre published again: they decide whether to apply again
+export function composeRepublicationPostuleeNotification(offre: Offre, republishedOffre: Offre): INotification {
   return {
     title: "Republication d'une Offre Postulée",
     message: [

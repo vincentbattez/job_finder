@@ -3,7 +3,7 @@ import { Form, useSearchParams } from 'react-router';
 import type { Statut } from './badge.tsx';
 
 interface IFilteredOffre {
-  status: Statut;
+  statut: Statut;
   city: string | null;
   region: string | null;
 }
@@ -18,7 +18,7 @@ export function filterOffres<T extends IFilteredOffre>(offreList: T[], searchPar
     (offre) =>
       (city === '' || offre.city === city) &&
       (region === '' || offre.region === region) &&
-      (isArchiveeShown || offre.status !== 'archivee'),
+      (isArchiveeShown || offre.statut !== 'archivee'),
   );
 }
 

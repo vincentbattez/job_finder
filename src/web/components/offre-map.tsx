@@ -9,7 +9,7 @@ import { showStatut, type Statut } from './badge.tsx';
 interface IMappedOffre {
   reference: string;
   title: string;
-  status: Statut;
+  statut: Statut;
   isExpiree: boolean;
   latitude: number | null;
   longitude: number | null;
@@ -88,7 +88,7 @@ export function OffreMap({ offreList }: Readonly<{ offreList: IMappedOffre[] }>)
           const point = leaflet
             .marker([offre.latitude, offre.longitude], { icon, title: `${offre.title} · ${offre.reference}` })
             .addTo(map);
-          point.getElement()?.setAttribute('data-statut', showStatut(offre.status, offre.isExpiree));
+          point.getElement()?.setAttribute('data-statut', showStatut(offre.statut, offre.isExpiree));
           const openFiche = () => void navigate(`/offres/${offre.reference}`);
           point.on('click', openFiche);
           point.on('keypress', ({ originalEvent }) => {

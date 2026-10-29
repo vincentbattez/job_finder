@@ -1,7 +1,7 @@
-import { RECHERCHE_DEFAULT_CONSIGNES } from './consignes.ts';
-import { composeRecherchePrompt } from './prompt.ts';
+import type { IAiModule } from '#/ai-module/index.ts';
 
-const RECHERCHE_FILE_NAME = 'recherche.md';
+import { RECHERCHE_DEFAULT_CONSIGNES } from './consignes.ts';
+import { composeRecherchePrompt, RECHERCHE_FILE_NAME } from './prompt.ts';
 
 // A Recherche starts with its title and ends with its sources, at least one link
 function findFormatError(markdown: string): string | undefined {
@@ -19,4 +19,6 @@ export const RECHERCHE_MODULE = {
   outputFileList: [{ name: RECHERCHE_FILE_NAME, findFormatError }],
   defaultConsignes: RECHERCHE_DEFAULT_CONSIGNES,
   composePrompt: composeRecherchePrompt,
-};
+  // A Republication starts from the work done for the Offre it publishes again
+  isReadingRepublishedOffre: true,
+} satisfies IAiModule;

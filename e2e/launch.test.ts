@@ -20,7 +20,7 @@ test.describe('launching the modules of an Offre', () => {
 
     await expect(lettre.getByRole('status')).toHaveText('En cours');
     await expect(lettre.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
-    await expect(lettre.locator('summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
+    await expect(lettre.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
     await expect(lettre.locator('figcaption')).toHaveText(['brouillon.md', 'lettre.md']);
     await expect(page.locator('.artefact-list [data-artefact="lettre"]')).toContainText('Prêt');
   });
@@ -36,7 +36,7 @@ test.describe('launching the modules of an Offre', () => {
     await recherche.getByRole('button', { name: 'Relancer la Recherche' }).click();
 
     await expect(recherche.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
-    await expect(recherche.locator('summary')).toHaveText([/^v1\s*En échec/, /^v2\s*Prêt\s*Retenue/]);
+    await expect(recherche.locator('li > details > summary')).toHaveText([/^v1\s*En échec/, /^v2\s*Prêt\s*Retenue/]);
     await expect(lettre.getByRole('button', { name: 'Lancer la Lettre' })).toBeEnabled();
     await expect(lettre).not.toContainText("n'a pas de Recherche retenue");
   });

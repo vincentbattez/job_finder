@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { FICHE_DE_POSTE_SCHEMA } from '#/domain/index.ts';
+import { EXTRACTION_SCHEMA, FICHE_DE_POSTE_SCHEMA, type Extraction } from '#/domain/index.ts';
 
 export const EXTRACTION_FILE_NAME = 'extraction.json';
 
@@ -48,25 +48,24 @@ function parseExtraction(filePath: string, markdown: string) {
   }
 }
 
-// The extraction a session wrote as JSON, parsed into the domain (ADR-0005): the title, null when
-// the Fiche de poste gives none, the fields of the Fiche de poste and the ville
-export function readExtraction(directory: string, markdown: string) {
+// The extraction a session wrote as JSON, parsed into the domain (ADR-0005)
+export function readExtraction(directory: string, markdown: string): Extraction {
   const { extraction, error } = parseExtraction(path.join(directory, EXTRACTION_FILE_NAME), markdown);
   if (extraction === undefined) {
     throw new Error(
       `Les champs relevés dans la Fiche de poste ne sont pas valables (${EXTRACTION_FILE_NAME}) : ${error}.`,
     );
   }
-  const { title, dateLimite, city, ...contactList } = extraction;
-  return {
+  const { title, dateLimite, city, ...ficheField } = extraction;
+  return EXTRACTION_SCHEMA.parse({
     title,
-    // The day, at midnight UTC, as the Source PEP gives it
-    fiche: FICHE_DE_POSTE_SCHEMA.parse({
-      ...contactList,
+    city,
+    ficheDePoste: FICHE_DE_POSTE_SCHEMA.parse({
+      ...ficheField,
+      // The day, at midnight UTC, as the Source PEP gives it
       dateLimite: dateLimite === null ? null : new Date(dateLimite),
       courtOfAppeal: null,
       markdown,
     }),
-    city,
-  };
+  });
 }

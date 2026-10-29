@@ -9,7 +9,7 @@ export interface IOffreRow {
   title: string;
   url: string | null;
   workplace: string | null;
-  status: Statut;
+  statut: Statut;
   isExpiree: boolean;
   publishedAt: Date | null;
   dateLimite: Date | null;
@@ -52,7 +52,7 @@ export function OffreList({ offreList }: Readonly<{ offreList: IOffreRow[] }>) {
               </div>
             </td>
             <td>
-              <StatutBadge statut={offre.status} isExpiree={offre.isExpiree} />
+              <StatutBadge statut={offre.statut} isExpiree={offre.isExpiree} />
             </td>
             <td className="date" data-label="Publiée le">
               <DateText date={offre.publishedAt} />

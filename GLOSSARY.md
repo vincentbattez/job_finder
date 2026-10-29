@@ -44,10 +44,18 @@ _Avoid_: scan, crawl, alerte
 
 **Zone**:
 Territoire d'une Veille où une Offre détectée lance automatiquement sa Recherche ; une Offre hors Zone est conservée mais pas traitée.
-_Avoid_: région, périmètre
+_Avoid_: périmètre, secteur
+
+**Ville**:
+Commune du lieu d'affectation d'une Offre, qui la place sur la carte.
+_Avoid_: localité, lieu
+
+**Région**:
+Région administrative de la Ville d'une Offre, par laquelle le Candidat filtre ses Offres ; elle n'a rien à voir avec la Zone.
+_Avoid_: zone, territoire
 
 **Date limite**:
-Dernier jour pour postuler à une Offre ; quand l'Offre n'en donne pas, sa date de publication plus un délai par défaut.
+Dernier jour pour postuler à une Offre ; quand l'Offre n'en donne pas, sa date de publication plus un délai par défaut, une Fiche de poste importée étant publiée le jour de son import.
 _Avoid_: date de fin, échéance
 
 ## Statut d'une Offre
@@ -57,11 +65,11 @@ Statut d'une Offre à laquelle le Candidat n'a pas encore postulé.
 _Avoid_: nouvelle, en attente
 
 **Postulée**:
-Statut d'une Offre à laquelle le Candidat a envoyé sa candidature ; sa Lettre ne change plus.
+Statut d'une Offre à laquelle le Candidat a envoyé sa candidature ; il ne s'annule jamais, et sa Lettre ne change plus, même une fois l'Offre Archivée.
 _Avoid_: envoyée, candidatée, postulé
 
 **Archivée**:
-Statut d'une Offre que le Candidat a décidé de ne plus suivre.
+Statut d'une Offre que le Candidat a décidé de ne plus suivre ; elle revient À traiter, ou Postulée si elle l'a été.
 _Avoid_: supprimée, ignorée
 
 **Expirée**:

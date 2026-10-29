@@ -11,8 +11,7 @@ import { composeExtractionPrompt, EXTRACTION_REQUEST } from './prompt.ts';
 // The folder of the Offre where the session writes what it read
 const EXTRACTION_DIRECTORY_NAME = 'extraction';
 
-// The Source Import Markdown: a Fiche de poste the Candidat found elsewhere (spec « Sources et
-// Détection »)
+// The Source Import Markdown: a Fiche de poste the Candidat found elsewhere
 export function createImportSource(aiSession: IAiSession) {
   return {
     // The Offre as the import lists it, before Claude reads its fields: known by the content of its
@@ -20,8 +19,8 @@ export function createImportSource(aiSession: IAiSession) {
     list(fileName: string, markdown: string) {
       const reference = `import-${createHash('sha256').update(markdown).digest('hex').slice(0, 10)}`;
       return {
-        listedOffre: LISTED_OFFRE_SCHEMA.parse({ reference, title: fileName, url: null, publishedAt: null }),
-        fiche: FICHE_DE_POSTE_SCHEMA.parse({
+        listedOffre: LISTED_OFFRE_SCHEMA.parse({ reference, title: fileName, url: null, publishedAt: new Date() }),
+        ficheDePoste: FICHE_DE_POSTE_SCHEMA.parse({
           dateLimite: null,
           employer: null,
           workplace: null,

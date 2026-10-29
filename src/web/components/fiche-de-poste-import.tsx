@@ -9,9 +9,7 @@ interface IImport {
   error: string | null;
 }
 
-// Imports a Fiche de poste in Markdown found elsewhere, dropped here or chosen from the disk: the
-// same action as jf import. The list below reloads with the new Offre, named after its file until
-// the worker has Claude read its fields.
+// The same action as jf import; the Offre is named after its file until the worker reads its fields
 export function FicheDePosteImport() {
   const fetcher = useFetcher<IImport>();
   const isHydrated = useIsHydrated();

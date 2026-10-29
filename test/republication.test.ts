@@ -1,16 +1,14 @@
-import { copyFileSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
 
+import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // The Boulogne parquet Poste, published as 2026-2231960 then again as 2026-2338409, both in Léa's
 // Zone (responses recorded on 2026-10-29)
@@ -36,16 +34,15 @@ const LETTRE_RUN = {
   },
 };
 
-function createDataDirectory(): string {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  return dataDirectory;
-}
-
 // A first Détection on the feed as it was before the Republication, then the actions for the next
-// one, on the feed as recorded
-async function detectBeforeRepublication(aiSession = createFakeAiSession()) {
+// one, on the feed as recorded. Out of the Zone, the Zone of Léa's Veille leaves out the court of
+// appeal of Douai, that of Boulogne.
+async function detectBeforeRepublication(aiSession = createFakeAiSession(), { isOutOfZone = false } = {}) {
   const dataDirectory = createDataDirectory();
+  if (isOutOfZone) {
+    const configPath = path.join(dataDirectory, 'config.json');
+    writeFileSync(configPath, readFileSync(configPath, 'utf8').replace('["Douai", "Amiens"]', '["Amiens"]'));
+  }
   const notificationChannel = createFakeNotificationChannel();
   const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout([REPUBLICATION_REFERENCE]) } });
   const earlierActions = await createActions({
@@ -109,7 +106,7 @@ describe('the Republication of an Offre Postulée', () => {
   it('launches no Recherche and tells the Candidat, who decides whether to apply again', async () => {
     const aiSession = createFakeAiSession();
     const { actions, notificationChannel } = await detectBeforeRepublication(aiSession);
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     await actions.detect();
 
@@ -130,7 +127,64 @@ describe('the Republication of an Offre Postulée', () => {
   });
 });
 
+describe('the Republication of an Offre Postulée out of the Zone', () => {
+  it('tells the Candidat all the same, who already applied to the Poste', async () => {
+    const { actions, notificationChannel } = await detectBeforeRepublication(createFakeAiSession(), {
+      isOutOfZone: true,
+    });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
+
+    await actions.detect();
+
+    expect(await findOffre(actions, REPUBLICATION_REFERENCE)).toMatchObject({ isInZone: false });
+    expect(notificationChannel.sentList).toMatchObject([{ title: "Republication d'une Offre Postulée" }]);
+    expect(await actions.runQueuedJobs()).toEqual([]);
+  });
+
+  // Archivée since, the Offre was Postulée all the same
+  it('tells the Candidat once the Offre Postulée is Archivée', async () => {
+    const { actions, notificationChannel } = await detectBeforeRepublication(createFakeAiSession(), {
+      isOutOfZone: true,
+    });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'archivee' });
+
+    await actions.detect();
+
+    expect(notificationChannel.sentList).toMatchObject([{ title: "Republication d'une Offre Postulée" }]);
+  });
+});
+
 describe('the Republication of an Offre not Postulée', () => {
+  it('tells the Candidat it publishes again an Offre, named by its reference', async () => {
+    const { actions, notificationChannel } = await detectBeforeRepublication(createFakeAiSession(RECHERCHE_RUN));
+
+    await actions.detect();
+
+    expect(notificationChannel.sentList).toEqual([
+      {
+        target: 'notify.mobile_app_iphone_de_lea',
+        title: 'Republication dans la Zone',
+        message: [
+          'Attaché de justice affecté auprès des magistrats du parquet',
+          'Tribunal Judiciaire de Boulogne-sur-mer',
+          `Republication de l'Offre ${REFERENCE} : sa Recherche part de celle de cette Offre`,
+          'Date limite : 03/08/2026',
+        ].join('\n'),
+      },
+    ]);
+  });
+
+  it('tells nothing out of the Zone', async () => {
+    const { actions, notificationChannel } = await detectBeforeRepublication(createFakeAiSession(), {
+      isOutOfZone: true,
+    });
+
+    await actions.detect();
+
+    expect(notificationChannel.sentList).toEqual([]);
+  });
+
   it('launches its Recherche, which reads the Artefacts retenus of the Offre it publishes again', async () => {
     const aiSession = createFakeAiSession(RECHERCHE_RUN, LETTRE_RUN, RECHERCHE_RUN);
     const { actions, dataDirectory } = await detectBeforeRepublication(aiSession);

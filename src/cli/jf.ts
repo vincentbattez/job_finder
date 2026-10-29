@@ -2,7 +2,8 @@ import path from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 
-import { createActions, type Actions } from '#/actions/index.ts';
+import { createActions, messageOf, type Actions } from '#/actions/index.ts';
+import { ARTEFACT_LABEL_BY_ARTEFACT, STATUT_LABEL_BY_STATUT } from '#/actions/labels.ts';
 
 import { readTextFile } from './acl/files.ts';
 
@@ -18,12 +19,6 @@ interface ICommand {
   description: string;
   run: (actions: Actions, argumentList: string[], option: { isWaiting: boolean }) => Promise<void>;
 }
-
-const STATUT_LABEL_BY_STATUS: Record<Offre['status'], string> = {
-  a_traiter: 'À traiter',
-  postulee: 'Postulée',
-  archivee: 'Archivée',
-};
 
 const VERSION_STATE_LABEL_BY_STATE: Record<Version['state'], string> = {
   running: 'en cours',
@@ -48,20 +43,13 @@ function formatOffre(offre: Offre): string {
     offre.title,
     offre.workplace ?? '—',
     offre.dateLimite?.toLocaleDateString('fr-FR', { timeZone: 'UTC' }) ?? '—',
-    offre.isExpiree ? `${STATUT_LABEL_BY_STATUS[offre.status]}, Expirée` : STATUT_LABEL_BY_STATUS[offre.status],
+    offre.isExpiree ? `${STATUT_LABEL_BY_STATUT[offre.statut]}, Expirée` : STATUT_LABEL_BY_STATUT[offre.statut],
     offre.isInZone ? 'Zone' : 'hors Zone',
     // The link of a Republication, both ways, only on the Offres that have one
     ...(republicationOf === null ? [] : [`Republication de ${republicationOf.reference}`]),
     ...republicationList.map(({ reference }) => `Republiée en ${reference}`),
   ].join('\t');
 }
-
-const ARTEFACT_LABEL_BY_ARTEFACT: Record<Version['artefact'], string> = {
-  recherche: 'Recherche',
-  lettre: 'Lettre',
-  fiche_entretien: "Fiche d'entretien",
-  visualisation: 'Visualisation',
-};
 
 // The terminal where the Candidat answers, one line per question. Ctrl-C or Ctrl-D closes it,
 // which ends the answers instead of leaving a question pending forever.
@@ -135,8 +123,7 @@ async function chooseReference(actions: Actions, terminal: Terminal): Promise<st
   return offre.reference;
 }
 
-// The Offre then the Artefact, unless given, from a list: the Candidat has no reference to
-// remember (spec « Claude Code interactif »)
+// From a list, unless given: the Candidat has no reference to remember
 async function chooseArtefact(actions: Actions, [givenReference, givenArtefact]: string[]) {
   if (givenReference !== undefined && givenArtefact !== undefined) {
     return { reference: givenReference, artefact: givenArtefact };
@@ -206,16 +193,15 @@ async function runConsignesOperation(
   }
 }
 
-function changeStatusCommand(status: 'postulee' | 'archivee', description: string): ICommand {
-  const name = status === 'postulee' ? 'postuler' : 'archiver';
+function changeStatutCommand(statut: Offre['statut'], name: string, description: string): ICommand {
   return {
     description: `${description} : jf ${name} <offre>`,
     run: async (actions, [reference]) => {
       if (reference === undefined) {
         throw new Error(`Usage : jf ${name} <offre>. « jf list <candidat> » liste les Offres.`);
       }
-      await actions.changeStatus({ reference, status });
-      process.stdout.write(`${reference} : ${STATUT_LABEL_BY_STATUS[status]}\n`);
+      await actions.changeStatut({ reference, statut });
+      process.stdout.write(`${reference} : ${STATUT_LABEL_BY_STATUT[statut]}\n`);
     },
   };
 }
@@ -250,6 +236,11 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
         for (const { reference, title } of nearMissList) {
           process.stdout.write(`  ${reference}\t${title}\n`);
         }
+      }
+      // What the Détection found is printed first; a notification not sent then fails the run in lpm
+      const failureList = detectionList.flatMap(({ notificationFailureList }) => notificationFailureList);
+      if (failureList.length > 0) {
+        throw new Error(failureList.join('\n'));
       }
     },
   },
@@ -376,8 +367,17 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       process.stdout.write(`${artefact} ${version} retenue pour l'Offre ${reference}.\n`);
     },
   },
-  postuler: changeStatusCommand('postulee', 'Passe une Offre en Postulée, avec ou sans Lettre, et fige sa Lettre'),
-  archiver: changeStatusCommand('archivee', 'Passe une Offre en Archivée'),
+  postuler: changeStatutCommand(
+    'postulee',
+    'postuler',
+    'Passe une Offre en Postulée, avec ou sans Lettre, ce qui fige sa Lettre pour de bon ; remet en Postulée une Offre Postulée puis Archivée',
+  ),
+  archiver: changeStatutCommand('archivee', 'archiver', 'Passe une Offre en Archivée, Postulée ou non'),
+  traiter: changeStatutCommand(
+    'a_traiter',
+    'traiter',
+    "Remet À traiter une Offre Archivée qui n'a jamais été Postulée",
+  ),
   profil: {
     description: "Complète le Profil d'un Candidat avec Claude Code : jf profil <candidat>",
     run: async (actions, [candidatId]) => {
@@ -394,8 +394,8 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       if (candidatId === undefined) {
         throw new Error(`${CONSIGNES_USAGE} « jf candidats » liste les Candidats.`);
       }
-      const consignesList = await actions.listConsignes({ candidatId });
       if (module === undefined) {
+        const consignesList = await actions.listConsignes({ candidatId });
         for (const { module: name, candidatConsignes } of consignesList) {
           process.stdout.write(
             `${name}\t${candidatConsignes === null ? 'Consignes par défaut' : 'Consignes du Candidat'}\n`,
@@ -403,11 +403,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
         }
         return;
       }
-      const consignes = consignesList.find((candidate) => candidate.module === module);
-      if (consignes === undefined) {
-        const nameList = consignesList.map((candidate) => candidate.module);
-        throw new Error(`Module inconnu : ${module}. Modules : ${nameList.join(', ')}.`);
-      }
+      const consignes = await actions.readConsignes({ candidatId, module });
       await runConsignesOperation(actions, { ...consignes, candidatId }, operation);
     },
   },
@@ -457,6 +453,6 @@ async function run(): Promise<void> {
 try {
   await run();
 } catch (error) {
-  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  process.stderr.write(`${messageOf(error)}\n`);
   process.exitCode = 1;
 }

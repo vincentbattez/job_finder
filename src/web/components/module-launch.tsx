@@ -1,7 +1,9 @@
 import { useFetcher } from 'react-router';
 
+import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/actions/labels.ts';
+
 import { EtatBadge } from './badge.tsx';
-import { ARTEFACT_LABEL_BY_ARTEFACT, type IArtefactVersions } from './offre-fiche.tsx';
+import type { IArtefactVersions } from './offre-fiche.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
 
@@ -17,9 +19,6 @@ export function ModuleLaunch({
   const isHydrated = useIsHydrated();
   const isRunning = etat === 'en_cours';
   useRevalidateWhile(isRunning);
-  if (module === null) {
-    return null;
-  }
   const error = fetcher.data?.error ?? null;
   return (
     <fetcher.Form method="post" action="/run" className="module-launch">

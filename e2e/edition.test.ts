@@ -31,10 +31,14 @@ test('corrects a Lettre, saves it, marks the Offre Postulée and finds the Lettr
     expect(await page.evaluate(() => globalThis.navigator.clipboard.readText())).toBe(CORRECTED_LETTRE);
   }).toPass();
 
+  // Postulée is never undone: a second click confirms it
   await page.getByRole('button', { name: 'Marquer comme Postulée' }).click();
+  await expect(page.getByText('Postulée', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Confirmer : Postulée' }).click();
 
   await expect(page.getByText('Postulée', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Marquer comme Postulée' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Archiver' })).toBeVisible();
   await expect(lettre.getByRole('textbox')).toHaveCount(0);
   await expect(correction).toContainText('Titulaire d’un master 2 de droit privé obtenu en 2025.');
 });
@@ -42,16 +46,16 @@ test('corrects a Lettre, saves it, marks the Offre Postulée and finds the Lettr
 test('changes the Version retenue of an Artefact', async ({ page }) => {
   await page.goto(`/offres/${VERSAILLES_REFERENCE}`);
   const recherche = page.getByRole('region', { name: 'Recherche' });
-  await expect(recherche.locator('summary')).toHaveText([
+  await expect(recherche.locator('li > details > summary')).toHaveText([
     /^v1\s*Prêt\s*Consignes par défaut\s*\d/,
     /^v2\s*Prêt\s*Retenue/,
   ]);
   await expect(recherche.getByRole('textbox', { name: 'Markdown' })).toHaveValue(/^# Recherche relancée/);
 
-  await recherche.locator('summary', { hasText: 'v1' }).click();
+  await recherche.locator('li > details > summary', { hasText: 'v1' }).click();
   await recherche.getByRole('button', { name: 'Retenir cette Version' }).click();
 
-  await expect(recherche.locator('summary')).toHaveText([
+  await expect(recherche.locator('li > details > summary')).toHaveText([
     /^v1\s*Prêt\s*Retenue/,
     /^v2\s*Prêt\s*Consignes par défaut\s*\d/,
   ]);

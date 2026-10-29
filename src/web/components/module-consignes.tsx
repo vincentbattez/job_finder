@@ -1,9 +1,11 @@
 import { useId, useState } from 'react';
 import { Form } from 'react-router';
 
+import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/actions/labels.ts';
+
 import { MarkdownEditor } from './markdown-editor.tsx';
 import { Markdown } from './markdown.tsx';
-import { ARTEFACT_LABEL_BY_ARTEFACT, type IArtefactVersions } from './offre-fiche.tsx';
+import type { IArtefactVersions } from './offre-fiche.tsx';
 
 // The shape of the listConsignes action, so the route passes its result as is
 export interface IModuleConsignes {
@@ -19,14 +21,12 @@ export function ConsignesOrigin({ hasCandidatConsignes }: Readonly<{ hasCandidat
   );
 }
 
-// The Consignes of one module: the editor starts from the Candidat's own, or from the default ones
-// until they have some. The route remounts it when the Consignes change hands, so the editor shows
-// the ones now in effect. Only the Consignes are here: the fixed part of the prompt stays in the
-// code, out of reach (ADR-0003).
+// The route remounts it when the Consignes change hands, so the editor shows those in effect; the
+// fixed part of the prompt stays in the code, out of reach (ADR-0003)
 export function ModuleConsignes({ module, defaultConsignes, candidatConsignes }: Readonly<IModuleConsignes>) {
   const headingId = useId();
   const hasCandidatConsignes = candidatConsignes !== null;
-  const [draft, setDraft] = useState(candidatConsignes ?? defaultConsignes);
+  const [editedConsignes, setEditedConsignes] = useState(candidatConsignes ?? defaultConsignes);
   return (
     <section className="artefact consignes" data-artefact={module} aria-labelledby={headingId}>
       <div className="consignes__head">
@@ -45,7 +45,7 @@ export function ModuleConsignes({ module, defaultConsignes, candidatConsignes }:
               : 'Les Consignes par défaut, à modifier pour en faire les vôtres'
           }
           defaultValue={candidatConsignes ?? defaultConsignes}
-          onChange={setDraft}
+          onChange={setEditedConsignes}
         />
         <div className="edition">
           <button type="submit" name="intent" value="save" className="button--primary">
@@ -56,7 +56,9 @@ export function ModuleConsignes({ module, defaultConsignes, candidatConsignes }:
               Revenir aux Consignes par défaut
             </button>
           )}
-          {draft !== (candidatConsignes ?? defaultConsignes) && <p role="status">Modifications non enregistrées</p>}
+          {editedConsignes !== (candidatConsignes ?? defaultConsignes) && (
+            <p role="status">Modifications non enregistrées</p>
+          )}
         </div>
       </Form>
       {hasCandidatConsignes && (

@@ -1,16 +1,9 @@
-import { copyFileSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
-import { createActions, type Actions } from '#/actions/index.ts';
+import { type Actions } from '#/actions/index.ts';
 
+import { detectOffres as detectRecordedOffres } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
-import { createRecordedFetch } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -39,15 +32,7 @@ const CORRECTED_LETTRE =
 
 // Launching a module only queues its job: the worker's turn is taken here
 async function detectOffres(...plannedRunList: Parameters<typeof createFakeAiSession>) {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  const actions = await createActions({
-    dataDirectory,
-    aiSession: createFakeAiSession(...plannedRunList),
-    fetch: createRecordedFetch().fetch,
-    notificationChannel: createFakeNotificationChannel(),
-  });
-  await actions.detect();
+  const { actions } = await detectRecordedOffres(createFakeAiSession(...plannedRunList));
   return actions;
 }
 
@@ -149,7 +134,7 @@ describe('saving a correction', () => {
     const actions = await detectOffres(rechercheRun('Recherche'), LETTRE_RUN);
     await runModule(actions, 'recherche');
     await runModule(actions, 'lettre');
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     await expect(
       actions.saveDocument({
@@ -158,7 +143,7 @@ describe('saving a correction', () => {
         fileName: 'lettre.md',
         markdown: CORRECTED_LETTRE,
       }),
-    ).rejects.toThrow(/L'Offre 2026-2445600 est Postulée : sa Lettre retenue est figée/);
+    ).rejects.toThrow(/L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/);
 
     expect(await readDocuments(actions, 'lettre')).toMatchObject([
       { documentList: [{ fileName: 'brouillon.md' }, { fileName: 'lettre.md', markdown: BROUILLON }] },
@@ -199,7 +184,7 @@ describe('saving a correction', () => {
     await runModule(actions, 'lettre');
     const beforePostuleeList = await readModifiableFiles(actions);
 
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     expect(beforePostuleeList).toEqual([
       { artefact: 'recherche', fileNameList: [[], ['recherche.md']] },
@@ -227,7 +212,7 @@ describe('saving a correction', () => {
     await runModule(actions, 'lettre');
     const beforePostuleeList = await readRetenableVersions(actions);
 
-    await actions.changeStatus({ reference: REFERENCE, status: 'postulee' });
+    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
 
     expect(beforePostuleeList).toEqual([
       { artefact: 'recherche', numberList: [1] },

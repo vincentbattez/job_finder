@@ -1,5 +1,4 @@
-import { copyFileSync, mkdtempSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -8,9 +7,9 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createActions, type Actions } from '#/actions/index.ts';
 import type { Detection, Offre } from '#/domain/index.ts';
 
+import { createDataDirectory } from './data-directory.ts';
+import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch, DSJ_FEED_URL, readRecordedFile } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // Every attaché de justice offer of the DSJ feed recorded on 2026-10-29, counted by hand from its
 // titles, « (e) » and « .e » forms included
@@ -98,12 +97,6 @@ const ATTACHE_DE_JUSTICE_REFERENCE_LIST = [
   '2026-2453874',
 ];
 
-function createDataDirectory(): string {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  return dataDirectory;
-}
-
 // Expirée depends on the day: the clock stays on the day the responses were recorded
 beforeAll(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -167,7 +160,7 @@ describe('detection on the responses recorded on 2026-10-29', () => {
       applicationEmail: 'p.tj-bethune@justice.fr',
       contact1: 'Madame Odile SIMART, présidente du Tribunal Judiciaire de Béthune',
       contact2: 'secrétariat en copie : sec.p.tj-bethune@justice.fr',
-      status: 'a_traiter',
+      statut: 'a_traiter',
       isInZone: true,
       isExpiree: false,
     });
@@ -286,6 +279,30 @@ describe('a second detection', () => {
     const { requestedUrlList } = await detectTwice();
 
     expect(requestedUrlList).toEqual([DSJ_FEED_URL]);
+  });
+});
+
+describe('a first launch cut off mid-way', () => {
+  // The Offres saved before the cut stay, but the first launch is over only once a Détection of the
+  // Veille went through: the next one imports the rest without triggering anything either
+  it('ends with the next Détection, which triggers nothing for the Offres left', async () => {
+    const dataDirectory = createDataDirectory();
+    const cutFetch = createRecordedFetch({
+      'https://place-ep-recrute.talent-soft.com/offre-de-emploi/emploi_2445600.aspx': { body: '', status: 500 },
+    }).fetch;
+    const cutActions = await createActions({ dataDirectory, fetch: cutFetch });
+    await expect(cutActions.detect()).rejects.toThrow(/HTTP 500/);
+    const notificationChannel = createFakeNotificationChannel();
+    const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch, notificationChannel });
+
+    const detectionList = await actions.detect();
+
+    expect(detectionList).toMatchObject([{ isFirstLaunch: true }]);
+    expect(detectionList[0]?.newOffreList.map(({ reference }) => reference)).toContain('2026-2445609');
+    expect(notificationChannel.sentList).toEqual([]);
+    expect(await actions.runQueuedJobs()).toEqual([]);
+    const nextDetectionList = await actions.detect();
+    expect(nextDetectionList).toMatchObject([{ isFirstLaunch: false, newOffreList: [] }]);
   });
 });
 

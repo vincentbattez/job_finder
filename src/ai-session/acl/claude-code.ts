@@ -2,6 +2,9 @@ import { spawn, spawnSync } from 'node:child_process';
 
 import { z } from 'zod/v4';
 
+import { SESSION_RESULT_SCHEMA, type SessionResult } from '#/domain/index.ts';
+import { messageOf } from '#/text/index.ts';
+
 export interface IInteractiveSession {
   prompt: string;
   directory: string;
@@ -9,9 +12,8 @@ export interface IInteractiveSession {
   readOnlyPathList?: string[];
 }
 
-// The two parts of a module's prompt (ADR-0003): the fixed part, then the Consignes. The session
-// reads in its directory and in the other folders it is given, and may write only in its output
-// folder.
+// The fixed part of a module's prompt, then its Consignes (ADR-0003); the session writes only in
+// its output folder
 export interface IHeadlessSession {
   fixedPrompt: string;
   consignes: string;
@@ -20,15 +22,9 @@ export interface IHeadlessSession {
   outputDirectory: string;
 }
 
-export interface IHeadlessResult {
-  isSuccess: boolean;
-  sessionId: string | null;
-  log: string;
-}
-
 export interface IAiSession {
   openInteractive(session: IInteractiveSession): void;
-  runHeadless(session: IHeadlessSession): Promise<IHeadlessResult>;
+  runHeadless(session: IHeadlessSession): Promise<SessionResult>;
 }
 
 // What would bill an API key or another provider instead of the subscription, or tell claude it
@@ -57,31 +53,28 @@ const CLAUDE_RESULT_SCHEMA = z.object({
   result: z.string().default(''),
 });
 
-function readResult(output: string, exitCode: number | null): IHeadlessResult {
+function readResult(output: string, exitCode: number | null): SessionResult {
   try {
     const result = CLAUDE_RESULT_SCHEMA.parse(JSON.parse(output));
-    return {
+    return SESSION_RESULT_SCHEMA.parse({
       isSuccess: exitCode === 0 && !result.is_error && result.subtype === 'success',
       sessionId: result.session_id,
       log: result.result === '' ? result.subtype : result.result,
-    };
+    });
   } catch {
-    return {
+    return SESSION_RESULT_SCHEMA.parse({
       isSuccess: false,
       sessionId: null,
       log: `Claude Code s'est arrêté (code ${String(exitCode)}) : ${output}`,
-    };
+    });
   }
 }
 
 // The only file that knows the AI runs on Claude Code, through the subscription and never an API
 // key (ADR-0003): the rest of the app sees an IAiSession, which the tests replace with a fake.
 export const CLAUDE_CODE: IAiSession = {
-  // The fixed prompt goes into the system prompt so the Candidat does not see it as their own
-  // message; the opening line only gets Claude to speak first. The manual mode, whatever the
-  // user's settings say, shows the Candidat each file edit and waits for their consent.
-  // A confined session has no shell that could get round its read-only paths, no web, nothing
-  // outside its directory, and none of the user's CLAUDE.md, hooks or MCP servers.
+  // The prompt goes into the system prompt, not the Candidat's messages; the manual mode asks their
+  // consent to each edit, and a confined session has no shell that could get round its read-only paths
   openInteractive({ prompt, directory, readOnlyPathList }) {
     const confinementList =
       readOnlyPathList === undefined
@@ -109,14 +102,14 @@ export const CLAUDE_CODE: IAiSession = {
       throw new Error(`Impossible de lancer Claude Code (${error.message}). Installer « claude » et s'y connecter.`);
     }
     if (status !== 0) {
-      throw new Error(`La session Claude Code s'est arrêtée en erreur (code ${String(status)}).`);
+      throw new Error(
+        `La session Claude Code s'est arrêtée en erreur (code ${String(status)}). Relancer la commande ; si l'erreur revient, lancer « claude » seul pour lire son message.`,
+      );
     }
   },
 
-  // The fixed part goes into the system prompt, above the Consignes sent as the message, so that
-  // no Consignes can lift its rules. The safe mode leaves out the user's CLAUDE.md, hooks, skills
-  // and MCP servers; dontAsk refuses any tool not listed, so the session reads, searches the web
-  // and writes only in its output folder. Never fails: a session that cannot run is a failed one.
+  // The fixed part goes into the system prompt so that no Consignes can lift its rules (ADR-0003);
+  // dontAsk refuses any tool not listed. A session that cannot run is a failed one, never a throw.
   async runHeadless({ fixedPrompt, consignes, directory, readDirectoryList, outputDirectory }) {
     const argumentList = [
       '-p',
@@ -155,9 +148,9 @@ export const CLAUDE_CODE: IAiSession = {
       });
       return readResult(output, exitCode);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = messageOf(error);
       const log = `Impossible de lancer Claude Code (${message}). Installer « claude » et s'y connecter.`;
-      return { isSuccess: false, sessionId: null, log };
+      return SESSION_RESULT_SCHEMA.parse({ isSuccess: false, sessionId: null, log });
     }
   },
 };

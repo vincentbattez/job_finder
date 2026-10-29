@@ -1,17 +1,13 @@
-import { copyFileSync, mkdtempSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { createActions, type Actions } from '#/actions/index.ts';
+import { type Actions } from '#/actions/index.ts';
 import { VISUALISATION_DEFAULT_CONSIGNES } from '#/modules/visualisation/consignes.ts';
 
+import { detectOffres as detectRecordedOffres, LEA_OFFRES_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
-import { createRecordedFetch } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -52,16 +48,8 @@ function visualisationRun(html = VISUALISATION) {
 }
 
 async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  const actions = await createActions({
-    dataDirectory,
-    aiSession,
-    fetch: createRecordedFetch().fetch,
-    notificationChannel: createFakeNotificationChannel(),
-  });
-  await actions.detect();
-  return { actions, offreDirectory: path.join(dataDirectory, 'candidats/lea/offres', OFFRE_DIRECTORY_NAME) };
+  const { actions, dataDirectory } = await detectRecordedOffres(aiSession);
+  return { actions, offreDirectory: path.join(dataDirectory, LEA_OFFRES_PATH, OFFRE_DIRECTORY_NAME) };
 }
 
 // Launching a module queues its job, which the worker runs (ADR-0003)
@@ -101,7 +89,8 @@ describe('visualisation', () => {
     });
     expect(readFileSync(path.join(offreDirectory, 'visualisation/v1/visualisation.html'), 'utf8')).toBe(VISUALISATION);
     const session = aiSession.headlessSessionList.at(-1);
-    expect(session?.readDirectoryList).toEqual([path.join(offreDirectory, 'fiche_entretien/v1')]);
+    // The Fiche d'entretien is in the folder of the Offre, the session's own
+    expect(session?.readDirectoryList).toEqual([]);
     expect(session?.fixedPrompt).toContain(`\`${path.join(offreDirectory, 'fiche_entretien/v1/fiche-entretien.md')}\``);
     const versionList = await actions.listVersions({ reference: REFERENCE, artefact: 'visualisation' });
     expect(versionList.map(({ number, isRetenue }) => ({ number, isRetenue }))).toEqual([
@@ -130,7 +119,7 @@ describe('visualisation', () => {
     const launch = actions.runModule({ module: 'visualisation', reference: REFERENCE });
 
     await expect(launch).rejects.toThrow(
-      "L'Offre 2026-2445600 n'a pas de Fiche d'entretien retenue, sur laquelle s'appuie la Visualisation. La produire d'abord : jf run fiche_entretien 2026-2445600.",
+      "L'Offre 2026-2445600 n'a pas de Fiche d’entretien retenue, sur laquelle s'appuie la Visualisation. La produire d'abord : jf run fiche_entretien 2026-2445600.",
     );
     expect(await actions.runQueuedJobs()).toEqual([]);
   });
@@ -217,7 +206,12 @@ describe('reading a Visualisation', () => {
   });
 
   it.each([
-    { case: 'an unknown Version', number: '2', error: "Version inconnue : visualisation v2 de l'Offre 2026-2445600." },
+    {
+      case: 'an unknown Version',
+      number: '2',
+      error:
+        "Version inconnue : visualisation v2 de l'Offre 2026-2445600. « jf versions 2026-2445600 visualisation » liste ses Versions.",
+    },
     {
       case: 'a Version without its page',
       number: '1',

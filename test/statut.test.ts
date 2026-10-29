@@ -46,50 +46,102 @@ describe('statut of an Offre', () => {
 
   async function findStatus(reference: string) {
     const offre = await findOffre(actions, reference);
-    return offre?.status;
+    return offre?.statut;
   }
 
   it('marks an Offre as Postulée, though it has no Lettre', async () => {
-    await actions.changeStatus({ reference: '2026-2445600', status: 'postulee' });
+    await actions.changeStatut({ reference: '2026-2445600', statut: 'postulee' });
 
     expect(await findStatus('2026-2445600')).toBe('postulee');
   });
 
   it('marks as Postulées the Boulogne Offres the Candidat applied to before the tool, though Expirées', async () => {
-    await actions.changeStatus({ reference: '2026-2231960', status: 'postulee' });
-    await actions.changeStatus({ reference: '2026-2338409', status: 'postulee' });
+    await actions.changeStatut({ reference: '2026-2231960', statut: 'postulee' });
+    await actions.changeStatut({ reference: '2026-2338409', statut: 'postulee' });
 
     expect([await findOffre(actions, '2026-2231960'), await findOffre(actions, '2026-2338409')]).toMatchObject([
-      { status: 'postulee', isExpiree: true },
-      { status: 'postulee', isExpiree: true },
+      { statut: 'postulee', isExpiree: true },
+      { statut: 'postulee', isExpiree: true },
     ]);
   });
 
   it('archives an Offre', async () => {
-    await actions.changeStatus({ reference: '2026-2445609', status: 'archivee' });
+    await actions.changeStatut({ reference: '2026-2445609', statut: 'archivee' });
 
     expect(await findStatus('2026-2445609')).toBe('archivee');
   });
 
-  it('keeps a Postulée Offre Postulée, so that its Lettre retenue stays the one sent', async () => {
-    await actions.changeStatus({ reference: '2026-2445183', status: 'postulee' });
+  it('archives a Postulée Offre, whose Lettre retenue stays the one sent', async () => {
+    await actions.changeStatut({ reference: '2026-2445183', statut: 'postulee' });
 
-    await expect(actions.changeStatus({ reference: '2026-2445183', status: 'archivee' })).rejects.toThrow(
-      /L'Offre 2026-2445183 est Postulée/,
+    await actions.changeStatut({ reference: '2026-2445183', statut: 'archivee' });
+
+    expect(await findStatus('2026-2445183')).toBe('archivee');
+    await expect(actions.runModule({ module: 'lettre', reference: '2026-2445183' })).rejects.toThrow(
+      /L'Offre 2026-2445183 a été Postulée : sa Lettre retenue est figée/,
     );
-    expect(await findStatus('2026-2445183')).toBe('postulee');
+  });
+
+  // Postulée is never undone: the Lettre retenue was sent
+  it('brings an Archivée Offre once Postulée back to Postulée, never to À traiter', async () => {
+    await actions.changeStatut({ reference: '2026-2350473', statut: 'postulee' });
+    await actions.changeStatut({ reference: '2026-2350473', statut: 'archivee' });
+
+    await expect(actions.changeStatut({ reference: '2026-2350473', statut: 'a_traiter' })).rejects.toThrow(
+      /L'Offre 2026-2350473 est Archivée : elle ne peut passer qu'en Postulée/,
+    );
+    await actions.changeStatut({ reference: '2026-2350473', statut: 'postulee' });
+    expect(await findStatus('2026-2350473')).toBe('postulee');
+  });
+
+  it('never brings a Postulée Offre back to À traiter', async () => {
+    await actions.changeStatut({ reference: '2026-2360411', statut: 'postulee' });
+
+    await expect(actions.changeStatut({ reference: '2026-2360411', statut: 'a_traiter' })).rejects.toThrow(
+      /L'Offre 2026-2360411 est Postulée : elle ne peut passer qu'en Archivée/,
+    );
+    expect(await findStatus('2026-2360411')).toBe('postulee');
+  });
+
+  it('brings an Archivée Offre never Postulée back to À traiter', async () => {
+    await actions.changeStatut({ reference: '2026-2199164', statut: 'archivee' });
+
+    await actions.changeStatut({ reference: '2026-2199164', statut: 'a_traiter' });
+
+    expect(await findStatus('2026-2199164')).toBe('a_traiter');
+  });
+
+  // The front shows a button for each of them, and none other
+  it('gives the statuts each Offre can move to', async () => {
+    await actions.changeStatut({ reference: '2026-2445629', statut: 'postulee' });
+    await actions.changeStatut({ reference: '2026-2445637', statut: 'archivee' });
+    await actions.changeStatut({ reference: '2026-2445671', statut: 'postulee' });
+    await actions.changeStatut({ reference: '2026-2445671', statut: 'archivee' });
+
+    const ficheList = await Promise.all(
+      ['2026-2445584', '2026-2445629', '2026-2445637', '2026-2445671'].map((reference) =>
+        actions.readOffre({ reference }),
+      ),
+    );
+
+    expect(ficheList.map(({ nextStatutList }) => nextStatutList)).toEqual([
+      ['postulee', 'archivee'],
+      ['archivee'],
+      ['a_traiter'],
+      ['postulee'],
+    ]);
   });
 
   it('marks a Postulée Offre as Postulée again without complaint', async () => {
-    await actions.changeStatus({ reference: '2026-2360445', status: 'postulee' });
+    await actions.changeStatut({ reference: '2026-2360445', statut: 'postulee' });
 
-    await actions.changeStatus({ reference: '2026-2360445', status: 'postulee' });
+    await actions.changeStatut({ reference: '2026-2360445', statut: 'postulee' });
 
     expect(await findStatus('2026-2360445')).toBe('postulee');
   });
 
   it('refuses an unknown Offre', async () => {
-    await expect(actions.changeStatus({ reference: '2026-0000000', status: 'postulee' })).rejects.toThrow(
+    await expect(actions.changeStatut({ reference: '2026-0000000', statut: 'postulee' })).rejects.toThrow(
       /Offre inconnue : 2026-0000000/,
     );
   });
@@ -112,11 +164,11 @@ it('refuses a reference shared by the Offres of two Candidats', async () => {
   const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
   await actions.detect();
 
-  await expect(actions.changeStatus({ reference: '2026-2445600', status: 'postulee' })).rejects.toThrow(
-    /Plusieurs Offres ont la référence 2026-2445600/,
+  await expect(actions.changeStatut({ reference: '2026-2445600', statut: 'postulee' })).rejects.toThrow(
+    /Plusieurs Offres ont la référence 2026-2445600, chez des Candidats différents : .*Veille/,
   );
   const offre = await findOffre(actions, '2026-2445600');
-  expect(offre?.status).toBe('a_traiter');
+  expect(offre?.statut).toBe('a_traiter');
 });
 
 describe('Expirée', () => {

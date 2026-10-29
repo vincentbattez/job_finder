@@ -7,6 +7,7 @@ interface IDetection {
   veilleId: string;
   isFirstLaunch: boolean;
   newOffreList: { reference: string; title: string }[];
+  notificationFailureList: string[];
 }
 
 function summarize({ isFirstLaunch, newOffreList }: IDetection): string {
@@ -43,6 +44,11 @@ export function Detection() {
                 ))}
               </ul>
             )}
+            {detection.notificationFailureList.map((failure) => (
+              <p key={failure} className="detection__error">
+                {failure}
+              </p>
+            ))}
           </div>
         ))}
       </div>

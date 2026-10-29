@@ -1,7 +1,3 @@
-import { copyFileSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
@@ -10,10 +6,9 @@ import { LETTRE_DEFAULT_CONSIGNES } from '#/modules/lettre/consignes.ts';
 import { RECHERCHE_DEFAULT_CONSIGNES } from '#/modules/recherche/consignes.ts';
 import { VISUALISATION_DEFAULT_CONSIGNES } from '#/modules/visualisation/consignes.ts';
 
+import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createRecordedFetch } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -23,8 +18,7 @@ const RECHERCHE_RUN = {
 };
 
 async function openActions(aiSession = createFakeAiSession()) {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
+  const dataDirectory = createDataDirectory();
   return createActions({ dataDirectory, aiSession, fetch: createRecordedFetch().fetch });
 }
 
@@ -60,6 +54,31 @@ describe('consignes', () => {
       { module: 'fiche_entretien', defaultConsignes: FICHE_ENTRETIEN_DEFAULT_CONSIGNES, candidatConsignes: null },
       { module: 'visualisation', defaultConsignes: VISUALISATION_DEFAULT_CONSIGNES, candidatConsignes: null },
     ]);
+  });
+
+  // jf consignes lea fiche, like jf run fiche
+  it('reads the Consignes of one module, named by its Artefact or its alias', async () => {
+    const actions = await openActions();
+    await actions.saveConsignes({ candidatId: 'lea', module: 'fiche', consignes: 'Dix questions.\n' });
+
+    expect([
+      await actions.readConsignes({ candidatId: 'lea', module: 'fiche' }),
+      await actions.readConsignes({ candidatId: 'lea', module: 'fiche_entretien' }),
+    ]).toEqual([
+      {
+        module: 'fiche_entretien',
+        defaultConsignes: FICHE_ENTRETIEN_DEFAULT_CONSIGNES,
+        candidatConsignes: 'Dix questions.\n',
+      },
+      {
+        module: 'fiche_entretien',
+        defaultConsignes: FICHE_ENTRETIEN_DEFAULT_CONSIGNES,
+        candidatConsignes: 'Dix questions.\n',
+      },
+    ]);
+    await expect(actions.readConsignes({ candidatId: 'lea', module: 'lettr' })).rejects.toThrow(
+      'Module inconnu : lettr. Modules : recherche, lettre, fiche, visualisation.',
+    );
   });
 
   it("goes back to the default Consignes once the Candidat's own are deleted", async () => {

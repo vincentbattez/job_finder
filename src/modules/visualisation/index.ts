@@ -1,7 +1,7 @@
-import { VISUALISATION_DEFAULT_CONSIGNES } from './consignes.ts';
-import { composeVisualisationPrompt } from './prompt.ts';
+import type { IAiModule } from '#/ai-module/index.ts';
 
-const VISUALISATION_FILE_NAME = 'visualisation.html';
+import { VISUALISATION_DEFAULT_CONSIGNES } from './consignes.ts';
+import { composeVisualisationPrompt, VISUALISATION_FILE_NAME } from './prompt.ts';
 
 // A whole HTML page, without a script: the front's sandboxed frame runs none, so a diagram drawn by
 // one would never show
@@ -19,5 +19,5 @@ export const VISUALISATION_MODULE = {
   outputFileList: [{ name: VISUALISATION_FILE_NAME, findFormatError }],
   defaultConsignes: VISUALISATION_DEFAULT_CONSIGNES,
   composePrompt: composeVisualisationPrompt,
-  requiredArtefactList: ['fiche_entretien'] as const,
-};
+  requiredArtefactList: ['fiche_entretien'],
+} satisfies IAiModule;

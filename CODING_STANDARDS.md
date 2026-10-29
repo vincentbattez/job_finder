@@ -18,7 +18,7 @@ Les règles génériques du code. Le pourquoi d'une décision est dans son ADR (
 
 ## Anti-corruption layer (ADR-0005)
 
-- **Domaine.** Chaque concept du domaine a son schéma Zod dans `src/domain/`, terminé par `.brand<'Domain'>()`. Son type en est tiré par `z.infer`.
+- **Domaine.** Chaque concept du domaine a son schéma Zod dans `src/domain/`, terminé par `.brand<'Domain'>()`. Son type en est tiré par `z.infer`. Une énumération (`z.enum`) reste sans brand, pour que ses littéraux s'écrivent dans le code : l'objet qui la porte a le sien.
 - **ACL.** La donnée brute (base, fichiers, HTTP, sous-processus, environnement) se lit dans un dossier `acl/`. Il la parse avec un schéma du domaine et n'exporte que des types domaine. **(CI)**
 - Une action reçoit son entrée en `unknown` et la parse. Elle renvoie `void` ou des valeurs du domaine. **(CI)**
 - Une valeur du domaine s'obtient toujours par `parse`. Les assertions `as` sont refusées. **(CI)**
@@ -43,6 +43,7 @@ Les règles génériques du code. Le pourquoi d'une décision est dans son ADR (
 ## Tests
 
 - Un test passe par les actions et vérifie ce qui s'observe : les Offres en base, les Artefacts sur disque, les jobs en file, les notifications envoyées.
+- Seule une règle qui a beaucoup de cas a aussi des tests unitaires, à côté de son code : le statut (`src/statut/`), la Republication (`src/republication/`), le titre d'une Veille (`src/modules/source-pep/title.ts`) et la ville d'un lieu d'affectation (`src/geo/city.ts`).
 - Seules les frontières externes sont simulées : le HTTP des Sources (avec des réponses enregistrées), le lancement de Claude et le canal de notification.
 - Chaque règle d'architecture a un projet fixture qui la viole, pour prouver qu'elle attrape bien quelque chose.
 

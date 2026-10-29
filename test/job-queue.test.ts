@@ -1,16 +1,13 @@
-import { copyFileSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
 
 import { createActions } from '#/actions/index.ts';
 
+import { createDataDirectory, detectOffres } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
-
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 
 // The two Béthune Offres, both in the Zone, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -19,26 +16,6 @@ const OTHER_REFERENCE = '2026-2445609';
 const OUT_OF_ZONE_REFERENCE = '2026-2215099';
 
 const RECHERCHE = { fileByName: { 'recherche.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
-
-function createDataDirectory(): string {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  return dataDirectory;
-}
-
-// A first Détection imports the Offres already online, without queuing anything
-async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
-  const dataDirectory = createDataDirectory();
-  const notificationChannel = createFakeNotificationChannel();
-  const actions = await createActions({
-    dataDirectory,
-    aiSession,
-    fetch: createRecordedFetch().fetch,
-    notificationChannel,
-  });
-  await actions.detect();
-  return { actions, dataDirectory, notificationChannel };
-}
 
 describe('the job queue', () => {
   it('queues the job of a module without launching Claude, and the worker runs it', async () => {

@@ -1,4 +1,4 @@
-import { copyFileSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -6,16 +6,10 @@ import { describe, expect, it } from 'vitest';
 
 import { createActions } from '#/actions/index.ts';
 
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', '..', 'config.example.json');
+import { createDataDirectory } from './data-directory.ts';
 
 function createEmptyDataDirectory(): string {
   return mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-}
-
-function createDataDirectoryFromExample(): string {
-  const dataDirectory = createEmptyDataDirectory();
-  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
-  return dataDirectory;
 }
 
 function writeConfig(dataDirectory: string, config: object): void {
@@ -32,13 +26,13 @@ function listLeaProfilFiles(dataDirectory: string): string[] {
 
 describe('actions', () => {
   it('lists the Candidats declared in the config', async () => {
-    const actions = await createActions({ dataDirectory: createDataDirectoryFromExample() });
+    const actions = await createActions({ dataDirectory: createDataDirectory() });
 
     expect(await actions.listCandidats()).toEqual([{ id: 'lea', name: 'Léa' }]);
   });
 
   it('gives each Candidat an empty Profil folder on first launch', async () => {
-    const dataDirectory = createDataDirectoryFromExample();
+    const dataDirectory = createDataDirectory();
 
     await createActions({ dataDirectory });
 
@@ -46,7 +40,7 @@ describe('actions', () => {
   });
 
   it('keeps the existing Profil and Candidats when launched again', async () => {
-    const dataDirectory = createDataDirectoryFromExample();
+    const dataDirectory = createDataDirectory();
     await createActions({ dataDirectory });
     writeFileSync(path.join(dataDirectory, 'candidats', 'lea', 'profil', 'faits.md'), '# Faits\n');
 
@@ -71,7 +65,7 @@ describe('actions', () => {
   });
 
   it('refuses to list the Offres of an unknown Candidat', async () => {
-    const actions = await createActions({ dataDirectory: createDataDirectoryFromExample() });
+    const actions = await createActions({ dataDirectory: createDataDirectory() });
 
     await expect(actions.listOffres({ candidatId: 'inconnu' })).rejects.toThrow(/Candidat inconnu : inconnu/);
   });
