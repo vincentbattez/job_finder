@@ -23,7 +23,7 @@ if (!dataDirectory.startsWith(tmpdir())) {
 // they hold for any of them
 const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
   // The fields of test/fixtures/import/greffier-grenoble.md, the Fiche de poste e2e/import.test.ts drops
-  import: {
+  extraction: {
     'extraction.json': JSON.stringify({
       title: 'Greffier placé – Tribunal judiciaire de Grenoble',
       employer: 'Ministère de la Justice – Tribunal judiciaire de Grenoble',
@@ -61,12 +61,10 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
 const SESSION_DURATION_MS = 1000;
 
 // A session's module is the Artefact its Version folder belongs to: <offre>/<artefact>/v<n>. The
-// extraction of an import works in a temporary folder of its own, jf-import-<random>
+// extraction of an imported Offre writes in a folder of its own: <offre>/extraction
 // (src/modules/source-import).
 function moduleOf({ outputDirectory }: IHeadlessSession): string {
-  return path.basename(outputDirectory).startsWith('jf-import-')
-    ? 'import'
-    : path.basename(path.dirname(outputDirectory));
+  return path.basename(outputDirectory) === 'extraction' ? 'extraction' : path.basename(path.dirname(outputDirectory));
 }
 
 const aiSession = {

@@ -1,49 +1,57 @@
 import { createHash } from 'node:crypto';
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
+import { FICHE_DE_POSTE_SCHEMA, LISTED_OFFRE_SCHEMA } from '#/domain/index.ts';
 
 import { EXTRACTION_FILE_NAME, readExtraction } from './acl/extraction.ts';
 import { composeExtractionPrompt, EXTRACTION_REQUEST } from './prompt.ts';
 
-const FICHE_DE_POSTE_FILE_NAME = 'fiche-de-poste.md';
-
-// The real path of the temporary folders, where the extraction session writes: on macOS, they lie
-// behind the link /var, and the rule letting the session write must name the folder it sees
-const TEMPORARY_DIRECTORY = realpathSync(tmpdir());
+// The folder of the Offre where the session writes what it read
+const EXTRACTION_DIRECTORY_NAME = 'extraction';
 
 // The Source Import Markdown: a Fiche de poste the Candidat found elsewhere (spec « Sources et
 // Détection »)
 export function createImportSource(aiSession: IAiSession) {
   return {
-    // An imported Offre is known by its Fiche de poste, so importing the same file again finds it
-    referenceOf(markdown: string): string {
-      return `import-${createHash('sha256').update(markdown).digest('hex').slice(0, 10)}`;
+    // The Offre as the import lists it, before Claude reads its fields: known by the content of its
+    // Fiche de poste, so importing the same file again finds it, and named after its file meanwhile
+    list(fileName: string, markdown: string) {
+      const reference = `import-${createHash('sha256').update(markdown).digest('hex').slice(0, 10)}`;
+      return {
+        listedOffre: LISTED_OFFRE_SCHEMA.parse({ reference, title: fileName, url: null, publishedAt: null }),
+        fiche: FICHE_DE_POSTE_SCHEMA.parse({
+          dateLimite: null,
+          employer: null,
+          workplace: null,
+          applicationEmail: null,
+          contact1: null,
+          contact2: null,
+          courtOfAppeal: null,
+          markdown,
+        }),
+      };
     },
 
-    // A headless Claude session, with a fixed prompt, reads the fields of the Fiche de poste. It
-    // works in a folder of its own, since the folder of the Offre is named after a title it has
-    // yet to find.
-    async extract(reference: string, markdown: string) {
-      const directory = mkdtempSync(path.join(TEMPORARY_DIRECTORY, 'jf-import-'));
-      try {
-        writeFileSync(path.join(directory, FICHE_DE_POSTE_FILE_NAME), markdown);
-        const session = await aiSession.runHeadless({
-          fixedPrompt: composeExtractionPrompt(FICHE_DE_POSTE_FILE_NAME, EXTRACTION_FILE_NAME),
-          consignes: EXTRACTION_REQUEST,
-          directory,
-          readDirectoryList: [],
-          outputDirectory: directory,
-        });
-        if (!session.isSuccess) {
-          throw new Error(`L'extraction des champs de la Fiche de poste a échoué : ${session.log} Relancer l'import.`);
-        }
-        return readExtraction(directory, reference, markdown);
-      } finally {
-        rmSync(directory, { recursive: true, force: true });
+    // A headless Claude session, with a fixed prompt, reads the fields of the Fiche de poste in the
+    // folder of the Offre. Throws when the session fails or writes an extraction that is not valid.
+    async extract(offreDirectory: string, ficheDePoste: string) {
+      const outputDirectory = path.join(offreDirectory, EXTRACTION_DIRECTORY_NAME);
+      // The extraction of an earlier run never passes for that of this one
+      rmSync(outputDirectory, { recursive: true, force: true });
+      mkdirSync(outputDirectory);
+      const session = await aiSession.runHeadless({
+        fixedPrompt: composeExtractionPrompt(path.join(EXTRACTION_DIRECTORY_NAME, EXTRACTION_FILE_NAME)),
+        consignes: EXTRACTION_REQUEST,
+        directory: offreDirectory,
+        readDirectoryList: [],
+        outputDirectory,
+      });
+      if (!session.isSuccess) {
+        throw new Error(`Claude Code n'a pas relevé les champs de la Fiche de poste : ${session.log}`);
       }
+      return { ...readExtraction(outputDirectory, ficheDePoste), session };
     },
   };
 }

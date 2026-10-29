@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { FICHE_DE_POSTE_SCHEMA, LISTED_OFFRE_SCHEMA } from '#/domain/index.ts';
+import { FICHE_DE_POSTE_SCHEMA } from '#/domain/index.ts';
 
 export const EXTRACTION_FILE_NAME = 'extraction.json';
 
@@ -48,24 +48,18 @@ function parseExtraction(filePath: string, markdown: string) {
   }
 }
 
-// The extraction a session wrote as JSON, parsed into the domain (ADR-0005): the Offre as the
-// Source Import Markdown lists it, its Fiche de poste and its ville
-export function readExtraction(directory: string, reference: string, markdown: string) {
+// The extraction a session wrote as JSON, parsed into the domain (ADR-0005): the title, null when
+// the Fiche de poste gives none, the fields of the Fiche de poste and the ville
+export function readExtraction(directory: string, markdown: string) {
   const { extraction, error } = parseExtraction(path.join(directory, EXTRACTION_FILE_NAME), markdown);
   if (extraction === undefined) {
     throw new Error(
-      `Les champs relevés dans la Fiche de poste ne sont pas valables (${EXTRACTION_FILE_NAME}) : ${error}. Relancer l'import.`,
+      `Les champs relevés dans la Fiche de poste ne sont pas valables (${EXTRACTION_FILE_NAME}) : ${error}.`,
     );
   }
   const { title, dateLimite, city, ...contactList } = extraction;
-  // An Offre is followed by its title, in every list and in the name of its folder
-  if (title === null) {
-    throw new Error(
-      "La Fiche de poste ne donne pas l'intitulé du poste, sans lequel l'Offre ne peut se suivre. L'ajouter en tête du fichier (« # Intitulé du poste »), puis relancer l'import.",
-    );
-  }
   return {
-    listedOffre: LISTED_OFFRE_SCHEMA.parse({ reference, title, url: null, publishedAt: null }),
+    title,
     // The day, at midnight UTC, as the Source PEP gives it
     fiche: FICHE_DE_POSTE_SCHEMA.parse({
       ...contactList,

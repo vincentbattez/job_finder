@@ -11,11 +11,13 @@ const FICHE_DE_POSTE = readFileSync(
 );
 const TITLE = 'Greffier placé – Tribunal judiciaire de Grenoble';
 
-// The worker takes the queued Recherche, its session lasts a second, and the fiche reads the état
-// again every two seconds
+const FILE_NAME = 'greffier-grenoble.md';
+
+// The worker takes the extraction, then the Recherche, each session lasting a second, and the fiche
+// reads the état again every two seconds
 const READY_TIMEOUT_MS = 15_000;
 
-test('imports a Fiche de poste dropped on the Offres, which then shows in the list and on the map with its Recherche', async ({
+test('imports a Fiche de poste dropped on the Offres: it shows at once, then the worker reads its fields and runs its Recherche', async ({
   page,
 }) => {
   // The tiles of the map come from OpenStreetMap over the internet: its points show without them
@@ -26,14 +28,30 @@ test('imports a Fiche de poste dropped on the Offres, which then shows in the li
   // The drop needs React, which enables the field once it runs
   await expect(page.getByLabel('Importer une Fiche de poste')).toBeEnabled();
 
-  const dataTransfer = await page.evaluateHandle((markdown) => {
-    const transfer = new DataTransfer();
-    transfer.items.add(new File([markdown], 'greffier-grenoble.md', { type: 'text/markdown' }));
-    return transfer;
-  }, FICHE_DE_POSTE);
+  const dataTransfer = await page.evaluateHandle(
+    ({ fileName, markdown }) => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([markdown], fileName, { type: 'text/markdown' }));
+      return transfer;
+    },
+    { fileName: FILE_NAME, markdown: FICHE_DE_POSTE },
+  );
   await page.getByText('Glissez ici une Fiche de poste en Markdown').dispatchEvent('drop', { dataTransfer });
 
-  await expect(page.getByText(`Offre importée : ${TITLE}`)).toBeVisible();
+  // Named after its file until Claude has read its title
+  await expect(page.getByText(`Offre importée : ${FILE_NAME}`)).toBeVisible();
+  await page
+    .getByRole('row', { name: new RegExp(FILE_NAME) })
+    .getByRole('link', { name: FILE_NAME })
+    .click();
+  const extraction = page.getByRole('form', { name: 'Champs relevés par Claude' });
+  await expect(extraction.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(TITLE);
+  await expect(page.getByRole('region', { name: 'Recherche' }).getByRole('status')).toHaveText('Prêt', {
+    timeout: READY_TIMEOUT_MS,
+  });
+
+  await page.goto('/');
   const row = page.getByRole('row', { name: new RegExp(TITLE) });
   await expect(row.getByRole('cell').last()).toHaveText('15/12/2026');
   // Located in Grenoble by API Géo's recorded answer
@@ -41,8 +59,4 @@ test('imports a Fiche de poste dropped on the Offres, which then shows in the li
     .getByRole('region', { name: 'Carte des Offres' })
     .getByRole('button', { name: new RegExp(`^${TITLE} · import-`) });
   await expect(point).toHaveAttribute('data-statut', 'a_traiter');
-  await row.getByRole('link', { name: TITLE }).click();
-  await expect(page.getByRole('region', { name: 'Recherche' }).getByRole('status')).toHaveText('Prêt', {
-    timeout: READY_TIMEOUT_MS,
-  });
 });

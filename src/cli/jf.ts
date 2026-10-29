@@ -255,10 +255,12 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
   },
   import: {
     description:
-      'Importe une Fiche de poste en Markdown trouvée ailleurs et met sa Recherche en file, Candidat proposé si absent : jf import <fichier> [<candidat>]',
-    run: async (actions, [filePath, givenCandidatId]) => {
+      "Importe une Fiche de poste en Markdown trouvée ailleurs : le worker en relève les champs avec Claude Code, puis met sa Recherche en file ; Candidat proposé si absent, --wait attend l'extraction : jf import <fichier> [<candidat>] [--wait]",
+    run: async (actions, [filePath, givenCandidatId], { isWaiting }) => {
       if (filePath === undefined) {
-        throw new Error('Usage : jf import <fichier> [<candidat>], par exemple jf import offre-greffier.md lea.');
+        throw new Error(
+          'Usage : jf import <fichier> [<candidat>] [--wait], par exemple jf import offre-greffier.md lea.',
+        );
       }
       const markdown = readTextFile(filePath);
       let candidatId = givenCandidatId;
@@ -270,11 +272,24 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
           terminal.close();
         }
       }
-      process.stdout.write('Claude Code relève les champs de la Fiche de poste…\n');
-      const offre = await actions.importFicheDePoste({ candidatId, markdown });
-      process.stdout.write(`${formatOffre(offre)}\n`);
+      const job = await actions.importFicheDePoste({ candidatId, fileName: path.basename(filePath), markdown });
+      const { reference } = job.offre;
+      process.stdout.write(`Offre ${reference} importée, extraction de ses champs en file (job ${String(job.id)}).\n`);
+      if (!isWaiting) {
+        process.stdout.write(
+          `Le worker la lance, puis met sa Recherche en file. « jf list ${candidatId} » la montre.\n`,
+        );
+        return;
+      }
+      process.stdout.write('Attente du worker (service lpm worker) : Claude Code relève les champs…\n');
+      const { state, offre, log } = await actions.followJob({ jobId: job.id });
+      if (state === 'failed') {
+        throw new Error(
+          `Extraction des champs de l'Offre ${reference} en échec :\n${log}\nRelancer : jf run extraction ${reference}`,
+        );
+      }
       process.stdout.write(
-        `Sa Recherche est mise en file à l'import : « jf versions ${offre.reference} recherche » la suit.\n`,
+        `${formatOffre(offre)}\nSa Recherche est en file : « jf versions ${reference} recherche » la suit.\n`,
       );
     },
   },

@@ -1,10 +1,11 @@
-// The whole prompt of the extraction is fixed: no Candidat can replace it (spec « Modules IA »)
-export function composeExtractionPrompt(ficheFileName: string, extractionFileName: string): string {
-  return `Tu relèves les champs d'une Fiche de poste, une offre d'emploi que le Candidat a trouvée lui-même et importée dans l'outil. Le dossier courant contient la Fiche de poste, \`${ficheFileName}\` : lis-la en entier.
+// The whole prompt of the extraction is fixed: no Candidat can replace it (spec « Modules IA »). It
+// runs in the folder of the Offre.
+export function composeExtractionPrompt(extractionPath: string): string {
+  return `Tu relèves les champs d'une Fiche de poste, une offre d'emploi que le Candidat a trouvée lui-même et importée dans l'outil. Le dossier courant est celui de l'Offre : sa Fiche de poste est dans \`fiche-de-poste.md\`. Lis-la en entier.
 
 ## Ce que tu produis
 
-Un seul fichier JSON, \`${extractionFileName}\`, dans le dossier courant, de cette forme :
+Un seul fichier JSON, \`${extractionPath}\`, de cette forme :
 
 \`\`\`json
 {
@@ -27,8 +28,9 @@ Un seul fichier JSON, \`${extractionFileName}\`, dans le dossier courant, de cet
 ## Règles non négociables
 
 - N'invente jamais une valeur, et ne la déduis de rien d'autre que la Fiche de poste : dans le doute, \`null\`.
-- N'écris aucun autre fichier que \`${extractionFileName}\`, et ne modifie jamais la Fiche de poste.
+- N'écris aucun autre fichier que \`${extractionPath}\`, et ne modifie jamais la Fiche de poste.
 - Ne cherche rien sur le web : tout est dans la Fiche de poste.
+- Ne touche jamais au statut de l'Offre ni à la file de jobs de l'outil.
 `;
 }
 

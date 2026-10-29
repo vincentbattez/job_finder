@@ -3,14 +3,15 @@ import { Link, useFetcher } from 'react-router';
 
 import { useIsHydrated } from './use-is-hydrated.ts';
 
-// The shape of the import action
+// The shape of the import action: the job of the extraction, with its Offre
 interface IImport {
-  offre: { reference: string; title: string } | null;
+  job: { offre: { reference: string; title: string } } | null;
   error: string | null;
 }
 
 // Imports a Fiche de poste in Markdown found elsewhere, dropped here or chosen from the disk: the
-// same action as jf import. The list below reloads with the new Offre.
+// same action as jf import. The list below reloads with the new Offre, named after its file until
+// the worker has Claude read its fields.
 export function FicheDePosteImport() {
   const fetcher = useFetcher<IImport>();
   const isHydrated = useIsHydrated();
@@ -21,7 +22,7 @@ export function FicheDePosteImport() {
     if (file === undefined || isImporting) {
       return;
     }
-    await fetcher.submit({ markdown: await file.text() }, { method: 'post', action: '/import' });
+    await fetcher.submit({ fileName: file.name, markdown: await file.text() }, { method: 'post', action: '/import' });
   }
 
   return (
@@ -42,10 +43,7 @@ export function FicheDePosteImport() {
         void importFile(event.dataTransfer.files[0]);
       }}
     >
-      <p>
-        Glissez ici une Fiche de poste en Markdown trouvée ailleurs : Claude en relève les champs, puis sa Recherche se
-        lance.
-      </p>
+      <p>Glissez ici une Fiche de poste en Markdown trouvée ailleurs : elle devient une de vos Offres.</p>
       <label className="fiche-de-poste-import__choose" data-disabled={!isHydrated || isImporting}>
         Importer une Fiche de poste
         <input
@@ -60,10 +58,11 @@ export function FicheDePosteImport() {
         />
       </label>
       <div aria-live="polite">
-        {isImporting && <p>Claude relève les champs de la Fiche de poste…</p>}
-        {!isImporting && fetcher.data?.offre != null && (
+        {!isImporting && fetcher.data?.job != null && (
           <p>
-            Offre importée : <Link to={`/offres/${fetcher.data.offre.reference}`}>{fetcher.data.offre.title}</Link>
+            Offre importée :{' '}
+            <Link to={`/offres/${fetcher.data.job.offre.reference}`}>{fetcher.data.job.offre.title}</Link>. Le worker en
+            relève les champs avec Claude, puis lance sa Recherche.
           </p>
         )}
         {!isImporting && fetcher.data?.error != null && (
