@@ -1,6 +1,6 @@
 # job_finder
 
-Veille d'offres d'emploi et préparation des candidatures. Vocabulaire : `GLOSSARY.md`. Décisions : `docs/adr/`.
+Veille d'offres d'emploi et préparation des candidatures. Vocabulaire : `GLOSSARY.md`. Décisions : `docs/adr/`. Règles de code : `CODING_STANDARDS.md`.
 
 ## Installation
 
@@ -30,7 +30,8 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 
 - `src/actions/` : la couche d'actions, seule source de vérité de chaque fonctionnalité. La CLI et le front ne font que l'appeler (ADR-0003). Les tests passent par elle.
 - `src/cli/` : la CLI `jf`, qui relaie vers les actions.
-- `src/workspace/` : l'accès au dossier de données (config, base, dossiers des Candidats). Le client Prisma y est généré, dans `generated/`, hors de git.
+- `src/domain/` : les types domaine, tirés de leurs schémas Zod. Une fois passée l'anti-corruption layer, le code ne manipule qu'eux (ADR-0005).
+- `src/workspace/` : l'accès au dossier de données (config, base, dossiers des Candidats). Seul son dossier `acl/` lit la config et la base. Le client Prisma est généré dans `generated/`, hors de git.
 - `src/modules/` : un dossier par module, avec un seul point d'entrée. Un module n'en importe jamais un autre, ce que vérifie `test/architecture.test.ts`.
 - `prisma/` : le schéma, les migrations et le seed.
 
