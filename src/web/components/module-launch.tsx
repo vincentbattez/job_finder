@@ -13,14 +13,16 @@ export function ModuleLaunch({
   reference,
   artifact,
   state,
+  failure,
   module,
-}: Readonly<Pick<IArtifactVersions, 'artifact' | 'state' | 'module'> & { reference: string }>) {
+}: Readonly<Pick<IArtifactVersions, 'artifact' | 'state' | 'failure' | 'module'> & { reference: string }>) {
   const { t } = useTranslation('posting');
   const fetcher = useFetcher<{ error: string | null }>();
   const isHydrated = useIsHydrated();
   const isRunning = state === 'in_progress';
   useRevalidateWhile(isRunning);
-  const error = fetcher.data?.error ?? null;
+  // The refusal of a relaunch, else why the last job failed, next to the Relaunch button
+  const error = fetcher.data?.error ?? failure?.log ?? null;
   return (
     <fetcher.Form method="post" action="/run">
       <input type="hidden" name="reference" value={reference} />

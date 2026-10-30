@@ -63,6 +63,7 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
     {
       artifact: 'research',
       state: 'ready',
+      failure: null,
       module: { refusal: null },
       isEditable: true,
       versionList: [sampleVersion(1, 'ready')],
@@ -70,6 +71,7 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
     {
       artifact: 'letter',
       state: 'in_progress',
+      failure: null,
       module: { refusal: null },
       isEditable: true,
       versionList: [sampleVersion(1, 'ready'), sampleVersion(2, 'running')],
@@ -77,6 +79,10 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
     {
       artifact: 'interview_brief',
       state: 'failed',
+      failure: {
+        errorCode: 'session_failed',
+        log: 'La session Claude Code a échoué : son journal dit pourquoi. Relancer le module.\nAPI Error: 529 Overloaded',
+      },
       module: { refusal: null },
       isEditable: false,
       versionList: [sampleVersion(1, 'failed')],
@@ -84,6 +90,7 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
     {
       artifact: 'visualization',
       state: 'absent',
+      failure: null,
       module: { refusal: 'Il faut d’abord une Fiche d’entretien retenue.' },
       isEditable: false,
       versionList: [],

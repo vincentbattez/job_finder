@@ -51,6 +51,7 @@ export function ArtifactVersions({
   reference,
   artifact,
   state,
+  failure,
   module,
   isEditable,
   versionList,
@@ -60,7 +61,7 @@ export function ArtifactVersions({
   return (
     <section className="artifact-versions" id={artifact} data-artifact={artifact} aria-labelledby={headingId}>
       <h2 id={headingId}>{t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' })}</h2>
-      <ModuleLaunch reference={reference} artifact={artifact} state={state} module={module} />
+      <ModuleLaunch reference={reference} artifact={artifact} state={state} failure={failure} module={module} />
       {isEditable && <CopyCommand command={`jf edit ${reference} ${artifact}`} />}
       {versionList.length === 0 ? (
         <p className="artifact-versions__missing">{t('noVersion')}</p>

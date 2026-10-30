@@ -8,6 +8,8 @@ import { SESSION_RESULT_SCHEMA, type SessionResult } from '#/domain/index.ts';
 interface IPlannedRun {
   fileByName?: Record<string, string>;
   isSuccess?: boolean;
+  // What the session says, kept as the job's log
+  log?: string;
   // The worker is stopped during this session, which then never ends
   isInterrupted?: boolean;
   // The launch throws this error instead of running the session
@@ -38,7 +40,13 @@ export function createFakeAiSession(...plannedRunList: IPlannedRun[]) {
     async runHeadless(session: IHeadlessSession): Promise<SessionResult> {
       headlessSessionList.push(session);
       const sessionId = `fake-session-${String(headlessSessionList.length)}`;
-      const { fileByName = {}, isSuccess = true, isInterrupted = false, errorMessage } = plannedRunList.shift() ?? {};
+      const {
+        fileByName = {},
+        isSuccess = true,
+        log = isSuccess ? 'La Recherche est écrite.' : 'Claude Code a rencontré une erreur.',
+        isInterrupted = false,
+        errorMessage,
+      } = plannedRunList.shift() ?? {};
       if (isInterrupted) {
         return new Promise<never>(() => {
           // never settles
@@ -54,7 +62,6 @@ export function createFakeAiSession(...plannedRunList: IPlannedRun[]) {
       for (const [fileName, content] of Object.entries(fileByName)) {
         writeFileSync(path.join(session.outputDirectory, fileName), content);
       }
-      const log = isSuccess ? 'La Recherche est écrite.' : 'Claude Code a rencontré une erreur.';
       return SESSION_RESULT_SCHEMA.parse({ isSuccess, sessionId, log });
     },
   };

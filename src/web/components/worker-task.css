@@ -18,5 +18,6 @@
 
   .worker-task [role='alert'] {
     color: var(--color-error);
+    white-space: pre-line;
   }
 }

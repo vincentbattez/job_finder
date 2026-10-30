@@ -251,12 +251,13 @@ export function createJobRunner(
       outputDirectory,
       locale,
     });
+    // The log starts with the message of the failure's code, which the Posting page and jf versions show
     const problem = session.isSuccess
       ? aiModule.outputFileList
           .map((outputFile) => findOutputProblem(outputFile, posting, outputDirectory, locale))
           .find((fileProblem) => fileProblem !== undefined)
-      : undefined;
-    const errorCode = session.isSuccess ? (problem?.code ?? null) : 'session_failed';
+      : codedError('session_failed', {}, { locale });
+    const errorCode = problem?.code ?? null;
     if (errorCode === null) {
       aiModule.completeVersion?.(outputDirectory);
     }

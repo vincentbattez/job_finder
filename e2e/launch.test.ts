@@ -35,12 +35,17 @@ test.describe('launching the modules of a Posting', () => {
     const research = page.getByRole('region', { name: 'Recherche' });
     const letter = page.getByRole('region', { name: 'Lettre' });
     await expect(research.getByRole('status')).toHaveText('En échec');
+    // The reason the fake worker's session gave, after the message of its code
+    await expect(research.getByRole('alert')).toHaveText(
+      'La session Claude Code a échoué : son journal dit pourquoi. Relancer le module.\nClaude Code a atteint la limite de son abonnement.',
+    );
     await expect(letter).toContainText(`L'Offre ${FAILED_RESEARCH_REFERENCE} n'a pas de Recherche retenue`);
     await expect(letter.getByRole('button', { name: 'Lancer la Lettre' })).toBeDisabled();
 
     await research.getByRole('button', { name: 'Relancer la Recherche' }).click();
 
     await expect(research.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
+    await expect(research.getByRole('alert')).toHaveCount(0);
     await expect(research.locator('li > details > summary')).toHaveText([/^v1\s*En échec/, /^v2\s*Prêt\s*Retenue/]);
     await expect(letter.getByRole('button', { name: 'Lancer la Lettre' })).toBeEnabled();
     await expect(letter).not.toContainText("n'a pas de Recherche retenue");

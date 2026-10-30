@@ -393,6 +393,11 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
         ];
         process.stdout.write(`${columnList.join('\t')}\n`);
       }
+      // Without --wait, the reason of a failed job is read here, even one that failed before its Version
+      const { failure } = await actions.readArtifactState({ reference, artifact });
+      if (failure !== null) {
+        process.stdout.write(t('lastJobFailed', { errorCode: failure.errorCode ?? '—', log: failure.log }));
+      }
     },
   },
   choose: {

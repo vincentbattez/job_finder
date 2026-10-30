@@ -326,10 +326,26 @@ const STATE_SCHEMA = z.enum(['absent', 'in_progress', 'ready', 'failed']);
 
 export type State = z.infer<typeof STATE_SCHEMA>;
 
+// Why the last job of an Artifact failed: the code of the catalogue it failed under, and its log, which
+// starts with the code's message (ADR-0015)
+const JOB_FAILURE_SCHEMA = z.object({ errorCode: ERROR_CODE_SCHEMA.nullable(), log: z.string() }).brand<'Domain'>();
+
+const ARTIFACT_STATE_SHAPE = {
+  // That of its last job, from the moment it is queued, unless a Version came after it; then that of
+  // its latest Version; absent before any
+  state: STATE_SCHEMA,
+  // Why its last job failed, null unless the state is that of a failed job
+  failure: JOB_FAILURE_SCHEMA.nullable(),
+};
+
+// Where an Artifact stands, as jf versions reads it
+export const ARTIFACT_STATE_SCHEMA = z.object(ARTIFACT_STATE_SHAPE).brand<'Domain'>();
+
+export type ArtifactState = z.infer<typeof ARTIFACT_STATE_SCHEMA>;
+
 const ARTIFACT_VERSIONS_SCHEMA = z.object({
   artifact: ARTIFACT_SCHEMA,
-  // In progress from the moment its job is queued, then that of its latest Version; absent before any
-  state: STATE_SCHEMA,
+  ...ARTIFACT_STATE_SHAPE,
   // The module that produces it: why it cannot run now, null when it can
   module: z.object({ refusal: z.string().nullable() }),
   // Whether jf edit opens it now: it has a Chosen Version, and is neither a Visualization nor the

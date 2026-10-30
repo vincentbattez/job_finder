@@ -23,6 +23,8 @@ export const STATE_BY_VERSION_STATE: Record<VersionState, State> = {
 export interface IArtifactVersions {
   artifact: Artifact;
   state: State;
+  // Why its last job failed: the code and the log, which starts with the code's message
+  failure: { errorCode: string | null; log: string } | null;
   // The module that produces the Artifact, and why it cannot run now
   module: { refusal: string | null };
   // Given by the action: jf edit opens its Chosen Version

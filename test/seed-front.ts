@@ -101,7 +101,11 @@ const RUN_BY_VERSION: Record<string, Parameters<typeof createFakeAiSession>[numb
   [`${VERSAILLES_REFERENCE} research v1`]: researchRun('Recherche première : le pôle civil du TJ de Versailles'),
   [`${VERSAILLES_REFERENCE} research v2`]: researchRun('Recherche relancée : le pôle civil du TJ de Versailles'),
   [`${RENNES_REFERENCE} research v1`]: researchRun('Recherche : la JIRS du TJ de Rennes'),
-  [`${NARBONNE_REFERENCE} research v1`]: { isSuccess: false },
+  // The reason e2e/launch.test.ts reads beside the Relaunch button
+  [`${NARBONNE_REFERENCE} research v1`]: {
+    isSuccess: false,
+    log: 'Claude Code a atteint la limite de son abonnement.',
+  },
   [`${INSTRUCTIONS_REFERENCE} research v1`]: researchRun('Recherche par défaut : le TJ de Pontoise'),
   [`${INSTRUCTIONS_REFERENCE} research v2`]: researchRun('Recherche selon Léa : le TJ de Pontoise'),
 };

@@ -78,6 +78,7 @@ export const CLI_FR: typeof CLI_EN = {
   versionsDescription: "Liste les Versions d'un Artefact : jf versions <offre> research",
   versionsUsage: 'Usage : jf versions <offre> <artifact>, par exemple jf versions 2026-2445600 research.',
   versionStateLabelByState: { running: 'en cours', ready: 'prête', failed: 'en échec' },
+  lastJobFailed: 'Dernier lancement en échec ({{errorCode}}) :\n{{log}}\n',
   chosenVersion: 'retenue',
   candidateInstructions: 'Consignes du Candidat',
   defaultInstructions: 'Consignes par défaut',
