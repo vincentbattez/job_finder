@@ -312,6 +312,45 @@ describe('a first launch cut off mid-way', () => {
   });
 });
 
+// The two Béthune Postings, both in the Zone, read in this order: the second one's page fails
+const SAVED_BEFORE_CUT_REFERENCE = '2026-2445600';
+const CUT_REFERENCE = '2026-2445609';
+
+describe('a second Detection cut off mid-way', () => {
+  // Saved, they are known from now on: a notification lost now would never come at the next Detection
+  it('notifies the Postings saved before the cut, then fails', async () => {
+    const dataDirectory = createDataDirectory();
+    const notificationChannel = createFakeNotificationChannel();
+    const earlierActions = await createActions({
+      dataDirectory,
+      fetch: createRecordedFetch({
+        [DSJ_FEED_URL]: { body: feedWithout([SAVED_BEFORE_CUT_REFERENCE, CUT_REFERENCE]) },
+      }).fetch,
+      notificationChannelList: notificationChannel.notificationChannelList,
+    });
+    await notificationChannel.saveFor(earlierActions);
+    await earlierActions.detect();
+    const actions = await createActions({
+      dataDirectory,
+      fetch: createRecordedFetch({
+        'https://place-ep-recrute.talent-soft.com/offre-de-emploi/emploi_2445609.aspx': { body: '', status: 500 },
+      }).fetch,
+      notificationChannelList: notificationChannel.notificationChannelList,
+    });
+
+    await expect(actions.detect()).rejects.toThrow(/HTTP 500/);
+
+    expect(
+      notificationChannel.sentList.map(({ title, message }) => `${title}: ${message.split('\n', 1).join('')}`),
+    ).toEqual([
+      'Nouvelle Offre dans la Zone: Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE',
+    ]);
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(postingList.map(({ reference }) => reference)).toContain(SAVED_BEFORE_CUT_REFERENCE);
+    expect(postingList.map(({ reference }) => reference)).not.toContain(CUT_REFERENCE);
+  });
+});
+
 const BETHUNE_API_GEO_URL =
   'https://geo.api.gouv.fr/communes?nom=B%C3%A9thune&fields=nom,centre,region&boost=population&limit=5';
 

@@ -1,3 +1,4 @@
+import { codedErrorOf } from '#/domain/coded-error.ts';
 import type { DomainValue } from '#/domain/index.ts';
 
 import { createCandidateActions } from './candidates.ts';
@@ -26,7 +27,7 @@ export { ARTIFACT_RENAME_LIST } from '#/domain/artifact-rename.ts';
 // (ADR-0003); `satisfies` holds each action to unknown input and domain output (ADR-0005)
 export async function createActions(option: IActionsOption) {
   const context = await openContext(option);
-  return {
+  return refuseUnderCodes({
     ...createPostingActions(context),
     ...createCandidateActions(context),
     ...createDetectActions(context),
@@ -40,5 +41,24 @@ export async function createActions(option: IActionsOption) {
     ...createInstructionsActions(context),
     ...createEditionActions(context),
     ...createJobActions(context),
-  } satisfies Record<string, (rawInput: unknown) => Promise<void> | Promise<DomainValue | DomainValue[]>>;
+  } satisfies Record<string, (rawInput: unknown) => Promise<void> | Promise<DomainValue | DomainValue[]>>);
+}
+
+// The boundary of every action, those added later included: a foreign failure, such as the ZodError
+// of an input that does not parse, leaves under a code of the catalogue, never as its JSON (ADR-0015)
+function refuseUnderCodes<TActions extends Record<string, (rawInput: unknown) => Promise<unknown>>>(
+  actions: TActions,
+): TActions {
+  for (const [name, action] of Object.entries(actions)) {
+    Object.assign(actions, {
+      [name]: async (rawInput: unknown) => {
+        try {
+          return await action(rawInput);
+        } catch (error) {
+          throw codedErrorOf(error);
+        }
+      },
+    });
+  }
+  return actions;
 }

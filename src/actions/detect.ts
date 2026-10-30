@@ -154,10 +154,13 @@ export function createDetectActions({
   // A Posting is known by its reference, never by its publication date, which the site changes
   // (ADR-0001). Each Watch has its own Zone: a Posting stored out of the Zone of one is read again
   // by each other Watch that has not read it yet.
+  // Each notification goes into notificationList as soon as its Posting is saved, so that a Detection
+  // cut off still sends it
   async function detectWatch(
     detection: RecordedDetection,
     watch: Watch,
     locateCity: IWatchRun['locate'],
+    notificationList: INotifiedPosting[],
   ): Promise<IFoundPostings> {
     const { candidateId, source } = watch;
     await workspace.updateDetectionWatch(detection, watch.id, { step: 'searching' });
@@ -174,7 +177,6 @@ export function createDetectActions({
       locate: locateCity,
     };
     const newPostingList: Posting[] = [];
-    const notificationList: INotifiedPosting[] = [];
     // Oldest first, as published: a Repost found by the same Detection as the Posting it
     // publishes again, as on the first launch, is saved after it
     const oldestFirstList = matchingList.toSorted((left, right) => left.reference.localeCompare(right.reference));
@@ -294,7 +296,16 @@ export function createDetectActions({
     }
     const foundList: IFoundPostings[] = [];
     for (const watch of watchList) {
-      foundList.push(await detectWatch(detection, watch, locator.locate));
+      const notificationList: INotifiedPosting[] = [];
+      try {
+        foundList.push(await detectWatch(detection, watch, locator.locate, notificationList));
+      } catch (error) {
+        // The Postings saved before the cut are known from now on: the next Detection would never
+        // notify them, so they are notified before the failure stops the run
+        const savedList = [...foundList.flatMap((found) => found.notificationList), ...notificationList];
+        await Promise.all(savedList.map(({ posting, notification }) => notify(posting, notification)));
+        throw error;
+      }
     }
     // Notified last, once every Posting is saved and its Research queued. A notification not sent
     // undoes nothing: it comes back with what the Detection found, which jf detect prints first.

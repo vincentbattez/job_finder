@@ -1,4 +1,5 @@
 import { z } from 'zod/v4';
+import { fr } from 'zod/v4/locales';
 
 import { DEFAULT_LOCALE, i18nOf } from './catalogue/i18n.ts';
 import { ERROR_CATALOGUE, type ErrorCode } from './error.ts';
@@ -17,6 +18,17 @@ class CodedError extends Error {
 }
 
 export type { CodedError };
+
+// Zod words what is wrong with an input in French, the default locale: it does so while it parses,
+// the only moment it still sees the value it refuses, before any Candidate is known (ADR-0012)
+z.config(fr());
+
+// Each input to correct, by its name, with what is wrong with it
+function problemOf(error: z.ZodError): string {
+  return error.issues
+    .map(({ path: pathList, message }) => (pathList.length === 0 ? message : `« ${pathList.join('.')} » : ${message}`))
+    .join('\n');
+}
 
 interface IErrorOption {
   // That of the Candidate the failure is for; before one is known, the default one
@@ -42,7 +54,7 @@ export function codedErrorOf(error: unknown, locale: Locale = DEFAULT_LOCALE): C
     return error;
   }
   if (error instanceof z.ZodError) {
-    return codedError('invalid_input', { problem: z.prettifyError(error) }, { locale, cause: error });
+    return codedError('invalid_input', { problem: problemOf(error) }, { locale, cause: error });
   }
   const reason = error instanceof Error ? error.message : String(error);
   return codedError('unexpected', { reason }, { locale, cause: error });

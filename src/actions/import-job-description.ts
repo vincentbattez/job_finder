@@ -34,7 +34,8 @@ export async function runExtraction(
 export function createImportActions({ workspace, importSource, findCandidate, locate }: ActionContext) {
   return {
     // The worker reads the fields of the Job Description (ADR-0003); importing the same file again
-    // gives back its job, without another Posting nor another job
+    // gives back its job, without another Posting nor another job, unless that job failed: giving it
+    // back would announce an extraction queued while nothing runs, so it is queued again
     async importJobDescription(rawInput: unknown): Promise<Job> {
       const candidate = await findCandidate(rawInput);
       const { fileName, markdown } = IMPORT_INPUT_SCHEMA.parse(rawInput);
@@ -44,6 +45,9 @@ export function createImportActions({ workspace, importSource, findCandidate, lo
       if (importedPosting !== undefined) {
         const jobList = await workspace.listJobs(importedPosting);
         const extractionJob = jobList.findLast(({ module }) => module === 'extraction');
+        if (extractionJob?.state === 'failed') {
+          return workspace.createJob(importedPosting, 'extraction');
+        }
         if (extractionJob !== undefined) {
           return extractionJob;
         }

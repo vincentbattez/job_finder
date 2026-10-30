@@ -230,6 +230,22 @@ describe('import of a Job Description in Markdown', () => {
     expect(await actions.runQueuedJobs()).toEqual([]);
   });
 
+  // Giving back the failed job would announce an extraction queued while nothing runs
+  it('runs the extraction again when the Job Description is imported again after it failed', async () => {
+    const actions = await openActions(createFakeAiSession({ isSuccess: false }, extractionRun()));
+    const input = { candidateId: 'lea', fileName: FILE_NAME, markdown: JOB_DESCRIPTION };
+    const failedJob = await actions.importJobDescription(input);
+    await actions.runQueuedJobs();
+
+    const importedAgainJob = await actions.importJobDescription(input);
+
+    expect(importedAgainJob).toMatchObject({ module: 'extraction', state: 'queued' });
+    expect(importedAgainJob.id).not.toBe(failedJob.id);
+    const [extractionJob] = await actions.runQueuedJobs();
+    expect(extractionJob).toMatchObject({ id: importedAgainJob.id, state: 'done' });
+    expect(await actions.listPostings({ candidateId: 'lea' })).toHaveLength(1);
+  });
+
   // The session writes the fields under the very names the extraction reads, or they are lost
   it('asks the session for every field the extraction reads, by its name', async () => {
     const aiSession = createFakeAiSession(extractionRun());

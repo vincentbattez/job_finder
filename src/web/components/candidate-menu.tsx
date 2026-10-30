@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Form } from 'react-router';
+import { useFetcher } from 'react-router';
 
 import './candidate-menu.css';
 
@@ -8,14 +8,15 @@ interface ICandidate {
   name: string;
 }
 
-// A plain form, so the choice also works before React hydrates the page
+// A plain form, so the choice also works before React hydrates the page; a refusal shows beside it
 export function CandidateMenu({
   candidateList,
   candidate,
 }: Readonly<{ candidateList: ICandidate[]; candidate: ICandidate | null }>) {
   const { t } = useTranslation('settings');
+  const fetcher = useFetcher<{ error?: string }>();
   return (
-    <Form method="post" action="/candidate" className="candidate-menu">
+    <fetcher.Form method="post" action="/candidate" className="candidate-menu">
       <label htmlFor="candidate">{t('menu.candidateLabel')}</label>
       <select
         className="button candidate-menu__select"
@@ -38,6 +39,7 @@ export function CandidateMenu({
       <button className="button button--primary" type="submit">
         {t('menu.choose')}
       </button>
-    </Form>
+      {fetcher.data?.error !== undefined && <p role="alert">{fetcher.data.error}</p>}
+    </fetcher.Form>
   );
 }
