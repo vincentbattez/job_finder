@@ -23,7 +23,7 @@ interface ISearchResult {
 
 // An Offre's detail page, and whether the Offre is in the Zone of the Veille, which the Source alone
 // knows how to tell
-interface IReadResult {
+export interface ISourceReadResult {
   ficheDePoste: FicheDePoste;
   isInZone: boolean;
 }
@@ -39,7 +39,7 @@ interface ISourceDefinition<TShape extends ParametreShape> {
     reference: string,
     parametres: ParametresOf<TShape>,
     httpFetch: typeof fetch | undefined,
-  ) => Promise<IReadResult>;
+  ) => Promise<ISourceReadResult>;
 }
 
 // A module as the Détection uses it, whatever its Paramètres: each operation parses those of the
@@ -49,7 +49,7 @@ export interface ISource {
   description: SourceModule;
   parseParametres(rawParametres: unknown): Parametres;
   search(veille: Veille, httpFetch?: typeof fetch): Promise<ISearchResult>;
-  readFicheDePoste(reference: string, veille: Veille, httpFetch?: typeof fetch): Promise<IReadResult>;
+  readFicheDePoste(reference: string, veille: Veille, httpFetch?: typeof fetch): Promise<ISourceReadResult>;
 }
 
 export function defineSource<TShape extends ParametreShape>({

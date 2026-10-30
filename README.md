@@ -43,7 +43,7 @@ Lancer un module ne fait que mettre son job en file. Le worker, service lpm `wor
 
 ## Détection quotidienne
 
-L'automation lpm `detect`, déclarée dans `.lpm.yml`, lance `jf detect` chaque jour à 18:00 (ADR-0003). Son run affiche « aucune nouvelle Offre » ou la liste des nouvelles Offres. Une Détection en échec sort en erreur : lpm marque le run « needs a look » et notifie. `.lpm.yml` se vérifie avec `lpm config validate .lpm.yml`.
+L'automation lpm `detect`, déclarée dans `.lpm.yml`, lance `jf detect` chaque jour à 18:00 (ADR-0003). Son run affiche « aucune nouvelle Offre » ou la liste des nouvelles Offres. Une Détection en échec sort en erreur : lpm marque le run « needs a look » et notifie. Chaque Veille a sa Zone : une Offre est dans la Zone dès qu'elle est dans celle de l'une des Veilles de son Candidat. Une Offre qu'une Veille a enregistrée hors de sa Zone est relue une fois par chacune des autres Veilles de la même Source, et celle qui la trouve dans sa Zone l'y place ; elle a alors sa Recherche et sa notification, une seule fois, sauf au premier lancement de cette Veille. `.lpm.yml` se vérifie avec `lpm config validate .lpm.yml`.
 
 ## Notifications
 

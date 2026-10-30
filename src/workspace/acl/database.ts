@@ -401,9 +401,23 @@ export function openDatabase(databasePath: string) {
       await prisma.veille.update({ where: { id }, data: { detectedAt: new Date() } });
     },
 
-    async listReferences(candidatId: string, source: string): Promise<string[]> {
-      const offreList = await prisma.offre.findMany({ where: { candidatId, source }, select: { reference: true } });
-      return z.array(z.string()).parse(offreList.map(({ reference }) => reference));
+    // The Offres of its Candidat and Source that another Veille stored out of its own Zone since this
+    // one last went through, all of them on its first launch: they may be in the Zone of this one
+    async listOutOfZoneOffresSince({ candidatId, source, detectedAt }: Veille): Promise<Offre[]> {
+      const since = detectedAt === null ? {} : { detectedAt: { gt: detectedAt } };
+      return z.array(OFFRE_SCHEMA).parse(
+        await prisma.offre.findMany({
+          where: { candidatId, source, isInZone: false, ...since },
+          include: OFFRE_INCLUDE,
+        }),
+      );
+    },
+
+    // An Offre is in the Zone as soon as it is in that of one of its Candidat's Veilles
+    async setInZone({ id }: Offre): Promise<Offre> {
+      return OFFRE_SCHEMA.parse(
+        await prisma.offre.update({ where: { id }, data: { isInZone: true }, include: OFFRE_INCLUDE }),
+      );
     },
 
     async findOffres(reference: string): Promise<Offre[]> {
