@@ -19,6 +19,9 @@ export const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
 
 export const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: z.string() });
 
+// The Paramètres the Candidat typed in the form of a module, before the module parses them (ADR-0010)
+export const PARAMETRES_INPUT_SCHEMA = z.record(z.string(), z.json());
+
 export interface IActionsOption {
   dataDirectory: string;
   aiSession?: IAiSession;

@@ -2,9 +2,9 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { z } from 'zod/v4';
 
-import { PARAMETRES_SCHEMA, type Candidat, type Veille } from '#/domain/index.ts';
+import type { Candidat, Veille } from '#/domain/index.ts';
 
-import type { ActionContext } from './context.ts';
+import { PARAMETRES_INPUT_SCHEMA, type ActionContext } from './context.ts';
 
 const VEILLE_INPUT_SCHEMA = z.object({ veilleId: z.string() });
 
@@ -12,7 +12,7 @@ const VEILLE_INPUT_SCHEMA = z.object({ veilleId: z.string() });
 const SAVE_INPUT_SCHEMA = z.object({
   veilleId: z.string().optional(),
   source: z.string(),
-  parametres: PARAMETRES_SCHEMA.transform((parametres) =>
+  parametres: PARAMETRES_INPUT_SCHEMA.transform((parametres) =>
     Object.fromEntries(
       Object.entries(parametres)
         .map(([name, value]) => [name, Array.isArray(value) ? value.filter((item) => item !== '') : value] as const)

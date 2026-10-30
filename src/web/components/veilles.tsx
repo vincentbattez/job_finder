@@ -59,7 +59,7 @@ function VeilleForm({ veille, sourceList }: Readonly<{ veille: Veille | null; so
   const [sourceId, setSourceId] = useState(veille?.source ?? sourceList[0]?.id ?? '');
   const source = sourceList.find(({ id }) => id === sourceId);
   // The saved Paramètres belong to the saved Source: another one starts blank
-  const savedParametres = veille !== null && veille.source === sourceId ? veille.parametres : {};
+  const savedParametres = veille !== null && veille.source === sourceId ? veille.parametres : undefined;
   const isDisabled = !isHydrated || fetcher.state !== 'idle';
   return (
     <fetcher.Form method="post" action="/veille">
@@ -87,7 +87,7 @@ function VeilleForm({ veille, sourceList }: Readonly<{ veille: Veille | null; so
           <ParametreField
             key={`${sourceId}:${parametre.name}`}
             parametre={parametre}
-            savedValue={savedParametres[parametre.name]}
+            savedValue={savedParametres?.[parametre.name]}
           />
         ))}
         <div className="settings__step">

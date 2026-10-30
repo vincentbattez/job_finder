@@ -15,7 +15,7 @@ export const SETTINGS_SCHEMA = z
 export type Settings = z.infer<typeof SETTINGS_SCHEMA>;
 
 // The Paramètres of a module of a family, as JSON: only the module's schema knows their shape (ADR-0010)
-export const PARAMETRES_SCHEMA = z.record(z.string(), z.json());
+export const PARAMETRES_SCHEMA = z.record(z.string(), z.json()).brand<'Domain'>();
 
 export type Parametres = z.infer<typeof PARAMETRES_SCHEMA>;
 

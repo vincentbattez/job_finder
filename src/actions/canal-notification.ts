@@ -2,25 +2,25 @@ import { z } from 'zod/v4';
 
 import {
   CANAL_NOTIFICATION_SCHEMA,
-  PARAMETRES_SCHEMA,
   type CanalNotification,
   type CanalNotificationModule,
   type ParametreChoice,
-  type Parametres,
   type SavedCanalNotification,
 } from '#/domain/index.ts';
 import { composeTestNotification } from '#/notification/index.ts';
 
-import type { ActionContext } from './context.ts';
+import { PARAMETRES_INPUT_SCHEMA, type ActionContext } from './context.ts';
 
 // The module the Candidat picked, the saved one when left out, and the Paramètres they typed; a field
 // of a form left blank arrives empty, and counts as left out
 const TRIAL_INPUT_SCHEMA = z.object({
   canal: z.string().optional(),
-  parametres: PARAMETRES_SCHEMA.default({}).transform((parametres) =>
+  parametres: PARAMETRES_INPUT_SCHEMA.default({}).transform((parametres) =>
     Object.fromEntries(Object.entries(parametres).filter(([, value]) => value !== '')),
   ),
 });
+
+type TypedParametres = z.infer<typeof PARAMETRES_INPUT_SCHEMA>;
 
 const SAVE_INPUT_SCHEMA = TRIAL_INPUT_SCHEMA.required({ canal: true });
 
@@ -33,9 +33,9 @@ const CHOICES_INPUT_SCHEMA = TRIAL_INPUT_SCHEMA.extend({ parametre: z.string() }
 function mergeParametres(
   { parametreList, id }: CanalNotificationModule,
   saved: SavedCanalNotification,
-  givenParametres: Parametres,
-): Parametres {
-  const savedParametres = saved.module === id ? saved.parametres : {};
+  givenParametres: TypedParametres,
+): TypedParametres {
+  const savedParametres: TypedParametres = saved.module === id ? saved.parametres : {};
   const isSameDestination = parametreList
     .filter(({ isSecret, hasChoices }) => !isSecret && !hasChoices)
     .every(({ name }) => givenParametres[name] === undefined || givenParametres[name] === savedParametres[name]);
@@ -57,7 +57,7 @@ export function createCanalNotificationActions({
   sendNotification,
 }: ActionContext) {
   // The module and the Paramètres a test, a list of choices or a save works on
-  async function mergeInput(rawInput: unknown, canal: string | undefined, givenParametres: Parametres) {
+  async function mergeInput(rawInput: unknown, canal: string | undefined, givenParametres: TypedParametres) {
     const candidat = await findCandidat(rawInput);
     const saved = await workspace.findCanalNotification(candidat.id);
     const module = findCanalNotificationModule(canal ?? saved.module, candidat.name);
