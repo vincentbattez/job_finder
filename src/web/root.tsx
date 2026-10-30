@@ -6,6 +6,7 @@ import {
   Meta,
   NavLink,
   Outlet,
+  redirect,
   Scripts,
   ScrollRestoration,
   useRouteLoaderData,
@@ -15,11 +16,14 @@ import {
 
 import { readCandidate } from './candidate.server.ts';
 import { CandidateMenu } from './components/candidate-menu.tsx';
+import { englishUrlOf } from './redirects.ts';
 
 import './app.css';
 
+// An English route reached with the French query of an older link moves for good to the English one
 export function loader({ request }: LoaderFunctionArgs) {
-  return readCandidate(request);
+  const englishUrl = englishUrlOf(new URL(request.url));
+  return englishUrl === null ? readCandidate(request) : redirect(englishUrl, 301);
 }
 
 export const links: LinksFunction = () => [
