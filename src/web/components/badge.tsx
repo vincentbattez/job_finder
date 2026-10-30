@@ -38,6 +38,6 @@ export function StateBadge({ state }: Readonly<{ state: State }>) {
 }
 
 // Any other badge, such as whose Instructions a module follows: its data attributes give its tint
-export function Badge(props: Readonly<Omit<ComponentProps<'span'>, 'className'>>) {
-  return <span {...props} className="badge" />;
+export function Badge(properties: Readonly<Omit<ComponentProps<'span'>, 'className'>>) {
+  return <span {...properties} className="badge" />;
 }

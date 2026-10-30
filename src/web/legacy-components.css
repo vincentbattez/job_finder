@@ -133,12 +133,6 @@
     color: var(--color-ink-2);
     font-size: var(--text-sm);
   }
-  .posting-detail .prose {
-    max-width: none;
-    padding: var(--space-md);
-    border-radius: var(--radius-input);
-    background: var(--color-paper-2);
-  }
   /* Below the label, each Artifact opens like its compartment: its tint along the top edge */
   .artifact {
     display: grid;
