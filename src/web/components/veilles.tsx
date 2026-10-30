@@ -3,52 +3,16 @@ import { useFetcher } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
 
-import { PARAMETRE_FIELD_PREFIX } from './canal-notification.tsx';
+import { ParametreField } from './parametre-field.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 
 type Veille = Awaited<ReturnType<Actions['listVeilles']>>[number];
 type SourceModule = Awaited<ReturnType<Actions['listSources']>>[number];
-type Parametre = SourceModule['parametreList'][number];
 
 // What /veille answers a save or a deletion: a message or a refusal, in the words of the action
 interface IOutcome {
   message: string | null;
   error: string | null;
-}
-
-// The value a field shows: a list Paramètre one value per line, such as the courts of appeal of a Zone
-function valueOf(value: unknown): string {
-  if (Array.isArray(value)) {
-    return value.filter((item) => typeof item === 'string').join('\n');
-  }
-  return typeof value === 'string' ? value : '';
-}
-
-function ParametreField({ parametre, savedValue }: Readonly<{ parametre: Parametre; savedValue: unknown }>) {
-  const { name, label, placeholder, type, isRequired } = parametre;
-  const fieldName = `${PARAMETRE_FIELD_PREFIX}${name}`;
-  return (
-    <label className="settings__field">
-      {type === 'list' ? `${label}, une par ligne` : label}
-      {type === 'list' ? (
-        <textarea
-          name={fieldName}
-          rows={3}
-          required={isRequired}
-          defaultValue={valueOf(savedValue)}
-          placeholder={placeholder ?? ''}
-        />
-      ) : (
-        <input
-          type={type}
-          name={fieldName}
-          required={isRequired}
-          defaultValue={valueOf(savedValue)}
-          placeholder={placeholder ?? ''}
-        />
-      )}
-    </label>
-  );
 }
 
 // A Veille, or a new one without veille: the Source it follows and the fields its descriptor
@@ -88,6 +52,7 @@ function VeilleForm({ veille, sourceList }: Readonly<{ veille: Veille | null; so
             key={`${sourceId}:${parametre.name}`}
             parametre={parametre}
             savedValue={savedParametres?.[parametre.name]}
+            className="settings__field"
           />
         ))}
         <div className="settings__step">

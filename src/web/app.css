@@ -1123,7 +1123,7 @@ a:active {
   outline-color: var(--color-focus);
 }
 /* Write-only, the token never shows again: only whether one is saved (ADR-0006) */
-.canal__configured {
+.parametre-field__configured {
   color: var(--color-success);
   font-weight: 600;
 }

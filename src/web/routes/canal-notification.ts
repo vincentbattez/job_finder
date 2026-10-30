@@ -3,7 +3,7 @@ import type { ActionFunctionArgs } from 'react-router';
 import { messageOf, type Actions } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidat } from '#/web/candidat.server.ts';
-import { PARAMETRE_FIELD_PREFIX } from '#/web/components/canal-notification.tsx';
+import { readParametres } from '#/web/parametres.server.ts';
 
 type ParametreChoice = Awaited<ReturnType<Actions['listParametreChoices']>>[number];
 
@@ -20,16 +20,13 @@ function refuse(error: string) {
 export async function action({ request }: ActionFunctionArgs) {
   const { candidat } = await readCandidat(request);
   const formData = await request.formData();
-  const parametres = Object.fromEntries(
-    [...formData]
-      .filter(([name]) => name.startsWith(PARAMETRE_FIELD_PREFIX))
-      .map(([name, value]) => [name.slice(PARAMETRE_FIELD_PREFIX.length), value]),
-  );
+  const moduleId = formData.get('canal');
+  const moduleList = await ACTIONS.listCanauxNotification();
   const input = {
     candidatId: candidat?.id,
-    canal: formData.get('canal') ?? undefined,
+    canal: moduleId ?? undefined,
     parametre: formData.get('parametre') ?? undefined,
-    parametres,
+    parametres: readParametres(formData, moduleList.find(({ id }) => id === moduleId)?.parametreList),
   };
   try {
     switch (formData.get('intent')) {

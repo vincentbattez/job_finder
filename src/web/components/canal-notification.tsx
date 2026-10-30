@@ -3,15 +3,13 @@ import { useFetcher, type FetcherWithComponents } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
 
+import { PARAMETRE_FIELD_PREFIX, ParametreField } from './parametre-field.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 
 type CanalNotification = Awaited<ReturnType<Actions['readCanalNotification']>>;
 type CanalNotificationModule = Awaited<ReturnType<Actions['listCanauxNotification']>>[number];
 type Parametre = CanalNotificationModule['parametreList'][number];
 type ParametreChoice = Awaited<ReturnType<Actions['listParametreChoices']>>[number];
-
-// The name of a Paramètre's field, apart from the fields of the form itself, such as the intent
-export const PARAMETRE_FIELD_PREFIX = 'parametres.';
 
 // What /canal-notification answers each button: a message or a refusal, and the choices it listed
 interface IOutcome {
@@ -109,50 +107,6 @@ function ChoiceField({
   );
 }
 
-// A Paramètre typed in. A secret one always starts empty: it is write-only, and left empty it keeps the
-// saved one (ADR-0006).
-function TypedField({
-  parametre: { name, label, placeholder, type, isRequired, isSecret },
-  savedValue,
-  isConfigured,
-  secretReference,
-}: Readonly<{
-  parametre: Parametre;
-  savedValue: string;
-  isConfigured: boolean;
-  secretReference: (input: HTMLInputElement | null) => void;
-}>) {
-  if (isSecret) {
-    return (
-      <label className="canal__field">
-        <span>
-          {label}
-          {isConfigured && <span className="canal__configured"> configuré ✓</span>}
-        </span>
-        <input
-          ref={secretReference}
-          type="password"
-          name={`${PARAMETRE_FIELD_PREFIX}${name}`}
-          autoComplete="off"
-          placeholder={isConfigured ? 'Laisser vide pour garder la valeur enregistrée' : (placeholder ?? '')}
-        />
-      </label>
-    );
-  }
-  return (
-    <label className="canal__field">
-      {label}
-      <input
-        type={type}
-        name={`${PARAMETRE_FIELD_PREFIX}${name}`}
-        required={isRequired}
-        defaultValue={savedValue}
-        placeholder={placeholder ?? ''}
-      />
-    </label>
-  );
-}
-
 // The Candidat's Canal de notification, which pushes each new Offre to their phone: a module of the
 // family, and the form its descriptor describes (ADR-0010)
 export function CanalNotificationForm({
@@ -229,10 +183,11 @@ export function CanalNotificationForm({
               isHydrated={isHydrated}
             />
           ) : (
-            <TypedField
+            <ParametreField
               key={`${moduleId}:${parametre.name}`}
               parametre={parametre}
               savedValue={savedValueOf(parametre.name)}
+              className="canal__field"
               isConfigured={isSavedModule && canal.configuredSecretList.includes(parametre.name)}
               secretReference={(input) => {
                 if (input !== null) {
