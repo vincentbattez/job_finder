@@ -30,10 +30,10 @@ export default {
       { '/.*/': [String.raw`/\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\((?!\s*from\s+var\()/i`] },
       { message: (property: string) => `Expected a color token instead of a color function in "${property}"` },
     ],
-    // Flat BEM, as tight as the real CSS allows: no ID, three compound selectors, specificity 0,3,1
+    // Flat BEM, as tight as the real CSS allows: no ID, two compound selectors, specificity 0,2,1
     'selector-max-id': 0,
-    'selector-max-compound-selectors': 3,
-    'selector-max-specificity': '0,3,1',
+    'selector-max-compound-selectors': 2,
+    'selector-max-specificity': '0,2,1',
     // Layers settle conflicts, not force
     'declaration-no-important': true,
     'no-duplicate-selectors': true,

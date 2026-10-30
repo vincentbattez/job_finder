@@ -36,7 +36,7 @@ export function PostingFilters({ postingList }: Readonly<{ postingList: IFiltere
   const [searchParameters] = useSearchParams();
   return (
     <Form role="search" aria-label={t('filtersLabel')} className="posting-filters" key={searchParameters.toString()}>
-      <label>
+      <label className="posting-filters__field">
         {t('cityFilter')}
         <select
           className="button posting-filters__control"
@@ -49,7 +49,7 @@ export function PostingFilters({ postingList }: Readonly<{ postingList: IFiltere
           ))}
         </select>
       </label>
-      <label>
+      <label className="posting-filters__field">
         {t('regionFilter')}
         <select
           className="button posting-filters__control"

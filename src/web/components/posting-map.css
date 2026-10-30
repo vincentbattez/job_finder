@@ -14,26 +14,27 @@
     font: var(--text-xs) var(--font-body);
   }
 
-  /* Leaflet's own link colors, which the links of base would otherwise turn to the text's */
-  .posting-map__canvas.leaflet-container a {
+  /* Leaflet's own link colors, which the links of base would otherwise turn to the text's: the canvas
+     is Leaflet's container */
+  .posting-map__canvas a {
     color: var(--color-leaflet-link);
   }
 
-  .posting-map__canvas.leaflet-container a[role='button'] {
+  .posting-map__canvas a[role='button'] {
     color: var(--color-leaflet-control);
   }
 
-  .posting-map__canvas.leaflet-container a[aria-disabled='true'] {
+  .posting-map__canvas a[aria-disabled='true'] {
     color: var(--color-leaflet-control-disabled);
   }
 
   .posting-map__point,
-  .posting-map__legend li {
+  .posting-map__key {
     --point: var(--color-status-to-apply);
   }
 
   .posting-map__point,
-  .posting-map__legend li::before {
+  .posting-map__key::before {
     border: 2px solid var(--light);
     border-radius: var(--radius-pill);
     background: var(--point);
@@ -45,17 +46,17 @@
   }
 
   .posting-map__point[data-status='applied'],
-  .posting-map__legend li[data-status='applied'] {
+  .posting-map__key[data-status='applied'] {
     --point: var(--color-status-applied);
   }
 
   .posting-map__point[data-status='expired'],
-  .posting-map__legend li[data-status='expired'] {
+  .posting-map__key[data-status='expired'] {
     --point: var(--color-status-expired);
   }
 
   .posting-map__point[data-status='archived'],
-  .posting-map__legend li[data-status='archived']::before {
+  .posting-map__key[data-status='archived']::before {
     border: 2px dashed var(--color-muted);
     background: var(--color-status-archived-soft);
   }
@@ -71,13 +72,13 @@
     font-size: var(--text-sm);
   }
 
-  .posting-map__legend li {
+  .posting-map__key {
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
   }
 
-  .posting-map__legend li::before {
+  .posting-map__key::before {
     content: '';
     width: 14px;
     height: 14px;

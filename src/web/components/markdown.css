@@ -8,7 +8,7 @@
     line-height: 1.65;
   }
 
-  .markdown > * + * {
+  .markdown > :where(:not(:first-child)) {
     margin-top: var(--space-sm);
   }
 

@@ -67,7 +67,9 @@
     white-space: nowrap;
   }
 
-  .artifact-versions__list details > :not(summary) {
+  /* What a Version unfolds, under its summary */
+  .artifact-versions__version > :not(summary),
+  .artifact-versions__instructions > :not(summary) {
     margin: 0 var(--space-md) var(--space-md);
   }
 

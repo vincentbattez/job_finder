@@ -28,8 +28,9 @@
   cursor: not-allowed;
 }
 
-/* A label stands for its hidden file input: data-disabled carries the state :disabled cannot */
-.button:hover:not(:disabled, [data-disabled='true']) {
+/* A label stands for its hidden file input: data-disabled carries the state :disabled cannot. The
+   guard adds no specificity, so a modifier's hover beats the default one by coming after it */
+.button:hover:where(:not(:disabled, [data-disabled='true'])) {
   background: var(--color-paper-2);
 }
 
@@ -39,7 +40,7 @@
   color: var(--color-accent-ink);
 }
 
-.button--primary:hover:not(:disabled, [data-disabled='true']) {
+.button--primary:hover:where(:not(:disabled, [data-disabled='true'])) {
   background: var(--color-accent-deep);
 }
 
@@ -50,7 +51,7 @@
   color: var(--color-accent-ink);
 }
 
-.button--danger:hover:not(:disabled, [data-disabled='true']) {
+.button--danger:hover:where(:not(:disabled, [data-disabled='true'])) {
   background: color-mix(in oklch, var(--color-error), var(--color-ink) 20%);
 }
 

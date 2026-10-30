@@ -68,7 +68,7 @@ export function ArtifactVersions({
         <ol className="artifact-versions__list">
           {versionList.map(({ version, isChoosable, documentList }) => (
             <li key={version.number}>
-              <details open={version.isChosen}>
+              <details className="artifact-versions__version" open={version.isChosen}>
                 <summary>
                   <span className="artifact-versions__reference">
                     {t('versionNumber', { versionNumber: version.number })}

@@ -82,7 +82,7 @@
       order: 1;
     }
 
-    .posting-list td[data-label]::before {
+    .posting-list__date[data-label]::before {
       content: attr(data-label) ' ';
       color: var(--color-muted);
       font: 500 var(--text-sm) var(--font-body);

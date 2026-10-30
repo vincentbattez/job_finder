@@ -111,10 +111,18 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
     <section aria-label={t('mapLabel')} className="posting-map">
       <div ref={containerReference} className="posting-map__canvas" />
       <ul className="posting-map__legend">
-        <li data-status="to_apply">{t('statusLabelByStatus.to_apply', { ns: 'common' })}</li>
-        <li data-status="applied">{t('statusLabelByStatus.applied', { ns: 'common' })}</li>
-        <li data-status="expired">{t('expired', { ns: 'common' })}</li>
-        <li data-status="archived">{t('statusLabelByStatus.archived', { ns: 'common' })}</li>
+        <li className="posting-map__key" data-status="to_apply">
+          {t('statusLabelByStatus.to_apply', { ns: 'common' })}
+        </li>
+        <li className="posting-map__key" data-status="applied">
+          {t('statusLabelByStatus.applied', { ns: 'common' })}
+        </li>
+        <li className="posting-map__key" data-status="expired">
+          {t('expired', { ns: 'common' })}
+        </li>
+        <li className="posting-map__key" data-status="archived">
+          {t('statusLabelByStatus.archived', { ns: 'common' })}
+        </li>
       </ul>
       {unlocatedCount > 0 && <p className="posting-map__note">{t('unlocatedPostings', { count: unlocatedCount })}</p>}
     </section>
