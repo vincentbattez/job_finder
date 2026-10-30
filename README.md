@@ -59,7 +59,7 @@ Chaque Candidat choisit son Canal de notification dans la section Notifications 
 
 Tout vit dans `data/`, hors de git et sans sauvegarde :
 
-- `config.json` : les Candidats, leurs Veilles et le délai par défaut. Le modèle versionné est `config.example.json` ;
+- `config.json` : les Candidats, leurs Veilles et le délai par défaut. Le modèle versionné est `config.example.json`. Chaque Veille nomme sa Source (`source`) et lui donne ses Paramètres (`parametres`), que seule cette Source vérifie, à la Détection ; une Veille écrite avant, en `criteria` et `zone`, se lit toujours ;
 - `job_finder.sqlite` : la base, migrée à chaque lancement, avec le Canal de notification de chaque Candidat, Paramètres secrets compris ;
 - `candidats/<id>/profil/` : le Profil de chaque Candidat, en fichiers Markdown : `faits.md`, `cv.md` et une `lettre-<employeur>-<année>.md` par lettre passée. `jf profil <candidat>` les écrit et les complète au fil d'une session Claude Code interactive ;
 - `candidats/<id>/offres/<référence>-<titre>/` : un dossier par Offre, avec sa Fiche de poste (`fiche-de-poste.md`) sauvegardée dès la Détection, et un dossier par Version de chaque Artefact, par exemple `recherche/v2/recherche.md`. Une Version de la Lettre (`lettre/v<n>/`) contient le Brouillon (`brouillon.md`, en lecture seule), la Lettre à corriger (`lettre.md`, d'abord sa copie) et les destinataires recommandés (`destinataires.json`). Une Version de la Fiche d'entretien (`fiche_entretien/v<n>/fiche-entretien.md`) commence par un titre ; ses Consignes par défaut l'organisent en « À réviser », « Moyens mnémotechniques », « Présentez-vous » et « Questions probables », et celles du Candidat peuvent l'organiser autrement. Une Version de la Visualisation (`visualisation/v<n>/visualisation.html`) est une page HTML autonome, sans script ;
@@ -69,7 +69,7 @@ Tout vit dans `data/`, hors de git et sans sauvegarde :
 
 ## Base de données
 
-Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Après une modification, `mise run db:migrate` génère la migration dans `prisma/migrations/` et l'applique à `dev-data/`. Une migration générée ne s'édite pas à la main, sauf pour recopier les données d'une table qu'elle remplace, comme `20261030110155_canal_notification`. `jf` applique les migrations en attente à `data/` à chaque lancement.
+Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Après une modification, `mise run db:migrate` génère la migration dans `prisma/migrations/` et l'applique à `dev-data/`. Une migration générée ne s'édite pas à la main, sauf pour recopier les données d'une table ou de colonnes qu'elle remplace, comme `20261030110155_canal_notification` ou `20261030112510_veille_parametres`. `jf` applique les migrations en attente à `data/` à chaque lancement.
 
 ## Code
 
@@ -87,6 +87,9 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 - `src/modules/` : un dossier par module, avec un seul point d'entrée. Un module n'en importe jamais un autre, ce que vérifie `test/architecture.test.ts`. Un module IA, comme `recherche/`, a sa partie fixe du prompt dans `prompt.ts` et ses Consignes par défaut dans `consignes.ts`.
 - `src/modules/source-import/` : la Source Import Markdown. L'import enregistre l'Offre et met en file l'extraction de ses champs ; le worker la lance comme un module, dans une session Claude sans interface au prompt fixe, qui écrit `extraction/extraction.json` dans le dossier de l'Offre. `acl/extraction.ts` refuse toute valeur que la Fiche de poste ne contient pas telle quelle. Les champs remplissent l'Offre, dont le dossier suit le nouveau titre, puis sa Recherche est mise en file. La référence de l'Offre vient du contenu du fichier : importer deux fois le même fichier redonne la même Offre, sans nouveau job.
 - `src/notification/` : le contrat de la famille des Canaux de notification (ADR-0010) : le descripteur qu'exporte chaque module (identifiant, nom affiché, Paramètres décrits par un schéma Zod, envoi, et en option test et choix d'un Paramètre), et le texte de chaque notification.
+- `src/source/` : le contrat de la famille des Sources qu'une Veille suit (ADR-0010) : le descripteur qu'exporte chaque module (identifiant, nom affiché, Paramètres d'une Veille décrits par un schéma Zod, Zone comprise, recherche des Offres et lecture de la fiche détaillée, qui dit si l'Offre est dans la Zone). L'action `listSources` donne ces descripteurs, dont le formulaire d'une Veille se construira.
+- `src/parametre/` : la déclaration des Paramètres, commune aux deux familles : `parametre(schema, { label, placeholder, type, isSecret })`, où `type` vaut `text`, `url` ou `list`.
+- `src/modules/source-pep/` : la Source PEP, Place de l'Emploi Public (ADR-0001). Seul son `acl/talent-soft.ts` lit le site. Ajouter une Source, c'est un dossier `src/modules/source-<nom>/` et une ligne dans `src/actions/modules.ts`.
 - `src/modules/notification-home-assistant/` : le Canal Home Assistant. Seul son `acl/home-assistant.ts` sait appeler Home Assistant. Ajouter un Canal, c'est un dossier `src/modules/notification-<nom>/` et une ligne dans `src/actions/modules.ts`, sans migration, action ni écran.
 - `prisma/` : le schéma, les migrations et le seed.
 - `test/fixtures/pep/` : les réponses du site PEP enregistrées le 2026-10-29, que `test/recorded-http.ts` sert aux tests à la place du vrai site.
