@@ -1,25 +1,29 @@
 import { useId } from 'react';
 import { useFetcher } from 'react-router';
 
-import { EtatBadge, type Etat } from './badge.tsx';
+import { StateBadge, type State } from './badge.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
 
-// The worker runs the extraction in its own process (ADR-0003), so its état is read again until done
-export function ExtractionLaunch({ reference, etat, log }: Readonly<{ reference: string; etat: Etat; log: string }>) {
+// The worker runs the extraction in its own process (ADR-0003), so its state is read again until done
+export function ExtractionLaunch({
+  reference,
+  state,
+  log,
+}: Readonly<{ reference: string; state: State; log: string }>) {
   const fetcher = useFetcher<{ error: string | null }>();
   const isHydrated = useIsHydrated();
   const labelId = useId();
-  useRevalidateWhile(etat === 'en_cours');
+  useRevalidateWhile(state === 'in_progress');
   return (
     <fetcher.Form method="post" action="/run" className="module-launch" aria-labelledby={labelId}>
       <input type="hidden" name="reference" value={reference} />
       <input type="hidden" name="module" value="extraction" />
       <span id={labelId}>Champs relevés par Claude</span>
       <span role="status">
-        <EtatBadge etat={etat} />
+        <StateBadge state={state} />
       </span>
-      {etat === 'en_echec' && (
+      {state === 'failed' && (
         <>
           <button type="submit" disabled={!isHydrated || fetcher.state !== 'idle'}>
             Relancer l’extraction

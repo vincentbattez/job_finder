@@ -68,7 +68,7 @@ test.describe('Postings of a Candidate', () => {
       'Madame Odile SIMART, présidente du Tribunal Judiciaire de Béthune',
       'secrétariat en copie : sec.p.tj-bethune@justice.fr',
     ]);
-    // Long as published, the Job Description stays folded below the Artefacts until it is opened
+    // Long as published, the Job Description stays folded below the Artifacts until it is opened
     const jobDescription = page.getByRole('region', { name: 'Fiche de poste' });
     await jobDescription.getByText('Lire la Fiche de poste').click();
     await expect(
@@ -76,7 +76,7 @@ test.describe('Postings of a Candidate', () => {
     ).toBeVisible();
   });
 
-  test('shows the recipients the Lettre recommends, each with the field it comes from', async ({ page }) => {
+  test('shows the recipients the Letter recommends, each with the field it comes from', async ({ page }) => {
     await page.goto('/postings/2026-2445600');
 
     const recipients = page.getByRole('region', { name: 'Destinataires recommandés' });
@@ -88,36 +88,36 @@ test.describe('Postings of a Candidate', () => {
     await expect(recipients).toContainText('Le mail de candidature est celui de la présidence');
   });
 
-  test('shows every Version of an Artefact and tells the Version retenue', async ({ page }) => {
+  test('shows every Version of an Artifact and tells the Chosen Version', async ({ page }) => {
     await page.goto('/postings/2026-2445600');
 
-    const recherche = page.getByRole('region', { name: 'Recherche' });
-    await expect(recherche.locator('li > details > summary')).toHaveText([
+    const research = page.getByRole('region', { name: 'Recherche' });
+    await expect(research.locator('li > details > summary')).toHaveText([
       /^v1\s*Prêt\s*Retenue/,
       /^v2\s*Prêt\s*Consignes par défaut\s*\d/,
     ]);
-    await expect(recherche.getByRole('heading', { name: /^Recherche retenue/ })).toBeVisible();
-    await expect(recherche.getByRole('heading', { name: /^Recherche relancée/ })).toBeHidden();
-    await recherche.locator('li > details > summary', { hasText: 'v2' }).click();
-    await expect(recherche.getByRole('heading', { name: /^Recherche relancée/ })).toBeVisible();
+    await expect(research.getByRole('heading', { name: /^Recherche retenue/ })).toBeVisible();
+    await expect(research.getByRole('heading', { name: /^Recherche relancée/ })).toBeHidden();
+    await research.locator('li > details > summary', { hasText: 'v2' }).click();
+    await expect(research.getByRole('heading', { name: /^Recherche relancée/ })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Lettre' }).locator('figcaption')).toHaveText([
-      'brouillon.md',
-      'lettre.md',
+      'draft.md',
+      'letter.md',
     ]);
     await expect(page.getByRole('region', { name: 'Fiche d’entretien' })).toContainText('Aucune Version');
   });
 
-  test('copies the jf edit command of an Artefact', async ({ page, context }) => {
+  test('copies the jf edit command of an Artifact', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.goto('/postings/2026-2445600');
-    const recherche = page.getByRole('region', { name: 'Recherche' });
+    const research = page.getByRole('region', { name: 'Recherche' });
 
-    await expect(recherche.getByRole('code')).toHaveText('jf edit 2026-2445600 recherche');
+    await expect(research.getByRole('code')).toHaveText('jf edit 2026-2445600 research');
     // A click before React hydrates the server-rendered page does nothing: click again until it copies
     await expect(async () => {
-      await recherche.getByRole('button', { name: 'Copier', exact: true }).click();
+      await research.getByRole('button', { name: 'Copier', exact: true }).click();
       expect(await page.evaluate(() => globalThis.navigator.clipboard.readText())).toBe(
-        'jf edit 2026-2445600 recherche',
+        'jf edit 2026-2445600 research',
       );
     }).toPass();
     await expect(page.getByRole('region', { name: 'Fiche d’entretien' }).getByRole('code')).toHaveCount(0);

@@ -16,7 +16,7 @@ const SERVICE_LIST = ['pôle civil', 'pôle pénal', 'parquet', "service de l'ap
 function fakePosting(candidateId: string): Prisma.PostingUncheckedCreateInput {
   const reference = `2026-${faker.string.numeric(7)}`;
   const city = faker.location.city();
-  const hasRecherche = faker.datatype.boolean();
+  const hasResearch = faker.datatype.boolean();
   return {
     candidateId,
     source: 'pep',
@@ -37,8 +37,8 @@ function fakePosting(candidateId: string): Prisma.PostingUncheckedCreateInput {
     status: faker.helpers.arrayElement(['to_apply', 'applied', 'archived'] as const),
     isInZone: faker.datatype.boolean(),
     versionList: {
-      create: hasRecherche
-        ? [{ artefact: 'recherche', number: 1, isRetenue: true, state: 'ready', instructions: '' }]
+      create: hasResearch
+        ? [{ artifact: 'research', number: 1, isChosen: true, state: 'ready', instructions: '' }]
         : [],
     },
   };

@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { useFetcher } from 'react-router';
 
-import { EtatBadge, type Etat } from './badge.tsx';
+import { StateBadge, type State } from './badge.tsx';
 import { DateText } from './date.tsx';
 import { DropZone } from './drop-zone.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
@@ -13,7 +13,7 @@ interface IUploadRefusal {
 }
 
 interface IConversion {
-  etat: Etat;
+  state: State;
   log: string;
 }
 
@@ -23,7 +23,7 @@ function UploadConversion({ fileName, conversion }: Readonly<{ fileName: string;
   const fetcher = useFetcher<IUploadRefusal>();
   const isHydrated = useIsHydrated();
   const labelId = useId();
-  const { etat, log } = conversion;
+  const { state, log } = conversion;
   return (
     <fetcher.Form
       method="post"
@@ -36,15 +36,15 @@ function UploadConversion({ fileName, conversion }: Readonly<{ fileName: string;
         Conversion en Markdown<span className="visually-hidden"> de {fileName}</span>
       </span>
       <span role="status">
-        <EtatBadge etat={etat} />
+        <StateBadge state={state} />
       </span>
-      {(etat === 'absent' || etat === 'en_echec') && (
+      {(state === 'absent' || state === 'failed') && (
         <button type="submit" name="intent" value="convertUpload" disabled={!isHydrated || fetcher.state !== 'idle'}>
-          {etat === 'absent' ? 'Convertir' : 'Relancer la conversion'}
+          {state === 'absent' ? 'Convertir' : 'Relancer la conversion'}
           <span className="visually-hidden"> de {fileName}</span>
         </button>
       )}
-      {etat === 'en_echec' && <p className="module-launch__refusal">{log}</p>}
+      {state === 'failed' && <p className="module-launch__refusal">{log}</p>}
       {fetcher.state === 'idle' && fetcher.data?.refusal != null && <p role="alert">{fetcher.data.refusal.message}</p>}
     </fetcher.Form>
   );
@@ -57,7 +57,7 @@ export function Uploads({
   const headingId = useId();
   const fetcher = useFetcher<IUploadRefusal>();
   const isSending = fetcher.state !== 'idle';
-  useRevalidateWhile(uploadList.some(({ conversion }) => conversion.etat === 'en_cours'));
+  useRevalidateWhile(uploadList.some(({ conversion }) => conversion.state === 'in_progress'));
 
   // Multipart, so the PDF reaches the action byte for byte, unlike the text of a Job Description
   async function saveUpload(file: File): Promise<void> {

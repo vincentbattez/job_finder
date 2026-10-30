@@ -1,6 +1,6 @@
 import { z } from 'zod/v4';
 
-import { ARTEFACT_SCHEMA, MODULE_INSTRUCTIONS_SCHEMA, type Artefact, type ModuleInstructions } from '#/domain/index.ts';
+import { ARTIFACT_SCHEMA, MODULE_INSTRUCTIONS_SCHEMA, type Artifact, type ModuleInstructions } from '#/domain/index.ts';
 
 import type { ActionContext } from './context.ts';
 import { findDefaultInstructions, parseModule } from './run-job.ts';
@@ -9,7 +9,7 @@ const INSTRUCTIONS_MODULE_INPUT_SCHEMA = z.object({ module: z.string() });
 const INSTRUCTIONS_INPUT_SCHEMA = INSTRUCTIONS_MODULE_INPUT_SCHEMA.extend({ instructions: z.string() });
 
 export function createInstructionsActions({ workspace, findCandidate }: ActionContext) {
-  function readModuleInstructions(candidateId: string, module: Artefact): ModuleInstructions {
+  function readModuleInstructions(candidateId: string, module: Artifact): ModuleInstructions {
     return MODULE_INSTRUCTIONS_SCHEMA.parse({
       module,
       defaultInstructions: findDefaultInstructions(module),
@@ -20,10 +20,10 @@ export function createInstructionsActions({ workspace, findCandidate }: ActionCo
   return {
     async listInstructions(rawInput: unknown): Promise<ModuleInstructions[]> {
       const candidate = await findCandidate(rawInput);
-      return ARTEFACT_SCHEMA.options.map((module) => readModuleInstructions(candidate.id, module));
+      return ARTIFACT_SCHEMA.options.map((module) => readModuleInstructions(candidate.id, module));
     },
 
-    // Named by its Artefact or its alias, as jf run names it
+    // Named by its Artifact or its alias, as jf run names it
     async readInstructions(rawInput: unknown): Promise<ModuleInstructions> {
       const candidate = await findCandidate(rawInput);
       const { module } = INSTRUCTIONS_MODULE_INPUT_SCHEMA.parse(rawInput);

@@ -13,7 +13,7 @@ const REFERENCE = '2026-2445600';
 const OTHER_REFERENCE = '2026-2445609';
 const OUT_OF_ZONE_REFERENCE = '2026-2215099';
 
-const RECHERCHE = { fileByName: { 'recherche.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
+const RESEARCH = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -84,10 +84,10 @@ describe('the notification of a new Posting in the Zone', () => {
   });
 });
 
-describe('the notification of a Recherche ready', () => {
-  it('tells the Candidate which Posting has its Recherche ready, once the worker has produced it', async () => {
-    const { actions, notificationChannel } = await detectPostings(createFakeAiSession(RECHERCHE));
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
+describe('the notification of a Research ready', () => {
+  it('tells the Candidate which Posting has its Research ready, once the worker has produced it', async () => {
+    const { actions, notificationChannel } = await detectPostings(createFakeAiSession(RESEARCH));
+    await actions.runModule({ module: 'research', reference: REFERENCE });
 
     await actions.runQueuedJobs();
 
@@ -101,10 +101,10 @@ describe('the notification of a Recherche ready', () => {
     ]);
   });
 
-  it('sends nothing for a Recherche that failed', async () => {
+  it('sends nothing for a Research that failed', async () => {
     const { actions, notificationChannel } = await detectPostings(createFakeAiSession({ isSuccess: false }, {}));
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
-    await actions.runModule({ module: 'recherche', reference: OTHER_REFERENCE });
+    await actions.runModule({ module: 'research', reference: REFERENCE });
+    await actions.runModule({ module: 'research', reference: OTHER_REFERENCE });
 
     await actions.runQueuedJobs();
 
@@ -115,9 +115,9 @@ describe('the notification of a Recherche ready', () => {
 describe('a notification that cannot be sent', () => {
   const ERROR_MESSAGE = 'Home Assistant injoignable.';
 
-  it('reports each notification not sent with what the Detection found, once every new Posting is saved and its Recherche queued', async () => {
+  it('reports each notification not sent with what the Detection found, once every new Posting is saved and its Research queued', async () => {
     const dataDirectory = createDataDirectory();
-    const aiSession = createFakeAiSession(RECHERCHE, RECHERCHE);
+    const aiSession = createFakeAiSession(RESEARCH, RESEARCH);
     const earlierFetch = createRecordedFetch({
       [DSJ_FEED_URL]: { body: feedWithout([REFERENCE, OTHER_REFERENCE]) },
     }).fetch;
@@ -151,20 +151,20 @@ describe('a notification that cannot be sent', () => {
     });
     const jobList = await worker.runQueuedJobs();
     expect(jobList).toMatchObject([
-      { module: 'recherche', posting: { reference: REFERENCE }, state: 'done' },
-      { module: 'recherche', posting: { reference: OTHER_REFERENCE }, state: 'done' },
+      { module: 'research', posting: { reference: REFERENCE }, state: 'done' },
+      { module: 'research', posting: { reference: OTHER_REFERENCE }, state: 'done' },
     ]);
     expect(jobList).toHaveLength(2);
   });
 
   // lpm never restarts a stopped worker: the failure goes to its log, lpm logs worker
-  it('never stops the worker, which logs it and goes on with the queue, each Recherche staying ready', async () => {
+  it('never stops the worker, which logs it and goes on with the queue, each Research staying ready', async () => {
     const stderrList: string[] = [];
     vi.spyOn(process.stderr, 'write').mockImplementation((text) => {
       stderrList.push(String(text));
       return true;
     });
-    const aiSession = createFakeAiSession(RECHERCHE, RECHERCHE);
+    const aiSession = createFakeAiSession(RESEARCH, RESEARCH);
     const dataDirectory = createDataDirectory();
     const earlierActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
     await earlierActions.detect();
@@ -175,8 +175,8 @@ describe('a notification that cannot be sent', () => {
       notificationChannelList: notificationChannel.notificationChannelList,
     });
     await notificationChannel.saveFor(actions);
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
-    await actions.runModule({ module: 'recherche', reference: OTHER_REFERENCE });
+    await actions.runModule({ module: 'research', reference: REFERENCE });
+    await actions.runModule({ module: 'research', reference: OTHER_REFERENCE });
 
     const jobList = await actions.runQueuedJobs();
 

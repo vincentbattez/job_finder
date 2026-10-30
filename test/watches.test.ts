@@ -18,7 +18,7 @@ const VERSAILLES_WATCH = {
   parameters: { title: 'attaché de justice', courtOfAppealList: ['Versailles'] },
 };
 
-const RECHERCHE = { fileByName: { 'recherche.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
+const RESEARCH = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
 
 // Léa's Postings already online, imported by the first Detection of her Watch
 async function detectLeaPostings() {
@@ -61,7 +61,7 @@ describe('Watches', () => {
     ]);
   });
 
-  // A broader title would otherwise start a Recherche for every Posting already online at once
+  // A broader title would otherwise start a Research for every Posting already online at once
   it('starts the first launch of a Watch again once its Parameters change', async () => {
     const actions = await detectLeaPostings();
 
@@ -128,12 +128,12 @@ describe('Watches', () => {
 
   // Each Watch has its own Zone: a Posting one stored out of its Zone may be in that of another
   describe('a Posting in the Zone of another Watch of the Candidate', () => {
-    it('gets its Recherche and its notification once, when it is new', async () => {
+    it('gets its Research and its notification once, when it is new', async () => {
       const dataDirectory = createDataDirectory();
       const notificationChannel = createFakeNotificationChannel();
       const option = {
         dataDirectory,
-        aiSession: createFakeAiSession(RECHERCHE),
+        aiSession: createFakeAiSession(RESEARCH),
         notificationChannelList: notificationChannel.notificationChannelList,
       };
       const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout([VERSAILLES_REFERENCE]) } });
@@ -157,7 +157,7 @@ describe('Watches', () => {
       expect(notificationChannel.sentList.map(({ title }) => title)).toEqual(['Nouvelle Offre dans la Zone']);
       const jobList = await actions.runQueuedJobs();
       expect(jobList.map((job) => `${job.module} ${'posting' in job ? job.posting.reference : job.upload}`)).toEqual([
-        `recherche ${VERSAILLES_REFERENCE}`,
+        `research ${VERSAILLES_REFERENCE}`,
       ]);
     });
 

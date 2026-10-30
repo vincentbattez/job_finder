@@ -23,21 +23,21 @@ export function StatusBadge({ status, isExpired }: Readonly<{ status: Status; is
   );
 }
 
-export const ETAT_LIST = ['absent', 'en_cours', 'pret', 'en_echec'] as const;
+export const STATE_LIST = ['absent', 'in_progress', 'ready', 'failed'] as const;
 
-export type Etat = (typeof ETAT_LIST)[number];
+export type State = (typeof STATE_LIST)[number];
 
-const ETAT_LABEL_BY_ETAT: Record<Etat, string> = {
+const STATE_LABEL_BY_STATE: Record<State, string> = {
   absent: 'Absent',
-  en_cours: 'En cours',
-  pret: 'Prêt',
-  en_echec: 'En échec',
+  in_progress: 'En cours',
+  ready: 'Prêt',
+  failed: 'En échec',
 };
 
-export function EtatBadge({ etat }: Readonly<{ etat: Etat }>) {
+export function StateBadge({ state }: Readonly<{ state: State }>) {
   return (
-    <span className="badge" data-etat={etat}>
-      {ETAT_LABEL_BY_ETAT[etat]}
+    <span className="badge" data-state={state}>
+      {STATE_LABEL_BY_STATE[state]}
     </span>
   );
 }

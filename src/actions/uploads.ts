@@ -13,12 +13,12 @@ import { findConversionFileNameError } from '#/modules/conversion/index.ts';
 
 import type { ActionContext } from './context.ts';
 
-// A CV or a lettre runs to a few hundred kilobytes: more is not an Upload
+// A CV or a letter runs to a few hundred kilobytes: more is not an Upload
 const MAX_UPLOAD_MEGABYTES = 10;
 // Every PDF starts with these bytes, whatever its name says
 const PDF_SIGNATURE = '%PDF-';
 
-const ETAT_BY_JOB_STATE = { queued: 'en_cours', running: 'en_cours', done: 'pret', failed: 'en_echec' } as const;
+const STATE_BY_JOB_STATE = { queued: 'in_progress', running: 'in_progress', done: 'ready', failed: 'failed' } as const;
 
 const UPLOAD_NAME_INPUT_SCHEMA = z.object({ fileName: z.string() });
 const UPLOAD_INPUT_SCHEMA = UPLOAD_NAME_INPUT_SCHEMA.extend({ content: z.instanceof(Uint8Array) });
@@ -54,7 +54,7 @@ function hasUpload({ workspace }: ActionContext, candidateId: string, fileName: 
   return workspace.readUploads(candidateId).some((upload) => upload.fileName === fileName);
 }
 
-// The worker converts an Upload into the files of the Profile it names: the CV or a past lettre. A file
+// The worker converts an Upload into the files of the Profile it names: the CV or a past letter. A file
 // the Profile already has is never overwritten: the job fails and says so.
 export async function runConversion(context: ActionContext, job: ProfileJob): Promise<ProfileJob> {
   const { workspace, uploadConversion, findCandidate } = context;
@@ -120,7 +120,7 @@ export function createUploadActions(context: ActionContext) {
           fileName,
           savedAt,
           conversion:
-            job === undefined ? { etat: 'absent', log: '' } : { etat: ETAT_BY_JOB_STATE[job.state], log: job.log },
+            job === undefined ? { state: 'absent', log: '' } : { state: STATE_BY_JOB_STATE[job.state], log: job.log },
         });
       });
     },

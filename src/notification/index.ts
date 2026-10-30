@@ -104,7 +104,7 @@ export function composeNewPostingNotification(posting: Posting): INotification {
   };
 }
 
-// A Repost in the Zone, whose Recherche starts from that of the Posting it publishes again
+// A Repost in the Zone, whose Research starts from that of the Posting it publishes again
 export function composeRepostNotification(posting: Posting, repostedPosting: Posting): INotification {
   return {
     title: 'Republication dans la Zone',
@@ -135,6 +135,6 @@ export function composeTestNotification(candidateName: string): INotification {
   return { title: 'Notification de test', message: `Le Canal de notification de ${candidateName} fonctionne.` };
 }
 
-export function composeRecherchePreteNotification(posting: Posting): INotification {
+export function composeResearchPreteNotification(posting: Posting): INotification {
   return { title: 'Recherche prête', message: [posting.title, jurisdictionOf(posting)].join('\n') };
 }

@@ -18,9 +18,9 @@ function formatJob(job: Job): string {
     return `job ${String(job.id)}, conversion de la Pièce ${job.upload} de ${job.candidateId} : ${outcome}\n`;
   }
   const { id, module, posting, state, version } = job;
-  const artefact = version === null ? module : `${module} v${String(version.number)}`;
+  const artifact = version === null ? module : `${module} v${String(version.number)}`;
   const outcome = state === 'done' ? 'prête et retenue' : failure;
-  return `job ${String(id)}, ${artefact} de l'Offre ${posting.reference} : ${outcome}\n`;
+  return `job ${String(id)}, ${artifact} de l'Offre ${posting.reference} : ${outcome}\n`;
 }
 
 // In its own process, so restarting the front never stops a session (ADR-0003)

@@ -2,7 +2,7 @@ import type { Candidate } from '#/domain/index.ts';
 
 import { SECTION_LIST } from './facts.ts';
 
-// How a CV or a past lettre becomes a file of the Profile, shared by jf profile and the conversion job
+// How a CV or a past letter becomes a file of the Profile, shared by jf profile and the conversion job
 // of an Upload, so both convert alike
 export const CONVERSION_INSTRUCTIONS =
   "convertis-le fidèlement en Markdown, sans le réécrire : un CV dans `cv.md`, une lettre de motivation dans `lettre-<employeur>-<année>.md`, l'employeur en minuscules et sans accents, ses mots reliés par des tirets, par exemple `lettre-tj-lille-2025.md`";

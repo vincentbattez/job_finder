@@ -90,13 +90,13 @@
   --color-status-archived: var(--color-muted);
   --color-status-archived-soft: var(--color-paper);
 
-  /* États of an Artefact, on the same signals: ready reads like Applied, failed like Expired */
-  --color-etat-absent: var(--color-muted);
-  --color-etat-absent-soft: var(--color-paper);
-  --color-etat-en-cours: var(--color-status-to-apply);
-  --color-etat-en-cours-soft: var(--color-status-to-apply-soft);
-  --color-etat-pret: var(--color-status-applied);
-  --color-etat-pret-soft: var(--color-status-applied-soft);
-  --color-etat-en-echec: var(--color-status-expired);
-  --color-etat-en-echec-soft: var(--color-status-expired-soft);
+  /* États of an Artifact, on the same signals: ready reads like Applied, failed like Expired */
+  --color-state-absent: var(--color-muted);
+  --color-state-absent-soft: var(--color-paper);
+  --color-state-in-progress: var(--color-status-to-apply);
+  --color-state-in-progress-soft: var(--color-status-to-apply-soft);
+  --color-state-ready: var(--color-status-applied);
+  --color-state-ready-soft: var(--color-status-applied-soft);
+  --color-state-failed: var(--color-status-expired);
+  --color-state-failed-soft: var(--color-status-expired-soft);
 }

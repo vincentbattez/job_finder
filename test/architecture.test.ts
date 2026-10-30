@@ -181,9 +181,9 @@ function createProject(fileContentByPath: Record<string, string>): string {
 describe('architecture', () => {
   it('catches a module importing another module', async () => {
     const tsconfigPath = createProject({
-      'src/modules/lettre/index.ts':
-        "import { recherche } from '#/modules/recherche/index.ts';\nexport const lettre = recherche;\n",
-      'src/modules/recherche/index.ts': 'export const recherche = 1;\n',
+      'src/modules/letter/index.ts':
+        "import { research } from '#/modules/research/index.ts';\nexport const letter = research;\n",
+      'src/modules/research/index.ts': 'export const research = 1;\n',
     });
 
     expect(await findCrossModuleImports(tsconfigPath)).toHaveLength(1);
@@ -274,7 +274,7 @@ describe('architecture', () => {
     const projectDirectory = path.dirname(
       createProject({
         'src/modules/source-pep/index.ts': 'export const pep = 1;\n',
-        'src/modules/source-import/index.ts': 'export const fiche = 1;\n',
+        'src/modules/source-import/index.ts': 'export const jobDescription = 1;\n',
         'src/web/components/markdown.tsx': "import { a } from './a.ts';\nexport const rehypePlugins = [a];\n",
       }),
     );

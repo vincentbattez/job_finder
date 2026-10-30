@@ -7,10 +7,10 @@ import type { Posting, Recipients } from '#/domain/index.ts';
 
 import { copyAsReadOnlyOriginal } from './acl/files.ts';
 import { parseRecipients, readRecipients, RECIPIENTS_FILE_NAME } from './acl/recipients.ts';
-import { LETTRE_DEFAULT_INSTRUCTIONS } from './instructions.ts';
-import { BROUILLON_FILE_NAME, composeLettrePrompt, LETTRE_FILE_NAME } from './prompt.ts';
+import { LETTER_DEFAULT_INSTRUCTIONS } from './instructions.ts';
+import { composeLetterPrompt, DRAFT_FILE_NAME, LETTER_FILE_NAME } from './prompt.ts';
 
-export { BROUILLON_FILE_NAME } from './prompt.ts';
+export { DRAFT_FILE_NAME } from './prompt.ts';
 
 // The recipients follow the format of the prompt, and each address is found as is in the field of
 // the Posting it cites, so none is invented, even from a field written as free text
@@ -31,27 +31,24 @@ function findRecipientsError(json: string, posting: Posting): string | undefined
     : `l'adresse ${invented.email} ne figure pas dans le champ ${invented.source} de l'Offre`;
 }
 
-// A Version is a pair: the Brouillon, never modified, so that the tool learns from the corrections
-// of the Lettre, its copy
-export const LETTRE_MODULE = {
-  fileName: LETTRE_FILE_NAME,
-  outputFileList: [{ name: BROUILLON_FILE_NAME }, { name: RECIPIENTS_FILE_NAME, findFormatError: findRecipientsError }],
-  defaultInstructions: LETTRE_DEFAULT_INSTRUCTIONS,
-  composePrompt: composeLettrePrompt,
-  // The Lettre builds on the Recherche retenue of its Posting, and learns from the Lettres the
-  // Candidate sent: the correction of each Brouillon shows their style
-  requiredArtefactList: ['recherche'],
+// A Version is a pair: the Draft, never modified, so that the tool learns from the corrections
+// of the Letter, its copy
+export const LETTER_MODULE = {
+  fileName: LETTER_FILE_NAME,
+  outputFileList: [{ name: DRAFT_FILE_NAME }, { name: RECIPIENTS_FILE_NAME, findFormatError: findRecipientsError }],
+  defaultInstructions: LETTER_DEFAULT_INSTRUCTIONS,
+  composePrompt: composeLetterPrompt,
+  // The Letter builds on the Chosen Research of its Posting, and learns from the Letters the
+  // Candidate sent: the correction of each Draft shows their style
+  requiredArtifactList: ['research'],
   isReadingProfile: true,
   isReadingSentVersions: true,
   isFrozenOnceApplied: true,
 
-  // The Lettre starts as a copy of the Brouillon, which becomes read-only: no correction, in the
+  // The Letter starts as a copy of the Draft, which becomes read-only: no correction, in the
   // front or with jf edit, can reach it
   completeVersion(versionDirectory: string): void {
-    copyAsReadOnlyOriginal(
-      path.join(versionDirectory, BROUILLON_FILE_NAME),
-      path.join(versionDirectory, LETTRE_FILE_NAME),
-    );
+    copyAsReadOnlyOriginal(path.join(versionDirectory, DRAFT_FILE_NAME), path.join(versionDirectory, LETTER_FILE_NAME));
   },
 
   readRecipients,

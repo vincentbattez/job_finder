@@ -13,7 +13,7 @@ test.describe('design system page', () => {
     await expect(section.getByRole('listitem')).toHaveText(['À traiter', 'Postulée', 'Expirée', 'Archivée']);
   });
 
-  test('shows a badge for each état of an Artefact', async ({ page }) => {
+  test('shows a badge for each state of an Artifact', async ({ page }) => {
     const section = page.getByRole('region', { name: 'États d’un Artefact' });
 
     await expect(section.getByRole('listitem')).toHaveText(['Absent', 'En cours', 'Prêt', 'En échec']);
@@ -38,7 +38,7 @@ test.describe('design system page', () => {
     await expect(section).toContainText('Aucune Offre pour l’instant');
   });
 
-  test('shows the Posting page with its contacts and the état of each Artefact', async ({ page }) => {
+  test('shows the Posting page with its contacts and the state of each Artifact', async ({ page }) => {
     const detail = page.getByRole('region', { name: 'Fiche d’une Offre' });
 
     await expect(detail.getByRole('heading', { level: 3 })).toHaveText(/Attaché de justice/);

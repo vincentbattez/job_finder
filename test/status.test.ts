@@ -42,7 +42,7 @@ describe('status of a Posting', () => {
     return posting?.status;
   }
 
-  it('marks a Posting as Applied, though it has no Lettre', async () => {
+  it('marks a Posting as Applied, though it has no Letter', async () => {
     await actions.changeStatus({ reference: '2026-2445600', status: 'applied' });
 
     expect(await findStatus('2026-2445600')).toBe('applied');
@@ -64,18 +64,18 @@ describe('status of a Posting', () => {
     expect(await findStatus('2026-2445609')).toBe('archived');
   });
 
-  it('archives an Applied Posting, whose Lettre retenue stays the one sent', async () => {
+  it('archives an Applied Posting, whose Chosen Letter stays the one sent', async () => {
     await actions.changeStatus({ reference: '2026-2445183', status: 'applied' });
 
     await actions.changeStatus({ reference: '2026-2445183', status: 'archived' });
 
     expect(await findStatus('2026-2445183')).toBe('archived');
-    await expect(actions.runModule({ module: 'lettre', reference: '2026-2445183' })).rejects.toThrow(
+    await expect(actions.runModule({ module: 'letter', reference: '2026-2445183' })).rejects.toThrow(
       /L'Offre 2026-2445183 a été Postulée : sa Lettre retenue est figée/,
     );
   });
 
-  // Applied is never undone: the Lettre retenue was sent
+  // Applied is never undone: the Chosen Letter was sent
   it('brings an Archived Posting once Applied back to Applied, never to To Apply', async () => {
     await actions.changeStatus({ reference: '2026-2350473', status: 'applied' });
     await actions.changeStatus({ reference: '2026-2350473', status: 'archived' });

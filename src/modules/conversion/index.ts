@@ -5,7 +5,7 @@ import type { Candidate, SessionResult, UploadFileName } from '#/domain/index.ts
 
 import { composeConversionPrompt, CONVERSION_REQUEST } from './prompt.ts';
 
-// The CV, or a past lettre named after its employeur and its year: a name of the Profile, so it never
+// The CV, or a past letter named after its employeur and its year: a name of the Profile, so it never
 // leads out of its folder
 const CONVERSION_FILE_NAME_PATTERN = /^(?:cv|lettre-[\p{L}\p{N}_.-]+-\d{4})\.md$/u;
 

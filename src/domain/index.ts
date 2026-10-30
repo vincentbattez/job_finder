@@ -128,20 +128,20 @@ export const DETECTION_SCHEMA = z
 
 export type Detection = z.infer<typeof DETECTION_SCHEMA>;
 
-export const ARTEFACT_SCHEMA = z.enum(['recherche', 'lettre', 'fiche_entretien', 'visualisation']);
+export const ARTIFACT_SCHEMA = z.enum(['research', 'letter', 'interview_brief', 'visualization']);
 
-export type Artefact = z.infer<typeof ARTEFACT_SCHEMA>;
+export type Artifact = z.infer<typeof ARTIFACT_SCHEMA>;
 
 // The fixed part of the prompt is not among the Instructions: no one changes it (ADR-0003)
 export const MODULE_INSTRUCTIONS_SCHEMA = z
-  .object({ module: ARTEFACT_SCHEMA, defaultInstructions: z.string(), candidateInstructions: z.string().nullable() })
+  .object({ module: ARTIFACT_SCHEMA, defaultInstructions: z.string(), candidateInstructions: z.string().nullable() })
   .brand<'Domain'>();
 
 export type ModuleInstructions = z.infer<typeof MODULE_INSTRUCTIONS_SCHEMA>;
 
 // A Version that another Version read as input, of its own Posting or of another one
 const READ_VERSION_SCHEMA = z.object({
-  artefact: ARTEFACT_SCHEMA,
+  artifact: ARTIFACT_SCHEMA,
   number: z.int(),
   posting: z.object({ reference: z.string() }),
 });
@@ -150,9 +150,9 @@ const READ_VERSION_SCHEMA = z.object({
 // and the Versions it read
 export const VERSION_SCHEMA = z
   .object({
-    artefact: ARTEFACT_SCHEMA,
+    artifact: ARTIFACT_SCHEMA,
     number: z.int(),
-    isRetenue: z.boolean(),
+    isChosen: z.boolean(),
     state: z.enum(['running', 'ready', 'failed']),
     instructions: z.string(),
     hasCandidateInstructions: z.boolean(),
@@ -163,9 +163,9 @@ export const VERSION_SCHEMA = z
 
 export type Version = z.infer<typeof VERSION_SCHEMA>;
 
-// An AI module is named after the Artefact it produces; the extraction fills the imported Posting
+// An AI module is named after the Artifact it produces; the extraction fills the imported Posting
 // itself, without a Version
-const MODULE_SCHEMA = z.enum([...ARTEFACT_SCHEMA.options, 'extraction']);
+const MODULE_SCHEMA = z.enum([...ARTIFACT_SCHEMA.options, 'extraction']);
 
 export type Module = z.infer<typeof MODULE_SCHEMA>;
 
@@ -205,7 +205,7 @@ export const RECIPIENTS_SCHEMA = z
 export type Recipients = z.infer<typeof RECIPIENTS_SCHEMA>;
 
 // A Markdown file of the data folder: of the Profile of a Candidate, such as facts.md or cv.md, or of a
-// Version, such as the Brouillon or the Lettre of a Lettre Version
+// Version, such as the Draft or the Letter of a Letter Version
 const MARKDOWN_FILE_SHAPE = { fileName: z.string(), markdown: z.string() };
 
 export const MARKDOWN_FILE_SCHEMA = z.object(MARKDOWN_FILE_SHAPE).brand<'Domain'>();
@@ -229,7 +229,7 @@ export const UPLOAD_FILE_NAME_SCHEMA = z
 
 export type UploadFileName = z.infer<typeof UPLOAD_FILE_NAME_SCHEMA>;
 
-// A PDF the Candidate dropped into their Profile, such as a CV or a past lettre, kept as is
+// A PDF the Candidate dropped into their Profile, such as a CV or a past letter, kept as is
 export const UPLOAD_SCHEMA = z.object({ fileName: UPLOAD_FILE_NAME_SCHEMA, savedAt: z.date() }).brand<'Domain'>();
 
 export type Upload = z.infer<typeof UPLOAD_SCHEMA>;
@@ -245,41 +245,41 @@ export type Section = z.infer<typeof SECTION_SCHEMA>;
 // A Markdown file of a Version, and whether the Candidate may correct it by hand
 const DOCUMENT_SCHEMA = z.object({ ...MARKDOWN_FILE_SHAPE, isModifiable: z.boolean() });
 
-// isRetenable: whether the Candidate may make it the Version retenue
+// isChoosable: whether the Candidate may make it the Chosen Version
 const VERSION_DOCUMENTS_SCHEMA = z.object({
   version: VERSION_SCHEMA,
-  isRetenable: z.boolean(),
+  isChoosable: z.boolean(),
   documentList: z.array(DOCUMENT_SCHEMA),
 });
 
-// What the front shows of an Artefact at a glance
-const ETAT_SCHEMA = z.enum(['absent', 'en_cours', 'pret', 'en_echec']);
+// What the front shows of an Artifact at a glance
+const STATE_SCHEMA = z.enum(['absent', 'in_progress', 'ready', 'failed']);
 
-const ARTEFACT_VERSIONS_SCHEMA = z.object({
-  artefact: ARTEFACT_SCHEMA,
+const ARTIFACT_VERSIONS_SCHEMA = z.object({
+  artifact: ARTIFACT_SCHEMA,
   // En cours from the moment its job is queued, then that of its latest Version; absent before any
-  etat: ETAT_SCHEMA,
+  state: STATE_SCHEMA,
   // The module that produces it: why it cannot run now, null when it can
   module: z.object({ refusal: z.string().nullable() }),
-  // Whether jf edit opens it now: it has a Version retenue, and is neither a Visualisation nor the
-  // Lettre of an Applied Posting
+  // Whether jf edit opens it now: it has a Chosen Version, and is neither a Visualization nor the
+  // Letter of an Applied Posting
   isEditable: z.boolean(),
   versionList: z.array(VERSION_DOCUMENTS_SCHEMA),
 });
 
 // What the Posting page shows: the Posting with its raw contacts, its Job Description, every
-// Version of each Artefact with its files, and the recipients its Lettre retenue recommends
+// Version of each Artifact with its files, and the recipients its Chosen Letter recommends
 export const POSTING_DETAIL_SCHEMA = z
   .object({
     posting: POSTING_SCHEMA,
     // The statuses the Posting can move to, a button each
     nextStatusList: z.array(STATUS_SCHEMA),
     jobDescription: z.string(),
-    artefactList: z.array(ARTEFACT_VERSIONS_SCHEMA),
+    artifactList: z.array(ARTIFACT_VERSIONS_SCHEMA),
     recipients: RECIPIENTS_SCHEMA.nullable(),
     // That of its latest extraction job, null for a Posting that was not imported; the log says why
     // it failed
-    extraction: z.object({ etat: ETAT_SCHEMA, log: z.string() }).nullable(),
+    extraction: z.object({ state: STATE_SCHEMA, log: z.string() }).nullable(),
   })
   .brand<'Domain'>();
 
@@ -305,13 +305,13 @@ export const QUEUED_JOB_SCHEMA = z.union([JOB_SCHEMA, PROFILE_JOB_SCHEMA]);
 
 export type QueuedJob = z.infer<typeof QUEUED_JOB_SCHEMA>;
 
-// An Upload and its conversion: the état of its latest conversion job, absent before any, and its log,
+// An Upload and its conversion: the state of its latest conversion job, absent before any, and its log,
 // which says why it failed
 export const UPLOAD_CONVERSION_SCHEMA = z
   .object({
     fileName: UPLOAD_FILE_NAME_SCHEMA,
     savedAt: z.date(),
-    conversion: z.object({ etat: ETAT_SCHEMA, log: z.string() }),
+    conversion: z.object({ state: STATE_SCHEMA, log: z.string() }),
   })
   .brand<'Domain'>();
 
@@ -332,10 +332,10 @@ export const EXTRACTION_SCHEMA = z
 
 export type Extraction = z.infer<typeof EXTRACTION_SCHEMA>;
 
-// The HTML page of a Visualisation Version, which the front shows in a sandboxed frame
-export const VISUALISATION_SCHEMA = z.object({ html: z.string() }).brand<'Domain'>();
+// The HTML page of a Visualization Version, which the front shows in a sandboxed frame
+export const VISUALIZATION_SCHEMA = z.object({ html: z.string() }).brand<'Domain'>();
 
-export type Visualisation = z.infer<typeof VISUALISATION_SCHEMA>;
+export type Visualization = z.infer<typeof VISUALIZATION_SCHEMA>;
 
 // A Parameter as the front builds its field: typed in, a list of values, secret, or chosen among what
 // the module lists

@@ -1,12 +1,12 @@
 import type { IPromptInput } from '#/ai-module/index.ts';
 
-export const VISUALISATION_FILE_NAME = 'visualisation.html';
+export const VISUALIZATION_FILE_NAME = 'visualization.html';
 
 // The rules no Instructions can lift (ADR-0003); a single self-contained file without JavaScript,
 // since the front's sandboxed frame runs no script and loads nothing from outside
-export function composeVisualisationPrompt({ posting, outputDirectory, readVersionList }: IPromptInput): string {
-  const outputPath = `${outputDirectory}/${VISUALISATION_FILE_NAME}`;
-  const ficheList = readVersionList.filter(({ artefact }) => artefact === 'fiche_entretien');
+export function composeVisualizationPrompt({ posting, outputDirectory, readVersionList }: IPromptInput): string {
+  const outputPath = `${outputDirectory}/${VISUALIZATION_FILE_NAME}`;
+  const briefList = readVersionList.filter(({ artifact }) => artifact === 'interview_brief');
   return `Tu mets en forme la Fiche d'entretien d'un Candidat en une page HTML, plus agréable pour réviser : des tableaux et des diagrammes plutôt que du texte suivi. Écris en français.
 
 ## L'Offre
@@ -19,7 +19,7 @@ Le dossier courant est celui de l'Offre.
 
 ## Ce que tu lis
 
-${ficheList.map(({ filePath }) => `- La Fiche d'entretien retenue, telle que le Candidat l'a peut-être corrigée : \`${filePath}\`. C'est la seule source du contenu de la page.`).join('\n')}
+${briefList.map(({ filePath }) => `- La Fiche d'entretien retenue, telle que le Candidat l'a peut-être corrigée : \`${filePath}\`. C'est la seule source du contenu de la page.`).join('\n')}
 
 ## Ce que tu produis
 

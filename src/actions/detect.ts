@@ -44,16 +44,16 @@ interface IWatchRun {
 // The Detection, in the actions rather than a module: it reads the Source modules, which no module
 // may import (ADR-0003). It knows them only through their family (ADR-0010).
 export function createDetectActions({ workspace, sourceList, findSource, locate, notify }: ActionContext) {
-  // In the Zone, a Posting gets its Recherche (ADR-0003)
+  // In the Zone, a Posting gets its Research (ADR-0003)
   async function startInZone(posting: Posting, repostOf: Posting | undefined): Promise<INotification> {
-    await workspace.createJob(posting, 'recherche');
+    await workspace.createJob(posting, 'research');
     return repostOf === undefined
       ? composeNewPostingNotification(posting)
       : composeRepostNotification(posting, repostOf);
   }
 
   // The Postings already online at the first launch start nothing (ADR-0003). The Repost of an
-  // Posting once Applied gets no Recherche whatever the Zone: the Candidate, who applied already, decides.
+  // Posting once Applied gets no Research whatever the Zone: the Candidate, who applied already, decides.
   async function saveNewPosting(
     { watch: { candidateId, source }, isFirstLaunch, postingList }: IWatchRun,
     listedPosting: ListedPosting,
@@ -150,7 +150,7 @@ export function createDetectActions({ workspace, sourceList, findSource, locate,
       for (const watch of watchList) {
         foundList.push(await detectWatch(watch));
       }
-      // Notified last, once every Posting is saved and its Recherche queued. A notification not sent
+      // Notified last, once every Posting is saved and its Research queued. A notification not sent
       // undoes nothing: it comes back with what the Detection found, which jf detect prints first.
       const detectionList: Detection[] = [];
       for (const { detection, notificationList } of foundList) {

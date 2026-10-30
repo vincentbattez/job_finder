@@ -18,8 +18,8 @@ if (!dataDirectory.startsWith(tmpdir())) {
   throw new Error(`JF_DATA_DIRECTORY doit être un dossier temporaire, pas « ${dataDirectory} ».`);
 }
 
-// What the fake Claude writes for each module, whatever the Posting: a Recherche, a Fiche
-// d'entretien and its Visualisation in their format, and a Lettre whose recipients come from no
+// What the fake Claude writes for each module, whatever the Posting: a Research, an
+// Interview Brief and its Visualization in their format, and a Letter whose recipients come from no
 // field of the Posting, so they hold for any of them
 const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
   // The fields of test/fixtures/import/greffier-grenoble.md, the Job Description e2e/import.test.ts drops
@@ -35,19 +35,19 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
       contact2: null,
     }),
   },
-  recherche: { 'recherche.md': '# Recherche factice\n\n## Sources\n\n- https://www.justice.fr/\n' },
-  lettre: {
-    'brouillon.md':
+  research: { 'research.md': '# Recherche factice\n\n## Sources\n\n- https://www.justice.fr/\n' },
+  letter: {
+    'draft.md':
       'Madame, Monsieur,\n\nTitulaire d’un [à compléter : diplôme], je souhaite rejoindre votre juridiction.\n',
-    'destinataires.json': JSON.stringify({
+    'recipients.json': JSON.stringify({
       to: null,
       ccList: [],
       salutation: { text: 'Madame, Monsieur,', source: null },
       justification: 'Aucun champ de l’Offre ne donne d’adresse.',
     }),
   },
-  fiche_entretien: {
-    'fiche-entretien.md': [
+  interview_brief: {
+    'interview-brief.md': [
       '# Fiche d’entretien factice',
       '## À réviser\n\n- Les missions du poste.',
       '## Moyens mnémotechniques\n\n- « MPS » : Missions, Partenaires, Service.',
@@ -57,8 +57,8 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
   },
   // The CV that e2e/profile.test.ts drops, test/fixtures/profile/cv.pdf
   conversion: { 'cv.md': '# CV converti\n\n## Formation\n\n- Master 2 droit public\n' },
-  visualisation: {
-    'visualisation.html': [
+  visualization: {
+    'visualization.html': [
       '<!DOCTYPE html>',
       '<html lang="fr"><head><meta charset="utf-8"><title>Fiche d’entretien factice</title></head><body>',
       '<h1>Fiche d’entretien factice</h1>',
@@ -68,10 +68,10 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
   },
 };
 
-// Long enough for the front to show the Artefact en cours before it is ready
+// Long enough for the front to show the Artifact en cours before it is ready
 const SESSION_DURATION_MS = 1000;
 
-// A session's module is the Artefact its Version folder belongs to: <posting>/<artefact>/v<n>. The
+// A session's module is the Artifact its Version folder belongs to: <posting>/<artifact>/v<n>. The
 // extraction of an imported Posting writes in a folder of its own, <posting>/extraction
 // (src/modules/source-import), and the conversion of an Upload in profile/uploads/.conversion/<upload>
 // (src/workspace).

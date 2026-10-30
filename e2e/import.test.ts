@@ -13,11 +13,11 @@ const TITLE = 'Greffier placé – Tribunal judiciaire de Grenoble';
 
 const FILE_NAME = 'greffier-grenoble.md';
 
-// The worker takes the extraction, then the Recherche, each session lasting a second, and the Posting page
-// reads the état again every two seconds
+// The worker takes the extraction, then the Research, each session lasting a second, and the Posting page
+// reads the state again every two seconds
 const READY_TIMEOUT_MS = 15_000;
 
-test('imports a Job Description dropped on the Postings: it shows at once, then the worker reads its fields and runs its Recherche', async ({
+test('imports a Job Description dropped on the Postings: it shows at once, then the worker reads its fields and runs its Research', async ({
   page,
 }) => {
   // The tiles of the map come from OpenStreetMap over the internet: its points show without them

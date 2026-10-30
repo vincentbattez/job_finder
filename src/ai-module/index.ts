@@ -1,11 +1,11 @@
-import type { Artefact, Posting } from '#/domain/index.ts';
+import type { Artifact, Posting } from '#/domain/index.ts';
 
 // The output folder is relative to the Posting's folder, where the session runs; what it reads is
 // named by absolute paths
 export interface IPromptInput {
   posting: Posting;
   outputDirectory: string;
-  readVersionList: { reference: string; artefact: Artefact; directory: string; filePath: string }[];
+  readVersionList: { reference: string; artifact: Artifact; directory: string; filePath: string }[];
   profileDirectory: string;
 }
 
@@ -18,7 +18,7 @@ interface IOutputFile {
 // What an AI module gives the job runner, from the single entry point of its folder; the runner
 // reads its inputs and its refusals from these declarations (ADR-0003)
 export interface IAiModule {
-  // A shorter name than its Artefact, for jf run
+  // A shorter name than its Artifact, for jf run
   alias?: string;
   // The file of the Version the Candidate reads
   fileName: string;
@@ -28,16 +28,16 @@ export interface IAiModule {
   composePrompt(input: IPromptInput): string;
   // Runs once the files are valid, before the Version is ready
   completeVersion?(versionDirectory: string): void;
-  // The Artefacts of the Posting the module reads: it refuses to run until each has a Version retenue
-  requiredArtefactList?: readonly Artefact[];
-  // The Artefacts of the Posting the module also reads, when they have a Version retenue
-  optionalArtefactList?: readonly Artefact[];
+  // The Artifacts of the Posting the module reads: it refuses to run until each has a Chosen Version
+  requiredArtifactList?: readonly Artifact[];
+  // The Artifacts of the Posting the module also reads, when they have a Chosen Version
+  optionalArtifactList?: readonly Artifact[];
   // Whether the module reads the Profile of the Candidate
   isReadingProfile?: boolean;
-  // Whether it reads the Artefacts retenus of the Posting that a Repost publishes again
+  // Whether it reads the Chosen Artifacts of the Posting that a Repost publishes again
   isReadingRepostedPosting?: boolean;
-  // Whether it reads its own Artefact retenu of each Posting once Applied: what the Candidate sent
+  // Whether it reads its own Chosen Artifact of each Posting once Applied: what the Candidate sent
   isReadingSentVersions?: boolean;
-  // Whether its Version retenue is what the Candidate sends: frozen once the Posting is Applied
+  // Whether its Chosen Version is what the Candidate sends: frozen once the Posting is Applied
   isFrozenOnceApplied?: boolean;
 }

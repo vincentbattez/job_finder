@@ -18,13 +18,13 @@ import { createRecordedFetch } from './recorded-http.ts';
 // A Béthune Posting in Léa's Zone, from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
-// A Version of each Artefact, as the fake Claude writes them, so that every action reading one has it
+// A Version of each Artifact, as the fake Claude writes them, so that every action reading one has it
 const RUN_BY_MODULE = {
-  recherche: { fileByName: { 'recherche.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } },
-  lettre: {
+  research: { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } },
+  letter: {
     fileByName: {
-      'brouillon.md': 'Madame, Monsieur,\n',
-      'destinataires.json': JSON.stringify({
+      'draft.md': 'Madame, Monsieur,\n',
+      'recipients.json': JSON.stringify({
         to: null,
         ccList: [],
         salutation: { text: 'Madame, Monsieur,', source: null },
@@ -32,8 +32,8 @@ const RUN_BY_MODULE = {
       }),
     },
   },
-  fiche_entretien: { fileByName: { 'fiche-entretien.md': '# Fiche d’entretien\n' } },
-  visualisation: { fileByName: { 'visualisation.html': '<!DOCTYPE html>\n<title>Fiche</title>\n' } },
+  interview_brief: { fileByName: { 'interview-brief.md': '# Fiche d’entretien\n' } },
+  visualization: { fileByName: { 'visualization.html': '<!DOCTYPE html>\n<title>Fiche</title>\n' } },
 };
 
 // What an action needs beyond the shared input of the check, such as an Upload, named in .pdf
@@ -110,7 +110,7 @@ const FAKE_VAULT_PARAMETERS = {
   password: 'mot-de-passe-secret',
 };
 
-// Léa's Postings detected, a Version of each Artefact ready, and her Notification Channel saved with
+// Léa's Postings detected, a Version of each Artifact ready, and her Notification Channel saved with
 // the given Parameters. The input of the check gives back its non-secret Parameters only: a save
 // without the secrets keeps them.
 async function saveChannel(module: INotificationChannel, parameters: Record<string, string>) {
@@ -123,21 +123,21 @@ async function saveChannel(module: INotificationChannel, parameters: Record<stri
   const { id, parameterList } = module.description;
   await actions.saveNotificationChannel({ candidateId: 'lea', channel: id, parameters });
   await actions.detect();
-  for (const artefactModule of Object.keys(RUN_BY_MODULE)) {
-    await actions.runModule({ module: artefactModule, reference: REFERENCE });
+  for (const artifactModule of Object.keys(RUN_BY_MODULE)) {
+    await actions.runModule({ module: artifactModule, reference: REFERENCE });
     await actions.runQueuedJobs();
   }
   const secretSet = new Set(parameterList.filter(({ isSecret }) => isSecret).map(({ name }) => name));
   const input = {
     candidateId: 'lea',
     reference: REFERENCE,
-    module: 'recherche',
-    artefact: 'recherche',
+    module: 'research',
+    artifact: 'research',
     number: 1,
     jobId: 1,
     status: 'to_apply',
-    fileName: 'recherche.md',
-    markdown: '# Recherche\n',
+    fileName: 'research.md',
+    markdown: '# Research\n',
     instructions: 'Citer chaque source.',
     entryListByTitle: {},
     channel: id,

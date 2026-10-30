@@ -48,11 +48,11 @@ describe('the headless launch of Claude Code', () => {
     });
     const directory = createDirectory();
 
-    const result = await CLAUDE_CODE.runHeadless({ ...SESSION, directory, outputDirectory: '/donnees/recherche/v1' });
+    const result = await CLAUDE_CODE.runHeadless({ ...SESSION, directory, outputDirectory: '/donnees/research/v1' });
 
     expect(result).toEqual({ isSuccess: true, sessionId: 'session-1', log: 'Fait.' });
     const argumentList = readRecord(recordDirectory, 'arguments').split('\0');
-    expect(argumentList).toEqual(expect.arrayContaining(['-p', 'dontAsk', 'Edit(//donnees/recherche/v1/**)']));
+    expect(argumentList).toEqual(expect.arrayContaining(['-p', 'dontAsk', 'Edit(//donnees/research/v1/**)']));
     expect(argumentList).not.toContain('--add-dir');
     expect(argumentList[argumentList.indexOf('--append-system-prompt') + 1]).toBe(SESSION.fixedPrompt);
     expect(readRecord(recordDirectory, 'message')).toBe(SESSION.instructions);
@@ -60,10 +60,10 @@ describe('the headless launch of Claude Code', () => {
     expect(readRecord(recordDirectory, 'environment')).not.toMatch(/^(?:ANTHROPIC_API_KEY|CLAUDECODE)=/m);
   });
 
-  // The Lettre reads the Profile and the Lettres already sent, outside the folder of its Posting
+  // The Letter reads the Profile and the Letters already sent, outside the folder of its Posting
   it('lets the session read the folders it is given besides its own', async () => {
     const recordDirectory = stubClaude({ subtype: 'success', is_error: false, session_id: 'session-3' });
-    const readDirectoryList = ['/donnees/profile', '/donnees/postings/2026-2445609/lettre/v1'];
+    const readDirectoryList = ['/donnees/profile', '/donnees/postings/2026-2445609/letter/v1'];
 
     await CLAUDE_CODE.runHeadless({
       ...SESSION,
@@ -114,12 +114,12 @@ describe('the interactive launch of Claude Code', () => {
     CLAUDE_CODE.openInteractive({
       prompt: SESSION.fixedPrompt,
       directory,
-      readOnlyPathList: ['/donnees/posting/**/brouillon.md'],
+      readOnlyPathList: ['/donnees/posting/**/draft.md'],
     });
 
     const argumentList = readRecord(recordDirectory, 'arguments').split('\0');
     expect(argumentList).toEqual(expect.arrayContaining(['--restricted', '--safe-mode', 'manual']));
-    expect(argumentList[argumentList.indexOf('--disallowedTools') + 1]).toBe('Edit(//donnees/posting/**/brouillon.md)');
+    expect(argumentList[argumentList.indexOf('--disallowedTools') + 1]).toBe('Edit(//donnees/posting/**/draft.md)');
     expect(argumentList[argumentList.indexOf('--append-system-prompt') + 1]).toBe(SESSION.fixedPrompt);
     expect(readRecord(recordDirectory, 'directory').trim()).toBe(realpathSync(directory));
     expect(readRecord(recordDirectory, 'environment')).not.toMatch(/^ANTHROPIC_API_KEY=/m);

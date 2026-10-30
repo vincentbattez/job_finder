@@ -3,7 +3,7 @@ import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 
 import { createActions, messageOf, type Actions } from '#/actions/index.ts';
-import { ARTEFACT_LABEL_BY_ARTEFACT, STATUS_LABEL_BY_STATUS } from '#/actions/labels.ts';
+import { ARTIFACT_LABEL_BY_ARTIFACT, STATUS_LABEL_BY_STATUS } from '#/actions/labels.ts';
 
 import { readTextFile } from './acl/files.ts';
 
@@ -124,20 +124,20 @@ async function chooseReference(actions: Actions, terminal: Terminal): Promise<st
 }
 
 // From a list, unless given: the Candidate has no reference to remember
-async function chooseArtefact(actions: Actions, [givenReference, givenArtefact]: string[]) {
-  if (givenReference !== undefined && givenArtefact !== undefined) {
-    return { reference: givenReference, artefact: givenArtefact };
+async function chooseArtifact(actions: Actions, [givenReference, givenArtifact]: string[]) {
+  if (givenReference !== undefined && givenArtifact !== undefined) {
+    return { reference: givenReference, artifact: givenArtifact };
   }
   const terminal = openTerminal();
   try {
     const reference = givenReference ?? (await chooseReference(actions, terminal));
     const version = await choose(terminal, {
       question: 'Artefact à modifier',
-      itemList: await actions.listVersionsRetenues({ reference }),
-      label: ({ artefact, number }) => `${ARTEFACT_LABEL_BY_ARTEFACT[artefact]} (v${String(number)}, retenue)`,
-      emptyMessage: `L'Offre ${reference} n'a aucun Artefact à modifier : « jf run recherche ${reference} » produit sa Recherche.`,
+      itemList: await actions.listChosenVersions({ reference }),
+      label: ({ artifact, number }) => `${ARTIFACT_LABEL_BY_ARTIFACT[artifact]} (v${String(number)}, retenue)`,
+      emptyMessage: `L'Offre ${reference} n'a aucun Artefact à modifier : « jf run research ${reference} » produit sa Recherche.`,
     });
-    return { reference, artefact: version.artefact };
+    return { reference, artifact: version.artifact };
   } finally {
     // Claude Code takes the terminal next
     terminal.close();
@@ -157,7 +157,7 @@ async function readStandardInput(): Promise<string> {
 }
 
 const INSTRUCTIONS_USAGE =
-  'Usage : jf instructions <candidat> [<module> [default|replace|delete]], par exemple jf instructions lea lettre.';
+  'Usage : jf instructions <candidat> [<module> [default|replace|delete]], par exemple jf instructions lea letter.';
 
 // The Instructions in effect for a module, or those the operation names; « replace » reads the new
 // ones on the standard input
@@ -298,13 +298,13 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
   },
   run: {
     description:
-      "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run recherche|lettre|fiche|visualisation <offre> [--wait]",
+      "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run research|letter|brief|visualization <offre> [--wait]",
     run: async (actions, [module, reference], { isWaiting }) => {
       if (module === undefined || reference === undefined) {
-        throw new Error('Usage : jf run <module> <offre> [--wait], par exemple jf run recherche 2026-2445600.');
+        throw new Error('Usage : jf run <module> <offre> [--wait], par exemple jf run research 2026-2445600.');
       }
       const queuedJob = await actions.runModule({ module, reference });
-      // jf versions takes the Artefact, which the module of jf run fiche is not named after
+      // jf versions takes the Artifact, which the module of jf run brief is not named after
       const versionsCommand = `jf versions ${reference} ${queuedJob.module}`;
       process.stdout.write(`${module} de l'Offre ${reference} en file (job ${String(queuedJob.id)}).\n`);
       if (!isWaiting) {
@@ -320,11 +320,11 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       process.stdout.write(`${name} prête et retenue. « ${versionsCommand} » liste ses Versions.\n`);
     },
   },
-  destinataires: {
-    description: 'Affiche à qui adresser la candidature, selon la Lettre retenue : jf destinataires <offre>',
+  recipients: {
+    description: 'Affiche à qui adresser la candidature, selon la Lettre retenue : jf recipients <offre>',
     run: async (actions, [reference]) => {
       if (reference === undefined) {
-        throw new Error('Usage : jf destinataires <offre>, par exemple jf destinataires 2026-2445600.');
+        throw new Error('Usage : jf recipients <offre>, par exemple jf recipients 2026-2445600.');
       }
       const { to, ccList, salutation, justification } = await actions.readRecipients({ reference });
       const salutationSource = salutation.source === null ? '' : ` (${FIELD_LABEL_BY_SOURCE[salutation.source]})`;
@@ -338,33 +338,33 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     },
   },
   versions: {
-    description: "Liste les Versions d'un Artefact : jf versions <offre> recherche",
-    run: async (actions, [reference, artefact]) => {
-      if (reference === undefined || artefact === undefined) {
-        throw new Error('Usage : jf versions <offre> <artefact>, par exemple jf versions 2026-2445600 recherche.');
+    description: "Liste les Versions d'un Artefact : jf versions <offre> research",
+    run: async (actions, [reference, artifact]) => {
+      if (reference === undefined || artifact === undefined) {
+        throw new Error('Usage : jf versions <offre> <artifact>, par exemple jf versions 2026-2445600 research.');
       }
-      const versionList = await actions.listVersions({ reference, artefact });
-      for (const { number, state, isRetenue, hasCandidateInstructions, createdAt } of versionList) {
+      const versionList = await actions.listVersions({ reference, artifact });
+      for (const { number, state, isChosen, hasCandidateInstructions, createdAt } of versionList) {
         const columnList = [
           `v${String(number)}`,
           VERSION_STATE_LABEL_BY_STATE[state],
-          isRetenue ? 'retenue' : '—',
+          isChosen ? 'retenue' : '—',
           hasCandidateInstructions ? 'Consignes du Candidat' : 'Consignes par défaut',
         ];
         process.stdout.write(`${[...columnList, createdAt.toLocaleString('fr-FR')].join('\t')}\n`);
       }
     },
   },
-  retenir: {
-    description: "Change la Version retenue d'un Artefact : jf retenir <offre> recherche <version>",
-    run: async (actions, [reference, artefact, version]) => {
-      if (reference === undefined || artefact === undefined || version === undefined) {
+  choose: {
+    description: "Change la Version retenue d'un Artefact : jf choose <offre> research <version>",
+    run: async (actions, [reference, artifact, version]) => {
+      if (reference === undefined || artifact === undefined || version === undefined) {
         throw new Error(
-          'Usage : jf retenir <offre> <artefact> <version>, par exemple jf retenir 2026-2445600 recherche 2.',
+          'Usage : jf choose <offre> <artifact> <version>, par exemple jf choose 2026-2445600 research 2.',
         );
       }
-      await actions.retenirVersion({ reference, artefact, number: version.replace(/^v/, '') });
-      process.stdout.write(`${artefact} ${version} retenue pour l'Offre ${reference}.\n`);
+      await actions.chooseVersion({ reference, artifact, number: version.replace(/^v/, '') });
+      process.stdout.write(`${artifact} ${version} retenue pour l'Offre ${reference}.\n`);
     },
   },
   apply: changeStatusCommand(
@@ -409,9 +409,9 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
   },
   edit: {
     description:
-      'Modifie un Artefact avec Claude Code, Offre et Artefact proposés si absents : jf edit [<offre> [<artefact>]]',
+      'Modifie un Artefact avec Claude Code, Offre et Artefact proposés si absents : jf edit [<offre> [<artifact>]]',
     run: async (actions, argumentList) => {
-      await actions.openArtefact(await chooseArtefact(actions, argumentList));
+      await actions.openArtifact(await chooseArtifact(actions, argumentList));
     },
   },
 };

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 // Sacha's Instructions are the ones these tests change; test/seed-front.ts leaves them to the default
-// ones. Léa's Posting 2026-2409247 has a Recherche made with the default Instructions, then one with hers.
+// ones. Léa's Posting 2026-2409247 has a Research made with the default Instructions, then one with hers.
 async function openInstructionsOfSacha(page: Page) {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Sacha');
@@ -21,9 +21,9 @@ test.describe('Instructions of a Candidate', () => {
       'Fiche d’entretien',
       'Visualisation',
     ]);
-    const lettre = page.getByRole('region', { name: 'Lettre' });
-    await expect(lettre.getByText('Consignes par défaut', { exact: true })).toBeVisible();
-    await expect(lettre.getByRole('textbox')).toHaveValue(/^Écris une lettre de motivation d'une page/);
+    const letter = page.getByRole('region', { name: 'Lettre' });
+    await expect(letter.getByText('Consignes par défaut', { exact: true })).toBeVisible();
+    await expect(letter.getByRole('textbox')).toHaveValue(/^Écris une lettre de motivation d'une page/);
     // The fixed part of every prompt holds this rule: no field of the page carries it
     const textboxList = await page.getByRole('textbox').all();
     expect(textboxList).toHaveLength(4);
@@ -36,38 +36,38 @@ test.describe('Instructions of a Candidate', () => {
     page,
   }) => {
     await openInstructionsOfSacha(page);
-    const lettre = page.getByRole('region', { name: 'Lettre' });
+    const letter = page.getByRole('region', { name: 'Lettre' });
 
-    await lettre.getByRole('textbox').fill('Une lettre courte, au ton direct.\n');
-    await expect(lettre.getByText('Modifications non enregistrées')).toBeVisible();
-    await lettre.getByRole('button', { name: 'Enregistrer mes Consignes' }).click();
-    await expect(lettre.getByText('Vos Consignes', { exact: true })).toBeVisible();
-    await lettre.getByRole('textbox').fill('Une lettre très courte.\n');
-    await lettre.getByRole('button', { name: 'Enregistrer mes Consignes' }).click();
-    await expect(lettre.getByText('Modifications non enregistrées')).toBeHidden();
+    await letter.getByRole('textbox').fill('Une lettre courte, au ton direct.\n');
+    await expect(letter.getByText('Modifications non enregistrées')).toBeVisible();
+    await letter.getByRole('button', { name: 'Enregistrer mes Consignes' }).click();
+    await expect(letter.getByText('Vos Consignes', { exact: true })).toBeVisible();
+    await letter.getByRole('textbox').fill('Une lettre très courte.\n');
+    await letter.getByRole('button', { name: 'Enregistrer mes Consignes' }).click();
+    await expect(letter.getByText('Modifications non enregistrées')).toBeHidden();
     await page.reload();
-    await expect(lettre.getByRole('textbox')).toHaveValue('Une lettre très courte.\n');
+    await expect(letter.getByRole('textbox')).toHaveValue('Une lettre très courte.\n');
     await expect(
       page.getByRole('region', { name: 'Recherche' }).getByText('Consignes par défaut', { exact: true }),
     ).toBeVisible();
 
-    await lettre.getByRole('button', { name: 'Revenir aux Consignes par défaut' }).click();
+    await letter.getByRole('button', { name: 'Revenir aux Consignes par défaut' }).click();
 
-    await expect(lettre.getByText('Consignes par défaut', { exact: true })).toBeVisible();
-    await expect(lettre.getByRole('textbox')).toHaveValue(/^Écris une lettre de motivation d'une page/);
+    await expect(letter.getByText('Consignes par défaut', { exact: true })).toBeVisible();
+    await expect(letter.getByRole('textbox')).toHaveValue(/^Écris une lettre de motivation d'une page/);
   });
 
   test('tells which Instructions produced each Version, and shows them folded to compare', async ({ page }) => {
     await page.goto('/postings/2026-2409247');
 
-    const recherche = page.getByRole('region', { name: 'Recherche' });
-    await expect(recherche.locator('li > details > summary')).toHaveText([
+    const research = page.getByRole('region', { name: 'Recherche' });
+    await expect(research.locator('li > details > summary')).toHaveText([
       /^v1.*Consignes par défaut/,
       /^v2.*Consignes du Candidat/,
     ]);
-    // v2, the Version retenue, is open; its Instructions stay folded until asked
-    const v2 = recherche.locator('li').filter({ has: page.locator('summary', { hasText: /^v2/ }) });
-    await expect(recherche.getByText('Creuse la ville.')).toBeHidden();
+    // v2, the Chosen Version, is open; its Instructions stay folded until asked
+    const v2 = research.locator('li').filter({ has: page.locator('summary', { hasText: /^v2/ }) });
+    await expect(research.getByText('Creuse la ville.')).toBeHidden();
     await v2.getByText('Consignes de cette Version').click();
     await expect(v2.getByText('Creuse la ville.')).toBeVisible();
   });

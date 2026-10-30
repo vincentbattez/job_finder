@@ -1,4 +1,4 @@
-import { ETAT_LIST, EtatBadge, StatusBadge, type Status } from '#/web/components/badge.tsx';
+import { STATE_LIST, StateBadge, StatusBadge, type Status } from '#/web/components/badge.tsx';
 import { MarkdownEditor } from '#/web/components/markdown-editor.tsx';
 import { PostingDetail, type IPostingDetail } from '#/web/components/posting-detail.tsx';
 import { PostingList, type IPostingRow } from '#/web/components/posting-list.tsx';
@@ -37,45 +37,45 @@ function sampleVersion(number: number, state: 'running' | 'ready' | 'failed') {
     version: {
       number,
       state,
-      isRetenue: number === 1,
+      isChosen: number === 1,
       hasCandidateInstructions: number === 2,
       instructions: 'Établis ce que les recruteurs attendent pour cette Offre.',
       createdAt: new Date('2026-10-21'),
     },
-    isRetenable: false,
+    isChoosable: false,
     documentList: [],
   };
 }
 
-// One Artefact in each état, that of its latest Version
+// One Artifact in each state, that of its latest Version
 const SAMPLE_POSTING_DETAIL: IPostingDetail = {
   posting: SAMPLE_POSTING,
   jobDescription: SAMPLE_JOB_DESCRIPTION,
-  artefactList: [
+  artifactList: [
     {
-      artefact: 'recherche',
-      etat: 'pret',
+      artifact: 'research',
+      state: 'ready',
       module: { refusal: null },
       isEditable: true,
       versionList: [sampleVersion(1, 'ready')],
     },
     {
-      artefact: 'lettre',
-      etat: 'en_cours',
+      artifact: 'letter',
+      state: 'in_progress',
       module: { refusal: null },
       isEditable: true,
       versionList: [sampleVersion(1, 'ready'), sampleVersion(2, 'running')],
     },
     {
-      artefact: 'fiche_entretien',
-      etat: 'en_echec',
+      artifact: 'interview_brief',
+      state: 'failed',
       module: { refusal: null },
       isEditable: false,
       versionList: [sampleVersion(1, 'failed')],
     },
     {
-      artefact: 'visualisation',
-      etat: 'absent',
+      artifact: 'visualization',
+      state: 'absent',
       module: { refusal: 'Il faut d’abord une Fiche d’entretien retenue.' },
       isEditable: false,
       versionList: [],
@@ -89,7 +89,7 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
   },
 };
 
-const SAMPLE_LETTRE = [
+const SAMPLE_LETTER = [
   'Madame, Monsieur,',
   '',
   'Titulaire d’un [à compléter : diplôme], je souhaite rejoindre le pôle civil du tribunal judiciaire de Béthune comme attachée de justice.',
@@ -166,12 +166,12 @@ export default function Design() {
           ))}
         </ul>
       </section>
-      <section aria-labelledby="etats">
-        <h2 id="etats">États d’un Artefact</h2>
+      <section aria-labelledby="states">
+        <h2 id="states">États d’un Artefact</h2>
         <ul className="badge-list">
-          {ETAT_LIST.map((etat) => (
-            <li key={etat}>
-              <EtatBadge etat={etat} />
+          {STATE_LIST.map((state) => (
+            <li key={state}>
+              <StateBadge state={state} />
             </li>
           ))}
         </ul>
@@ -190,7 +190,7 @@ export default function Design() {
       </section>
       <section aria-labelledby="editeur">
         <h2 id="editeur">Éditeur Markdown</h2>
-        <MarkdownEditor label="Lettre" defaultValue={SAMPLE_LETTRE} placeholder="Madame, Monsieur," />
+        <MarkdownEditor label="Lettre" defaultValue={SAMPLE_LETTER} placeholder="Madame, Monsieur," />
       </section>
     </main>
   );

@@ -1,9 +1,9 @@
 import type { IPromptInput } from '#/ai-module/index.ts';
 import { JOB_DESCRIPTION_FILE_NAME } from '#/domain/index.ts';
 
-export const RECHERCHE_FILE_NAME = 'recherche.md';
+export const RESEARCH_FILE_NAME = 'research.md';
 
-// A Repost starts from the Artefacts of the Posting it publishes again, so the work is not
+// A Repost starts from the Artifacts of the Posting it publishes again, so the work is not
 // done twice
 function describeRepostedPosting(readVersionList: IPromptInput['readVersionList']): string {
   const [firstVersion] = readVersionList;
@@ -23,8 +23,8 @@ Ne refais pas ce travail : pars de sa Recherche, vérifie ce que la Fiche de pos
 
 // The fixed part sets the objective and the rules no Instructions can lift (ADR-0003); the way to
 // reach it is left to the session and its Instructions
-export function composeRecherchePrompt({ posting, outputDirectory, readVersionList }: IPromptInput): string {
-  const outputPath = `${outputDirectory}/${RECHERCHE_FILE_NAME}`;
+export function composeResearchPrompt({ posting, outputDirectory, readVersionList }: IPromptInput): string {
+  const outputPath = `${outputDirectory}/${RESEARCH_FILE_NAME}`;
   return `Tu produis la Recherche d'une Offre d'emploi, pour le Candidat qui va y postuler. Écris en français.
 
 ## Objectif

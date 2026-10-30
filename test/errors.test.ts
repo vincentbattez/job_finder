@@ -9,37 +9,37 @@ import { createFakeAiSession } from './fake-ai-session.ts';
 // The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
-const RECHERCHE_RUN = {
-  fileByName: { 'recherche.md': '# Recherche\n\nLe TJ de Béthune.\n\n## Sources\n\n- https://www.justice.fr/\n' },
+const RESEARCH_RUN = {
+  fileByName: { 'research.md': '# Recherche\n\nLe TJ de Béthune.\n\n## Sources\n\n- https://www.justice.fr/\n' },
 };
 
 // An error stops the command and says, in French, what to do (CODING_STANDARDS « Échec visible »)
 describe('an error', () => {
   it.each([
     { command: 'jf versions', call: 'listVersions' },
-    { command: 'jf edit', call: 'openArtefact' },
-    { command: 'jf retenir', call: 'retenirVersion' },
-  ] as const)('names the Artefacts when $command gets a mistyped one', async ({ call }) => {
+    { command: 'jf edit', call: 'openArtifact' },
+    { command: 'jf choose', call: 'chooseVersion' },
+  ] as const)('names the Artifacts when $command gets a mistyped one', async ({ call }) => {
     const { actions } = await detectPostings();
 
-    await expect(actions[call]({ reference: REFERENCE, artefact: 'lettr', number: '1' })).rejects.toThrow(
-      'Artefact inconnu : lettr. Artefacts : recherche, lettre, fiche, visualisation.',
+    await expect(actions[call]({ reference: REFERENCE, artifact: 'lettr', number: '1' })).rejects.toThrow(
+      'Artefact inconnu : lettr. Artefacts : research, letter, brief, visualization.',
     );
   });
 
-  it('takes the alias of an Artefact, as jf run does', async () => {
-    const { actions } = await detectPostings(createFakeAiSession(RECHERCHE_RUN));
+  it('takes the alias of an Artifact, as jf run does', async () => {
+    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
 
-    expect(await actions.listVersions({ reference: REFERENCE, artefact: 'fiche' })).toEqual([]);
+    expect(await actions.listVersions({ reference: REFERENCE, artifact: 'brief' })).toEqual([]);
   });
 
-  it('tells where to find the Versions of an Artefact when one is unknown', async () => {
-    const { actions } = await detectPostings(createFakeAiSession(RECHERCHE_RUN));
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
+  it('tells where to find the Versions of an Artifact when one is unknown', async () => {
+    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
+    await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runQueuedJobs();
 
-    await expect(actions.retenirVersion({ reference: REFERENCE, artefact: 'recherche', number: 9 })).rejects.toThrow(
-      `Version inconnue : recherche v9 de l'Offre ${REFERENCE}. « jf versions ${REFERENCE} recherche » liste ses Versions.`,
+    await expect(actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: 9 })).rejects.toThrow(
+      `Version inconnue : research v9 de l'Offre ${REFERENCE}. « jf versions ${REFERENCE} research » liste ses Versions.`,
     );
   });
 

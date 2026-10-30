@@ -17,7 +17,7 @@ import {
   SAVED_NOTIFICATION_CHANNEL_SCHEMA,
   VERSION_SCHEMA,
   WATCH_SCHEMA,
-  type Artefact,
+  type Artifact,
   type Candidate,
   type DefaultDeadlinePeriod,
   type Job,
@@ -46,7 +46,7 @@ const MIGRATIONS_DIRECTORY = path.join(ROOT_DIRECTORY, 'prisma', 'migrations');
 const APPLIED_MIGRATION_LIST_SCHEMA = z.array(z.object({ migration_name: z.string() }));
 
 const VERSION_INCLUDE = {
-  inputList: { select: { artefact: true, number: true, posting: { select: { reference: true } } } },
+  inputList: { select: { artifact: true, number: true, posting: { select: { reference: true } } } },
 };
 const LINKED_POSTING_SELECT = { select: { reference: true } };
 const POSTING_INCLUDE = {
@@ -119,22 +119,22 @@ export function openDatabase(databasePath: string) {
     },
   });
 
-  // A single Version retenue per Artefact of a Posting
-  function retenirStatementList({
+  // A single Chosen Version per Artifact of a Posting
+  function chooseStatementList({
     postingId,
-    artefact,
+    artifact,
     number,
   }: {
     postingId: number;
-    artefact: Artefact;
+    artifact: Artifact;
     number: number;
   }) {
     return [
       prisma.version.updateMany({
-        where: { postingId, artefact, number: { not: number } },
-        data: { isRetenue: false },
+        where: { postingId, artifact, number: { not: number } },
+        data: { isChosen: false },
       }),
-      prisma.version.updateMany({ where: { postingId, artefact, number }, data: { isRetenue: true } }),
+      prisma.version.updateMany({ where: { postingId, artifact, number }, data: { isChosen: true } }),
     ];
   }
 
@@ -266,10 +266,10 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    // The job runs and its Version is created, numbered after the last Version of its Artefact,
+    // The job runs and its Version is created, numbered after the last Version of its Artifact,
     // with the Versions it reads
     async startJob(
-      { id, module, posting }: Job & { module: Artefact },
+      { id, module, posting }: Job & { module: Artifact },
       {
         instructions,
         hasCandidateInstructions,
@@ -281,7 +281,7 @@ export function openDatabase(databasePath: string) {
       },
     ): Promise<Version> {
       const { _max: max } = await prisma.version.aggregate({
-        where: { postingId: posting.id, artefact: module },
+        where: { postingId: posting.id, artifact: module },
         _max: { number: true },
       });
       const [, version] = await prisma.$transaction([
@@ -289,15 +289,15 @@ export function openDatabase(databasePath: string) {
         prisma.version.create({
           data: {
             postingId: posting.id,
-            artefact: module,
+            artifact: module,
             number: (max.number ?? 0) + 1,
             state: 'running',
             instructions,
             hasCandidateInstructions,
             jobId: id,
             inputList: {
-              connect: inputList.map(({ posting: { id: postingId }, version: { artefact, number } }) => ({
-                postingId_artefact_number: { postingId, artefact, number },
+              connect: inputList.map(({ posting: { id: postingId }, version: { artifact, number } }) => ({
+                postingId_artifact_number: { postingId, artifact, number },
               })),
             },
           },
@@ -307,22 +307,22 @@ export function openDatabase(databasePath: string) {
       return VERSION_SCHEMA.parse(version);
     },
 
-    // A ready Version becomes the Version retenue: by default, the latest one is retained
+    // A ready Version becomes the Chosen Version: by default, the latest one is retained
     async finishJob(
       { job, version }: { job: Job; version: Version },
       { isReady, log, sessionId }: { isReady: boolean; log: string; sessionId: string | null },
     ): Promise<{ job: Job; version: Version }> {
-      const versionWhere = { postingId: job.posting.id, artefact: version.artefact, number: version.number };
+      const versionWhere = { postingId: job.posting.id, artifact: version.artifact, number: version.number };
       await prisma.$transaction([
         prisma.version.updateMany({ where: versionWhere, data: { state: isReady ? 'ready' : 'failed' } }),
         prisma.job.update({ where: { id: job.id }, data: { state: isReady ? 'done' : 'failed', log, sessionId } }),
-        ...(isReady ? retenirStatementList(versionWhere) : []),
+        ...(isReady ? chooseStatementList(versionWhere) : []),
       ]);
       return {
         job: JOB_SCHEMA.parse(await prisma.job.findUniqueOrThrow({ where: { id: job.id }, include: JOB_INCLUDE })),
         version: VERSION_SCHEMA.parse(
           await prisma.version.findUniqueOrThrow({
-            where: { postingId_artefact_number: versionWhere },
+            where: { postingId_artifact_number: versionWhere },
             include: VERSION_INCLUDE,
           }),
         ),
@@ -399,18 +399,18 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    async listVersions(posting: Posting, artefact: Artefact): Promise<Version[]> {
+    async listVersions(posting: Posting, artifact: Artifact): Promise<Version[]> {
       return z.array(VERSION_SCHEMA).parse(
         await prisma.version.findMany({
-          where: { postingId: posting.id, artefact },
+          where: { postingId: posting.id, artifact },
           orderBy: { number: 'asc' },
           include: VERSION_INCLUDE,
         }),
       );
     },
 
-    async retenirVersion(posting: Posting, { artefact, number }: Version): Promise<void> {
-      await prisma.$transaction(retenirStatementList({ postingId: posting.id, artefact, number }));
+    async chooseVersion(posting: Posting, { artifact, number }: Version): Promise<void> {
+      await prisma.$transaction(chooseStatementList({ postingId: posting.id, artifact, number }));
     },
 
     async setDetected({ id }: Watch): Promise<void> {

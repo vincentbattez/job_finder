@@ -10,30 +10,30 @@ import { useIsHydrated } from './use-is-hydrated.ts';
 // What the Candidate changes from the Posting page. Each form posts to a route that relays to
 // an action, then comes back to the Posting page where it was (ADR-0003).
 
-interface IArtefactDocument {
+interface IArtifactDocument {
   reference: string;
-  artefact: string;
+  artifact: string;
   fileName: string;
   markdown: string;
-  // Given by the action: a file of the Version retenue, except a Brouillon or a frozen Lettre
+  // Given by the action: a file of the Chosen Version, except a Draft or a frozen Letter
   isModifiable: boolean;
 }
 
 // A file of a Version: the editor when the Candidate may correct it, saved in place in the Version
-// retenue, else the text as written. Either copies as Markdown, the way it goes into a mail.
-export function ArtefactDocument({
+// chosen, else the text as written. Either copies as Markdown, the way it goes into a mail.
+export function ArtifactDocument({
   reference,
-  artefact,
+  artifact,
   fileName,
   markdown,
   isModifiable,
-}: Readonly<IArtefactDocument>) {
+}: Readonly<IArtifactDocument>) {
   const [editedMarkdown, setEditedMarkdown] = useState(markdown);
   return (
     <figure className="document">
       <figcaption className="reference">{fileName}</figcaption>
       {isModifiable ? (
-        <Form method="post" action={`/postings/${reference}/${artefact}/document`} preventScrollReset>
+        <Form method="post" action={`/postings/${reference}/${artifact}/document`} preventScrollReset>
           <input type="hidden" name="fileName" value={fileName} />
           <MarkdownEditor
             label="Markdown"
@@ -62,13 +62,13 @@ export function ArtefactDocument({
   );
 }
 
-export function RetenirButton({
+export function ChooseButton({
   reference,
-  artefact,
+  artifact,
   number,
-}: Readonly<{ reference: string; artefact: string; number: number }>) {
+}: Readonly<{ reference: string; artifact: string; number: number }>) {
   return (
-    <Form method="post" action={`/postings/${reference}/${artefact}/retenue`} preventScrollReset className="edition">
+    <Form method="post" action={`/postings/${reference}/${artifact}/chosen`} preventScrollReset className="edition">
       <input type="hidden" name="number" value={number} />
       <button type="submit">Retenir cette Version</button>
     </Form>
@@ -82,7 +82,7 @@ const STATUS_BUTTON_LABEL_BY_STATUS: Record<Status, string> = {
 };
 
 // A button for each status the action lets the Posting move to. Applied is never undone and freezes
-// the Lettre retenue, the one sent: it takes a second click, without a browser dialog.
+// the Chosen Letter, the one sent: it takes a second click, without a browser dialog.
 export function StatusButtons({
   reference,
   nextStatusList,

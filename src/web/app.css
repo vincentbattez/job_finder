@@ -1,7 +1,7 @@
 /* Hallmark · shape: app screen · genre: modern-minimal · theme: Dose (deal 3/3, seed soft-friendly-app-track-8518·cf75787d·2026-10-29·r0)
- * nav: a top bar, the wordmark, the Candidate's pages (Postings, Profile, Instructions: #14) and the Candidate menu (#11) · signature: the Posting label, reference and Deadline in DM Mono over a dashed stub, above four plastic Artefact compartments · states: full and empty list, the four états · dose: white
+ * nav: a top bar, the wordmark, the Candidate's pages (Postings, Profile, Instructions: #14) and the Candidate menu (#11) · signature: the Posting label, reference and Deadline in DM Mono over a dashed stub, above four plastic Artifact compartments · states: full and empty list, the four states · dose: white
  * axes: light/grotesk-sans/chromatic-green · posture: committed · contrast: pass · v2.0.0 */
-/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a list and a Posting page fit any tracker; the Posting became a pharmacy label with its Artefacts as an organiser's compartments */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a list and a Posting page fit any tracker; the Posting became a pharmacy label with its Artifacts as an organiser's compartments */
 /* Hallmark · deviation: Expired and En échec are red, against Dose's grey for a missed state, because the map of issue #20 asks red for Expired · no fibre grain: an app screen takes the theme's surfaces, not its ornament */
 /* Hallmark · finish-review: subagent · 8 findings · 5 resolved 3 partial · gap: the list's loading and error states and the empty list's action (#12) */
 @import url('./tokens.css');
@@ -85,7 +85,7 @@
 .settings .button--primary:hover:enabled {
   background: var(--color-accent-deep);
 }
-/* A module missing an input, an Artefact en cours, a Detection running: the button waits */
+/* A module missing an input, an Artifact en cours, a Detection running: the button waits */
 .module-launch button:disabled,
 .detection button:disabled,
 .channel button:disabled,
@@ -268,29 +268,29 @@ a:active {
   --badge-ink: var(--color-status-archived);
   --badge-soft: var(--color-status-archived-soft);
 }
-.badge[data-etat='absent'] {
-  --badge-ink: var(--color-etat-absent);
-  --badge-soft: var(--color-etat-absent-soft);
+.badge[data-state='absent'] {
+  --badge-ink: var(--color-state-absent);
+  --badge-soft: var(--color-state-absent-soft);
 }
-.badge[data-etat='en_cours'] {
-  --badge-ink: var(--color-etat-en-cours);
-  --badge-soft: var(--color-etat-en-cours-soft);
+.badge[data-state='in_progress'] {
+  --badge-ink: var(--color-state-in-progress);
+  --badge-soft: var(--color-state-in-progress-soft);
 }
-.badge[data-etat='pret'] {
-  --badge-ink: var(--color-etat-pret);
-  --badge-soft: var(--color-etat-pret-soft);
+.badge[data-state='ready'] {
+  --badge-ink: var(--color-state-ready);
+  --badge-soft: var(--color-state-ready-soft);
 }
-.badge[data-etat='en_echec'] {
-  --badge-ink: var(--color-etat-en-echec);
-  --badge-soft: var(--color-etat-en-echec-soft);
+.badge[data-state='failed'] {
+  --badge-ink: var(--color-state-failed);
+  --badge-soft: var(--color-state-failed-soft);
 }
 /* What steps back keeps its place: a dashed rim instead of a fill */
-.badge:is([data-status='archived'], [data-etat='absent']) {
+.badge:is([data-status='archived'], [data-state='absent']) {
   border-style: dashed;
   border-color: var(--color-muted);
 }
-/* The one motion of the screen: a loader while a module writes the Artefact */
-.badge[data-etat='en_cours']::before {
+/* The one motion of the screen: a loader while a module writes the Artifact */
+.badge[data-state='in_progress']::before {
   content: '';
   width: 10px;
   height: 10px;
@@ -306,7 +306,7 @@ a:active {
 }
 /* A still arc reads as a letter: the label alone carries the état */
 @media (prefers-reduced-motion: reduce) {
-  .badge[data-etat='en_cours']::before {
+  .badge[data-state='in_progress']::before {
     content: none;
   }
 }
@@ -458,7 +458,7 @@ a:active {
   font-size: var(--text-sm);
 }
 
-/* The label above its Artefacts, beside the contacts, the recipients and the Job Description */
+/* The label above its Artifacts, beside the contacts, the recipients and the Job Description */
 .posting-detail {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
@@ -519,9 +519,9 @@ a:active {
   font-weight: 500;
 }
 
-/* Plastic compartments, one tint per Artefact like the days of a pill organiser: a tint names the
-   Artefact, never its état, which the badge carries */
-.artefact-list {
+/* Plastic compartments, one tint per Artifact like the days of a pill organiser: a tint names the
+   Artifact, never its état, which the badge carries */
+.artifact-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-xs);
@@ -529,7 +529,7 @@ a:active {
   padding: 0;
   list-style: none;
 }
-.artefact-list li {
+.artifact-list li {
   display: grid;
   align-content: space-between;
   justify-items: start;
@@ -547,25 +547,25 @@ a:active {
     0 18px 26px -16px color-mix(in oklab, var(--tint) 85%, transparent);
   font-weight: 500;
 }
-.artefact-list a {
+.artifact-list a {
   white-space: nowrap;
 }
 /* Below 22rem two compartments would wrap their names: they stack */
 @media (max-width: 22rem) {
-  .artefact-list {
+  .artifact-list {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-[data-artefact] {
+[data-artifact] {
   --tint: var(--p-mon);
 }
-[data-artefact='lettre'] {
+[data-artifact='letter'] {
   --tint: var(--p-tue);
 }
-[data-artefact='fiche_entretien'] {
+[data-artifact='interview_brief'] {
   --tint: var(--p-wed);
 }
-[data-artefact='visualisation'] {
+[data-artifact='visualization'] {
   --tint: var(--p-fri);
 }
 
@@ -681,7 +681,7 @@ a:active {
 .editor textarea:focus-visible {
   outline-color: var(--color-focus);
 }
-/* A Lettre is frozen once its Posting is Applied */
+/* A Letter is frozen once its Posting is Applied */
 .editor textarea:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -695,8 +695,8 @@ a:active {
   background: var(--color-paper-2);
 }
 
-/* Below the label, each Artefact opens like its compartment: its tint along the top edge */
-.artefact {
+/* Below the label, each Artifact opens like its compartment: its tint along the top edge */
+.artifact {
   display: grid;
   align-content: start;
   gap: var(--space-md);
@@ -704,7 +704,7 @@ a:active {
   padding-top: var(--space-md);
   border-top: 4px solid var(--tint);
 }
-/* The état of the Artefact, then the button of its module and why it waits, if it does */
+/* The état of the Artifact, then the button of its module and why it waits, if it does */
 .module-launch {
   display: flex;
   flex-wrap: wrap;
@@ -763,8 +763,8 @@ a:active {
 .version-list details > :not(summary) {
   margin: 0 var(--space-md) var(--space-md);
 }
-/* The Version retenue, the one the next Artefacts read and the one sent: the full accent */
-.badge[data-retenue] {
+/* The Chosen Version, the one the next Artifacts read and the one sent: the full accent */
+.badge[data-chosen] {
   --badge-ink: var(--color-accent-ink);
   --badge-soft: var(--color-accent);
 }
@@ -775,7 +775,7 @@ a:active {
 .document figcaption {
   color: var(--color-muted);
 }
-/* A missing fact the Lettre marks « [à compléter : …] »: a highlighter stroke, so that none is sent */
+/* A missing fact the Letter marks « [à compléter : …] »: a highlighter stroke, so that none is sent */
 .prose mark {
   padding-inline: var(--space-3xs);
   border-radius: var(--space-2xs);
@@ -797,8 +797,8 @@ a:active {
   display: grid;
   gap: var(--space-sm);
 }
-/* The Visualisation, a page of its own, read in a tall frame on the paper of the Posting page */
-.visualisation iframe {
+/* The Visualization, a page of its own, read in a tall frame on the paper of the Posting page */
+.visualization iframe {
   display: block;
   width: 100%;
   height: min(80vh, 48rem);

@@ -42,7 +42,7 @@ describe('conversion of an Upload', () => {
 
     await actions.saveUpload({ candidateId: 'lea', fileName: 'cv.pdf', content: CV_PDF });
 
-    expect(await conversionOf(actions)).toEqual({ etat: 'en_cours', log: '' });
+    expect(await conversionOf(actions)).toEqual({ state: 'in_progress', log: '' });
     await actions.runQueuedJobs();
     const [session] = aiSession.headlessSessionList;
     expect(session?.directory).toBe(profileDirectory);
@@ -53,7 +53,7 @@ describe('conversion of an Upload', () => {
       { fileName: 'cv.md', markdown: CV_MARKDOWN },
       { fileName: 'facts.md', markdown: '# Faits\n' },
     ]);
-    expect(await conversionOf(actions)).toMatchObject({ etat: 'pret' });
+    expect(await conversionOf(actions)).toMatchObject({ state: 'ready' });
   });
 
   it('shares its conversion rules with jf profile', async () => {
@@ -78,7 +78,7 @@ describe('conversion of an Upload', () => {
     await actions.runQueuedJobs();
 
     expect(aiSession.headlessSessionList).toHaveLength(2);
-    expect(await conversionOf(actions)).toMatchObject({ etat: 'pret' });
+    expect(await conversionOf(actions)).toMatchObject({ state: 'ready' });
     expect(await profileFileNameListOf(actions)).toEqual(['cv.md', 'facts.md']);
   });
 
@@ -92,7 +92,7 @@ describe('conversion of an Upload', () => {
 
     expect(readFileSync(path.join(profileDirectory, 'cv.md'), 'utf8')).toBe('# Mon CV corrigé à la main\n');
     const failure = await conversionOf(actions);
-    expect(failure?.etat).toBe('en_echec');
+    expect(failure?.state).toBe('failed');
     expect(failure?.log).toContain(
       "« cv.pdf » se convertit en « cv.md », que le Profil a déjà : il n'est pas écrasé. Supprimer ou renommer « cv.md », puis relancer la conversion.",
     );
@@ -102,7 +102,7 @@ describe('conversion of an Upload', () => {
     await actions.runQueuedJobs();
 
     expect(readFileSync(path.join(profileDirectory, 'cv.md'), 'utf8')).toBe(CV_MARKDOWN);
-    expect(await conversionOf(actions)).toMatchObject({ etat: 'pret' });
+    expect(await conversionOf(actions)).toMatchObject({ state: 'ready' });
   });
 
   it('shows why a conversion failed, and runs it again when relaunched', async () => {
@@ -112,19 +112,19 @@ describe('conversion of an Upload', () => {
 
     await actions.runQueuedJobs();
     const sessionFailure = await conversionOf(actions);
-    expect(sessionFailure?.etat).toBe('en_echec');
+    expect(sessionFailure?.state).toBe('failed');
     expect(sessionFailure?.log).toContain('Claude Code a rencontré une erreur.');
     await actions.convertUpload({ candidateId: 'lea', fileName: 'cv.pdf' });
     await actions.runQueuedJobs();
     const nameFailure = await conversionOf(actions);
-    expect(nameFailure?.etat).toBe('en_echec');
+    expect(nameFailure?.state).toBe('failed');
     expect(nameFailure?.log).toContain(
       "« notes.md » n'est ni « cv.md » ni une lettre « lettre-<employeur>-<année>.md »",
     );
     await actions.convertUpload({ candidateId: 'lea', fileName: 'cv.pdf' });
     await actions.runQueuedJobs();
 
-    expect(await conversionOf(actions)).toMatchObject({ etat: 'pret' });
+    expect(await conversionOf(actions)).toMatchObject({ state: 'ready' });
     expect(await profileFileNameListOf(actions)).toEqual(['cv.md', 'facts.md']);
   });
 

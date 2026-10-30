@@ -34,19 +34,19 @@ export function isExpired(
   return lastDay !== undefined && FRANCE_DAY_FORMAT.format(now) > lastDay;
 }
 
-// Applied once, even if Archived since: the Candidate sent its Lettre retenue. A Posting Applied
+// Applied once, even if Archived since: the Candidate sent its Chosen Letter. A Posting Applied
 // before appliedAt existed has none.
 export function hasBeenApplied({ status, appliedAt }: Pick<Posting, 'status' | 'appliedAt'>): boolean {
   return status === 'applied' || appliedAt !== null;
 }
 
-// When a Posting moving to the status was first Applied: its Lettre retenue, the one sent, stays
+// When a Posting moving to the status was first Applied: its Chosen Letter, the one sent, stays
 // frozen from then on
 export function findAppliedAt(posting: Pick<Posting, 'status' | 'appliedAt'>, status: Status, now: Date): Date | null {
   return posting.appliedAt ?? (status === 'applied' || hasBeenApplied(posting) ? now : null);
 }
 
-// The statuses a Posting can move to. Applied is never undone, since the Lettre retenue was sent: a
+// The statuses a Posting can move to. Applied is never undone, since the Chosen Letter was sent: a
 // Applied Posting can be Archived, and comes back from Archived as Applied, never To Apply.
 export function listNextStatuses(posting: Pick<Posting, 'status' | 'appliedAt'>): Status[] {
   switch (posting.status) {
@@ -75,16 +75,16 @@ export function assertStatusChange(posting: PostingStatus, status: Status): void
   );
 }
 
-// Once the Posting was Applied, the Lettre retenue is the one sent, even once the Posting is Archived
-export function findLettreFreeze(posting: PostingStatus): string | undefined {
+// Once the Posting was Applied, the Chosen Letter is the one sent, even once the Posting is Archived
+export function findLetterFreeze(posting: PostingStatus): string | undefined {
   return hasBeenApplied(posting)
     ? `L'Offre ${posting.reference} a été Postulée : sa Lettre retenue est figée telle qu'envoyée. Elle ne se modifie plus, ne se régénère plus et ne se remplace plus par une autre Version.`
     : undefined;
 }
 
-// Every action that would change the Lettre retenue calls this first
-export function assertLettreModifiable(posting: PostingStatus): void {
-  const freeze = findLettreFreeze(posting);
+// Every action that would change the Chosen Letter calls this first
+export function assertLetterModifiable(posting: PostingStatus): void {
+  const freeze = findLetterFreeze(posting);
   if (freeze !== undefined) {
     throw new Error(freeze);
   }

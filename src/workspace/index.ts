@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import {
   JOB_DESCRIPTION_FILE_NAME,
-  type Artefact,
+  type Artifact,
   type JobDescription,
   type Location,
   type Posting,
@@ -60,14 +60,14 @@ export async function openWorkspace(dataDirectory: string) {
   }
 
   // Each Posting has a folder named by its reference and title, for its Job Description and its
-  // Artefacts
+  // Artifacts
   function postingDirectoryOf({ candidateId, reference, title }: Pick<Posting, 'candidateId' | 'reference' | 'title'>) {
     return path.join(candidateDirectoryOf(candidateId), 'postings', `${reference}-${slugify(title)}`);
   }
 
-  // Each Version of an Artefact has its own folder, so a new launch never overwrites the others
-  function versionDirectoryOf(posting: Posting, { artefact, number }: Version): string {
-    return path.join(postingDirectoryOf(posting), artefact, `v${String(number)}`);
+  // Each Version of an Artifact has its own folder, so a new launch never overwrites the others
+  function versionDirectoryOf(posting: Posting, { artifact, number }: Version): string {
+    return path.join(postingDirectoryOf(posting), artifact, `v${String(number)}`);
   }
 
   return {
@@ -134,7 +134,7 @@ export async function openWorkspace(dataDirectory: string) {
       return readMarkdownFiles(outputDirectory);
     },
 
-    // The Markdown files of a Version, such as the Brouillon and the Lettre of a Lettre Version
+    // The Markdown files of a Version, such as the Draft and the Letter of a Letter Version
     readVersionDocuments(posting: Posting, version: Version) {
       return readMarkdownFiles(versionDirectoryOf(posting, version));
     },
@@ -144,17 +144,17 @@ export async function openWorkspace(dataDirectory: string) {
       writeTextFile(path.join(versionDirectoryOf(posting, version), fileName), markdown);
     },
 
-    // The Instructions with which a Candidate replaced the default ones of an Artefact, if any
-    readInstructions(candidateId: string, artefact: Artefact): string | null {
-      return readTextFile(path.join(instructionsDirectoryOf(candidateId), `${artefact}.md`));
+    // The Instructions with which a Candidate replaced the default ones of an Artifact, if any
+    readInstructions(candidateId: string, artifact: Artifact): string | null {
+      return readTextFile(path.join(instructionsDirectoryOf(candidateId), `${artifact}.md`));
     },
 
-    saveInstructions(candidateId: string, artefact: Artefact, instructions: string): void {
-      writeTextFile(path.join(instructionsDirectoryOf(candidateId), `${artefact}.md`), instructions);
+    saveInstructions(candidateId: string, artifact: Artifact, instructions: string): void {
+      writeTextFile(path.join(instructionsDirectoryOf(candidateId), `${artifact}.md`), instructions);
     },
 
-    deleteInstructions(candidateId: string, artefact: Artefact): void {
-      deleteFile(path.join(instructionsDirectoryOf(candidateId), `${artefact}.md`), { isMissingAllowed: true });
+    deleteInstructions(candidateId: string, artifact: Artifact): void {
+      deleteFile(path.join(instructionsDirectoryOf(candidateId), `${artifact}.md`), { isMissingAllowed: true });
     },
 
     // The Job Description is written first, so a Posting in the database always has it

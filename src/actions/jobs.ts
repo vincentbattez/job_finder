@@ -3,7 +3,7 @@ import { setTimeout } from 'node:timers/promises';
 import { z } from 'zod/v4';
 
 import type { Job, QueuedJob } from '#/domain/index.ts';
-import { composeRecherchePreteNotification } from '#/notification/index.ts';
+import { composeResearchPreteNotification } from '#/notification/index.ts';
 import { messageOf } from '#/text/index.ts';
 
 import type { ActionContext } from './context.ts';
@@ -34,10 +34,10 @@ export function createJobActions(context: ActionContext) {
         }
         return workspace.createJob(posting, 'extraction');
       }
-      const artefact = parseModule(module);
+      const artifact = parseModule(module);
       const posting = await findPosting(reference);
-      await findInputs(workspace, posting, artefact);
-      return workspace.createJob(posting, artefact);
+      await findInputs(workspace, posting, artifact);
+      return workspace.createJob(posting, artifact);
     },
 
     async followJob(rawInput: unknown): Promise<Job> {
@@ -76,8 +76,8 @@ export function createJobActions(context: ActionContext) {
           const { job: finishedJob } =
             module === 'extraction' ? await runExtraction(context, job) : await runJob({ ...job, module });
           jobList.push(finishedJob);
-          if (finishedJob.module === 'recherche' && finishedJob.state === 'done') {
-            const failure = await notify(finishedJob.posting, composeRecherchePreteNotification(finishedJob.posting));
+          if (finishedJob.module === 'research' && finishedJob.state === 'done') {
+            const failure = await notify(finishedJob.posting, composeResearchPreteNotification(finishedJob.posting));
             // Logged, in lpm logs worker: lpm never restarts a stopped worker, and the job is done
             if (failure !== undefined) {
               process.stderr.write(`${failure}\n`);

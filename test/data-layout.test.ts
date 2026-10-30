@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -18,6 +18,9 @@ const FACTS = '# Faits\n\n## Mobilité\n\n- Lille et alentours\n';
 const CV = '# CV de Léa\n';
 const CV_PDF = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
 const LETTER_INSTRUCTIONS = 'Une lettre courte.';
+const BRIEF_INSTRUCTIONS = '# À réviser\n';
+const DRAFT = '# Brouillon\n';
+const RESEARCH = '# Recherche 2\n';
 const RECIPIENTS = JSON.stringify({
   to: null,
   ccList: [],
@@ -40,8 +43,9 @@ function writeFile(filePath: string, content: string | Uint8Array): void {
 }
 
 // Léa's data folder as the French jf left it: a database at the last French migration, holding an
-// Offre Postulée with its Lettre retenue made from her own Consignes, an Offre in each other Statut, a
-// Republication, the conversion of a Pièce, her folders and the config an older jf read
+// Applied Posting with its Chosen Letter made from her own Instructions out of the second of two
+// Research Versions, a failed Interview Brief, a queued Visualization, a Posting in each other
+// Status, a Repost, the conversion of an Upload, her folders and the config an older jf read
 function writeFrenchDataDirectory(): string {
   const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
   const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_CANDIDATE_MIGRATION));
@@ -58,16 +62,32 @@ function writeFrenchDataDirectory(): string {
     INSERT INTO Job (id, module, offreId, state) VALUES (1, 'lettre', 1, 'done');
     INSERT INTO Version (offreId, artefact, number, isRetenue, state, consignes, hasCandidatConsignes, jobId)
     VALUES (1, 'lettre', 1, 1, 'ready', 'Une lettre courte.', 1, 1);
-    INSERT INTO Job (id, module, candidatId, piece, state, log) VALUES (2, 'conversion', 'lea', 'cv.pdf', 'done', 'Converti.');`);
+    INSERT INTO Job (id, module, candidatId, piece, state, log) VALUES (2, 'conversion', 'lea', 'cv.pdf', 'done', 'Converti.');
+    INSERT INTO Job (id, module, offreId, state) VALUES (3, 'recherche', 1, 'done');
+    INSERT INTO Version (offreId, artefact, number, isRetenue, state, consignes, jobId) VALUES (1, 'recherche', 1, 0, 'ready', 'Chercher.', 3);
+    INSERT INTO Job (id, module, offreId, state) VALUES (4, 'recherche', 1, 'done');
+    INSERT INTO Version (offreId, artefact, number, isRetenue, state, consignes, jobId) VALUES (1, 'recherche', 2, 1, 'ready', 'Chercher.', 4);
+    INSERT INTO _Input (A, B) VALUES (1, 3);
+    INSERT INTO Job (id, module, offreId, state, log) VALUES (5, 'fiche_entretien', 1, 'failed', 'Interrompu.');
+    INSERT INTO Version (offreId, artefact, number, isRetenue, state, consignes, hasCandidatConsignes, jobId)
+    VALUES (1, 'fiche_entretien', 1, 0, 'failed', 'Réviser.', 1, 5);
+    INSERT INTO Job (id, module, offreId, state) VALUES (6, 'visualisation', 3, 'queued');`);
   database.close();
   const leaDirectory = path.join(dataDirectory, 'candidats', 'lea');
   writeFile(path.join(leaDirectory, 'profil', 'faits.md'), FACTS);
   writeFile(path.join(leaDirectory, 'profil', 'cv.md'), CV);
   writeFile(path.join(leaDirectory, 'profil', 'pieces', 'cv.pdf'), CV_PDF);
   writeFile(path.join(leaDirectory, 'consignes', 'lettre.md'), LETTER_INSTRUCTIONS);
+  writeFile(path.join(leaDirectory, 'consignes', 'fiche_entretien.md'), BRIEF_INSTRUCTIONS);
   writeFile(path.join(leaDirectory, 'offres', '2026-1-greffier', 'fiche-de-poste.md'), '# Greffier\n');
   const letterDirectory = path.join(leaDirectory, 'offres', '2026-1-greffier', 'lettre', 'v1');
   writeFile(path.join(letterDirectory, 'lettre.md'), '# Lettre\n');
+  writeFile(path.join(letterDirectory, 'brouillon.md'), DRAFT);
+  chmodSync(path.join(letterDirectory, 'brouillon.md'), 0o444);
+  const postingDirectory = path.join(leaDirectory, 'offres', '2026-1-greffier');
+  writeFile(path.join(postingDirectory, 'recherche', 'v1', 'recherche.md'), '# Recherche 1\n');
+  writeFile(path.join(postingDirectory, 'recherche', 'v2', 'recherche.md'), RESEARCH);
+  mkdirSync(path.join(postingDirectory, 'fiche_entretien', 'v1'), { recursive: true });
   writeFile(path.join(letterDirectory, 'destinataires.json'), RECIPIENTS);
   writeFile(path.join(leaDirectory, 'offres', '2026-3-greffier', 'fiche-de-poste.md'), '# Greffier, encore\n');
   writeFile(path.join(dataDirectory, 'config.json'), FRENCH_CONFIG);
@@ -105,13 +125,13 @@ describe('the French data folder', () => {
       expect.objectContaining({ title: 'Mobilité', entryList: ['- Lille et alentours'] }),
     );
     expect(await actions.listUploads({ candidateId: 'lea' })).toEqual([
-      expect.objectContaining({ fileName: 'cv.pdf', conversion: { etat: 'pret', log: 'Converti.' } }),
+      expect.objectContaining({ fileName: 'cv.pdf', conversion: { state: 'ready', log: 'Converti.' } }),
     ]);
-    expect(await actions.readInstructions({ candidateId: 'lea', module: 'lettre' })).toMatchObject({
+    expect(await actions.readInstructions({ candidateId: 'lea', module: 'letter' })).toMatchObject({
       candidateInstructions: LETTER_INSTRUCTIONS,
     });
-    expect(await actions.listVersions({ reference: '2026-1', artefact: 'lettre' })).toEqual([
-      expect.objectContaining({ isRetenue: true, instructions: LETTER_INSTRUCTIONS, hasCandidateInstructions: true }),
+    expect(await actions.listVersions({ reference: '2026-1', artifact: 'letter' })).toEqual([
+      expect.objectContaining({ isChosen: true, instructions: LETTER_INSTRUCTIONS, hasCandidateInstructions: true }),
     ]);
     expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([
       { id: 'lea-1', candidateId: 'lea', source: 'pep', parameters: WATCH_PARAMETERS, detectedAt: DETECTED_AT },
@@ -168,8 +188,10 @@ describe('the French data folder', () => {
     const { jobDescription } = await actions.readPosting({ reference: '2026-3' });
     expect(jobDescription).toBe('# Greffier, encore\n');
     expect(listSorted(path.join(dataDirectory, 'candidates', 'lea', 'postings', '2026-1-greffier'))).toEqual([
+      'interview_brief',
       'job-description.md',
-      'lettre',
+      'letter',
+      'research',
     ]);
   });
 
@@ -179,10 +201,63 @@ describe('the French data folder', () => {
 
     const actions = await createActions({ dataDirectory });
 
-    const { nextStatusList, artefactList } = await actions.readPosting({ reference: '2026-1' });
+    const { nextStatusList, artifactList } = await actions.readPosting({ reference: '2026-1' });
     expect(nextStatusList).toEqual(['archived']);
-    expect(artefactList.find(({ artefact }) => artefact === 'lettre')).toMatchObject({ isEditable: false });
-    await expect(actions.runModule({ module: 'lettre', reference: '2026-1' })).rejects.toThrow(/figée/);
+    expect(artifactList.find(({ artifact }) => artifact === 'letter')).toMatchObject({ isEditable: false });
+    await expect(actions.runModule({ module: 'letter', reference: '2026-1' })).rejects.toThrow(/figée/);
+    const draftPath = path.join(
+      dataDirectory,
+      'candidates',
+      'lea',
+      'postings',
+      '2026-1-greffier',
+      'letter',
+      'v1',
+      'draft.md',
+    );
+    expect(readFileSync(draftPath, 'utf8')).toBe(DRAFT);
+    expect(statSync(draftPath).mode & 0o777).toBe(0o444);
+  });
+
+  // Each Version keeps its number, its Instructions, the Versions it read and whether it is chosen; a
+  // failed or queued Job reads back under its English module
+  it('keeps every Version of each Artifact, its Chosen Version, its inputs and its Jobs', async () => {
+    const dataDirectory = writeFrenchDataDirectory();
+
+    const actions = await createActions({ dataDirectory });
+
+    expect(await actions.listVersions({ reference: '2026-1', artifact: 'research' })).toEqual([
+      expect.objectContaining({ artifact: 'research', number: 1, isChosen: false }),
+      expect.objectContaining({ artifact: 'research', number: 2, isChosen: true }),
+    ]);
+    expect(await actions.listVersions({ reference: '2026-1', artifact: 'letter' })).toEqual([
+      expect.objectContaining({
+        inputList: [{ artifact: 'research', number: 2, posting: { reference: '2026-1' } }],
+      }),
+    ]);
+    const { artifactList, recipients } = await actions.readPosting({ reference: '2026-1' });
+    expect(Object.fromEntries(artifactList.map(({ artifact, state }) => [artifact, state]))).toEqual({
+      research: 'ready',
+      letter: 'ready',
+      interview_brief: 'failed',
+      visualization: 'absent',
+    });
+    const research = artifactList.find(({ artifact }) => artifact === 'research');
+    expect(research?.versionList[1]?.documentList).toEqual([
+      expect.objectContaining({ fileName: 'research.md', markdown: RESEARCH }),
+    ]);
+    const letter = artifactList.find(({ artifact }) => artifact === 'letter');
+    expect(letter?.versionList[0]?.documentList.map(({ fileName }) => fileName)).toEqual(
+      expect.arrayContaining(['draft.md', 'letter.md']),
+    );
+    expect(recipients).toEqual(JSON.parse(RECIPIENTS));
+    const { artifactList: queuedArtifactList } = await actions.readPosting({ reference: '2026-3' });
+    expect(queuedArtifactList.find(({ artifact }) => artifact === 'visualization')).toMatchObject({
+      state: 'in_progress',
+    });
+    expect(await actions.readInstructions({ candidateId: 'lea', module: 'interview_brief' })).toMatchObject({
+      candidateInstructions: BRIEF_INSTRUCTIONS,
+    });
   });
 
   it('rewrites the keys of the config an older jf left', async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { assertLettreModifiable, isExpired } from './index.ts';
+import { assertLetterModifiable, isExpired } from './index.ts';
 
 // A Deadline is a calendar day, stored at midnight UTC as the Source gives it; the day is over
 // at midnight in France
@@ -62,30 +62,30 @@ describe('Expired', () => {
   });
 });
 
-// The tickets that edit, regenerate or retain a Lettre test this rule through their own actions
-describe('Lettre retenue of a Posting', () => {
+// The tickets that edit, regenerate or retain a Letter test this rule through their own actions
+describe('Chosen Letter of a Posting', () => {
   it('is frozen once the Posting is Applied', () => {
     expect(() => {
-      assertLettreModifiable({ reference: '2026-2445600', status: 'applied', appliedAt: new Date() });
+      assertLetterModifiable({ reference: '2026-2445600', status: 'applied', appliedAt: new Date() });
     }).toThrow(/L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/);
   });
 
   it('stays frozen once the Applied Posting is Archived', () => {
     expect(() => {
-      assertLettreModifiable({ reference: '2026-2445600', status: 'archived', appliedAt: new Date() });
+      assertLetterModifiable({ reference: '2026-2445600', status: 'archived', appliedAt: new Date() });
     }).toThrow(/a été Postulée/);
   });
 
   // Applied before the tool kept the date
   it('is frozen for an Applied Posting without a date', () => {
     expect(() => {
-      assertLettreModifiable({ reference: '2026-2445600', status: 'applied', appliedAt: null });
+      assertLetterModifiable({ reference: '2026-2445600', status: 'applied', appliedAt: null });
     }).toThrow(/a été Postulée/);
   });
 
   it.each(['to_apply', 'archived'] as const)('can still change while the Posting, never Applied, is %s', (status) => {
     expect(() => {
-      assertLettreModifiable({ reference: '2026-2445600', status, appliedAt: null });
+      assertLetterModifiable({ reference: '2026-2445600', status, appliedAt: null });
     }).not.toThrow();
   });
 });

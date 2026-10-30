@@ -1,7 +1,16 @@
 import { generatePath, matchPath } from 'react-router';
 
+// The Artifacts as the French routes named them, and their English names
+const ARTIFACT_RENAME_LIST = [
+  { from: 'recherche', to: 'research' },
+  { from: 'lettre', to: 'letter' },
+  { from: 'fiche_entretien', to: 'interview_brief' },
+  { from: 'visualisation', to: 'visualization' },
+];
+
 // The routes of the French front and their English ones, as route patterns: a link Léa saved keeps
-// working (#65). A `:param` of the French route goes into the English one.
+// working (#65). A `:param` of the French route goes into the English one; an Artifact in a path has
+// a route of its own, which ranks before the English route's `:artifact`.
 export const REDIRECT_LIST = [
   { from: 'candidat', to: 'candidate' },
   { from: 'profil', to: 'profile' },
@@ -9,9 +18,11 @@ export const REDIRECT_LIST = [
   { from: 'consignes', to: 'instructions' },
   { from: 'offres/:reference', to: 'postings/:reference' },
   { from: 'offres/:reference/statut', to: 'postings/:reference/status' },
-  { from: 'offres/:reference/:artefact/document', to: 'postings/:reference/:artefact/document' },
-  { from: 'offres/:reference/:artefact/retenue', to: 'postings/:reference/:artefact/retenue' },
-  { from: 'offres/:reference/visualisation/:number', to: 'postings/:reference/visualisation/:number' },
+  ...ARTIFACT_RENAME_LIST.flatMap(({ from, to }) => [
+    { from: `offres/:reference/${from}/document`, to: `postings/:reference/${to}/document` },
+    { from: `offres/:reference/${from}/retenue`, to: `postings/:reference/${to}/chosen` },
+  ]),
+  { from: 'offres/:reference/visualisation/:number', to: 'postings/:reference/visualization/:number' },
 ];
 
 // The query parameters of the French filters of the Posting list and their English names: a filter Léa

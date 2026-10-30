@@ -6,9 +6,9 @@ import { ACTIONS } from '#/web/acl/actions.server.ts';
 // outside, even opened on its own, beside the sandbox of the frame of the Posting page
 const CONTENT_SECURITY_POLICY = "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:";
 
-// The page of a Visualisation Version, which the Posting page shows in a frame
+// The page of a Visualization Version, which the Posting page shows in a frame
 export async function loader({ params }: LoaderFunctionArgs) {
-  const { html } = await ACTIONS.readVisualisation(params);
+  const { html } = await ACTIONS.readVisualization(params);
   return new Response(html, {
     headers: { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': CONTENT_SECURITY_POLICY },
   });

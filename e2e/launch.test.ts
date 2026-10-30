@@ -4,10 +4,10 @@ import { z } from 'zod/v4';
 // Each test launches modules on a Posting of its own, which test/seed-front.ts prepares: the data
 // folder is shared by the whole run. The e2e worker runs the queued jobs with the fake Claude, whose
 // sessions last a second (test/e2e-actions.server.ts).
-const LETTRE_REFERENCE = '2026-2420931';
-const FAILED_RECHERCHE_REFERENCE = '2026-2412591';
+const LETTER_REFERENCE = '2026-2420931';
+const FAILED_RESEARCH_REFERENCE = '2026-2412591';
 
-// The worker takes the job, then its session lasts a second, and the Posting page reads the état again
+// The worker takes the job, then its session lasts a second, and the Posting page reads the state again
 // every two seconds
 const READY_TIMEOUT_MS = 15_000;
 
@@ -16,35 +16,35 @@ const RECEIVED_NOTIFICATION_LIST_SCHEMA = z.array(
 );
 
 test.describe('launching the modules of a Posting', () => {
-  test('launches the Lettre, then shows it turn ready without a reload', async ({ page }) => {
-    await page.goto(`/postings/${LETTRE_REFERENCE}`);
-    const lettre = page.getByRole('region', { name: 'Lettre' });
-    await expect(lettre.getByRole('status')).toHaveText('Absent');
+  test('launches the Letter, then shows it turn ready without a reload', async ({ page }) => {
+    await page.goto(`/postings/${LETTER_REFERENCE}`);
+    const letter = page.getByRole('region', { name: 'Lettre' });
+    await expect(letter.getByRole('status')).toHaveText('Absent');
 
-    await lettre.getByRole('button', { name: 'Lancer la Lettre' }).click();
+    await letter.getByRole('button', { name: 'Lancer la Lettre' }).click();
 
-    await expect(lettre.getByRole('status')).toHaveText('En cours');
-    await expect(lettre.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
-    await expect(lettre.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
-    await expect(lettre.locator('figcaption')).toHaveText(['brouillon.md', 'lettre.md']);
-    await expect(page.locator('.artefact-list [data-artefact="lettre"]')).toContainText('Prêt');
+    await expect(letter.getByRole('status')).toHaveText('En cours');
+    await expect(letter.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
+    await expect(letter.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
+    await expect(letter.locator('figcaption')).toHaveText(['draft.md', 'letter.md']);
+    await expect(page.locator('.artifact-list [data-artifact="letter"]')).toContainText('Prêt');
   });
 
-  test('relaunches a failed Recherche, which lets the Lettre run and notifies it ready', async ({ page, request }) => {
-    await page.goto(`/postings/${FAILED_RECHERCHE_REFERENCE}`);
-    const recherche = page.getByRole('region', { name: 'Recherche' });
-    const lettre = page.getByRole('region', { name: 'Lettre' });
-    await expect(recherche.getByRole('status')).toHaveText('En échec');
-    await expect(lettre).toContainText(`L'Offre ${FAILED_RECHERCHE_REFERENCE} n'a pas de Recherche retenue`);
-    await expect(lettre.getByRole('button', { name: 'Lancer la Lettre' })).toBeDisabled();
+  test('relaunches a failed Research, which lets the Letter run and notifies it ready', async ({ page, request }) => {
+    await page.goto(`/postings/${FAILED_RESEARCH_REFERENCE}`);
+    const research = page.getByRole('region', { name: 'Recherche' });
+    const letter = page.getByRole('region', { name: 'Lettre' });
+    await expect(research.getByRole('status')).toHaveText('En échec');
+    await expect(letter).toContainText(`L'Offre ${FAILED_RESEARCH_REFERENCE} n'a pas de Recherche retenue`);
+    await expect(letter.getByRole('button', { name: 'Lancer la Lettre' })).toBeDisabled();
 
-    await recherche.getByRole('button', { name: 'Relancer la Recherche' }).click();
+    await research.getByRole('button', { name: 'Relancer la Recherche' }).click();
 
-    await expect(recherche.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
-    await expect(recherche.locator('li > details > summary')).toHaveText([/^v1\s*En échec/, /^v2\s*Prêt\s*Retenue/]);
-    await expect(lettre.getByRole('button', { name: 'Lancer la Lettre' })).toBeEnabled();
-    await expect(lettre).not.toContainText("n'a pas de Recherche retenue");
-    // The worker notifies Léa's phone through the fake Home Assistant once the Recherche is saved
+    await expect(research.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
+    await expect(research.locator('li > details > summary')).toHaveText([/^v1\s*En échec/, /^v2\s*Prêt\s*Retenue/]);
+    await expect(letter.getByRole('button', { name: 'Lancer la Lettre' })).toBeEnabled();
+    await expect(letter).not.toContainText("n'a pas de Recherche retenue");
+    // The worker notifies Léa's phone through the fake Home Assistant once the Research is saved
     const { homeAssistantUrl } = z.object({ homeAssistantUrl: z.url() }).parse(test.info().config.metadata);
     await expect
       .poll(async () => {

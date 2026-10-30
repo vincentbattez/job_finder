@@ -24,8 +24,8 @@ export async function runExtraction(
     jobDescription,
     location,
   });
-  // Imported by the Candidate, it gets its Recherche whatever the Zone
-  await workspace.createJob(filledPosting, 'recherche');
+  // Imported by the Candidate, it gets its Research whatever the Zone
+  await workspace.createJob(filledPosting, 'research');
   return { job: await workspace.finishJobWithoutVersion(job, { log: session.log, sessionId: session.sessionId }) };
 }
 
@@ -52,7 +52,7 @@ export function createImportActions({ workspace, importSource, findCandidate, lo
         listedPosting,
         jobDescription,
         location: await locate(null),
-        // No Watch detected it, so no Zone holds it; chosen by the Candidate, it gets its Recherche
+        // No Watch detected it, so no Zone holds it; chosen by the Candidate, it gets its Research
         // once extracted, whatever the Zone (ADR-0003)
         isInZone: false,
         repostOf: undefined,

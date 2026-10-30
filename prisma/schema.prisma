@@ -72,7 +72,7 @@ model Posting {
   contact1         String?
   contact2         String?
   status           PostingStatus @default(to_apply)
-  // When the Posting was first marked Applied: its Lettre retenue, the one sent, stays frozen even
+  // When the Posting was first marked Applied: its Chosen Letter, the one sent, stays frozen even
   // once it is Archived
   appliedAt        DateTime?
   repostOf         Posting?      @relation("Repost", fields: [repostOfId], references: [id])
@@ -92,14 +92,14 @@ enum PostingStatus {
   archived
 }
 
-// A Version of the lettre Artefact holds a pair: the Brouillon, never changed, and the Lettre.
+// A Version of the letter Artifact holds a pair: the Draft, never changed, and the Letter.
 model Version {
   id                       Int          @id @default(autoincrement())
   posting                  Posting      @relation(fields: [postingId], references: [id])
   postingId                Int
-  artefact                 Artefact
+  artifact                 Artifact
   number                   Int
-  isRetenue                Boolean      @default(false)
+  isChosen                 Boolean      @default(false)
   state                    VersionState
   instructions             String
   // Whether those Instructions are the Candidate's own rather than the module's default ones
@@ -112,14 +112,14 @@ model Version {
   job                      Job?         @relation(fields: [jobId], references: [id])
   jobId                    Int?         @unique
 
-  @@unique([postingId, artefact, number])
+  @@unique([postingId, artifact, number])
 }
 
-enum Artefact {
-  recherche
-  lettre
-  fiche_entretien
-  visualisation
+enum Artifact {
+  research
+  letter
+  interview_brief
+  visualization
 }
 
 enum VersionState {

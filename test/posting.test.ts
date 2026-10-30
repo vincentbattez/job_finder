@@ -6,7 +6,7 @@ import { createFakeAiSession } from './fake-ai-session.ts';
 // The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
-const RECHERCHE = '# Recherche : le tribunal pour enfants de Béthune\n\n## Sources\n\n- https://www.justice.fr/\n';
+const RESEARCH = '# Recherche : le tribunal pour enfants de Béthune\n\n## Sources\n\n- https://www.justice.fr/\n';
 
 const RECIPIENTS = {
   to: { email: 'p.tj-bethune@justice.fr', source: 'applicationEmail' },
@@ -32,43 +32,43 @@ describe('the Posting page', () => {
     );
   });
 
-  it('reads every Version of each Artefact with its files, and tells the Version retenue', async () => {
+  it('reads every Version of each Artifact with its files, and tells the Chosen Version', async () => {
     const { actions } = await detectPostings(
-      createFakeAiSession({ fileByName: { 'recherche.md': RECHERCHE } }, { isSuccess: false }),
+      createFakeAiSession({ fileByName: { 'research.md': RESEARCH } }, { isSuccess: false }),
     );
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await actions.runModule({ module: 'research', reference: REFERENCE });
+    await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runQueuedJobs();
 
-    const { artefactList } = await actions.readPosting({ reference: REFERENCE });
+    const { artifactList } = await actions.readPosting({ reference: REFERENCE });
 
-    expect(artefactList.map(({ artefact }) => artefact)).toEqual([
-      'recherche',
-      'lettre',
-      'fiche_entretien',
-      'visualisation',
+    expect(artifactList.map(({ artifact }) => artifact)).toEqual([
+      'research',
+      'letter',
+      'interview_brief',
+      'visualization',
     ]);
-    expect(artefactList[0]?.versionList).toMatchObject([
+    expect(artifactList[0]?.versionList).toMatchObject([
       {
-        version: { number: 1, state: 'ready', isRetenue: true },
-        documentList: [{ fileName: 'recherche.md', markdown: RECHERCHE }],
+        version: { number: 1, state: 'ready', isChosen: true },
+        documentList: [{ fileName: 'research.md', markdown: RESEARCH }],
       },
-      { version: { number: 2, state: 'failed', isRetenue: false }, documentList: [] },
+      { version: { number: 2, state: 'failed', isChosen: false }, documentList: [] },
     ]);
-    expect(artefactList[1]?.versionList).toEqual([]);
+    expect(artifactList[1]?.versionList).toEqual([]);
   });
 
-  it('reads the recipients the Lettre retenue recommends, none before it exists', async () => {
+  it('reads the recipients the Chosen Letter recommends, none before it exists', async () => {
     const { actions } = await detectPostings(
       createFakeAiSession(
-        { fileByName: { 'recherche.md': RECHERCHE } },
-        { fileByName: { 'brouillon.md': 'Madame la Présidente,\n', 'destinataires.json': JSON.stringify(RECIPIENTS) } },
+        { fileByName: { 'research.md': RESEARCH } },
+        { fileByName: { 'draft.md': 'Madame la Présidente,\n', 'recipients.json': JSON.stringify(RECIPIENTS) } },
       ),
     );
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runQueuedJobs();
     const before = await actions.readPosting({ reference: REFERENCE });
-    await actions.runModule({ module: 'lettre', reference: REFERENCE });
+    await actions.runModule({ module: 'letter', reference: REFERENCE });
     await actions.runQueuedJobs();
 
     const { recipients } = await actions.readPosting({ reference: REFERENCE });

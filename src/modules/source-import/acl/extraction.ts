@@ -18,7 +18,7 @@ function normalize(text: string): string {
 }
 
 // The fields the session found in the Job Description, null when it does not give them. Each one is
-// copied from the Fiche, so a value the Fiche does not contain was invented: refused.
+// copied from the Job Description, so a value it does not contain was invented: refused.
 function extractionSchemaOf(markdown: string) {
   const excerpt = z
     .string()

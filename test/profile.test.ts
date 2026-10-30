@@ -68,14 +68,14 @@ describe('profile', () => {
     await actions.createProfileFile({
       candidateId: 'lea',
       fileName: 'lettre-tj-lille-2025.md',
-      markdown: '# Lettre\n',
+      markdown: '# Letter\n',
     });
     await actions.createProfileFile({ candidateId: 'lea', fileName: 'vide.md' });
 
     expect(await actions.listProfileFiles({ candidateId: 'lea' })).toEqual([
       { fileName: 'cv.md', markdown: '# CV de Léa\n' },
       { fileName: 'facts.md', markdown: '# Faits\n\n## Diplômes\n\n- Master 2 droit privé\n' },
-      { fileName: 'lettre-tj-lille-2025.md', markdown: '# Lettre\n' },
+      { fileName: 'lettre-tj-lille-2025.md', markdown: '# Letter\n' },
       { fileName: 'vide.md', markdown: '' },
     ]);
   });
@@ -85,7 +85,7 @@ describe('profile', () => {
     const dataDirectory = createDataDirectory();
     const actions = await createActions({ dataDirectory, aiSession });
 
-    await actions.createProfileFile({ candidateId: 'lea', fileName: 'lettre-présidente.md', markdown: '# Lettre\n' });
+    await actions.createProfileFile({ candidateId: 'lea', fileName: 'lettre-présidente.md', markdown: '# Letter\n' });
     await actions.openProfile({ candidateId: 'lea' });
 
     const directory = aiSession.interactiveSessionList[0]?.directory ?? '';

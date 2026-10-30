@@ -1,15 +1,15 @@
 import { useId, useState } from 'react';
 import { Form } from 'react-router';
 
-import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/actions/labels.ts';
+import { ARTIFACT_LABEL_BY_ARTIFACT } from '#/actions/labels.ts';
 
 import { MarkdownEditor } from './markdown-editor.tsx';
 import { Markdown } from './markdown.tsx';
-import type { IArtefactVersions } from './posting-detail.tsx';
+import type { IArtifactVersions } from './posting-detail.tsx';
 
 // The shape of the listInstructions action, so the route passes its result as is
 export interface IModuleInstructions {
-  module: IArtefactVersions['artefact'];
+  module: IArtifactVersions['artifact'];
   defaultInstructions: string;
   candidateInstructions: string | null;
 }
@@ -34,9 +34,9 @@ export function ModuleInstructions({
   const hasCandidateInstructions = candidateInstructions !== null;
   const [editedInstructions, setEditedInstructions] = useState(candidateInstructions ?? defaultInstructions);
   return (
-    <section className="artefact instructions" data-artefact={module} aria-labelledby={headingId}>
+    <section className="artifact instructions" data-artifact={module} aria-labelledby={headingId}>
       <div className="instructions__head">
-        <h2 id={headingId}>{ARTEFACT_LABEL_BY_ARTEFACT[module]}</h2>
+        <h2 id={headingId}>{ARTIFACT_LABEL_BY_ARTIFACT[module]}</h2>
         <span className="badge" data-instructions={hasCandidateInstructions ? 'candidate' : 'default'}>
           {hasCandidateInstructions ? 'Vos Consignes' : 'Consignes par défaut'}
         </span>

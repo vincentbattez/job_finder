@@ -65,20 +65,20 @@ test.describe('Profile of a Candidate', () => {
     await creation.getByRole('textbox', { name: /^Contenu/ }).fill('# Lettre au TJ de Lille\n');
     await creation.getByRole('button', { name: 'Créer le fichier' }).click();
 
-    const lettre = page.getByRole('region', { name: 'lettre-tj-lille-2025.md' });
-    await expect(lettre.getByRole('textbox')).toHaveValue('# Lettre au TJ de Lille\n');
+    const letter = page.getByRole('region', { name: 'lettre-tj-lille-2025.md' });
+    await expect(letter.getByRole('textbox')).toHaveValue('# Lettre au TJ de Lille\n');
     await expect(creation.getByRole('textbox', { name: 'Nom du fichier' })).toHaveValue('');
-    await lettre.getByRole('textbox').fill('# Lettre au TJ de Lille\n\nMadame la Présidente,\n');
-    await lettre.getByRole('button', { name: 'Enregistrer' }).click();
-    await expect(lettre.getByText('Modifications non enregistrées')).toBeHidden();
+    await letter.getByRole('textbox').fill('# Lettre au TJ de Lille\n\nMadame la Présidente,\n');
+    await letter.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(letter.getByText('Modifications non enregistrées')).toBeHidden();
     await page.reload();
     await expect(page.getByRole('region', { name: 'lettre-tj-lille-2025.md' }).getByRole('textbox')).toHaveValue(
       '# Lettre au TJ de Lille\n\nMadame la Présidente,\n',
     );
 
-    await lettre.getByText('Supprimer lettre-tj-lille-2025.md…').click();
-    await lettre.getByRole('button', { name: 'Supprimer définitivement lettre-tj-lille-2025.md' }).click();
-    await expect(lettre).toHaveCount(0);
+    await letter.getByText('Supprimer lettre-tj-lille-2025.md…').click();
+    await letter.getByRole('button', { name: 'Supprimer définitivement lettre-tj-lille-2025.md' }).click();
+    await expect(letter).toHaveCount(0);
     await page.reload();
     await expect(page.getByRole('heading', { level: 2 })).toHaveText([
       'Faits',

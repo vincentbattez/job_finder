@@ -17,15 +17,15 @@ const REPOST_REFERENCE = '2026-2338409';
 const POSTING_DIRECTORY_NAME =
   '2026-2231960-attache-de-justice-affecte-aupres-des-magistrats-du-parquet-tj-boulogne-sur-mer';
 
-const RECHERCHE_RUN = {
+const RESEARCH_RUN = {
   fileByName: {
-    'recherche.md': '# Recherche\n\nLe parquet de Boulogne-sur-Mer.\n\n## Sources\n\n- https://www.justice.fr/\n',
+    'research.md': '# Recherche\n\nLe parquet de Boulogne-sur-Mer.\n\n## Sources\n\n- https://www.justice.fr/\n',
   },
 };
-const LETTRE_RUN = {
+const LETTER_RUN = {
   fileByName: {
-    'brouillon.md': 'Madame la Procureure,\n',
-    'destinataires.json': JSON.stringify({
+    'draft.md': 'Madame la Procureure,\n',
+    'recipients.json': JSON.stringify({
       to: { email: 'chcab.pr.tj-boulogne-sur-mer@justice.fr', source: 'applicationEmail' },
       ccList: [],
       salutation: { text: 'Madame la Procureure,', source: 'contact1' },
@@ -108,7 +108,7 @@ describe('a Repost detected', () => {
 });
 
 describe('the Repost of an Applied Posting', () => {
-  it('launches no Recherche and tells the Candidate, who decides whether to apply again', async () => {
+  it('launches no Research and tells the Candidate, who decides whether to apply again', async () => {
     const aiSession = createFakeAiSession();
     const { actions, notificationChannel } = await detectBeforeRepost(aiSession);
     await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
@@ -162,7 +162,7 @@ describe('the Repost of an Applied Posting out of the Zone', () => {
 
 describe('the Repost of a Posting not Applied', () => {
   it('tells the Candidate it publishes again a Posting, named by its reference', async () => {
-    const { actions, notificationChannel } = await detectBeforeRepost(createFakeAiSession(RECHERCHE_RUN));
+    const { actions, notificationChannel } = await detectBeforeRepost(createFakeAiSession(RESEARCH_RUN));
 
     await actions.detect();
 
@@ -190,25 +190,25 @@ describe('the Repost of a Posting not Applied', () => {
     expect(notificationChannel.sentList).toEqual([]);
   });
 
-  it('launches its Recherche, which reads the Artefacts retenus of the Posting it publishes again', async () => {
-    const aiSession = createFakeAiSession(RECHERCHE_RUN, LETTRE_RUN, RECHERCHE_RUN);
+  it('launches its Research, which reads the Chosen Artifacts of the Posting it publishes again', async () => {
+    const aiSession = createFakeAiSession(RESEARCH_RUN, LETTER_RUN, RESEARCH_RUN);
     const { actions, dataDirectory } = await detectBeforeRepost(aiSession);
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runQueuedJobs();
-    await actions.runModule({ module: 'lettre', reference: REFERENCE });
+    await actions.runModule({ module: 'letter', reference: REFERENCE });
     await actions.runQueuedJobs();
 
     await actions.detect();
 
     expect(await actions.runQueuedJobs()).toMatchObject([
       {
-        module: 'recherche',
+        module: 'research',
         posting: { reference: REPOST_REFERENCE },
         state: 'done',
         version: {
           inputList: [
-            { artefact: 'recherche', number: 1, posting: { reference: REFERENCE } },
-            { artefact: 'lettre', number: 1, posting: { reference: REFERENCE } },
+            { artifact: 'research', number: 1, posting: { reference: REFERENCE } },
+            { artifact: 'letter', number: 1, posting: { reference: REFERENCE } },
           ],
         },
       },
@@ -216,11 +216,11 @@ describe('the Repost of a Posting not Applied', () => {
     const postingDirectory = path.join(dataDirectory, 'candidates/lea/postings', POSTING_DIRECTORY_NAME);
     const session = aiSession.headlessSessionList[2];
     expect(session?.readDirectoryList).toEqual([
-      path.join(postingDirectory, 'recherche/v1'),
-      path.join(postingDirectory, 'lettre/v1'),
+      path.join(postingDirectory, 'research/v1'),
+      path.join(postingDirectory, 'letter/v1'),
     ]);
     expect(session?.fixedPrompt).toContain(REFERENCE);
-    expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'recherche/v1')}\``);
-    expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'lettre/v1')}\``);
+    expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'research/v1')}\``);
+    expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'letter/v1')}\``);
   });
 });

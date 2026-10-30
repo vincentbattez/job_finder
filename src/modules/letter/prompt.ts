@@ -3,34 +3,34 @@ import { JOB_DESCRIPTION_FILE_NAME } from '#/domain/index.ts';
 
 import { RECIPIENTS_FILE_NAME } from './acl/recipients.ts';
 
-// The Brouillon the session writes, never modified, and the Lettre the Candidate corrects, its copy
-export const BROUILLON_FILE_NAME = 'brouillon.md';
-export const LETTRE_FILE_NAME = 'lettre.md';
+// The Draft the session writes, never modified, and the Letter the Candidate corrects, its copy
+export const DRAFT_FILE_NAME = 'draft.md';
+export const LETTER_FILE_NAME = 'letter.md';
 
 function quote(field: string | null): string {
   return field === null ? 'non renseigné' : `« ${field.trim()} »`;
 }
 
-// The pairs Brouillon/Lettre the Candidate already sent, one folder per Applied Posting
-function describeSentLettres(sentList: IPromptInput['readVersionList']): string {
+// The pairs Draft/Letter the Candidate already sent, one folder per Applied Posting
+function describeSentLetters(sentList: IPromptInput['readVersionList']): string {
   if (sentList.length === 0) {
     return "Le Candidat n'a encore envoyé aucune Lettre.";
   }
   const folderList = sentList.map(({ reference, directory }) => `- Offre ${reference} : \`${directory}\``);
-  return `Les Lettres que le Candidat a déjà envoyées, une par dossier. Chaque dossier contient le Brouillon que l'outil avait écrit (\`${BROUILLON_FILE_NAME}\`) et la Lettre telle que le Candidat l'a corrigée puis envoyée (\`${LETTRE_FILE_NAME}\`). Compare chaque paire : ses corrections montrent son style et ce qu'il refuse, applique-les.
+  return `Les Lettres que le Candidat a déjà envoyées, une par dossier. Chaque dossier contient le Brouillon que l'outil avait écrit (\`${DRAFT_FILE_NAME}\`) et la Lettre telle que le Candidat l'a corrigée puis envoyée (\`${LETTER_FILE_NAME}\`). Compare chaque paire : ses corrections montrent son style et ce qu'il refuse, applique-les.
 ${folderList.join('\n')}`;
 }
 
-// The fixed part of the prompt of the Lettre: what it reads, what it writes and where, and the
+// The fixed part of the prompt of the Letter: what it reads, what it writes and where, and the
 // rules no Instructions can lift (ADR-0003). It runs in the folder of the Posting.
-export function composeLettrePrompt({
+export function composeLetterPrompt({
   posting,
   outputDirectory,
   readVersionList,
   profileDirectory,
 }: IPromptInput): string {
-  const rechercheList = readVersionList.filter(({ artefact }) => artefact === 'recherche');
-  const sentList = readVersionList.filter(({ artefact }) => artefact === 'lettre');
+  const researchList = readVersionList.filter(({ artifact }) => artifact === 'research');
+  const sentList = readVersionList.filter(({ artifact }) => artifact === 'letter');
   return `Tu écris le Brouillon de la lettre de motivation d'un Candidat pour une Offre d'emploi, et tu recommandes à qui l'adresser. Écris en français.
 
 ## L'Offre
@@ -46,9 +46,9 @@ Le dossier courant est celui de l'Offre.
 
 Lis tout avant d'écrire :
 - La Fiche de poste, telle qu'elle a été publiée : \`${JOB_DESCRIPTION_FILE_NAME}\`.
-${rechercheList.map(({ filePath }) => `- La Recherche retenue, qui établit ce que les recruteurs attendent et dans quel contexte : \`${filePath}\`.`).join('\n')}
+${researchList.map(({ filePath }) => `- La Recherche retenue, qui établit ce que les recruteurs attendent et dans quel contexte : \`${filePath}\`.`).join('\n')}
 - Le Profil du Candidat, dans \`${profileDirectory}\` : les faits qu'il a validés, son CV et ses lettres passées, quand ils existent. Lis chacun de ses fichiers : c'est la seule source des faits sur le Candidat, et ses lettres passées donnent son style.
-- ${describeSentLettres(sentList)}
+- ${describeSentLetters(sentList)}
 
 ## Les contacts de l'Offre, tels que publiés
 
@@ -60,7 +60,7 @@ Ce sont des champs en texte libre : une adresse peut y être mêlée à un nom, 
 
 ## Ce que tu produis
 
-1. \`${outputDirectory}/${BROUILLON_FILE_NAME}\` : le Brouillon, la lettre complète en Markdown, de la formule d'appel à la signature, prête à être corrigée puis collée dans un mail.
+1. \`${outputDirectory}/${DRAFT_FILE_NAME}\` : le Brouillon, la lettre complète en Markdown, de la formule d'appel à la signature, prête à être corrigée puis collée dans un mail.
 2. \`${outputDirectory}/${RECIPIENTS_FILE_NAME}\` : les destinataires recommandés, en JSON, exactement sous cette forme :
 
 \`\`\`json

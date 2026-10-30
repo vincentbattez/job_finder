@@ -1,41 +1,41 @@
 import { useId, type ReactNode } from 'react';
 
-import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/actions/labels.ts';
+import { ARTIFACT_LABEL_BY_ARTIFACT } from '#/actions/labels.ts';
 
-import { EtatBadge, StatusBadge, type Etat } from './badge.tsx';
+import { StateBadge, StatusBadge, type State } from './badge.tsx';
 import { DateText } from './date.tsx';
 import { Markdown } from './markdown.tsx';
 import type { IPostingRow } from './posting-list.tsx';
 import { Recipients, type IRecipients } from './recipients.tsx';
 import { RepostFacts, type IRepost } from './repost.tsx';
 
-type Artefact = 'recherche' | 'lettre' | 'fiche_entretien' | 'visualisation';
+type Artifact = 'research' | 'letter' | 'interview_brief' | 'visualization';
 
 type VersionState = 'running' | 'ready' | 'failed';
 
-export const ETAT_BY_VERSION_STATE: Record<VersionState, Etat> = {
-  running: 'en_cours',
-  ready: 'pret',
-  failed: 'en_echec',
+export const STATE_BY_VERSION_STATE: Record<VersionState, State> = {
+  running: 'in_progress',
+  ready: 'ready',
+  failed: 'failed',
 };
 
-export interface IArtefactVersions {
-  artefact: Artefact;
-  etat: Etat;
-  // The module that produces the Artefact, and why it cannot run now
+export interface IArtifactVersions {
+  artifact: Artifact;
+  state: State;
+  // The module that produces the Artifact, and why it cannot run now
   module: { refusal: string | null };
-  // Given by the action: jf edit opens its Version retenue
+  // Given by the action: jf edit opens its Chosen Version
   isEditable: boolean;
   versionList: {
     version: {
       number: number;
       state: VersionState;
-      isRetenue: boolean;
+      isChosen: boolean;
       hasCandidateInstructions: boolean;
       instructions: string;
       createdAt: Date;
     };
-    isRetenable: boolean;
+    isChoosable: boolean;
     documentList: { fileName: string; markdown: string; isModifiable: boolean }[];
   }[];
 }
@@ -51,7 +51,7 @@ export interface IPostingDetail {
     repostList: IRepost['repostList'];
   };
   jobDescription: string;
-  artefactList: IArtefactVersions[];
+  artifactList: IArtifactVersions[];
   recipients: IRecipients | null;
 }
 
@@ -66,10 +66,10 @@ export function PostingDetail({
   isPage = false,
   children,
 }: Readonly<{ detail: IPostingDetail; isPage?: boolean; children?: ReactNode }>) {
-  const { posting, jobDescription, artefactList, recipients } = detail;
+  const { posting, jobDescription, artifactList, recipients } = detail;
   const TITLE_TAG = isPage ? 'h1' : 'h3';
   const PART_TAG = isPage ? 'h2' : 'h4';
-  const artefactsId = useId();
+  const artifactsId = useId();
   const contactsId = useId();
   const recipientsId = useId();
   const jobDescriptionId = useId();
@@ -105,13 +105,13 @@ export function PostingDetail({
           </dl>
           {children}
         </header>
-        <section className="posting-detail__part" aria-labelledby={artefactsId}>
-          <PART_TAG id={artefactsId}>Artefacts</PART_TAG>
-          <ul className="artefact-list">
-            {artefactList.map(({ artefact, etat }) => (
-              <li key={artefact} data-artefact={artefact}>
-                <a href={`#${artefact}`}>{ARTEFACT_LABEL_BY_ARTEFACT[artefact]}</a>
-                <EtatBadge etat={etat} />
+        <section className="posting-detail__part" aria-labelledby={artifactsId}>
+          <PART_TAG id={artifactsId}>Artefacts</PART_TAG>
+          <ul className="artifact-list">
+            {artifactList.map(({ artifact, state }) => (
+              <li key={artifact} data-artifact={artifact}>
+                <a href={`#${artifact}`}>{ARTIFACT_LABEL_BY_ARTIFACT[artifact]}</a>
+                <StateBadge state={state} />
               </li>
             ))}
           </ul>

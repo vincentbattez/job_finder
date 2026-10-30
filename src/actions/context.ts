@@ -17,7 +17,7 @@ const CANDIDATE_INPUT_SCHEMA = z.object({ candidateId: z.string() });
 
 export const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
 
-export const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: z.string() });
+export const ARTIFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artifact: z.string() });
 
 // The Parameters the Candidate typed in the form of a module, before the module parses them (ADR-0010)
 export const PARAMETERS_INPUT_SCHEMA = z.record(z.string(), z.json());

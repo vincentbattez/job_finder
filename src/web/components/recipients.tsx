@@ -18,7 +18,7 @@ function Source({ field }: Readonly<{ field: ContactField | null }>) {
   return field === null ? null : <span className="recipients__source">{CONTACT_LABEL_BY_FIELD[field]}</span>;
 }
 
-// What the Lettre retenue recommends: who receives the application, who gets a copy, and how to
+// What the Chosen Letter recommends: who receives the application, who gets a copy, and how to
 // address them
 export function Recipients({ recipients }: Readonly<{ recipients: IRecipients }>) {
   const { to, ccList, salutation, justification } = recipients;

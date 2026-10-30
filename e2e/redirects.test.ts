@@ -9,9 +9,13 @@ test.describe('French routes', () => {
     { frenchPath: '/candidat', englishPath: '/candidate' },
     { frenchPath: '/offres/2026-2445600', englishPath: '/postings/2026-2445600' },
     { frenchPath: '/offres/2026-2445600/statut', englishPath: '/postings/2026-2445600/status' },
-    { frenchPath: '/offres/2026-2445600/lettre/document', englishPath: '/postings/2026-2445600/lettre/document' },
-    { frenchPath: '/offres/2026-2445600/lettre/retenue', englishPath: '/postings/2026-2445600/lettre/retenue' },
-    { frenchPath: '/offres/2026-2445600/visualisation/1', englishPath: '/postings/2026-2445600/visualisation/1' },
+    { frenchPath: '/offres/2026-2445600/lettre/document', englishPath: '/postings/2026-2445600/letter/document' },
+    {
+      frenchPath: '/offres/2026-2445600/fiche_entretien/document',
+      englishPath: '/postings/2026-2445600/interview_brief/document',
+    },
+    { frenchPath: '/offres/2026-2445600/recherche/retenue', englishPath: '/postings/2026-2445600/research/chosen' },
+    { frenchPath: '/offres/2026-2445600/visualisation/1', englishPath: '/postings/2026-2445600/visualization/1' },
   ]) {
     test(`redirects ${frenchPath} permanently to ${englishPath}`, async ({ page }) => {
       const response = await page.request.get(`${frenchPath}?from=bookmark`, { maxRedirects: 0 });

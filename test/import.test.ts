@@ -39,7 +39,7 @@ const EXTRACTION = {
   contact2: null,
 };
 
-const RECHERCHE = `# Recherche : greffier placé à Lille
+const RESEARCH = `# Recherche : greffier placé à Lille
 
 Le tribunal judiciaire de Lille est l'un des plus grands de France ([justice.fr](https://www.justice.fr/)).
 
@@ -92,18 +92,18 @@ describe('import of a Job Description in Markdown', () => {
       employer: null,
       url: null,
       status: 'to_apply',
-      // No Zone of a Watch holds it: the import queues its Recherche whatever the Zone
+      // No Zone of a Watch holds it: the import queues its Research whatever the Zone
       isInZone: false,
     });
     const { jobDescription, extraction } = await actions.readPosting({ reference: job.posting.reference });
     expect(jobDescription).toBe(JOB_DESCRIPTION);
-    expect(extraction).toEqual({ etat: 'en_cours', log: '' });
+    expect(extraction).toEqual({ state: 'in_progress', log: '' });
     // The worker runs the session, never the front nor the CLI (ADR-0003)
     expect(aiSession.headlessSessionList).toEqual([]);
   });
 
-  it('has the worker fill the Posting with the fields Claude read and locate it, then queue its Recherche', async () => {
-    const aiSession = createFakeAiSession(extractionRun(), { fileByName: { 'recherche.md': RECHERCHE } });
+  it('has the worker fill the Posting with the fields Claude read and locate it, then queue its Research', async () => {
+    const aiSession = createFakeAiSession(extractionRun(), { fileByName: { 'research.md': RESEARCH } });
     const actions = await openActions(aiSession);
     const { posting: importedPosting } = await actions.importJobDescription({
       candidateId: 'lea',
@@ -115,7 +115,7 @@ describe('import of a Job Description in Markdown', () => {
 
     expect(jobList.map(({ module, state }) => ({ module, state }))).toEqual([
       { module: 'extraction', state: 'done' },
-      { module: 'recherche', state: 'done' },
+      { module: 'research', state: 'done' },
     ]);
     const { posting, jobDescription, extraction } = await actions.readPosting({ reference: importedPosting.reference });
     expect(posting).toMatchObject({
@@ -133,7 +133,7 @@ describe('import of a Job Description in Markdown', () => {
       longitude: 3.0468,
     });
     expect(jobDescription).toBe(JOB_DESCRIPTION);
-    expect(extraction?.etat).toBe('pret');
+    expect(extraction?.state).toBe('ready');
   });
 
   it('fails the extraction visibly when the session fails, leaving the Posting as imported, and runs it again', async () => {
@@ -150,8 +150,8 @@ describe('import of a Job Description in Markdown', () => {
     expect(failedJob).toMatchObject({ module: 'extraction', state: 'failed', log });
     const detail = await actions.readPosting({ reference: posting.reference });
     expect(detail.posting).toMatchObject({ title: FILE_NAME, employer: null });
-    expect(detail.extraction).toEqual({ etat: 'en_echec', log });
-    expect(detail.artefactList.find(({ artefact }) => artefact === 'recherche')?.etat).toBe('absent');
+    expect(detail.extraction).toEqual({ state: 'failed', log });
+    expect(detail.artifactList.find(({ artifact }) => artifact === 'research')?.state).toBe('absent');
 
     const job = await actions.runModule({ module: 'extraction', reference: posting.reference });
     await actions.runQueuedJobs();
@@ -172,7 +172,7 @@ describe('import of a Job Description in Markdown', () => {
   });
 
   it('imports the same Job Description once: importing it again gives back its extraction, without another job', async () => {
-    const aiSession = createFakeAiSession(extractionRun(), { fileByName: { 'recherche.md': RECHERCHE } });
+    const aiSession = createFakeAiSession(extractionRun(), { fileByName: { 'research.md': RESEARCH } });
     const actions = await openActions(aiSession);
     const input = { candidateId: 'lea', fileName: FILE_NAME, markdown: JOB_DESCRIPTION };
     const job = await actions.importJobDescription(input);
@@ -183,7 +183,7 @@ describe('import of a Job Description in Markdown', () => {
 
     expect(importedAgainJob).toMatchObject({ id: job.id, state: 'done' });
     expect(await actions.listPostings({ candidateId: 'lea' })).toHaveLength(1);
-    // One extraction, then one Recherche
+    // One extraction, then one Research
     expect(aiSession.headlessSessionList).toHaveLength(2);
     expect(await actions.runQueuedJobs()).toEqual([]);
   });
@@ -250,7 +250,7 @@ describe('import of a Job Description in Markdown', () => {
       /figure pas tel quel dans la Fiche de poste[\s\S]*city[\s\S]*figure pas tel quel[\s\S]*applicationEmail/,
     );
     expect(detail.posting).toMatchObject({ title: FILE_NAME, employer: null, city: null });
-    expect(detail.extraction?.etat).toBe('en_echec');
+    expect(detail.extraction?.state).toBe('failed');
   });
 
   it('takes a field copied with other case, spacing or apostrophes as found in the Job Description', async () => {
