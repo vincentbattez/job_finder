@@ -15,6 +15,10 @@ const PIECE_INPUT_SCHEMA = PIECE_NAME_INPUT_SCHEMA.extend({ content: z.instanceo
 // The name comes from the front: parsed before anything touches the disk, so it never leads out of
 // the folder of the Pièces
 function parsePieceFileName(fileName: string): PieceFileName {
+  // The front sends an unnamed, empty file when the request carries none
+  if (fileName === '') {
+    throw new Error('Aucun fichier reçu. Déposer un PDF ou le choisir, puis recommencer.');
+  }
   const result = PIECE_FILE_NAME_SCHEMA.safeParse(fileName);
   if (!result.success) {
     throw new Error(

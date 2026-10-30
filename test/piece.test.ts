@@ -49,6 +49,7 @@ describe('pièce', () => {
     ['pieces/../../faits.md', CV_PDF, "n'est pas un nom de Pièce"],
     ['cv.md', CV_PDF, "« cv.md » n'est pas un nom de Pièce"],
     ['cv.pdf', new TextEncoder().encode('# CV de Léa\n'), "« cv.pdf » n'est pas un PDF"],
+    ['', new Uint8Array(), 'Aucun fichier reçu'],
   ])('refuses « %s » without writing anything', async (fileName, content, message) => {
     const { actions, profilDirectory } = await openProfil();
 
