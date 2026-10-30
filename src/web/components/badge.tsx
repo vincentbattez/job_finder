@@ -1,24 +1,24 @@
-import { STATUT_LABEL_BY_STATUT } from '#/actions/labels.ts';
+import { STATUS_LABEL_BY_STATUS } from '#/actions/labels.ts';
 
-// The statuts as the actions name them
-export type Statut = keyof typeof STATUT_LABEL_BY_STATUT;
+// The statuses as the actions name them
+export type Status = keyof typeof STATUS_LABEL_BY_STATUS;
 
-const SHOWN_STATUT_LABEL_BY_STATUT: Record<Statut | 'expiree', string> = {
-  ...STATUT_LABEL_BY_STATUT,
-  expiree: 'Expirée',
+const SHOWN_STATUS_LABEL_BY_STATUS: Record<Status | 'expired', string> = {
+  ...STATUS_LABEL_BY_STATUS,
+  expired: 'Expirée',
 };
 
-// Expirée comes from the Date limite, whatever the statut (GLOSSARY.md). The badge and the map
-// show it only in place of À traiter: a Postulée Offre stays green past its Date limite.
-export function showStatut(statut: Statut, isExpiree: boolean): Statut | 'expiree' {
-  return statut === 'a_traiter' && isExpiree ? 'expiree' : statut;
+// Expired comes from the Deadline, whatever the status (GLOSSARY.md). The badge and the map
+// show it only in place of To Apply: an Applied Posting stays green past its Deadline.
+export function showStatus(status: Status, isExpired: boolean): Status | 'expired' {
+  return status === 'to_apply' && isExpired ? 'expired' : status;
 }
 
-export function StatutBadge({ statut, isExpiree }: Readonly<{ statut: Statut; isExpiree: boolean }>) {
-  const shownStatut = showStatut(statut, isExpiree);
+export function StatusBadge({ status, isExpired }: Readonly<{ status: Status; isExpired: boolean }>) {
+  const shownStatus = showStatus(status, isExpired);
   return (
-    <span className="badge" data-statut={shownStatut}>
-      {SHOWN_STATUT_LABEL_BY_STATUT[shownStatut]}
+    <span className="badge" data-status={shownStatus}>
+      {SHOWN_STATUS_LABEL_BY_STATUS[shownStatus]}
     </span>
   );
 }

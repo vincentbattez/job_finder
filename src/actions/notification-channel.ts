@@ -106,7 +106,7 @@ export function createNotificationChannelActions({
       return module.listChoices(parameter, parameters);
     },
 
-    // Through what is saved, as a new Offre would be
+    // Through what is saved, as a new Posting would be
     async sendTestNotification(rawInput: unknown): Promise<void> {
       const candidate = await findCandidate(rawInput);
       await sendNotification(candidate.id, composeTestNotification(candidate.name));

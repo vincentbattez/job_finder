@@ -4,18 +4,18 @@ import { z } from 'zod/v4';
 
 import {
   ARTEFACT_SCHEMA,
-  OFFRE_FICHE_SCHEMA,
+  POSTING_DETAIL_SCHEMA,
   VISUALISATION_SCHEMA,
   type Candidate,
-  type Offre,
-  type OffreFiche,
+  type Posting,
+  type PostingDetail,
   type Recipients,
   type Version,
   type Visualisation,
 } from '#/domain/index.ts';
 import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import { VISUALISATION_MODULE } from '#/modules/visualisation/index.ts';
-import { listNextStatuts } from '#/statut/index.ts';
+import { listNextStatuses } from '#/status/index.ts';
 
 import { ARTEFACT_INPUT_SCHEMA, REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
 import { assertArtefactModifiable, assertDocumentModifiable, assertRetenable, isAccepted } from './edition.ts';
@@ -26,25 +26,25 @@ const VISUALISATION_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({ number: z.coe
 const ETAT_BY_VERSION_STATE = { running: 'en_cours', ready: 'pret', failed: 'en_echec' } as const;
 const ETAT_BY_JOB_STATE = { queued: 'en_cours', running: 'en_cours', done: 'pret', failed: 'en_echec' } as const;
 
-export function createOffreActions({ workspace, findCandidate, findOffre }: ActionContext) {
-  async function findRecipients(offre: Offre): Promise<Recipients | null> {
-    const version = await findVersionRetenue(workspace, offre, 'lettre');
-    return version === undefined ? null : LETTRE_MODULE.readRecipients(workspace.versionDirectoryOf(offre, version));
+export function createPostingActions({ workspace, findCandidate, findPosting }: ActionContext) {
+  async function findRecipients(posting: Posting): Promise<Recipients | null> {
+    const version = await findVersionRetenue(workspace, posting, 'lettre');
+    return version === undefined ? null : LETTRE_MODULE.readRecipients(workspace.versionDirectoryOf(posting, version));
   }
 
-  function readFicheVersion(offre: Offre, version: Version) {
+  function readDetailVersion(posting: Posting, version: Version) {
     const { artefact, number, isRetenue } = version;
     return {
       version,
       isRetenable:
         !isRetenue &&
         isAccepted(() => {
-          assertRetenable(offre, artefact, version, number);
+          assertRetenable(posting, artefact, version, number);
         }),
-      documentList: workspace.readVersionDocuments(offre, version).map((document) => ({
+      documentList: workspace.readVersionDocuments(posting, version).map((document) => ({
         ...document,
         isModifiable: isAccepted(() => {
-          assertDocumentModifiable(offre, artefact, version, document.fileName);
+          assertDocumentModifiable(posting, artefact, version, document.fileName);
         }),
       })),
     };
@@ -55,20 +55,20 @@ export function createOffreActions({ workspace, findCandidate, findOffre }: Acti
       return workspace.listCandidates();
     },
 
-    async listOffres(rawInput: unknown): Promise<Offre[]> {
+    async listPostings(rawInput: unknown): Promise<Posting[]> {
       const candidate = await findCandidate(rawInput);
-      return workspace.listOffres(candidate.id);
+      return workspace.listPostings(candidate.id);
     },
 
-    async readOffre(rawInput: unknown): Promise<OffreFiche> {
+    async readPosting(rawInput: unknown): Promise<PostingDetail> {
       const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
-      const offre = await findOffre(reference);
-      const jobList = await workspace.listJobs(offre);
+      const posting = await findPosting(reference);
+      const jobList = await workspace.listJobs(posting);
       const extractionJob = jobList.findLast(({ module }) => module === 'extraction');
       const artefactList = await Promise.all(
         ARTEFACT_SCHEMA.options.map(async (artefact) => {
-          const versionList = await workspace.listVersions(offre, artefact);
-          const versionRetenue = await findVersionRetenue(workspace, offre, artefact);
+          const versionList = await workspace.listVersions(posting, artefact);
+          const versionRetenue = await findVersionRetenue(workspace, posting, artefact);
           // A queued job has no Version yet, while the worker runs another one (ADR-0003), and a
           // claimed job has none until the worker starts it: both are already en cours
           const isPending = jobList.some(
@@ -78,20 +78,20 @@ export function createOffreActions({ workspace, findCandidate, findOffre }: Acti
           return {
             artefact,
             etat: state === undefined ? 'absent' : ETAT_BY_VERSION_STATE[state],
-            module: await describeModule(workspace, offre, artefact),
+            module: await describeModule(workspace, posting, artefact),
             isEditable: isAccepted(() => {
-              assertArtefactModifiable(offre, artefact, versionRetenue);
+              assertArtefactModifiable(posting, artefact, versionRetenue);
             }),
-            versionList: versionList.map((version) => readFicheVersion(offre, version)),
+            versionList: versionList.map((version) => readDetailVersion(posting, version)),
           };
         }),
       );
-      return OFFRE_FICHE_SCHEMA.parse({
-        offre,
-        nextStatutList: listNextStatuts(offre),
-        ficheDePoste: workspace.readFicheDePoste(offre),
+      return POSTING_DETAIL_SCHEMA.parse({
+        posting,
+        nextStatusList: listNextStatuses(posting),
+        jobDescription: workspace.readJobDescription(posting),
         artefactList,
-        recipients: await findRecipients(offre),
+        recipients: await findRecipients(posting),
         extraction:
           extractionJob === undefined ? null : { etat: ETAT_BY_JOB_STATE[extractionJob.state], log: extractionJob.log },
       });
@@ -99,13 +99,13 @@ export function createOffreActions({ workspace, findCandidate, findOffre }: Acti
 
     async listVersions(rawInput: unknown): Promise<Version[]> {
       const { reference, artefact } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
-      return workspace.listVersions(await findOffre(reference), parseArtefact(artefact));
+      return workspace.listVersions(await findPosting(reference), parseArtefact(artefact));
     },
 
     async readVisualisation(rawInput: unknown): Promise<Visualisation> {
       const { reference, number } = VISUALISATION_INPUT_SCHEMA.parse(rawInput);
-      const offre = await findOffre(reference);
-      const versionList = await workspace.listVersions(offre, 'visualisation');
+      const posting = await findPosting(reference);
+      const versionList = await workspace.listVersions(posting, 'visualisation');
       const version = versionList.find((entry) => entry.number === number);
       if (version === undefined) {
         throw new Error(
@@ -113,7 +113,7 @@ export function createOffreActions({ workspace, findCandidate, findOffre }: Acti
         );
       }
       const html = workspace.readTextFile(
-        path.join(workspace.versionDirectoryOf(offre, version), VISUALISATION_MODULE.fileName),
+        path.join(workspace.versionDirectoryOf(posting, version), VISUALISATION_MODULE.fileName),
       );
       if (html === null) {
         throw new Error(
@@ -125,7 +125,7 @@ export function createOffreActions({ workspace, findCandidate, findOffre }: Acti
 
     async readRecipients(rawInput: unknown): Promise<Recipients> {
       const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
-      const recipients = await findRecipients(await findOffre(reference));
+      const recipients = await findRecipients(await findPosting(reference));
       if (recipients === null) {
         throw new Error(`L'Offre ${reference} n'a pas de Lettre retenue. La produire : jf run lettre ${reference}.`);
       }

@@ -7,7 +7,7 @@ import { composeRecherchePreteNotification } from '#/notification/index.ts';
 import { messageOf } from '#/text/index.ts';
 
 import type { ActionContext } from './context.ts';
-import { runExtraction } from './import-fiche-de-poste.ts';
+import { runExtraction } from './import-job-description.ts';
 import { findInputs, parseModule } from './run-job.ts';
 import { runConversion } from './uploads.ts';
 
@@ -18,26 +18,26 @@ const JOB_INPUT_SCHEMA = z.object({ jobId: z.coerce.number().int() });
 const FOLLOW_INTERVAL_MS = 1000;
 
 export function createJobActions(context: ActionContext) {
-  const { workspace, runJob, findOffre, notify } = context;
+  const { workspace, runJob, findPosting, notify } = context;
   return {
     // Only queues the job: the worker runs it, so restarting the front never stops a session
     // (ADR-0003)
     async runModule(rawInput: unknown): Promise<Job> {
       const { module, reference } = MODULE_INPUT_SCHEMA.parse(rawInput);
-      // The extraction of an imported Offre runs again after a failure
+      // The extraction of an imported Posting runs again after a failure
       if (module === 'extraction') {
-        const offre = await findOffre(reference);
-        if (offre.source !== 'import') {
+        const posting = await findPosting(reference);
+        if (posting.source !== 'import') {
           throw new Error(
             `L'Offre ${reference} n'a pas été importée : ses champs viennent de sa Source, sans extraction.`,
           );
         }
-        return workspace.createJob(offre, 'extraction');
+        return workspace.createJob(posting, 'extraction');
       }
       const artefact = parseModule(module);
-      const offre = await findOffre(reference);
-      await findInputs(workspace, offre, artefact);
-      return workspace.createJob(offre, artefact);
+      const posting = await findPosting(reference);
+      await findInputs(workspace, posting, artefact);
+      return workspace.createJob(posting, artefact);
     },
 
     async followJob(rawInput: unknown): Promise<Job> {
@@ -77,7 +77,7 @@ export function createJobActions(context: ActionContext) {
             module === 'extraction' ? await runExtraction(context, job) : await runJob({ ...job, module });
           jobList.push(finishedJob);
           if (finishedJob.module === 'recherche' && finishedJob.state === 'done') {
-            const failure = await notify(finishedJob.offre, composeRecherchePreteNotification(finishedJob.offre));
+            const failure = await notify(finishedJob.posting, composeRecherchePreteNotification(finishedJob.posting));
             // Logged, in lpm logs worker: lpm never restarts a stopped worker, and the job is done
             if (failure !== undefined) {
               process.stderr.write(`${failure}\n`);

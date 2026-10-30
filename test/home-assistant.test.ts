@@ -10,7 +10,7 @@ import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.
 const LEA_SERVICE = 'notify.mobile_app_iphone_de_lea';
 const CAMILLE_SERVICE = 'notify.mobile_app_pixel_de_camille';
 
-// Two Béthune Offres in Léa's Zone, from the responses recorded on 2026-10-29
+// Two Béthune Postings in Léa's Zone, from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 const OTHER_REFERENCE = '2026-2445609';
 
@@ -34,7 +34,7 @@ function testChannel(actions: Actions, parameters: object = {}) {
   return actions.testNotificationChannel({ candidateId: 'lea', parameters });
 }
 
-// A first Detection on the feed as it was before the two Béthune Offres, then the actions for the
+// A first Detection on the feed as it was before the two Béthune Postings, then the actions for the
 // next one, which finds them and notifies through the real Home Assistant module
 async function detectBeforeBethune(dataDirectory: string) {
   const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout([REFERENCE, OTHER_REFERENCE]) } });
@@ -224,7 +224,7 @@ describe('the Notification Channel Home Assistant of a Candidate', () => {
   });
 });
 
-describe('the notification of a new Offre', () => {
+describe('the notification of a new Posting', () => {
   it('goes to the Home Assistant the Candidate saved', async () => {
     const homeAssistant = await startHomeAssistant();
     const actions = await detectBeforeBethune(createDataDirectory());
@@ -241,7 +241,7 @@ describe('the notification of a new Offre', () => {
   it("goes to each Candidate's own Home Assistant", async () => {
     const homeAssistantByCandidateId = { lea: await startHomeAssistant(), camille: await startHomeAssistant() };
     const dataDirectory = createDataDirectory();
-    // Camille follows the same Offres as Léa, those of the courts of appeal of Douai and Amiens
+    // Camille follows the same Postings as Léa, those of the courts of appeal of Douai and Amiens
     const frontActions = await createActions({ dataDirectory });
     await frontActions.createCandidate({ id: 'camille', name: 'Camille' });
     await frontActions.saveWatch({ candidateId: 'camille', ...LEA_WATCH });

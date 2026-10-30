@@ -3,22 +3,25 @@ import { useLoaderData, useSearchParams, type LoaderFunctionArgs } from 'react-r
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { Detection } from '#/web/components/detection.tsx';
-import { FicheDePosteImport } from '#/web/components/fiche-de-poste-import.tsx';
-import { filterOffres, OffreFilters } from '#/web/components/offre-filters.tsx';
-import { OffreList } from '#/web/components/offre-list.tsx';
-import { OffreMap } from '#/web/components/offre-map.tsx';
+import { JobDescriptionImport } from '#/web/components/job-description-import.tsx';
+import { filterPostings, PostingFilters } from '#/web/components/posting-filters.tsx';
+import { PostingList } from '#/web/components/posting-list.tsx';
+import { PostingMap } from '#/web/components/posting-map.tsx';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { candidate } = await readCandidate(request);
-  return { candidate, offreList: candidate === null ? [] : await ACTIONS.listOffres({ candidateId: candidate.id }) };
+  return {
+    candidate,
+    postingList: candidate === null ? [] : await ACTIONS.listPostings({ candidateId: candidate.id }),
+  };
 }
 
 export function meta() {
   return [{ title: 'Offres · Job Finder' }];
 }
 
-export default function Offres() {
-  const { candidate, offreList } = useLoaderData<typeof loader>();
+export default function Postings() {
+  const { candidate, postingList } = useLoaderData<typeof loader>();
   const [searchParameters] = useSearchParams();
   if (candidate === null) {
     return (
@@ -30,20 +33,20 @@ export default function Offres() {
       </main>
     );
   }
-  const filteredOffreList = filterOffres(offreList, searchParameters);
+  const filteredPostingList = filterPostings(postingList, searchParameters);
   return (
     <main className="container page">
       <div className="page__head">
         <h1>Offres de {candidate.name}</h1>
         <Detection />
-        <FicheDePosteImport />
-        {offreList.length > 0 && <OffreFilters offreList={offreList} />}
+        <JobDescriptionImport />
+        {postingList.length > 0 && <PostingFilters postingList={postingList} />}
       </div>
-      {offreList.length > 0 && <OffreMap offreList={filteredOffreList} />}
-      {filteredOffreList.length === 0 && offreList.length > 0 ? (
+      {postingList.length > 0 && <PostingMap postingList={filteredPostingList} />}
+      {filteredPostingList.length === 0 && postingList.length > 0 ? (
         <p className="empty">Aucune Offre ne répond à ces filtres.</p>
       ) : (
-        <OffreList offreList={filteredOffreList} />
+        <PostingList postingList={filteredPostingList} />
       )}
     </main>
   );

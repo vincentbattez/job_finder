@@ -8,7 +8,7 @@ import { readCandidate } from '#/web/candidate.server.ts';
 export async function action({ request }: ActionFunctionArgs) {
   const { candidate } = await readCandidate(request);
   try {
-    const job = await ACTIONS.importFicheDePoste({
+    const job = await ACTIONS.importJobDescription({
       ...Object.fromEntries(await request.formData()),
       candidateId: candidate?.id,
     });

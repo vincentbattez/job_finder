@@ -19,6 +19,8 @@ const LAYOUT_STEP_LIST: ILayoutStep[] = [
   { from: 'candidates/*/profile/faits.md', to: 'candidates/*/profile/facts.md' },
   { from: 'candidates/*/profile/pieces', to: 'candidates/*/profile/uploads' },
   { from: 'candidates/*/consignes', to: 'candidates/*/instructions' },
+  { from: 'candidates/*/offres', to: 'candidates/*/postings' },
+  { from: 'candidates/*/postings/*/fiche-de-poste.md', to: 'candidates/*/postings/*/job-description.md' },
 ];
 
 // The concrete entries of a step, `*` replaced by each entry found

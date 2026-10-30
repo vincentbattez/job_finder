@@ -72,7 +72,7 @@ function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; source
   );
 }
 
-// The Watches of the Candidate, each on its Source; a deleted Watch leaves its Offres behind
+// The Watches of the Candidate, each on its Source; a deleted Watch leaves its Postings behind
 export function Watches({ watchList, sourceList }: Readonly<{ watchList: Watch[]; sourceList: SourceModule[] }>) {
   const headingId = useId();
   return (

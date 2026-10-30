@@ -1,7 +1,7 @@
-import type { Offre } from '#/domain/index.ts';
+import type { Posting } from '#/domain/index.ts';
 import { wordListOf } from '#/text/index.ts';
 
-type IComparedOffre = Pick<Offre, 'reference' | 'title' | 'workplace' | 'applicationEmail'>;
+type IComparedPosting = Pick<Posting, 'reference' | 'title' | 'workplace' | 'applicationEmail'>;
 
 // A field left empty is the same as no other
 function isSameField(left: string | null, right: string | null): boolean {
@@ -19,9 +19,9 @@ function stemOf(word: string): string {
   return stem;
 }
 
-// The Poste a title names, set apart from its inclusive writing and from its jurisdiction, already in
+// The Position a title names, set apart from its inclusive writing and from its jurisdiction, already in
 // the workplace (« TJ » abbreviates the Tribunal judiciaire it names in full)
-function posteOf(title: string, workplace: string | null): string {
+function positionOf(title: string, workplace: string | null): string {
   const jurisdictionStemSet = new Set([...wordListOf(workplace ?? '').map((word) => stemOf(word)), 'tj']);
   return wordListOf(title)
     .map((word) => stemOf(word))
@@ -29,15 +29,18 @@ function posteOf(title: string, workplace: string | null): string {
     .join(' ');
 }
 
-// The service in the title tells apart the Postes of one jurisdiction, which share workplace and
-// mail; the latest Offre when the Poste was published several times
-export function findRepublishedOffre<T extends IComparedOffre>(offre: IComparedOffre, offreList: T[]): T | undefined {
-  return offreList
+// The service in the title tells apart the Positions of one jurisdiction, which share workplace and
+// mail; the latest Posting when the Position was published several times
+export function findRepostedPosting<T extends IComparedPosting>(
+  posting: IComparedPosting,
+  postingList: T[],
+): T | undefined {
+  return postingList
     .filter(
-      (earlierOffre) =>
-        isSameField(earlierOffre.workplace, offre.workplace) &&
-        isSameField(earlierOffre.applicationEmail, offre.applicationEmail) &&
-        posteOf(earlierOffre.title, earlierOffre.workplace) === posteOf(offre.title, offre.workplace),
+      (earlierPosting) =>
+        isSameField(earlierPosting.workplace, posting.workplace) &&
+        isSameField(earlierPosting.applicationEmail, posting.applicationEmail) &&
+        positionOf(earlierPosting.title, earlierPosting.workplace) === positionOf(posting.title, posting.workplace),
     )
     .toSorted((left, right) => right.reference.localeCompare(left.reference))[0];
 }

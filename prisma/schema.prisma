@@ -15,7 +15,7 @@ model Candidate {
   id                  String               @id
   name                String
   watchList           Watch[]
-  offreList           Offre[]
+  postingList         Posting[]
   notificationChannel NotificationChannel?
   jobList             Job[]
 }
@@ -52,51 +52,51 @@ model Watch {
   detectedAt  DateTime?
 }
 
-model Offre {
-  id                Int         @id @default(autoincrement())
-  candidate         Candidate   @relation(fields: [candidateId], references: [id])
-  candidateId       String
-  source            String
-  reference         String
-  title             String
-  url               String?
-  publishedAt       DateTime?
-  dateLimite        DateTime?
-  employer          String?
-  workplace         String?
-  city              String?
-  region            String?
-  latitude          Float?
-  longitude         Float?
-  applicationEmail  String?
-  contact1          String?
-  contact2          String?
-  statut            OffreStatut @default(a_traiter) @map("status")
-  // When the Offre was first marked Postulée: its Lettre retenue, the one sent, stays frozen even
-  // once it is Archivée
-  postuleeAt        DateTime?
-  republicationOf   Offre?      @relation("Republication", fields: [republicationOfId], references: [id])
-  republicationOfId Int?
-  republicationList Offre[]     @relation("Republication")
-  detectedAt        DateTime    @default(now())
-  isInZone          Boolean
-  versionList       Version[]
-  jobList           Job[]
+model Posting {
+  id               Int           @id @default(autoincrement())
+  candidate        Candidate     @relation(fields: [candidateId], references: [id])
+  candidateId      String
+  source           String
+  reference        String
+  title            String
+  url              String?
+  publishedAt      DateTime?
+  deadline         DateTime?
+  employer         String?
+  workplace        String?
+  city             String?
+  region           String?
+  latitude         Float?
+  longitude        Float?
+  applicationEmail String?
+  contact1         String?
+  contact2         String?
+  status           PostingStatus @default(to_apply)
+  // When the Posting was first marked Applied: its Lettre retenue, the one sent, stays frozen even
+  // once it is Archived
+  appliedAt        DateTime?
+  repostOf         Posting?      @relation("Repost", fields: [repostOfId], references: [id])
+  repostOfId       Int?
+  repostList       Posting[]     @relation("Repost")
+  detectedAt       DateTime      @default(now())
+  isInZone         Boolean
+  versionList      Version[]
+  jobList          Job[]
 
   @@unique([candidateId, source, reference])
 }
 
-enum OffreStatut {
-  a_traiter
-  postulee
-  archivee
+enum PostingStatus {
+  to_apply
+  applied
+  archived
 }
 
 // A Version of the lettre Artefact holds a pair: the Brouillon, never changed, and the Lettre.
 model Version {
   id                       Int          @id @default(autoincrement())
-  offre                    Offre        @relation(fields: [offreId], references: [id])
-  offreId                  Int
+  posting                  Posting      @relation(fields: [postingId], references: [id])
+  postingId                Int
   artefact                 Artefact
   number                   Int
   isRetenue                Boolean      @default(false)
@@ -112,7 +112,7 @@ model Version {
   job                      Job?         @relation(fields: [jobId], references: [id])
   jobId                    Int?         @unique
 
-  @@unique([offreId, artefact, number])
+  @@unique([postingId, artefact, number])
 }
 
 enum Artefact {
@@ -128,12 +128,12 @@ enum VersionState {
   failed
 }
 
-// A job works on an Offre, or on the Profile of a Candidate: the conversion of one of its Uploads
+// A job works on a Posting, or on the Profile of a Candidate: the conversion of one of its Uploads
 model Job {
   id          Int        @id @default(autoincrement())
   module      String
-  offre       Offre?     @relation(fields: [offreId], references: [id], onDelete: Restrict)
-  offreId     Int?
+  posting     Posting?   @relation(fields: [postingId], references: [id], onDelete: Restrict)
+  postingId   Int?
   candidate   Candidate? @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   candidateId String?
   upload      String?

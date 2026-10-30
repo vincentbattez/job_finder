@@ -6,12 +6,12 @@ import { describe, expect, it } from 'vitest';
 import { type Actions } from '#/actions/index.ts';
 import { RECHERCHE_DEFAULT_INSTRUCTIONS } from '#/modules/recherche/instructions.ts';
 
-import { detectOffres as detectRecordedOffres, LEA_OFFRES_PATH } from './data-directory.ts';
+import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
-// The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
+// The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
-const OFFRE_DIRECTORY_NAME =
+const POSTING_DIRECTORY_NAME =
   '2026-2445600-attache-de-justice-affecte-aupres-des-magistrats-du-siege-tribunal-pour-enfants-tj-bethune';
 
 const RECHERCHE = `# Recherche : attaché de justice au tribunal pour enfants de Béthune
@@ -23,9 +23,13 @@ Le tribunal judiciaire de Béthune compte un tribunal pour enfants ([justice.fr]
 - [justice.fr](https://www.justice.fr/)
 `;
 
-async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
-  const { actions, dataDirectory } = await detectRecordedOffres(aiSession);
-  return { actions, dataDirectory, offreDirectory: path.join(dataDirectory, LEA_OFFRES_PATH, OFFRE_DIRECTORY_NAME) };
+async function detectPostings(aiSession: ReturnType<typeof createFakeAiSession>) {
+  const { actions, dataDirectory } = await detectRecordedPostings(aiSession);
+  return {
+    actions,
+    dataDirectory,
+    postingDirectory: path.join(dataDirectory, LEA_POSTINGS_PATH, POSTING_DIRECTORY_NAME),
+  };
 }
 
 // Launching a module queues its job, which the worker runs (ADR-0003)
@@ -36,15 +40,15 @@ async function runRecherche(actions: Actions) {
 }
 
 describe('recherche', () => {
-  it('produces the Recherche of an Offre as its first Version, retained', async () => {
+  it('produces the Recherche of a Posting as its first Version, retained', async () => {
     const aiSession = createFakeAiSession({ fileByName: { 'recherche.md': RECHERCHE } });
-    const { actions, offreDirectory } = await detectOffres(aiSession);
+    const { actions, postingDirectory } = await detectPostings(aiSession);
 
     const job = await runRecherche(actions);
 
     expect(job).toMatchObject({ module: 'recherche', state: 'done', sessionId: 'fake-session-1' });
     expect(job.version).toMatchObject({ artefact: 'recherche', number: 1, state: 'ready', isRetenue: true });
-    expect(readFileSync(path.join(offreDirectory, 'recherche/v1/recherche.md'), 'utf8')).toBe(RECHERCHE);
+    expect(readFileSync(path.join(postingDirectory, 'recherche/v1/recherche.md'), 'utf8')).toBe(RECHERCHE);
   });
 
   it('creates a new Version at each launch without overwriting the previous ones, and retains the latest', async () => {
@@ -53,7 +57,7 @@ describe('recherche', () => {
       { fileByName: { 'recherche.md': RECHERCHE } },
       { fileByName: { 'recherche.md': secondRecherche } },
     );
-    const { actions, offreDirectory } = await detectOffres(aiSession);
+    const { actions, postingDirectory } = await detectPostings(aiSession);
 
     await runRecherche(actions);
     await runRecherche(actions);
@@ -63,13 +67,13 @@ describe('recherche', () => {
       { number: 1, isRetenue: false },
       { number: 2, isRetenue: true },
     ]);
-    expect(readFileSync(path.join(offreDirectory, 'recherche/v1/recherche.md'), 'utf8')).toBe(RECHERCHE);
-    expect(readFileSync(path.join(offreDirectory, 'recherche/v2/recherche.md'), 'utf8')).toBe(secondRecherche);
+    expect(readFileSync(path.join(postingDirectory, 'recherche/v1/recherche.md'), 'utf8')).toBe(RECHERCHE);
+    expect(readFileSync(path.join(postingDirectory, 'recherche/v2/recherche.md'), 'utf8')).toBe(secondRecherche);
   });
 
   it('retains the Version the Candidate chooses', async () => {
     const recherche = { fileByName: { 'recherche.md': RECHERCHE } };
-    const { actions } = await detectOffres(createFakeAiSession(recherche, recherche));
+    const { actions } = await detectPostings(createFakeAiSession(recherche, recherche));
     await runRecherche(actions);
     await runRecherche(actions);
 
@@ -84,15 +88,15 @@ describe('recherche', () => {
 
   it('sends the fixed part of the prompt and the default Instructions, and keeps them in the Version', async () => {
     const aiSession = createFakeAiSession({ fileByName: { 'recherche.md': RECHERCHE } });
-    const { actions, offreDirectory } = await detectOffres(aiSession);
+    const { actions, postingDirectory } = await detectPostings(aiSession);
 
     const { version } = await runRecherche(actions);
 
     expect(aiSession.headlessSessionList).toHaveLength(1);
     expect(aiSession.headlessSessionList[0]).toMatchObject({
       instructions: RECHERCHE_DEFAULT_INSTRUCTIONS,
-      directory: offreDirectory,
-      outputDirectory: path.join(offreDirectory, 'recherche/v1'),
+      directory: postingDirectory,
+      outputDirectory: path.join(postingDirectory, 'recherche/v1'),
     });
     expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain("N'invente jamais un fait.");
     expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain('`recherche/v1/recherche.md`');
@@ -102,7 +106,7 @@ describe('recherche', () => {
   it("replaces the default Instructions with the Candidate's own, keeping the fixed part", async () => {
     const instructions = 'Insiste sur la justice des mineurs dans le ressort de Béthune.\n';
     const aiSession = createFakeAiSession({ fileByName: { 'recherche.md': RECHERCHE } });
-    const { actions, dataDirectory } = await detectOffres(aiSession);
+    const { actions, dataDirectory } = await detectPostings(aiSession);
     mkdirSync(path.join(dataDirectory, 'candidates/lea/instructions'));
     writeFileSync(path.join(dataDirectory, 'candidates/lea/instructions/recherche.md'), instructions);
 
@@ -115,9 +119,9 @@ describe('recherche', () => {
 });
 
 describe('a launch refused', () => {
-  it('refuses an unknown Offre without launching Claude', async () => {
+  it('refuses an unknown Posting without launching Claude', async () => {
     const aiSession = createFakeAiSession();
-    const { actions } = await detectOffres(aiSession);
+    const { actions } = await detectPostings(aiSession);
 
     await expect(actions.runModule({ module: 'recherche', reference: '2026-0000000' })).rejects.toThrow(
       /Offre inconnue : 2026-0000000/,
@@ -127,7 +131,7 @@ describe('a launch refused', () => {
 
   it('refuses a module that does not exist, without launching Claude', async () => {
     const aiSession = createFakeAiSession();
-    const { actions } = await detectOffres(aiSession);
+    const { actions } = await detectPostings(aiSession);
 
     await expect(actions.runModule({ module: 'inconnu', reference: REFERENCE })).rejects.toThrow(
       'Module inconnu : inconnu. Modules : recherche, lettre, fiche, visualisation.',
@@ -155,7 +159,7 @@ describe('a Recherche that fails', () => {
       log: /Claude Code a rencontré une erreur/,
     },
   ])('puts the Version and the job « en échec » when $problem', async ({ plannedRun, log }) => {
-    const { actions } = await detectOffres(createFakeAiSession(plannedRun));
+    const { actions } = await detectPostings(createFakeAiSession(plannedRun));
 
     const job = await runRecherche(actions);
 
@@ -166,7 +170,7 @@ describe('a Recherche that fails', () => {
 
   it('keeps the Version retenue when a new launch fails, and can be launched again', async () => {
     const recherche = { fileByName: { 'recherche.md': RECHERCHE } };
-    const { actions } = await detectOffres(createFakeAiSession(recherche, {}, recherche));
+    const { actions } = await detectPostings(createFakeAiSession(recherche, {}, recherche));
 
     await runRecherche(actions);
     await runRecherche(actions);
@@ -185,10 +189,10 @@ describe('a Recherche that fails', () => {
     ]);
   });
 
-  // A Postulée Offre keeps the Lettre that was sent (spec « Versions »)
-  it('refuses to change the Lettre retenue of a Postulée Offre', async () => {
-    const { actions } = await detectOffres(createFakeAiSession());
-    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
+  // An Applied Posting keeps the Lettre that was sent (spec « Versions »)
+  it('refuses to change the Lettre retenue of an Applied Posting', async () => {
+    const { actions } = await detectPostings(createFakeAiSession());
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
 
     await expect(actions.retenirVersion({ reference: REFERENCE, artefact: 'lettre', number: 1 })).rejects.toThrow(
       /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/,
@@ -196,7 +200,7 @@ describe('a Recherche that fails', () => {
   });
 
   it('refuses to retain a Version « en échec »', async () => {
-    const { actions } = await detectOffres(createFakeAiSession({}));
+    const { actions } = await detectPostings(createFakeAiSession({}));
     await runRecherche(actions);
 
     await expect(actions.retenirVersion({ reference: REFERENCE, artefact: 'recherche', number: 1 })).rejects.toThrow(

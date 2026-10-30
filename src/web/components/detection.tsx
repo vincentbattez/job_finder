@@ -6,19 +6,19 @@ import { useIsHydrated } from './use-is-hydrated.ts';
 interface IDetection {
   watchId: string;
   isFirstLaunch: boolean;
-  newOffreList: { reference: string; title: string }[];
+  newPostingList: { reference: string; title: string }[];
   notificationFailureList: string[];
 }
 
-function summarize({ isFirstLaunch, newOffreList }: IDetection): string {
-  const count = newOffreList.length;
-  const offres = count > 1 ? 'nouvelles Offres' : 'nouvelle Offre';
-  const summary = count === 0 ? 'aucune nouvelle Offre' : `${String(count)} ${offres}`;
+function summarize({ isFirstLaunch, newPostingList }: IDetection): string {
+  const count = newPostingList.length;
+  const postings = count > 1 ? 'nouvelles Offres' : 'nouvelle Offre';
+  const summary = count === 0 ? 'aucune nouvelle Offre' : `${String(count)} ${postings}`;
   return isFirstLaunch ? `${summary}, premier lancement : importées sans rien déclencher` : summary;
 }
 
 // Runs a Detection without waiting for the daily one, then says what it found for each Watch; the
-// list of Offres below reloads with the new ones
+// list of Postings below reloads with the new ones
 export function Detection() {
   const fetcher = useFetcher<{ detectionList: IDetection[]; error: string | null }>();
   const isHydrated = useIsHydrated();
@@ -35,11 +35,11 @@ export function Detection() {
             <p>
               Veille {detection.watchId} : {summarize(detection)}
             </p>
-            {detection.newOffreList.length > 0 && (
+            {detection.newPostingList.length > 0 && (
               <ul>
-                {detection.newOffreList.map(({ reference, title }) => (
+                {detection.newPostingList.map(({ reference, title }) => (
                   <li key={reference}>
-                    <Link to={`/offres/${reference}`}>{title}</Link>
+                    <Link to={`/postings/${reference}`}>{title}</Link>
                   </li>
                 ))}
               </ul>

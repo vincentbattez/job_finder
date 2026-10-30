@@ -1,7 +1,7 @@
 import { z } from 'zod/v4';
 
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { PLACE_SCHEMA, type Candidate, type Offre, type Place } from '#/domain/index.ts';
+import { LOCATION_SCHEMA, type Candidate, type Location, type Posting } from '#/domain/index.ts';
 import { createApiGeo } from '#/geo/acl/api-geo.ts';
 import { createUploadConversion } from '#/modules/conversion/index.ts';
 import { createImportSource } from '#/modules/source-import/index.ts';
@@ -33,7 +33,7 @@ export interface IActionsOption {
 }
 
 // What the actions of every feature share: the data folder, the external boundaries, which the
-// tests replace with fakes, and the lookups of a Candidate and an Offre
+// tests replace with fakes, and the lookups of a Candidate and a Posting
 export async function openContext({
   dataDirectory,
   aiSession = CLAUDE_CODE,
@@ -55,24 +55,24 @@ export async function openContext({
     return candidate;
   }
 
-  async function findOffre(reference: string): Promise<Offre> {
-    const [offre, ...otherOffreList] = await workspace.findOffres(reference);
-    if (offre === undefined) {
+  async function findPosting(reference: string): Promise<Posting> {
+    const [posting, ...otherPostingList] = await workspace.findPostings(reference);
+    if (posting === undefined) {
       throw new Error(`Offre inconnue : ${reference}. « jf list <candidat> » liste les Offres.`);
     }
-    // Two Candidates may follow the same Source: a reference alone then names several Offres
-    if (otherOffreList.length > 0) {
+    // Two Candidates may follow the same Source: a reference alone then names several Postings
+    if (otherPostingList.length > 0) {
       throw new Error(
         `Plusieurs Offres ont la référence ${reference}, chez des Candidats différents : leurs Veilles suivent la même Source, et l'outil ne sait pas encore choisir entre elles. Le signaler pour qu'il les distingue.`,
       );
     }
-    return offre;
+    return posting;
   }
 
   // A city API Géo does not know stays as read, without coordinates, to be located again later
-  async function locate(city: string | null): Promise<Place> {
-    const place = city === null ? null : await apiGeo.findPlace(city);
-    return place ?? PLACE_SCHEMA.parse({ city, region: null, latitude: null, longitude: null });
+  async function locate(city: string | null): Promise<Location> {
+    const location = city === null ? null : await apiGeo.findLocation(city);
+    return location ?? LOCATION_SCHEMA.parse({ city, region: null, latitude: null, longitude: null });
   }
 
   // A module of the family by its identifier, undefined when the registry does not have it (ADR-0010)
@@ -116,13 +116,13 @@ export async function openContext({
   }
 
   // A notification not sent undoes and skips nothing: it comes back as the failure to report
-  async function notify(offre: Offre, notification: INotification): Promise<string | undefined> {
+  async function notify(posting: Posting, notification: INotification): Promise<string | undefined> {
     try {
-      await sendNotification(offre.candidateId, notification);
+      await sendNotification(posting.candidateId, notification);
       return undefined;
     } catch (error) {
       const reason = messageOf(error);
-      return `Notification « ${notification.title} » de l'Offre ${offre.reference} non envoyée : ${reason}`;
+      return `Notification « ${notification.title} » de l'Offre ${posting.reference} non envoyée : ${reason}`;
     }
   }
 
@@ -139,7 +139,7 @@ export async function openContext({
     findNotificationChannelModule,
     sendNotification,
     findCandidate,
-    findOffre,
+    findPosting,
     locate,
     notify,
   };

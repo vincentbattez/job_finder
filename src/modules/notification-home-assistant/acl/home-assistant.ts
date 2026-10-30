@@ -46,7 +46,7 @@ async function request({ url, token }: IAccess, pathname: string, body?: unknown
   return response;
 }
 
-// Before the Candidate relies on it: a wrong address or token fails here rather than on a new Offre
+// Before the Candidate relies on it: a wrong address or token fails here rather than on a new Posting
 export async function checkConnexion(access: IAccess): Promise<void> {
   const response = await request(access, '/api/');
   if (!response.ok) {

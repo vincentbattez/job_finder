@@ -11,7 +11,7 @@ import {
   CANDIDATE_SCHEMA,
   DEFAULT_DEADLINE_PERIOD_SCHEMA,
   JOB_SCHEMA,
-  OFFRE_SCHEMA,
+  POSTING_SCHEMA,
   PROFILE_JOB_SCHEMA,
   QUEUED_JOB_SCHEMA,
   SAVED_NOTIFICATION_CHANNEL_SCHEMA,
@@ -20,22 +20,22 @@ import {
   type Artefact,
   type Candidate,
   type DefaultDeadlinePeriod,
-  type FicheDePoste,
   type Job,
-  type ListedOffre,
+  type JobDescription,
+  type ListedPosting,
+  type Location,
   type Module,
-  type Offre,
   type Parameters,
-  type Place,
+  type Posting,
   type ProfileJob,
   type QueuedJob,
   type SavedNotificationChannel,
-  type Statut,
+  type Status,
   type UploadFileName,
   type Version,
   type Watch,
 } from '#/domain/index.ts';
-import { findPostuleeAt, isExpiree } from '#/statut/index.ts';
+import { findAppliedAt, isExpired } from '#/status/index.ts';
 import { PrismaClient } from '#/workspace/generated/client.ts';
 
 import type { Config } from './config.ts';
@@ -46,28 +46,28 @@ const MIGRATIONS_DIRECTORY = path.join(ROOT_DIRECTORY, 'prisma', 'migrations');
 const APPLIED_MIGRATION_LIST_SCHEMA = z.array(z.object({ migration_name: z.string() }));
 
 const VERSION_INCLUDE = {
-  inputList: { select: { artefact: true, number: true, offre: { select: { reference: true } } } },
+  inputList: { select: { artefact: true, number: true, posting: { select: { reference: true } } } },
 };
-const LINKED_OFFRE_SELECT = { select: { reference: true } };
-const OFFRE_INCLUDE = {
-  republicationOf: LINKED_OFFRE_SELECT,
-  republicationList: { ...LINKED_OFFRE_SELECT, orderBy: { reference: 'asc' } },
+const LINKED_POSTING_SELECT = { select: { reference: true } };
+const POSTING_INCLUDE = {
+  repostOf: LINKED_POSTING_SELECT,
+  repostList: { ...LINKED_POSTING_SELECT, orderBy: { reference: 'asc' } },
 } as const;
 // The single row of the Default Deadline Period every Candidate shares
 const DEFAULT_DEADLINE_PERIOD_ID = 1;
 // The Default Deadline Period of a new database, that of the example config of older versions
 const DEFAULT_DELAY_MONTHS = 6;
 
-const JOB_INCLUDE = { offre: { include: OFFRE_INCLUDE }, version: { include: VERSION_INCLUDE } };
+const JOB_INCLUDE = { posting: { include: POSTING_INCLUDE }, version: { include: VERSION_INCLUDE } };
 
-export interface INewOffre {
+export interface INewPosting {
   candidateId: string;
   source: string;
-  listedOffre: ListedOffre;
-  ficheDePoste: FicheDePoste;
+  listedPosting: ListedPosting;
+  jobDescription: JobDescription;
   isInZone: boolean;
-  republicationOf: Offre | undefined;
-  place: Place;
+  repostOf: Posting | undefined;
+  location: Location;
 }
 
 // Read where Prisma records the migrations it applied (ADR-0004): a database it has not created
@@ -107,31 +107,34 @@ export function openDatabase(databasePath: string) {
   }
   // Read at launch once the Default Deadline Period exists, then changed by the process that saves them (ADR-0011)
   let defaultDelayMonths = DEFAULT_DELAY_MONTHS;
-  // Expirée depends on the day, so every Offre read computes it rather than storing it
+  // Expired depends on the day, so every Posting read computes it rather than storing it
   const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url }) }).$extends({
     result: {
-      offre: {
-        isExpiree: {
-          needs: { dateLimite: true, publishedAt: true },
-          compute: (offre) => isExpiree(offre, new Date(), defaultDelayMonths),
+      posting: {
+        isExpired: {
+          needs: { deadline: true, publishedAt: true },
+          compute: (posting) => isExpired(posting, new Date(), defaultDelayMonths),
         },
       },
     },
   });
 
-  // A single Version retenue per Artefact of an Offre
+  // A single Version retenue per Artefact of a Posting
   function retenirStatementList({
-    offreId,
+    postingId,
     artefact,
     number,
   }: {
-    offreId: number;
+    postingId: number;
     artefact: Artefact;
     number: number;
   }) {
     return [
-      prisma.version.updateMany({ where: { offreId, artefact, number: { not: number } }, data: { isRetenue: false } }),
-      prisma.version.updateMany({ where: { offreId, artefact, number }, data: { isRetenue: true } }),
+      prisma.version.updateMany({
+        where: { postingId, artefact, number: { not: number } },
+        data: { isRetenue: false },
+      }),
+      prisma.version.updateMany({ where: { postingId, artefact, number }, data: { isRetenue: true } }),
     ];
   }
 
@@ -205,7 +208,7 @@ export function openDatabase(databasePath: string) {
       });
     },
 
-    // Also what Expirée computes with from then on, in this process
+    // Also what Expired computes with from then on, in this process
     async readDefaultDeadlinePeriod(): Promise<DefaultDeadlinePeriod> {
       const defaultDeadlinePeriod = DEFAULT_DEADLINE_PERIOD_SCHEMA.parse(
         await prisma.defaultDeadlinePeriod.findUniqueOrThrow({
@@ -242,44 +245,50 @@ export function openDatabase(databasePath: string) {
       await prisma.watch.update({ where: { id }, data: { source, parameters, detectedAt: null } });
     },
 
-    // Its Offres stay: they belong to the Candidate, not to the Watch
+    // Its Postings stay: they belong to the Candidate, not to the Watch
     async deleteWatch({ id }: Watch): Promise<void> {
       await prisma.watch.delete({ where: { id } });
     },
 
-    async listOffres(candidateId: string): Promise<Offre[]> {
-      return z.array(OFFRE_SCHEMA).parse(
-        await prisma.offre.findMany({
+    async listPostings(candidateId: string): Promise<Posting[]> {
+      return z.array(POSTING_SCHEMA).parse(
+        await prisma.posting.findMany({
           where: { candidateId },
           orderBy: { reference: 'desc' },
-          include: OFFRE_INCLUDE,
+          include: POSTING_INCLUDE,
         }),
       );
     },
 
-    async createJob(offre: Offre, module: Module): Promise<Job> {
-      return JOB_SCHEMA.parse(await prisma.job.create({ data: { module, offreId: offre.id }, include: JOB_INCLUDE }));
+    async createJob(posting: Posting, module: Module): Promise<Job> {
+      return JOB_SCHEMA.parse(
+        await prisma.job.create({ data: { module, postingId: posting.id }, include: JOB_INCLUDE }),
+      );
     },
 
     // The job runs and its Version is created, numbered after the last Version of its Artefact,
     // with the Versions it reads
     async startJob(
-      { id, module, offre }: Job & { module: Artefact },
+      { id, module, posting }: Job & { module: Artefact },
       {
         instructions,
         hasCandidateInstructions,
         inputList,
-      }: { instructions: string; hasCandidateInstructions: boolean; inputList: { offre: Offre; version: Version }[] },
+      }: {
+        instructions: string;
+        hasCandidateInstructions: boolean;
+        inputList: { posting: Posting; version: Version }[];
+      },
     ): Promise<Version> {
       const { _max: max } = await prisma.version.aggregate({
-        where: { offreId: offre.id, artefact: module },
+        where: { postingId: posting.id, artefact: module },
         _max: { number: true },
       });
       const [, version] = await prisma.$transaction([
         prisma.job.update({ where: { id }, data: { state: 'running' } }),
         prisma.version.create({
           data: {
-            offreId: offre.id,
+            postingId: posting.id,
             artefact: module,
             number: (max.number ?? 0) + 1,
             state: 'running',
@@ -287,8 +296,8 @@ export function openDatabase(databasePath: string) {
             hasCandidateInstructions,
             jobId: id,
             inputList: {
-              connect: inputList.map(({ offre: { id: offreId }, version: { artefact, number } }) => ({
-                offreId_artefact_number: { offreId, artefact, number },
+              connect: inputList.map(({ posting: { id: postingId }, version: { artefact, number } }) => ({
+                postingId_artefact_number: { postingId, artefact, number },
               })),
             },
           },
@@ -303,7 +312,7 @@ export function openDatabase(databasePath: string) {
       { job, version }: { job: Job; version: Version },
       { isReady, log, sessionId }: { isReady: boolean; log: string; sessionId: string | null },
     ): Promise<{ job: Job; version: Version }> {
-      const versionWhere = { offreId: job.offre.id, artefact: version.artefact, number: version.number };
+      const versionWhere = { postingId: job.posting.id, artefact: version.artefact, number: version.number };
       await prisma.$transaction([
         prisma.version.updateMany({ where: versionWhere, data: { state: isReady ? 'ready' : 'failed' } }),
         prisma.job.update({ where: { id: job.id }, data: { state: isReady ? 'done' : 'failed', log, sessionId } }),
@@ -313,7 +322,7 @@ export function openDatabase(databasePath: string) {
         job: JOB_SCHEMA.parse(await prisma.job.findUniqueOrThrow({ where: { id: job.id }, include: JOB_INCLUDE })),
         version: VERSION_SCHEMA.parse(
           await prisma.version.findUniqueOrThrow({
-            where: { offreId_artefact_number: versionWhere },
+            where: { postingId_artefact_number: versionWhere },
             include: VERSION_INCLUDE,
           }),
         ),
@@ -327,17 +336,17 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    async listJobs(offre: Offre): Promise<Job[]> {
+    async listJobs(posting: Posting): Promise<Job[]> {
       return z
         .array(JOB_SCHEMA)
         .parse(
-          await prisma.job.findMany({ where: { offreId: offre.id }, include: JOB_INCLUDE, orderBy: { id: 'asc' } }),
+          await prisma.job.findMany({ where: { postingId: posting.id }, include: JOB_INCLUDE, orderBy: { id: 'asc' } }),
         );
     },
 
-    // A job of an Offre: those of a Profile are followed on its page
+    // A job of a Posting: those of a Profile are followed on its page
     async findJob(id: number): Promise<Job | null> {
-      const job = await prisma.job.findUnique({ where: { id, offreId: { not: null } }, include: JOB_INCLUDE });
+      const job = await prisma.job.findUnique({ where: { id, postingId: { not: null } }, include: JOB_INCLUDE });
       return job === null ? null : JOB_SCHEMA.parse(job);
     },
 
@@ -390,96 +399,98 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    async listVersions(offre: Offre, artefact: Artefact): Promise<Version[]> {
+    async listVersions(posting: Posting, artefact: Artefact): Promise<Version[]> {
       return z.array(VERSION_SCHEMA).parse(
         await prisma.version.findMany({
-          where: { offreId: offre.id, artefact },
+          where: { postingId: posting.id, artefact },
           orderBy: { number: 'asc' },
           include: VERSION_INCLUDE,
         }),
       );
     },
 
-    async retenirVersion(offre: Offre, { artefact, number }: Version): Promise<void> {
-      await prisma.$transaction(retenirStatementList({ offreId: offre.id, artefact, number }));
+    async retenirVersion(posting: Posting, { artefact, number }: Version): Promise<void> {
+      await prisma.$transaction(retenirStatementList({ postingId: posting.id, artefact, number }));
     },
 
     async setDetected({ id }: Watch): Promise<void> {
       await prisma.watch.update({ where: { id }, data: { detectedAt: new Date() } });
     },
 
-    // The Offres of its Candidate and Source that another Watch stored out of its own Zone since this
+    // The Postings of its Candidate and Source that another Watch stored out of its own Zone since this
     // one last went through, all of them on its first launch: they may be in the Zone of this one
-    async listOutOfZoneOffresSince({ candidateId, source, detectedAt }: Watch): Promise<Offre[]> {
+    async listOutOfZonePostingsSince({ candidateId, source, detectedAt }: Watch): Promise<Posting[]> {
       const since = detectedAt === null ? {} : { detectedAt: { gt: detectedAt } };
-      return z.array(OFFRE_SCHEMA).parse(
-        await prisma.offre.findMany({
+      return z.array(POSTING_SCHEMA).parse(
+        await prisma.posting.findMany({
           where: { candidateId, source, isInZone: false, ...since },
-          include: OFFRE_INCLUDE,
+          include: POSTING_INCLUDE,
         }),
       );
     },
 
-    // An Offre is in the Zone as soon as it is in that of one of its Candidate's Watches
-    async setInZone({ id }: Offre): Promise<Offre> {
-      return OFFRE_SCHEMA.parse(
-        await prisma.offre.update({ where: { id }, data: { isInZone: true }, include: OFFRE_INCLUDE }),
+    // A Posting is in the Zone as soon as it is in that of one of its Candidate's Watches
+    async setInZone({ id }: Posting): Promise<Posting> {
+      return POSTING_SCHEMA.parse(
+        await prisma.posting.update({ where: { id }, data: { isInZone: true }, include: POSTING_INCLUDE }),
       );
     },
 
-    async findOffres(reference: string): Promise<Offre[]> {
-      return z.array(OFFRE_SCHEMA).parse(await prisma.offre.findMany({ where: { reference }, include: OFFRE_INCLUDE }));
-    },
-
-    async listUnlocatedOffres(): Promise<Offre[]> {
+    async findPostings(reference: string): Promise<Posting[]> {
       return z
-        .array(OFFRE_SCHEMA)
-        .parse(await prisma.offre.findMany({ where: { latitude: null }, include: OFFRE_INCLUDE }));
+        .array(POSTING_SCHEMA)
+        .parse(await prisma.posting.findMany({ where: { reference }, include: POSTING_INCLUDE }));
     },
 
-    async setPlace({ id }: Offre, place: Place): Promise<void> {
-      await prisma.offre.update({ where: { id }, data: place });
+    async listUnlocatedPostings(): Promise<Posting[]> {
+      return z
+        .array(POSTING_SCHEMA)
+        .parse(await prisma.posting.findMany({ where: { latitude: null }, include: POSTING_INCLUDE }));
     },
 
-    // The fields read in its Fiche de poste replace those of the Offre, its title included
-    async fillOffre(
-      { id }: Offre,
-      { title, ficheDePoste, place }: { title: string; ficheDePoste: FicheDePoste; place: Place },
+    async setLocation({ id }: Posting, location: Location): Promise<void> {
+      await prisma.posting.update({ where: { id }, data: location });
+    },
+
+    // The fields read in its Job Description replace those of the Posting, its title included
+    async fillPosting(
+      { id }: Posting,
+      { title, jobDescription, location }: { title: string; jobDescription: JobDescription; location: Location },
     ) {
-      const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = ficheDePoste;
-      const data = { title, dateLimite, employer, workplace, applicationEmail, contact1, contact2, ...place };
-      return OFFRE_SCHEMA.parse(await prisma.offre.update({ where: { id }, data, include: OFFRE_INCLUDE }));
+      const { deadline, employer, workplace, applicationEmail, contact1, contact2 } = jobDescription;
+      const data = { title, deadline, employer, workplace, applicationEmail, contact1, contact2, ...location };
+      return POSTING_SCHEMA.parse(await prisma.posting.update({ where: { id }, data, include: POSTING_INCLUDE }));
     },
 
-    async setStatut(offre: Offre, statut: Statut): Promise<void> {
-      const postuleeAt = findPostuleeAt(offre, statut, new Date());
-      await prisma.offre.update({ where: { id: offre.id }, data: { statut, postuleeAt } });
+    async setStatus(posting: Posting, status: Status): Promise<void> {
+      const appliedAt = findAppliedAt(posting, status, new Date());
+      await prisma.posting.update({ where: { id: posting.id }, data: { status, appliedAt } });
     },
 
-    async createOffre({
+    async createPosting({
       candidateId,
       source,
-      listedOffre,
-      ficheDePoste,
+      listedPosting,
+      jobDescription,
       isInZone,
-      republicationOf,
-      place,
-    }: INewOffre): Promise<Offre> {
-      const { reference, title, url, publishedAt } = listedOffre;
-      const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = ficheDePoste;
-      const data = { candidateId, source, reference, title, url, publishedAt, dateLimite, employer, workplace };
-      return OFFRE_SCHEMA.parse(
-        await prisma.offre.create({
+      repostOf,
+      location,
+    }: INewPosting): Promise<Posting> {
+      const { reference, title, url, publishedAt } = listedPosting;
+      const { deadline, employer, workplace, applicationEmail, contact1, contact2 } = jobDescription;
+      const data = { candidateId, source, reference, title, url, publishedAt, deadline, employer, workplace };
+      return POSTING_SCHEMA.parse(
+        await prisma.posting.create({
           data: {
             ...data,
-            ...place,
+            ...location,
             applicationEmail,
             contact1,
             contact2,
             isInZone,
-            republicationOfId: republicationOf?.id ?? null,
+            repostOfId: repostOf?.id ?? null,
           },
-          include: OFFRE_INCLUDE,
+          include: POSTING_INCLUDE,
         }),
       );
     },

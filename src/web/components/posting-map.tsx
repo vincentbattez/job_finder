@@ -4,18 +4,18 @@ import type { LatLngTuple, Map as LeafletMap } from 'leaflet';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 
-import { showStatut, type Statut } from './badge.tsx';
+import { showStatus, type Status } from './badge.tsx';
 
-interface IMappedOffre {
+interface IMappedPosting {
   reference: string;
   title: string;
-  statut: Statut;
-  isExpiree: boolean;
+  status: Status;
+  isExpired: boolean;
   latitude: number | null;
   longitude: number | null;
 }
 
-interface ILocatedOffre extends IMappedOffre {
+interface ILocatedPosting extends IMappedPosting {
   latitude: number;
   longitude: number;
 }
@@ -29,32 +29,32 @@ const METROPOLE_CORNER_LIST: LatLngTuple[] = [
 const POINT_SIZE = 14;
 const POINT_STEP = POINT_SIZE + 4;
 
-function isLocated(offre: IMappedOffre): offre is ILocatedOffre {
-  return offre.latitude !== null && offre.longitude !== null;
+function isLocated(posting: IMappedPosting): posting is ILocatedPosting {
+  return posting.latitude !== null && posting.longitude !== null;
 }
 
-// The Offres of one commune share its coordinates: they are grouped to sit side by side
-function groupByPlace(offreList: ILocatedOffre[]): ILocatedOffre[][] {
-  const placeList: ILocatedOffre[][] = [];
-  for (const offre of offreList) {
-    const placeOffreList = placeList.find(
-      ([first]) => first?.latitude === offre.latitude && first.longitude === offre.longitude,
+// The Postings of one commune share its coordinates: they are grouped to sit side by side
+function groupByLocation(postingList: ILocatedPosting[]): ILocatedPosting[][] {
+  const locationList: ILocatedPosting[][] = [];
+  for (const posting of postingList) {
+    const locationPostingList = locationList.find(
+      ([first]) => first?.latitude === posting.latitude && first.longitude === posting.longitude,
     );
-    if (placeOffreList === undefined) {
-      placeList.push([offre]);
+    if (locationPostingList === undefined) {
+      locationList.push([posting]);
     } else {
-      placeOffreList.push(offre);
+      locationPostingList.push(posting);
     }
   }
-  return placeList;
+  return locationList;
 }
 
-// A point per Offre, coloured by statut like its badge; a click opens its fiche. The map shows
+// A point per Posting, coloured by status like its badge; a click opens its page. The map shows
 // metropolitan France, or only the overseas points when the filters leave nothing else.
-export function OffreMap({ offreList }: Readonly<{ offreList: IMappedOffre[] }>) {
+export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosting[] }>) {
   const containerReference = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const unlocatedCount = offreList.filter((offre) => !isLocated(offre)).length;
+  const unlocatedCount = postingList.filter((posting) => !isLocated(posting)).length;
 
   useEffect(() => {
     let map: LeafletMap | undefined;
@@ -66,10 +66,10 @@ export function OffreMap({ offreList }: Readonly<{ offreList: IMappedOffre[] }>)
       }
       // Half zoom steps, so France fills the map rather than a quarter of Europe
       map = leaflet.map(containerReference.current, { zoomSnap: 0.5 });
-      const locatedOffreList = offreList.filter((offre) => isLocated(offre));
+      const locatedPostingList = postingList.filter((posting) => isLocated(posting));
       // The view comes first: until the map has one, Leaflet holds back the points it is given
       const metropoleBounds = leaflet.latLngBounds(METROPOLE_CORNER_LIST);
-      const pointList = locatedOffreList.map(({ latitude, longitude }) => leaflet.latLng(latitude, longitude));
+      const pointList = locatedPostingList.map(({ latitude, longitude }) => leaflet.latLng(latitude, longitude));
       const metropolePointList = pointList.filter((point) => metropoleBounds.contains(point));
       const shownPointList = metropolePointList.length > 0 ? metropolePointList : pointList;
       map.fitBounds(shownPointList.length > 0 ? leaflet.latLngBounds(shownPointList) : metropoleBounds, {
@@ -77,23 +77,23 @@ export function OffreMap({ offreList }: Readonly<{ offreList: IMappedOffre[] }>)
         padding: [POINT_STEP * 2, POINT_STEP * 2],
       });
       leaflet.tileLayer(TILE_URL, { attribution: ATTRIBUTION }).addTo(map);
-      for (const placeOffreList of groupByPlace(locatedOffreList)) {
-        for (const [index, offre] of placeOffreList.entries()) {
-          const shift = (index - (placeOffreList.length - 1) / 2) * POINT_STEP;
+      for (const locationPostingList of groupByLocation(locatedPostingList)) {
+        for (const [index, posting] of locationPostingList.entries()) {
+          const shift = (index - (locationPostingList.length - 1) / 2) * POINT_STEP;
           const icon = leaflet.divIcon({
-            className: 'offre-point',
+            className: 'posting-point',
             iconSize: [POINT_SIZE, POINT_SIZE],
             iconAnchor: [POINT_SIZE / 2 - shift, POINT_SIZE / 2],
           });
           const point = leaflet
-            .marker([offre.latitude, offre.longitude], { icon, title: `${offre.title} · ${offre.reference}` })
+            .marker([posting.latitude, posting.longitude], { icon, title: `${posting.title} · ${posting.reference}` })
             .addTo(map);
-          point.getElement()?.setAttribute('data-statut', showStatut(offre.statut, offre.isExpiree));
-          const openFiche = () => void navigate(`/offres/${offre.reference}`);
-          point.on('click', openFiche);
+          point.getElement()?.setAttribute('data-status', showStatus(posting.status, posting.isExpired));
+          const openPosting = () => void navigate(`/postings/${posting.reference}`);
+          point.on('click', openPosting);
           point.on('keypress', ({ originalEvent }) => {
             if (originalEvent.key === 'Enter') {
-              openFiche();
+              openPosting();
             }
           });
         }
@@ -103,19 +103,19 @@ export function OffreMap({ offreList }: Readonly<{ offreList: IMappedOffre[] }>)
       isUnmounted = true;
       map?.remove();
     };
-  }, [offreList, navigate]);
+  }, [postingList, navigate]);
 
   return (
-    <section aria-label="Carte des Offres" className="offre-map">
-      <div ref={containerReference} className="offre-map__canvas" />
-      <ul className="offre-map__legend">
-        <li data-statut="a_traiter">À traiter</li>
-        <li data-statut="postulee">Postulée</li>
-        <li data-statut="expiree">Expirée</li>
-        <li data-statut="archivee">Archivée</li>
+    <section aria-label="Carte des Offres" className="posting-map">
+      <div ref={containerReference} className="posting-map__canvas" />
+      <ul className="posting-map__legend">
+        <li data-status="to_apply">À traiter</li>
+        <li data-status="applied">Postulée</li>
+        <li data-status="expired">Expirée</li>
+        <li data-status="archived">Archivée</li>
       </ul>
       {unlocatedCount > 0 && (
-        <p className="offre-map__note">
+        <p className="posting-map__note">
           {unlocatedCount === 1
             ? '1 Offre sans coordonnées n’est pas sur la carte.'
             : `${String(unlocatedCount)} Offres sans coordonnées ne sont pas sur la carte.`}

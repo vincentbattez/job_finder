@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
 
-// An Offre that test/seed-front.ts leaves without any Artefact and that no other test touches: the
+// A Posting that test/seed-front.ts leaves without any Artefact and that no other test touches: the
 // test produces its Recherche first. The e2e worker runs the jobs with the fake Claude, whose
 // sessions last a second (test/e2e-actions.server.ts).
 const REFERENCE = '2026-2416437';
 
-// The worker takes the job, then its session lasts a second, and the fiche reads the état again
+// The worker takes the job, then its session lasts a second, and the Posting page reads the état again
 // every two seconds
 const READY_TIMEOUT_MS = 15_000;
 
@@ -29,8 +29,8 @@ Titulaire d’un master 2 de droit privé, je souhaite rejoindre votre juridicti
 - Pourquoi ce poste ?
 `;
 
-test('launches the Fiche d’entretien once the Offre has a Recherche retenue, then corrects it', async ({ page }) => {
-  await page.goto(`/offres/${REFERENCE}`);
+test('launches the Fiche d’entretien once the Posting has a Recherche retenue, then corrects it', async ({ page }) => {
+  await page.goto(`/postings/${REFERENCE}`);
   const recherche = page.getByRole('region', { name: 'Recherche' });
   const fiche = page.getByRole('region', { name: 'Fiche d’entretien' });
   await expect(fiche).toContainText(`L'Offre ${REFERENCE} n'a pas de Recherche retenue`);

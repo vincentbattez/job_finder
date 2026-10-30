@@ -69,7 +69,7 @@ export function createCandidateActions({ workspace, findCandidate }: ActionConte
       return workspace.readDefaultDeadlinePeriod();
     },
 
-    // Expirée follows at once, here, and at their next launch in the other processes (ADR-0011)
+    // Expired follows at once, here, and at their next launch in the other processes (ADR-0011)
     async saveDefaultDeadlinePeriod(rawInput: unknown): Promise<void> {
       const { months } = DEFAULT_DEADLINE_PERIOD_INPUT_SCHEMA.parse(rawInput);
       await workspace.saveDefaultDeadlinePeriod(DEFAULT_DEADLINE_PERIOD_SCHEMA.parse({ months: parseMonths(months) }));

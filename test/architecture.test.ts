@@ -56,7 +56,7 @@ function findCrossModuleImports(tsconfigPath: string) {
 // (ADR-0003)
 const RELAY_LIST = [
   { folder: 'cli', filePath: 'src/cli/jf.ts' },
-  { folder: 'web', filePath: 'src/web/routes/offres.tsx' },
+  { folder: 'web', filePath: 'src/web/routes/postings.tsx' },
   { folder: 'worker', filePath: 'src/worker/worker.ts' },
 ];
 
@@ -98,7 +98,7 @@ function findJobsRunOutsideWorker(projectDirectory: string): string[] {
 }
 
 // The families of interchangeable modules, each module in src/modules/<famille>-<nom>/ (ADR-0010).
-// source-import is no Source a Watch chooses but the import of a Fiche de poste by hand: an
+// source-import is no Source a Watch chooses but the import of a Job Description by hand: an
 // ordinary module, out of the family.
 const FAMILY_LIST = ['notification', 'source'];
 const ORDINARY_MODULE_SET = new Set(['source-import']);
@@ -212,14 +212,14 @@ describe('architecture', () => {
     );
     const fileContentByPath = Object.fromEntries(
       exampleList.flatMap(({ example }, index) => [
-        [`src/offres/raw-${String(index)}.ts`, example],
-        [`src/offres/acl/raw-${String(index)}.ts`, example],
+        [`src/postings/raw-${String(index)}.ts`, example],
+        [`src/postings/acl/raw-${String(index)}.ts`, example],
       ]),
     );
     const projectDirectory = path.dirname(createProject(fileContentByPath));
 
     expect(new Set(findRawDataOutsideAcl(projectDirectory))).toEqual(
-      new Set(exampleList.map(({ name }, index) => `src/offres/raw-${String(index)}.ts uses ${name}`)),
+      new Set(exampleList.map(({ name }, index) => `src/postings/raw-${String(index)}.ts uses ${name}`)),
     );
   });
 
@@ -229,10 +229,10 @@ describe('architecture', () => {
 
   it('catches the front running the queued jobs', () => {
     const projectDirectory = path.dirname(
-      createProject({ 'src/web/routes/offres.tsx': 'export const run = (actions) => actions.runQueuedJobs();\n' }),
+      createProject({ 'src/web/routes/postings.tsx': 'export const run = (actions) => actions.runQueuedJobs();\n' }),
     );
 
-    expect(findJobsRunOutsideWorker(projectDirectory)).toEqual(['src/web/routes/offres.tsx']);
+    expect(findJobsRunOutsideWorker(projectDirectory)).toEqual(['src/web/routes/postings.tsx']);
   });
 
   it('runs the queued jobs only in the worker', () => {

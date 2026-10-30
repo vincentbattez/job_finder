@@ -64,8 +64,8 @@ describe('the Sources a Watch follows', () => {
 
     await actions.detect();
 
-    const offreList = await actions.listOffres({ candidateId: 'lea' });
-    expect(offreList.filter(({ isInZone }) => isInZone).map(({ reference }) => reference)).toContain('2026-2445600');
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(postingList.filter(({ isInZone }) => isInZone).map(({ reference }) => reference)).toContain('2026-2445600');
   });
 
   it('stops the Detection of a Watch that follows an unknown Source, naming those it may follow', async () => {

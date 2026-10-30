@@ -107,7 +107,7 @@ function ChoiceField({
   );
 }
 
-// The Candidate's Notification Channel, which pushes each new Offre to their phone: a module of the
+// The Candidate's Notification Channel, which pushes each new Posting to their phone: a module of the
 // family, and the form its descriptor describes (ADR-0010)
 export function NotificationChannelForm({
   channel,

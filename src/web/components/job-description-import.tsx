@@ -2,14 +2,14 @@ import { Link, useFetcher } from 'react-router';
 
 import { DropZone } from './drop-zone.tsx';
 
-// The shape of the import action: the job of the extraction, with its Offre
+// The shape of the import action: the job of the extraction, with its Posting
 interface IImport {
-  job: { offre: { reference: string; title: string } } | null;
+  job: { posting: { reference: string; title: string } } | null;
   error: string | null;
 }
 
-// The same action as jf import; the Offre is named after its file until the worker reads its fields
-export function FicheDePosteImport() {
+// The same action as jf import; the Posting is named after its file until the worker reads its fields
+export function JobDescriptionImport() {
   const fetcher = useFetcher<IImport>();
   const isImporting = fetcher.state !== 'idle';
 
@@ -28,8 +28,8 @@ export function FicheDePosteImport() {
       {!isImporting && fetcher.data?.job != null && (
         <p>
           Offre importée :{' '}
-          <Link to={`/offres/${fetcher.data.job.offre.reference}`}>{fetcher.data.job.offre.title}</Link>. Le worker en
-          relève les champs avec Claude, puis lance sa Recherche.
+          <Link to={`/postings/${fetcher.data.job.posting.reference}`}>{fetcher.data.job.posting.title}</Link>. Le
+          worker en relève les champs avec Claude, puis lance sa Recherche.
         </p>
       )}
       {!isImporting && fetcher.data?.error != null && <p className="drop-zone__error">{fetcher.data.error}</p>}

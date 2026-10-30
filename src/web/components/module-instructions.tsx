@@ -5,7 +5,7 @@ import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/actions/labels.ts';
 
 import { MarkdownEditor } from './markdown-editor.tsx';
 import { Markdown } from './markdown.tsx';
-import type { IArtefactVersions } from './offre-fiche.tsx';
+import type { IArtefactVersions } from './posting-detail.tsx';
 
 // The shape of the listInstructions action, so the route passes its result as is
 export interface IModuleInstructions {

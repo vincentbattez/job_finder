@@ -3,9 +3,9 @@ import type { z } from 'zod/v4';
 import {
   NOTIFICATION_CHANNEL_MODULE_SCHEMA,
   type NotificationChannelModule,
-  type Offre,
   type ParameterChoice,
   type Parameters,
+  type Posting,
 } from '#/domain/index.ts';
 import { declareParameters, labelOf, type ParameterShape, type ParametersOf } from '#/parameter/index.ts';
 
@@ -84,48 +84,48 @@ export function defineNotificationChannel<TShape extends ParameterShape>(
   };
 }
 
-// The Source gives the Date limite as a day, at midnight UTC
-const DATE_LIMITE_FORMAT = new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC' });
+// The Source gives the Deadline as a day, at midnight UTC
+const DEADLINE_FORMAT = new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC' });
 
-// The jurisdiction of an Offre is its workplace, such as « Tribunal Judiciaire de Béthune »
-function jurisdictionOf({ workplace }: Offre): string {
+// The jurisdiction of a Posting is its workplace, such as « Tribunal Judiciaire de Béthune »
+function jurisdictionOf({ workplace }: Posting): string {
   return workplace ?? 'Juridiction non précisée';
 }
 
-function dateLimiteOf({ dateLimite }: Offre): string {
-  return `Date limite : ${dateLimite === null ? 'non précisée' : DATE_LIMITE_FORMAT.format(dateLimite)}`;
+function deadlineOf({ deadline }: Posting): string {
+  return `Date limite : ${deadline === null ? 'non précisée' : DEADLINE_FORMAT.format(deadline)}`;
 }
 
 // One composer per notified event, whatever the Channel
-export function composeNouvelleOffreNotification(offre: Offre): INotification {
+export function composeNewPostingNotification(posting: Posting): INotification {
   return {
     title: 'Nouvelle Offre dans la Zone',
-    message: [offre.title, jurisdictionOf(offre), dateLimiteOf(offre)].join('\n'),
+    message: [posting.title, jurisdictionOf(posting), deadlineOf(posting)].join('\n'),
   };
 }
 
-// A Republication in the Zone, whose Recherche starts from that of the Offre it publishes again
-export function composeRepublicationNotification(offre: Offre, republishedOffre: Offre): INotification {
+// A Repost in the Zone, whose Recherche starts from that of the Posting it publishes again
+export function composeRepostNotification(posting: Posting, repostedPosting: Posting): INotification {
   return {
     title: 'Republication dans la Zone',
     message: [
-      offre.title,
-      jurisdictionOf(offre),
-      `Republication de l'Offre ${republishedOffre.reference} : sa Recherche part de celle de cette Offre`,
-      dateLimiteOf(offre),
+      posting.title,
+      jurisdictionOf(posting),
+      `Republication de l'Offre ${repostedPosting.reference} : sa Recherche part de celle de cette Offre`,
+      deadlineOf(posting),
     ].join('\n'),
   };
 }
 
-// The Candidate already applied to the Offre published again: they decide whether to apply again
-export function composeRepublicationPostuleeNotification(offre: Offre, republishedOffre: Offre): INotification {
+// The Candidate already applied to the Posting published again: they decide whether to apply again
+export function composeRepostAppliedNotification(posting: Posting, repostedPosting: Posting): INotification {
   return {
     title: "Republication d'une Offre Postulée",
     message: [
-      offre.title,
-      jurisdictionOf(offre),
-      `Republication de l'Offre ${republishedOffre.reference}, Postulée : aucune Recherche lancée`,
-      dateLimiteOf(offre),
+      posting.title,
+      jurisdictionOf(posting),
+      `Republication de l'Offre ${repostedPosting.reference}, Postulée : aucune Recherche lancée`,
+      deadlineOf(posting),
     ].join('\n'),
   };
 }
@@ -135,6 +135,6 @@ export function composeTestNotification(candidateName: string): INotification {
   return { title: 'Notification de test', message: `Le Canal de notification de ${candidateName} fonctionne.` };
 }
 
-export function composeRecherchePreteNotification(offre: Offre): INotification {
-  return { title: 'Recherche prête', message: [offre.title, jurisdictionOf(offre)].join('\n') };
+export function composeRecherchePreteNotification(posting: Posting): INotification {
+  return { title: 'Recherche prête', message: [posting.title, jurisdictionOf(posting)].join('\n') };
 }

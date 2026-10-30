@@ -1,11 +1,11 @@
 import path from 'node:path';
 
 import {
-  FICHE_DE_POSTE_FILE_NAME,
+  JOB_DESCRIPTION_FILE_NAME,
   type Artefact,
-  type FicheDePoste,
-  type Offre,
-  type Place,
+  type JobDescription,
+  type Location,
+  type Posting,
   type ProfileFileName,
   type UploadFileName,
   type Version,
@@ -13,7 +13,7 @@ import {
 import { wordListOf } from '#/text/index.ts';
 
 import { findObsoleteConfig, readObsoleteConfig } from './acl/config.ts';
-import { openDatabase, type INewOffre } from './acl/database.ts';
+import { openDatabase, type INewPosting } from './acl/database.ts';
 import {
   createDirectory,
   deleteFile,
@@ -59,15 +59,15 @@ export async function openWorkspace(dataDirectory: string) {
     createDirectory(profileDirectoryOf(candidate.id));
   }
 
-  // Each Offre has a folder named by its reference and title, for its Fiche de poste and its
+  // Each Posting has a folder named by its reference and title, for its Job Description and its
   // Artefacts
-  function offreDirectoryOf({ candidateId, reference, title }: Pick<Offre, 'candidateId' | 'reference' | 'title'>) {
-    return path.join(candidateDirectoryOf(candidateId), 'offres', `${reference}-${slugify(title)}`);
+  function postingDirectoryOf({ candidateId, reference, title }: Pick<Posting, 'candidateId' | 'reference' | 'title'>) {
+    return path.join(candidateDirectoryOf(candidateId), 'postings', `${reference}-${slugify(title)}`);
   }
 
   // Each Version of an Artefact has its own folder, so a new launch never overwrites the others
-  function versionDirectoryOf(offre: Offre, { artefact, number }: Version): string {
-    return path.join(offreDirectoryOf(offre), artefact, `v${String(number)}`);
+  function versionDirectoryOf(posting: Posting, { artefact, number }: Version): string {
+    return path.join(postingDirectoryOf(posting), artefact, `v${String(number)}`);
   }
 
   return {
@@ -82,13 +82,13 @@ export async function openWorkspace(dataDirectory: string) {
 
     // The config left behind once imported, which jf says is no longer read until it is deleted
     findObsoleteConfig: () => findObsoleteConfig(dataDirectory),
-    offreDirectoryOf,
+    postingDirectoryOf,
     versionDirectoryOf,
     readTextFile,
 
     // The folder where a job's session writes its Version
-    createVersionDirectory(offre: Offre, version: Version): string {
-      const directory = versionDirectoryOf(offre, version);
+    createVersionDirectory(posting: Posting, version: Version): string {
+      const directory = versionDirectoryOf(posting, version);
       createDirectory(directory);
       return directory;
     },
@@ -135,13 +135,13 @@ export async function openWorkspace(dataDirectory: string) {
     },
 
     // The Markdown files of a Version, such as the Brouillon and the Lettre of a Lettre Version
-    readVersionDocuments(offre: Offre, version: Version) {
-      return readMarkdownFiles(versionDirectoryOf(offre, version));
+    readVersionDocuments(posting: Posting, version: Version) {
+      return readMarkdownFiles(versionDirectoryOf(posting, version));
     },
 
     // A correction by the Candidate changes the Version in place, without creating another one
-    writeVersionDocument(offre: Offre, version: Version, fileName: string, markdown: string): void {
-      writeTextFile(path.join(versionDirectoryOf(offre, version), fileName), markdown);
+    writeVersionDocument(posting: Posting, version: Version, fileName: string, markdown: string): void {
+      writeTextFile(path.join(versionDirectoryOf(posting, version), fileName), markdown);
     },
 
     // The Instructions with which a Candidate replaced the default ones of an Artefact, if any
@@ -157,29 +157,32 @@ export async function openWorkspace(dataDirectory: string) {
       deleteFile(path.join(instructionsDirectoryOf(candidateId), `${artefact}.md`), { isMissingAllowed: true });
     },
 
-    // The Fiche de poste is written first, so an Offre in the database always has it
-    async saveOffre(newOffre: INewOffre): Promise<Offre> {
-      const offreDirectory = offreDirectoryOf({ candidateId: newOffre.candidateId, ...newOffre.listedOffre });
-      writeTextFile(path.join(offreDirectory, FICHE_DE_POSTE_FILE_NAME), newOffre.ficheDePoste.markdown);
-      return database.createOffre(newOffre);
+    // The Job Description is written first, so a Posting in the database always has it
+    async savePosting(newPosting: INewPosting): Promise<Posting> {
+      const postingDirectory = postingDirectoryOf({ candidateId: newPosting.candidateId, ...newPosting.listedPosting });
+      writeTextFile(path.join(postingDirectory, JOB_DESCRIPTION_FILE_NAME), newPosting.jobDescription.markdown);
+      return database.createPosting(newPosting);
     },
 
-    // The folder of an Offre is named after its title: it follows a new title
-    async fillOffre(offre: Offre, fields: { title: string; ficheDePoste: FicheDePoste; place: Place }): Promise<Offre> {
-      const filledOffre = await database.fillOffre(offre, fields);
-      moveDirectory(offreDirectoryOf(offre), offreDirectoryOf(filledOffre));
-      return filledOffre;
+    // The folder of a Posting is named after its title: it follows a new title
+    async fillPosting(
+      posting: Posting,
+      fields: { title: string; jobDescription: JobDescription; location: Location },
+    ): Promise<Posting> {
+      const filledPosting = await database.fillPosting(posting, fields);
+      moveDirectory(postingDirectoryOf(posting), postingDirectoryOf(filledPosting));
+      return filledPosting;
     },
 
-    readFicheDePoste(offre: Offre): string {
-      const filePath = path.join(offreDirectoryOf(offre), FICHE_DE_POSTE_FILE_NAME);
-      const ficheDePoste = readTextFile(filePath);
-      if (ficheDePoste === null) {
+    readJobDescription(posting: Posting): string {
+      const filePath = path.join(postingDirectoryOf(posting), JOB_DESCRIPTION_FILE_NAME);
+      const jobDescription = readTextFile(filePath);
+      if (jobDescription === null) {
         throw new Error(
-          `Fiche de poste introuvable pour l'Offre ${offre.reference} : ${filePath}. La remettre à cet emplacement, d'où l'outil la lit.`,
+          `Fiche de poste introuvable pour l'Offre ${posting.reference} : ${filePath}. La remettre à cet emplacement, d'où l'outil la lit.`,
         );
       }
-      return ficheDePoste;
+      return jobDescription;
     },
   };
 }

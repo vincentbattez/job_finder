@@ -18,6 +18,12 @@ const FACTS = '# Faits\n\n## Mobilité\n\n- Lille et alentours\n';
 const CV = '# CV de Léa\n';
 const CV_PDF = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
 const LETTER_INSTRUCTIONS = 'Une lettre courte.';
+const RECIPIENTS = JSON.stringify({
+  to: null,
+  ccList: [],
+  salutation: { text: 'Madame, Monsieur,', source: null },
+  justification: 'Aucune adresse publiée.',
+});
 // Léa's Watch and the last Detection of her live data/, from before the English code
 const WATCH_PARAMETERS = { title: 'attaché de justice', courtOfAppealList: ['Douai', 'Amiens'] };
 const DETECTED_AT = new Date('2026-10-30T10:44:22.500Z');
@@ -34,8 +40,8 @@ function writeFile(filePath: string, content: string | Uint8Array): void {
 }
 
 // Léa's data folder as the French jf left it: a database at the last French migration, holding an
-// Offre with a Version made from her own Consignes and the conversion of a Pièce, her folders and the
-// config an older jf read
+// Offre Postulée with its Lettre retenue made from her own Consignes, an Offre in each other Statut, a
+// Republication, the conversion of a Pièce, her folders and the config an older jf read
 function writeFrenchDataDirectory(): string {
   const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
   const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_CANDIDATE_MIGRATION));
@@ -44,8 +50,11 @@ function writeFrenchDataDirectory(): string {
     INSERT INTO Veille (id, candidatId, source, parametres, detectedAt)
     VALUES ('lea-1', 'lea', 'pep', '{"title":"attaché de justice","courtOfAppealList":["Douai","Amiens"]}', '2026-10-30T10:44:22.500+00:00');
     INSERT INTO CanalNotification (candidatId, module, parametres) VALUES ('lea', 'faux', '{"target":"notify.mobile_app_iphone_de_lea"}');
-    INSERT INTO Offre (id, candidatId, source, reference, title, isInZone) VALUES (1, 'lea', 'pep', '2026-1', 'Greffier', 1);
+    INSERT INTO Offre (id, candidatId, source, reference, title, dateLimite, status, postuleeAt, isInZone)
+    VALUES (1, 'lea', 'pep', '2026-1', 'Greffier', '2026-11-20T00:00:00.000+00:00', 'postulee', '2026-10-20T09:00:00.000+00:00', 1);
     INSERT INTO Offre (id, candidatId, source, reference, title, isInZone) VALUES (2, 'lea', 'pep', '2026-2445600', 'Attaché de justice', 1);
+    INSERT INTO Offre (id, candidatId, source, reference, title, status, republicationOfId, isInZone)
+    VALUES (3, 'lea', 'pep', '2026-3', 'Greffier', 'archivee', 1, 1);
     INSERT INTO Job (id, module, offreId, state) VALUES (1, 'lettre', 1, 'done');
     INSERT INTO Version (offreId, artefact, number, isRetenue, state, consignes, hasCandidatConsignes, jobId)
     VALUES (1, 'lettre', 1, 1, 'ready', 'Une lettre courte.', 1, 1);
@@ -57,6 +66,10 @@ function writeFrenchDataDirectory(): string {
   writeFile(path.join(leaDirectory, 'profil', 'pieces', 'cv.pdf'), CV_PDF);
   writeFile(path.join(leaDirectory, 'consignes', 'lettre.md'), LETTER_INSTRUCTIONS);
   writeFile(path.join(leaDirectory, 'offres', '2026-1-greffier', 'fiche-de-poste.md'), '# Greffier\n');
+  const letterDirectory = path.join(leaDirectory, 'offres', '2026-1-greffier', 'lettre', 'v1');
+  writeFile(path.join(letterDirectory, 'lettre.md'), '# Lettre\n');
+  writeFile(path.join(letterDirectory, 'destinataires.json'), RECIPIENTS);
+  writeFile(path.join(leaDirectory, 'offres', '2026-3-greffier', 'fiche-de-poste.md'), '# Greffier, encore\n');
   writeFile(path.join(dataDirectory, 'config.json'), FRENCH_CONFIG);
   return dataDirectory;
 }
@@ -105,7 +118,71 @@ describe('the French data folder', () => {
     ]);
     expect(await actions.readDefaultDeadlinePeriod()).toEqual({ months: 6 });
     expect(listSorted(dataDirectory)).toEqual(['candidates', 'config.json', 'job_finder.sqlite']);
-    expect(listSorted(path.join(dataDirectory, 'candidates', 'lea'))).toEqual(['instructions', 'offres', 'profile']);
+    expect(listSorted(path.join(dataDirectory, 'candidates', 'lea'))).toEqual(['instructions', 'postings', 'profile']);
+  });
+
+  // Léa's Postings keep their Status, Deadline and Repost links, each Job Description its folder
+  it('keeps each Posting with its Status, its Repost link and its Job Description', async () => {
+    const dataDirectory = writeFrenchDataDirectory();
+
+    const actions = await createActions({ dataDirectory });
+
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(
+      postingList
+        .toSorted((first, second) => first.reference.localeCompare(second.reference))
+        .map(({ reference, status, appliedAt, deadline, repostOf, repostList }) => ({
+          reference,
+          status,
+          appliedAt,
+          deadline,
+          repostOf,
+          repostList,
+        })),
+    ).toEqual([
+      {
+        reference: '2026-1',
+        status: 'applied',
+        appliedAt: new Date('2026-10-20T09:00:00Z'),
+        deadline: new Date('2026-11-20T00:00:00Z'),
+        repostOf: null,
+        repostList: [{ reference: '2026-3' }],
+      },
+      {
+        reference: '2026-2445600',
+        status: 'to_apply',
+        appliedAt: null,
+        deadline: null,
+        repostOf: null,
+        repostList: [],
+      },
+      {
+        reference: '2026-3',
+        status: 'archived',
+        appliedAt: null,
+        deadline: null,
+        repostOf: { reference: '2026-1' },
+        repostList: [],
+      },
+    ]);
+    const { jobDescription } = await actions.readPosting({ reference: '2026-3' });
+    expect(jobDescription).toBe('# Greffier, encore\n');
+    expect(listSorted(path.join(dataDirectory, 'candidates', 'lea', 'postings', '2026-1-greffier'))).toEqual([
+      'job-description.md',
+      'lettre',
+    ]);
+  });
+
+  // The Letter she sent stays the one recorded: no correction, no new Version, no other Version retained
+  it('keeps the Letter of an Applied Posting frozen', async () => {
+    const dataDirectory = writeFrenchDataDirectory();
+
+    const actions = await createActions({ dataDirectory });
+
+    const { nextStatusList, artefactList } = await actions.readPosting({ reference: '2026-1' });
+    expect(nextStatusList).toEqual(['archived']);
+    expect(artefactList.find(({ artefact }) => artefact === 'lettre')).toMatchObject({ isEditable: false });
+    await expect(actions.runModule({ module: 'lettre', reference: '2026-1' })).rejects.toThrow(/figée/);
   });
 
   it('rewrites the keys of the config an older jf left', async () => {
@@ -136,11 +213,11 @@ describe('the French data folder', () => {
     const [detection] = await actions.detect();
 
     expect(detection).toMatchObject({ watchId: 'lea-1', isFirstLaunch: false, notificationFailureList: [] });
-    expect(detection?.newOffreList.map(({ reference }) => reference)).not.toContain(KNOWN_REFERENCE);
+    expect(detection?.newPostingList.map(({ reference }) => reference)).not.toContain(KNOWN_REFERENCE);
     expect(notificationChannel.sentList.length).toBeGreaterThan(0);
     expect(notificationChannel.sentList.every(({ target }) => target === LEA_TARGET)).toBe(true);
-    const offreList = await actions.listOffres({ candidateId: 'lea' });
-    expect(offreList.filter(({ reference }) => reference === KNOWN_REFERENCE)).toHaveLength(1);
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(postingList.filter(({ reference }) => reference === KNOWN_REFERENCE)).toHaveLength(1);
   });
 
   // A fresh database imports the config once: a French-keyed one still brings its Candidates

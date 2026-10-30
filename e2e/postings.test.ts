@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 // The front runs on the data that test/seed-front.ts made through the actions, with the HTTP of
-// the PEP Source recorded on 2026-10-29: Léa follows the attaché de justice Offres, Camille has
+// the PEP Source recorded on 2026-10-29: Léa follows the attaché de justice Postings, Camille has
 // no Watch
 const BETHUNE_TITLE = 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE';
 
@@ -23,8 +23,8 @@ function findOverflowing(page: Page): Promise<string[]> {
   );
 }
 
-test.describe('Offres of a Candidate', () => {
-  test('lists the Offres of the Candidate chosen in the menu', async ({ page }) => {
+test.describe('Postings of a Candidate', () => {
+  test('lists the Postings of the Candidate chosen in the menu', async ({ page }) => {
     await page.goto('/');
 
     await chooseCandidate(page, 'Léa');
@@ -55,7 +55,7 @@ test.describe('Offres of a Candidate', () => {
     await expect(page.getByText('Aucune Offre pour l’instant')).toBeVisible();
   });
 
-  test('opens an Offre with its Fiche de poste and its raw contacts', async ({ page }) => {
+  test('opens a Posting with its Job Description and its raw contacts', async ({ page }) => {
     await page.goto('/');
     await chooseCandidate(page, 'Léa');
 
@@ -68,16 +68,16 @@ test.describe('Offres of a Candidate', () => {
       'Madame Odile SIMART, présidente du Tribunal Judiciaire de Béthune',
       'secrétariat en copie : sec.p.tj-bethune@justice.fr',
     ]);
-    // Long as published, the Fiche de poste stays folded below the Artefacts until it is opened
-    const ficheDePoste = page.getByRole('region', { name: 'Fiche de poste' });
-    await ficheDePoste.getByText('Lire la Fiche de poste').click();
+    // Long as published, the Job Description stays folded below the Artefacts until it is opened
+    const jobDescription = page.getByRole('region', { name: 'Fiche de poste' });
+    await jobDescription.getByText('Lire la Fiche de poste').click();
     await expect(
-      ficheDePoste.getByText('La présente fiche de poste concerne une affectation auprès du tribunal pour enfants.'),
+      jobDescription.getByText('La présente fiche de poste concerne une affectation auprès du tribunal pour enfants.'),
     ).toBeVisible();
   });
 
   test('shows the recipients the Lettre recommends, each with the field it comes from', async ({ page }) => {
-    await page.goto('/offres/2026-2445600');
+    await page.goto('/postings/2026-2445600');
 
     const recipients = page.getByRole('region', { name: 'Destinataires recommandés' });
     await expect(recipients.getByRole('definition')).toHaveText([
@@ -89,7 +89,7 @@ test.describe('Offres of a Candidate', () => {
   });
 
   test('shows every Version of an Artefact and tells the Version retenue', async ({ page }) => {
-    await page.goto('/offres/2026-2445600');
+    await page.goto('/postings/2026-2445600');
 
     const recherche = page.getByRole('region', { name: 'Recherche' });
     await expect(recherche.locator('li > details > summary')).toHaveText([
@@ -109,7 +109,7 @@ test.describe('Offres of a Candidate', () => {
 
   test('copies the jf edit command of an Artefact', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-    await page.goto('/offres/2026-2445600');
+    await page.goto('/postings/2026-2445600');
     const recherche = page.getByRole('region', { name: 'Recherche' });
 
     await expect(recherche.getByRole('code')).toHaveText('jf edit 2026-2445600 recherche');
@@ -123,7 +123,7 @@ test.describe('Offres of a Candidate', () => {
     await expect(page.getByRole('region', { name: 'Fiche d’entretien' }).getByRole('code')).toHaveCount(0);
   });
 
-  test('fits a phone screen, the list as the fiche', async ({ page }) => {
+  test('fits a phone screen, the list as the Posting page', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/');
     await chooseCandidate(page, 'Léa');
@@ -131,14 +131,14 @@ test.describe('Offres of a Candidate', () => {
 
     await expect.poll(() => findOverflowing(page)).toEqual([]);
 
-    await page.goto('/offres/2026-2445600');
+    await page.goto('/postings/2026-2445600');
     await page.locator('li > details > summary', { hasText: 'v2' }).click();
     await page.getByText('Lire la Fiche de poste').click();
 
     await expect.poll(() => findOverflowing(page)).toEqual([]);
   });
 
-  test('asks who is there before showing any Offre', async ({ page }) => {
+  test('asks who is there before showing any Posting', async ({ page }) => {
     await page.goto('/');
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Qui consulte ses Offres ?');

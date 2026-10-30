@@ -3,9 +3,9 @@ import path from 'node:path';
 
 import { expect, test } from '@playwright/test';
 
-// The fake Claude of test/e2e-actions.server.ts extracts this Fiche de poste: a city outside
-// Hauts-de-France, whose Offres the region filter of the map counts
-const FICHE_DE_POSTE = readFileSync(
+// The fake Claude of test/e2e-actions.server.ts extracts this Job Description: a city outside
+// Hauts-de-France, whose Postings the region filter of the map counts
+const JOB_DESCRIPTION = readFileSync(
   path.join(import.meta.dirname, '..', 'test', 'fixtures', 'import', 'greffier-grenoble.md'),
   'utf8',
 );
@@ -13,11 +13,11 @@ const TITLE = 'Greffier placé – Tribunal judiciaire de Grenoble';
 
 const FILE_NAME = 'greffier-grenoble.md';
 
-// The worker takes the extraction, then the Recherche, each session lasting a second, and the fiche
+// The worker takes the extraction, then the Recherche, each session lasting a second, and the Posting page
 // reads the état again every two seconds
 const READY_TIMEOUT_MS = 15_000;
 
-test('imports a Fiche de poste dropped on the Offres: it shows at once, then the worker reads its fields and runs its Recherche', async ({
+test('imports a Job Description dropped on the Postings: it shows at once, then the worker reads its fields and runs its Recherche', async ({
   page,
 }) => {
   // The tiles of the map come from OpenStreetMap over the internet: its points show without them
@@ -34,7 +34,7 @@ test('imports a Fiche de poste dropped on the Offres: it shows at once, then the
       transfer.items.add(new File([markdown], fileName, { type: 'text/markdown' }));
       return transfer;
     },
-    { fileName: FILE_NAME, markdown: FICHE_DE_POSTE },
+    { fileName: FILE_NAME, markdown: JOB_DESCRIPTION },
   );
   await page.getByText('Glissez ici une Fiche de poste en Markdown').dispatchEvent('drop', { dataTransfer });
 
@@ -58,5 +58,5 @@ test('imports a Fiche de poste dropped on the Offres: it shows at once, then the
   const point = page
     .getByRole('region', { name: 'Carte des Offres' })
     .getByRole('button', { name: new RegExp(`^${TITLE} · import-`) });
-  await expect(point).toHaveAttribute('data-statut', 'a_traiter');
+  await expect(point).toHaveAttribute('data-status', 'to_apply');
 });

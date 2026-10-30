@@ -148,7 +148,7 @@ describe('actions', () => {
   it('refuses to list the Offres of an unknown Candidate', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
-    await expect(actions.listOffres({ candidateId: 'inconnu' })).rejects.toThrow(/Candidat inconnu : inconnu/);
+    await expect(actions.listPostings({ candidateId: 'inconnu' })).rejects.toThrow(/Candidat inconnu : inconnu/);
   });
 
   it('starts in an empty data folder, creating its database, without any config', async () => {

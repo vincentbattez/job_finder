@@ -3,12 +3,12 @@ import { useFetcher } from 'react-router';
 import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/actions/labels.ts';
 
 import { EtatBadge } from './badge.tsx';
-import type { IArtefactVersions } from './offre-fiche.tsx';
+import type { IArtefactVersions } from './posting-detail.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
 
 // The button of the module that produces an Artefact, beside its état. The worker runs the job in
-// its own process (ADR-0003), so the fiche reads the état again until the job is done.
+// its own process (ADR-0003), so the Posting page reads the état again until the job is done.
 export function ModuleLaunch({
   reference,
   artefact,

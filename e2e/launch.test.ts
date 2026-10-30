@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { z } from 'zod/v4';
 
-// Each test launches modules on an Offre of its own, which test/seed-front.ts prepares: the data
+// Each test launches modules on a Posting of its own, which test/seed-front.ts prepares: the data
 // folder is shared by the whole run. The e2e worker runs the queued jobs with the fake Claude, whose
 // sessions last a second (test/e2e-actions.server.ts).
 const LETTRE_REFERENCE = '2026-2420931';
 const FAILED_RECHERCHE_REFERENCE = '2026-2412591';
 
-// The worker takes the job, then its session lasts a second, and the fiche reads the état again
+// The worker takes the job, then its session lasts a second, and the Posting page reads the état again
 // every two seconds
 const READY_TIMEOUT_MS = 15_000;
 
@@ -15,9 +15,9 @@ const RECEIVED_NOTIFICATION_LIST_SCHEMA = z.array(
   z.object({ service: z.string(), title: z.string(), message: z.string() }),
 );
 
-test.describe('launching the modules of an Offre', () => {
+test.describe('launching the modules of a Posting', () => {
   test('launches the Lettre, then shows it turn ready without a reload', async ({ page }) => {
-    await page.goto(`/offres/${LETTRE_REFERENCE}`);
+    await page.goto(`/postings/${LETTRE_REFERENCE}`);
     const lettre = page.getByRole('region', { name: 'Lettre' });
     await expect(lettre.getByRole('status')).toHaveText('Absent');
 
@@ -31,7 +31,7 @@ test.describe('launching the modules of an Offre', () => {
   });
 
   test('relaunches a failed Recherche, which lets the Lettre run and notifies it ready', async ({ page, request }) => {
-    await page.goto(`/offres/${FAILED_RECHERCHE_REFERENCE}`);
+    await page.goto(`/postings/${FAILED_RECHERCHE_REFERENCE}`);
     const recherche = page.getByRole('region', { name: 'Recherche' });
     const lettre = page.getByRole('region', { name: 'Lettre' });
     await expect(recherche.getByRole('status')).toHaveText('En échec');

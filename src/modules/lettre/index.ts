@@ -3,7 +3,7 @@ import path from 'node:path';
 import { z } from 'zod/v4';
 
 import type { IAiModule } from '#/ai-module/index.ts';
-import type { Offre, Recipients } from '#/domain/index.ts';
+import type { Posting, Recipients } from '#/domain/index.ts';
 
 import { copyAsReadOnlyOriginal } from './acl/files.ts';
 import { parseRecipients, readRecipients, RECIPIENTS_FILE_NAME } from './acl/recipients.ts';
@@ -13,8 +13,8 @@ import { BROUILLON_FILE_NAME, composeLettrePrompt, LETTRE_FILE_NAME } from './pr
 export { BROUILLON_FILE_NAME } from './prompt.ts';
 
 // The recipients follow the format of the prompt, and each address is found as is in the field of
-// the Offre it cites, so none is invented, even from a field written as free text
-function findRecipientsError(json: string, offre: Offre): string | undefined {
+// the Posting it cites, so none is invented, even from a field written as free text
+function findRecipientsError(json: string, posting: Posting): string | undefined {
   let recipients: Recipients;
   try {
     recipients = parseRecipients(json);
@@ -24,7 +24,7 @@ function findRecipientsError(json: string, offre: Offre): string | undefined {
   }
   const addressList = recipients.to === null ? recipients.ccList : [recipients.to, ...recipients.ccList];
   const invented = addressList.find(
-    ({ email, source }) => !(offre[source] ?? '').toLowerCase().includes(email.toLowerCase()),
+    ({ email, source }) => !(posting[source] ?? '').toLowerCase().includes(email.toLowerCase()),
   );
   return invented === undefined
     ? undefined
@@ -38,12 +38,12 @@ export const LETTRE_MODULE = {
   outputFileList: [{ name: BROUILLON_FILE_NAME }, { name: RECIPIENTS_FILE_NAME, findFormatError: findRecipientsError }],
   defaultInstructions: LETTRE_DEFAULT_INSTRUCTIONS,
   composePrompt: composeLettrePrompt,
-  // The Lettre builds on the Recherche retenue of its Offre, and learns from the Lettres the
+  // The Lettre builds on the Recherche retenue of its Posting, and learns from the Lettres the
   // Candidate sent: the correction of each Brouillon shows their style
   requiredArtefactList: ['recherche'],
   isReadingProfile: true,
   isReadingSentVersions: true,
-  isFrozenOncePostulee: true,
+  isFrozenOnceApplied: true,
 
   // The Lettre starts as a copy of the Brouillon, which becomes read-only: no correction, in the
   // front or with jf edit, can reach it

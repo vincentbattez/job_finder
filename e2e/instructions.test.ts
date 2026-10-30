@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 // Sacha's Instructions are the ones these tests change; test/seed-front.ts leaves them to the default
-// ones. Léa's Offre 2026-2409247 has a Recherche made with the default Instructions, then one with hers.
+// ones. Léa's Posting 2026-2409247 has a Recherche made with the default Instructions, then one with hers.
 async function openInstructionsOfSacha(page: Page) {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Sacha');
@@ -58,7 +58,7 @@ test.describe('Instructions of a Candidate', () => {
   });
 
   test('tells which Instructions produced each Version, and shows them folded to compare', async ({ page }) => {
-    await page.goto('/offres/2026-2409247');
+    await page.goto('/postings/2026-2409247');
 
     const recherche = page.getByRole('region', { name: 'Recherche' });
     await expect(recherche.locator('li > details > summary')).toHaveText([

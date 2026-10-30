@@ -10,7 +10,7 @@ import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
-// The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
+// The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
 const RECHERCHE_RUN = {

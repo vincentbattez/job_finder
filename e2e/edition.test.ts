@@ -1,15 +1,18 @@
 import { expect, test } from '@playwright/test';
 
-// These parcours change data, each on its own Offre that test/seed-front.ts prepared: Bastia has a
+// These parcours change data, each on its own Posting that test/seed-front.ts prepared: Bastia has a
 // Recherche and a Lettre, Versailles two Recherches. The read tests keep Béthune 2026-2445600.
 const BASTIA_REFERENCE = '2026-2426147';
 const VERSAILLES_REFERENCE = '2026-2409178';
 
 const CORRECTED_LETTRE = 'Madame la Première présidente,\n\nTitulaire d’un master 2 de droit privé obtenu en 2025.\n';
 
-test('corrects a Lettre, saves it, marks the Offre Postulée and finds the Lettre frozen', async ({ page, context }) => {
+test('corrects a Lettre, saves it, marks the Posting as Applied and finds the Lettre frozen', async ({
+  page,
+  context,
+}) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await page.goto(`/offres/${BASTIA_REFERENCE}`);
+  await page.goto(`/postings/${BASTIA_REFERENCE}`);
   const lettre = page.getByRole('region', { name: 'Lettre' });
   const brouillon = lettre.getByRole('figure', { name: 'brouillon.md' });
   const correction = lettre.getByRole('figure', { name: 'lettre.md' });
@@ -31,7 +34,7 @@ test('corrects a Lettre, saves it, marks the Offre Postulée and finds the Lettr
     expect(await page.evaluate(() => globalThis.navigator.clipboard.readText())).toBe(CORRECTED_LETTRE);
   }).toPass();
 
-  // Postulée is never undone: a second click confirms it
+  // Applied is never undone: a second click confirms it
   await page.getByRole('button', { name: 'Marquer comme Postulée' }).click();
   await expect(page.getByText('Postulée', { exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Confirmer : Postulée' }).click();
@@ -44,7 +47,7 @@ test('corrects a Lettre, saves it, marks the Offre Postulée and finds the Lettr
 });
 
 test('changes the Version retenue of an Artefact', async ({ page }) => {
-  await page.goto(`/offres/${VERSAILLES_REFERENCE}`);
+  await page.goto(`/postings/${VERSAILLES_REFERENCE}`);
   const recherche = page.getByRole('region', { name: 'Recherche' });
   await expect(recherche.locator('li > details > summary')).toHaveText([
     /^v1\s*Prêt\s*Consignes par défaut\s*\d/,

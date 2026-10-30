@@ -1,11 +1,11 @@
 import { expect, test, type Locator } from '@playwright/test';
 
-// The Sens Offre, which test/seed-front.ts leaves without any Artefact and that no other test
+// The Sens Posting, which test/seed-front.ts leaves without any Artefact and that no other test
 // touches: the test produces its Recherche and its Fiche d'entretien first. The e2e worker runs the
 // jobs with the fake Claude, whose sessions last a second (test/e2e-actions.server.ts).
 const REFERENCE = '2026-2344393';
 
-// The worker takes the job, then its session lasts a second, and the fiche reads the état again
+// The worker takes the job, then its session lasts a second, and the Posting page reads the état again
 // every two seconds
 const READY_TIMEOUT_MS = 15_000;
 
@@ -17,7 +17,7 @@ async function launch(region: Locator, label: string) {
 test('launches the Visualisation of the Fiche d’entretien retenue, shows it in a frame, and relaunches it', async ({
   page,
 }) => {
-  await page.goto(`/offres/${REFERENCE}`);
+  await page.goto(`/postings/${REFERENCE}`);
   const visualisation = page.getByRole('region', { name: 'Visualisation' });
   await expect(visualisation).toContainText(`L'Offre ${REFERENCE} n'a pas de Fiche d’entretien retenue`);
   await expect(visualisation.getByRole('button', { name: 'Lancer la Visualisation' })).toBeDisabled();

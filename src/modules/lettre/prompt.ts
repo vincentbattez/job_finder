@@ -1,5 +1,5 @@
 import type { IPromptInput } from '#/ai-module/index.ts';
-import { FICHE_DE_POSTE_FILE_NAME } from '#/domain/index.ts';
+import { JOB_DESCRIPTION_FILE_NAME } from '#/domain/index.ts';
 
 import { RECIPIENTS_FILE_NAME } from './acl/recipients.ts';
 
@@ -11,7 +11,7 @@ function quote(field: string | null): string {
   return field === null ? 'non renseigné' : `« ${field.trim()} »`;
 }
 
-// The pairs Brouillon/Lettre the Candidate already sent, one folder per Postulée Offre
+// The pairs Brouillon/Lettre the Candidate already sent, one folder per Applied Posting
 function describeSentLettres(sentList: IPromptInput['readVersionList']): string {
   if (sentList.length === 0) {
     return "Le Candidat n'a encore envoyé aucune Lettre.";
@@ -22,9 +22,9 @@ ${folderList.join('\n')}`;
 }
 
 // The fixed part of the prompt of the Lettre: what it reads, what it writes and where, and the
-// rules no Instructions can lift (ADR-0003). It runs in the folder of the Offre.
+// rules no Instructions can lift (ADR-0003). It runs in the folder of the Posting.
 export function composeLettrePrompt({
-  offre,
+  posting,
   outputDirectory,
   readVersionList,
   profileDirectory,
@@ -35,26 +35,26 @@ export function composeLettrePrompt({
 
 ## L'Offre
 
-- Référence : ${offre.reference}
-- Titre : ${offre.title}
-- Employeur : ${offre.employer ?? 'non précisé'}
-- Lieu d'affectation : ${offre.workplace ?? 'non précisé'}
+- Référence : ${posting.reference}
+- Titre : ${posting.title}
+- Employeur : ${posting.employer ?? 'non précisé'}
+- Lieu d'affectation : ${posting.workplace ?? 'non précisé'}
 
 Le dossier courant est celui de l'Offre.
 
 ## Ce que tu lis
 
 Lis tout avant d'écrire :
-- La Fiche de poste, telle qu'elle a été publiée : \`${FICHE_DE_POSTE_FILE_NAME}\`.
+- La Fiche de poste, telle qu'elle a été publiée : \`${JOB_DESCRIPTION_FILE_NAME}\`.
 ${rechercheList.map(({ filePath }) => `- La Recherche retenue, qui établit ce que les recruteurs attendent et dans quel contexte : \`${filePath}\`.`).join('\n')}
 - Le Profil du Candidat, dans \`${profileDirectory}\` : les faits qu'il a validés, son CV et ses lettres passées, quand ils existent. Lis chacun de ses fichiers : c'est la seule source des faits sur le Candidat, et ses lettres passées donnent son style.
 - ${describeSentLettres(sentList)}
 
 ## Les contacts de l'Offre, tels que publiés
 
-- \`applicationEmail\`, le mail de candidature : ${quote(offre.applicationEmail)}
-- \`contact1\`, la première personne à contacter : ${quote(offre.contact1)}
-- \`contact2\`, la seconde personne à contacter : ${quote(offre.contact2)}
+- \`applicationEmail\`, le mail de candidature : ${quote(posting.applicationEmail)}
+- \`contact1\`, la première personne à contacter : ${quote(posting.contact1)}
+- \`contact2\`, la seconde personne à contacter : ${quote(posting.contact2)}
 
 Ce sont des champs en texte libre : une adresse peut y être mêlée à un nom, à une fonction, à un téléphone ou à une consigne (« secrétariat en copie »), et un champ peut ne donner aucune adresse. Interprète-les, et lève l'ambiguïté entre eux : à qui envoyer, qui mettre en copie, à qui s'adresse la lettre.
 

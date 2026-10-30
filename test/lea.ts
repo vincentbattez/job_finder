@@ -1,6 +1,6 @@
 import type { Actions } from '#/actions/index.ts';
 
-// Léa, the first Candidate: her Watch follows the attaché de justice Offres of the PEP, her Zone the
+// Léa, the first Candidate: her Watch follows the attaché de justice Postings of the PEP, her Zone the
 // courts of appeal of Douai and Amiens
 export const LEA_WATCH = {
   source: 'pep',

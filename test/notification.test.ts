@@ -2,12 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createActions } from '#/actions/index.ts';
 
-import { createDataDirectory, detectOffres } from './data-directory.ts';
+import { createDataDirectory, detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel, LEA_TARGET } from './fake-notification-channel.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
-// The two Béthune Offres, both in the Zone, and an attaché de justice Offre outside it, from the
+// The two Béthune Postings, both in the Zone, and an attaché de justice Posting outside it, from the
 // responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 const OTHER_REFERENCE = '2026-2445609';
@@ -19,7 +19,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// A first Detection on the feed as it was before the given Offres were published, then the actions
+// A first Detection on the feed as it was before the given Postings were published, then the actions
 // for the next one, on the feed as recorded
 async function detectBefore(referenceList: string[]) {
   const dataDirectory = createDataDirectory();
@@ -40,8 +40,8 @@ async function detectBefore(referenceList: string[]) {
   return { actions, notificationChannel };
 }
 
-describe('the notification of a new Offre in the Zone', () => {
-  it('tells the Candidate its title, its jurisdiction and its Date limite, for each new Offre in the Zone only', async () => {
+describe('the notification of a new Posting in the Zone', () => {
+  it('tells the Candidate its title, its jurisdiction and its Deadline, for each new Posting in the Zone only', async () => {
     const { actions, notificationChannel } = await detectBefore([REFERENCE, OTHER_REFERENCE, OUT_OF_ZONE_REFERENCE]);
 
     await actions.detect();
@@ -62,7 +62,7 @@ describe('the notification of a new Offre in the Zone', () => {
     ]);
   });
 
-  it('sends nothing on the first launch, which imports the Offres already online', async () => {
+  it('sends nothing on the first launch, which imports the Postings already online', async () => {
     const notificationChannel = createFakeNotificationChannel();
     const actions = await createActions({
       dataDirectory: createDataDirectory(),
@@ -85,8 +85,8 @@ describe('the notification of a new Offre in the Zone', () => {
 });
 
 describe('the notification of a Recherche ready', () => {
-  it('tells the Candidate which Offre has its Recherche ready, once the worker has produced it', async () => {
-    const { actions, notificationChannel } = await detectOffres(createFakeAiSession(RECHERCHE));
+  it('tells the Candidate which Posting has its Recherche ready, once the worker has produced it', async () => {
+    const { actions, notificationChannel } = await detectPostings(createFakeAiSession(RECHERCHE));
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
 
     await actions.runQueuedJobs();
@@ -102,7 +102,7 @@ describe('the notification of a Recherche ready', () => {
   });
 
   it('sends nothing for a Recherche that failed', async () => {
-    const { actions, notificationChannel } = await detectOffres(createFakeAiSession({ isSuccess: false }, {}));
+    const { actions, notificationChannel } = await detectPostings(createFakeAiSession({ isSuccess: false }, {}));
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runModule({ module: 'recherche', reference: OTHER_REFERENCE });
 
@@ -115,7 +115,7 @@ describe('the notification of a Recherche ready', () => {
 describe('a notification that cannot be sent', () => {
   const ERROR_MESSAGE = 'Home Assistant injoignable.';
 
-  it('reports each notification not sent with what the Detection found, once every new Offre is saved and its Recherche queued', async () => {
+  it('reports each notification not sent with what the Detection found, once every new Posting is saved and its Recherche queued', async () => {
     const dataDirectory = createDataDirectory();
     const aiSession = createFakeAiSession(RECHERCHE, RECHERCHE);
     const earlierFetch = createRecordedFetch({
@@ -134,15 +134,15 @@ describe('a notification that cannot be sent', () => {
 
     const detectionList = await actions.detect();
 
-    // jf detect prints the new Offres, then each failure, and exits in error
-    expect(detectionList[0]?.newOffreList.map(({ reference }) => reference)).toEqual([REFERENCE, OTHER_REFERENCE]);
+    // jf detect prints the new Postings, then each failure, and exits in error
+    expect(detectionList[0]?.newPostingList.map(({ reference }) => reference)).toEqual([REFERENCE, OTHER_REFERENCE]);
     // Both notifications were tried
     expect(detectionList[0]?.notificationFailureList).toEqual([
       `Notification « Nouvelle Offre dans la Zone » de l'Offre ${REFERENCE} non envoyée : ${ERROR_MESSAGE}`,
       `Notification « Nouvelle Offre dans la Zone » de l'Offre ${OTHER_REFERENCE} non envoyée : ${ERROR_MESSAGE}`,
     ]);
-    const offreList = await actions.listOffres({ candidateId: 'lea' });
-    expect(offreList.map(({ reference }) => reference)).toEqual(expect.arrayContaining([REFERENCE, OTHER_REFERENCE]));
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(postingList.map(({ reference }) => reference)).toEqual(expect.arrayContaining([REFERENCE, OTHER_REFERENCE]));
     // The worker, a process of its own, whose notifications go through
     const worker = await createActions({
       dataDirectory,
@@ -151,8 +151,8 @@ describe('a notification that cannot be sent', () => {
     });
     const jobList = await worker.runQueuedJobs();
     expect(jobList).toMatchObject([
-      { module: 'recherche', offre: { reference: REFERENCE }, state: 'done' },
-      { module: 'recherche', offre: { reference: OTHER_REFERENCE }, state: 'done' },
+      { module: 'recherche', posting: { reference: REFERENCE }, state: 'done' },
+      { module: 'recherche', posting: { reference: OTHER_REFERENCE }, state: 'done' },
     ]);
     expect(jobList).toHaveLength(2);
   });
@@ -181,8 +181,8 @@ describe('a notification that cannot be sent', () => {
     const jobList = await actions.runQueuedJobs();
 
     expect(jobList).toMatchObject([
-      { offre: { reference: REFERENCE }, state: 'done', version: { state: 'ready' } },
-      { offre: { reference: OTHER_REFERENCE }, state: 'done', version: { state: 'ready' } },
+      { posting: { reference: REFERENCE }, state: 'done', version: { state: 'ready' } },
+      { posting: { reference: OTHER_REFERENCE }, state: 'done', version: { state: 'ready' } },
     ]);
     expect(stderrList).toEqual([
       `Notification « Recherche prête » de l'Offre ${REFERENCE} non envoyée : ${ERROR_MESSAGE}\n`,

@@ -3,14 +3,14 @@ import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 
 import { createActions, messageOf, type Actions } from '#/actions/index.ts';
-import { ARTEFACT_LABEL_BY_ARTEFACT, STATUT_LABEL_BY_STATUT } from '#/actions/labels.ts';
+import { ARTEFACT_LABEL_BY_ARTEFACT, STATUS_LABEL_BY_STATUS } from '#/actions/labels.ts';
 
 import { readTextFile } from './acl/files.ts';
 
 const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
 
 // Through the actions only: the CLI never reaches the domain directly (ADR-0003)
-type Offre = Awaited<ReturnType<Actions['listOffres']>>[number];
+type Posting = Awaited<ReturnType<Actions['listPostings']>>[number];
 type Version = Awaited<ReturnType<Actions['listVersions']>>[number];
 type Recipients = Awaited<ReturnType<Actions['readRecipients']>>;
 type ModuleInstructions = Awaited<ReturnType<Actions['listInstructions']>>[number];
@@ -36,18 +36,18 @@ function formatAddress({ email, source }: Recipients['ccList'][number]): string 
   return `${email} (${FIELD_LABEL_BY_SOURCE[source]})`;
 }
 
-function formatOffre(offre: Offre): string {
-  const { republicationOf, republicationList } = offre;
+function formatPosting(posting: Posting): string {
+  const { repostOf, repostList } = posting;
   return [
-    offre.reference,
-    offre.title,
-    offre.workplace ?? '—',
-    offre.dateLimite?.toLocaleDateString('fr-FR', { timeZone: 'UTC' }) ?? '—',
-    offre.isExpiree ? `${STATUT_LABEL_BY_STATUT[offre.statut]}, Expirée` : STATUT_LABEL_BY_STATUT[offre.statut],
-    offre.isInZone ? 'Zone' : 'hors Zone',
-    // The link of a Republication, both ways, only on the Offres that have one
-    ...(republicationOf === null ? [] : [`Republication de ${republicationOf.reference}`]),
-    ...republicationList.map(({ reference }) => `Republiée en ${reference}`),
+    posting.reference,
+    posting.title,
+    posting.workplace ?? '—',
+    posting.deadline?.toLocaleDateString('fr-FR', { timeZone: 'UTC' }) ?? '—',
+    posting.isExpired ? `${STATUS_LABEL_BY_STATUS[posting.status]}, Expirée` : STATUS_LABEL_BY_STATUS[posting.status],
+    posting.isInZone ? 'Zone' : 'hors Zone',
+    // The link of a Repost, both ways, only on the Postings that have one
+    ...(repostOf === null ? [] : [`Republication de ${repostOf.reference}`]),
+    ...repostList.map(({ reference }) => `Republiée en ${reference}`),
   ].join('\t');
 }
 
@@ -114,13 +114,13 @@ async function chooseCandidate(actions: Actions, terminal: Terminal) {
 
 async function chooseReference(actions: Actions, terminal: Terminal): Promise<string> {
   const candidate = await chooseCandidate(actions, terminal);
-  const offre = await choose(terminal, {
+  const posting = await choose(terminal, {
     question: 'Offre à modifier',
-    itemList: await actions.listOffres({ candidateId: candidate.id }),
-    label: formatOffre,
+    itemList: await actions.listPostings({ candidateId: candidate.id }),
+    label: formatPosting,
     emptyMessage: `Aucune Offre pour ${candidate.name} : « jf detect » cherche les nouvelles Offres.`,
   });
-  return offre.reference;
+  return posting.reference;
 }
 
 // From a list, unless given: the Candidate has no reference to remember
@@ -193,15 +193,15 @@ async function runInstructionsOperation(
   }
 }
 
-function changeStatutCommand(statut: Offre['statut'], name: string, description: string): ICommand {
+function changeStatusCommand(status: Posting['status'], name: string, description: string): ICommand {
   return {
     description: `${description} : jf ${name} <offre>`,
     run: async (actions, [reference]) => {
       if (reference === undefined) {
         throw new Error(`Usage : jf ${name} <offre>. « jf list <candidat> » liste les Offres.`);
       }
-      await actions.changeStatut({ reference, statut });
-      process.stdout.write(`${reference} : ${STATUT_LABEL_BY_STATUT[statut]}\n`);
+      await actions.changeStatus({ reference, status });
+      process.stdout.write(`${reference} : ${STATUS_LABEL_BY_STATUS[status]}\n`);
     },
   };
 }
@@ -222,13 +222,13 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     run: async (actions) => {
       const detectionList = await actions.detect();
       for (const detection of detectionList) {
-        const { watchId, candidateId, isFirstLaunch, newOffreList, nearMissList } = detection;
+        const { watchId, candidateId, isFirstLaunch, newPostingList, nearMissList } = detection;
         const summary =
-          newOffreList.length === 0 ? 'aucune nouvelle Offre' : `${String(newOffreList.length)} nouvelles Offres`;
+          newPostingList.length === 0 ? 'aucune nouvelle Offre' : `${String(newPostingList.length)} nouvelles Offres`;
         const firstLaunch = isFirstLaunch ? ', premier lancement : importées sans rien déclencher' : '';
         process.stdout.write(`Veille ${watchId} (${candidateId}) : ${summary}${firstLaunch}\n`);
-        for (const offre of newOffreList) {
-          process.stdout.write(`  ${formatOffre(offre)}\n`);
+        for (const posting of newPostingList) {
+          process.stdout.write(`  ${formatPosting(posting)}\n`);
         }
         if (nearMissList.length > 0) {
           process.stdout.write('Titres écartés de justesse :\n');
@@ -263,8 +263,8 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
           terminal.close();
         }
       }
-      const job = await actions.importFicheDePoste({ candidateId, fileName: path.basename(filePath), markdown });
-      const { reference } = job.offre;
+      const job = await actions.importJobDescription({ candidateId, fileName: path.basename(filePath), markdown });
+      const { reference } = job.posting;
       process.stdout.write(`Offre ${reference} importée, extraction de ses champs en file (job ${String(job.id)}).\n`);
       if (!isWaiting) {
         process.stdout.write(
@@ -273,14 +273,14 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
         return;
       }
       process.stdout.write('Attente du worker (service lpm worker) : Claude Code relève les champs…\n');
-      const { state, offre, log } = await actions.followJob({ jobId: job.id });
+      const { state, posting, log } = await actions.followJob({ jobId: job.id });
       if (state === 'failed') {
         throw new Error(
           `Extraction des champs de l'Offre ${reference} en échec :\n${log}\nRelancer : jf run extraction ${reference}`,
         );
       }
       process.stdout.write(
-        `${formatOffre(offre)}\nSa Recherche est en file : « jf versions ${reference} recherche » la suit.\n`,
+        `${formatPosting(posting)}\nSa Recherche est en file : « jf versions ${reference} recherche » la suit.\n`,
       );
     },
   },
@@ -290,9 +290,9 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       if (candidateId === undefined) {
         throw new Error('Usage : jf list <candidat>. « jf candidates » liste les Candidats.');
       }
-      const offreList = await actions.listOffres({ candidateId });
-      for (const offre of offreList) {
-        process.stdout.write(`${formatOffre(offre)}\n`);
+      const postingList = await actions.listPostings({ candidateId });
+      for (const posting of postingList) {
+        process.stdout.write(`${formatPosting(posting)}\n`);
       }
     },
   },
@@ -367,15 +367,15 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       process.stdout.write(`${artefact} ${version} retenue pour l'Offre ${reference}.\n`);
     },
   },
-  postuler: changeStatutCommand(
-    'postulee',
-    'postuler',
+  apply: changeStatusCommand(
+    'applied',
+    'apply',
     'Passe une Offre en Postulée, avec ou sans Lettre, ce qui fige sa Lettre pour de bon ; remet en Postulée une Offre Postulée puis Archivée',
   ),
-  archiver: changeStatutCommand('archivee', 'archiver', 'Passe une Offre en Archivée, Postulée ou non'),
-  traiter: changeStatutCommand(
-    'a_traiter',
-    'traiter',
+  archive: changeStatusCommand('archived', 'archive', 'Passe une Offre en Archivée, Postulée ou non'),
+  'to-apply': changeStatusCommand(
+    'to_apply',
+    'to-apply',
     "Remet À traiter une Offre Archivée qui n'a jamais été Postulée",
   ),
   profile: {

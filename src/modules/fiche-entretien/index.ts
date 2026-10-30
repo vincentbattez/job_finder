@@ -9,7 +9,7 @@ function findFormatError(markdown: string): string | undefined {
   return markdown.trimStart().startsWith('# ') ? undefined : 'il ne commence pas par un titre de niveau 1 (« # »)';
 }
 
-// The Fiche d'entretien of an Offre: a headless Claude session writes a single Markdown file, to
+// The Fiche d'entretien of a Posting: a headless Claude session writes a single Markdown file, to
 // revise and train before the interview (ADR-0003)
 export const FICHE_ENTRETIEN_MODULE = {
   alias: 'fiche',
@@ -17,7 +17,7 @@ export const FICHE_ENTRETIEN_MODULE = {
   outputFileList: [{ name: FICHE_ENTRETIEN_FILE_NAME, findFormatError }],
   defaultInstructions: FICHE_ENTRETIEN_DEFAULT_INSTRUCTIONS,
   composePrompt: composeFicheEntretienPrompt,
-  // The Fiche d'entretien builds on the Recherche retenue of its Offre, and on its Lettre retenue
+  // The Fiche d'entretien builds on the Recherche retenue of its Posting, and on its Lettre retenue
   // once there is one, to prepare the questions on what the Candidate wrote
   requiredArtefactList: ['recherche'],
   optionalArtefactList: ['lettre'],

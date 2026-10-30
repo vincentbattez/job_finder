@@ -52,7 +52,7 @@ export function createWatchActions({ workspace, findCandidate, findSource }: Act
     },
 
     // Creates a Watch, or changes the one named: it starts its first launch again once its Source or
-    // its Parameters change, so the Offres already online trigger nothing (ADR-0011)
+    // its Parameters change, so the Postings already online trigger nothing (ADR-0011)
     async saveWatch(rawInput: unknown): Promise<void> {
       const candidate = await findCandidate(rawInput);
       const input = SAVE_INPUT_SCHEMA.parse(rawInput);
@@ -69,7 +69,7 @@ export function createWatchActions({ workspace, findCandidate, findSource }: Act
       }
     },
 
-    // Its Offres stay with the Candidate
+    // Its Postings stay with the Candidate
     async deleteWatch(rawInput: unknown): Promise<void> {
       const candidate = await findCandidate(rawInput);
       await workspace.deleteWatch(await findWatch(candidate, rawInput));

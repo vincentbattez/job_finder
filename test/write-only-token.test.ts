@@ -15,7 +15,7 @@ import { startFakeHomeAssistant } from './fake-home-assistant.ts';
 import { LEA_WATCH, LEA_WATCH_ID } from './lea.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
-// A Béthune Offre in Léa's Zone, from the responses recorded on 2026-10-29
+// A Béthune Posting in Léa's Zone, from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
 // A Version of each Artefact, as the fake Claude writes them, so that every action reading one has it
@@ -110,7 +110,7 @@ const FAKE_VAULT_PARAMETERS = {
   password: 'mot-de-passe-secret',
 };
 
-// Léa's Offres detected, a Version of each Artefact ready, and her Notification Channel saved with
+// Léa's Postings detected, a Version of each Artefact ready, and her Notification Channel saved with
 // the given Parameters. The input of the check gives back its non-secret Parameters only: a save
 // without the secrets keeps them.
 async function saveChannel(module: INotificationChannel, parameters: Record<string, string>) {
@@ -135,7 +135,7 @@ async function saveChannel(module: INotificationChannel, parameters: Record<stri
     artefact: 'recherche',
     number: 1,
     jobId: 1,
-    statut: 'a_traiter',
+    status: 'to_apply',
     fileName: 'recherche.md',
     markdown: '# Recherche\n',
     instructions: 'Citer chaque source.',

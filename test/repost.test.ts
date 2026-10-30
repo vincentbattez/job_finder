@@ -10,11 +10,11 @@ import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { LEA_WATCH, LEA_WATCH_ID } from './lea.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
-// The Boulogne parquet Poste, published as 2026-2231960 then again as 2026-2338409, both in Léa's
+// The Boulogne parquet Position, published as 2026-2231960 then again as 2026-2338409, both in Léa's
 // Zone (responses recorded on 2026-10-29)
 const REFERENCE = '2026-2231960';
-const REPUBLICATION_REFERENCE = '2026-2338409';
-const OFFRE_DIRECTORY_NAME =
+const REPOST_REFERENCE = '2026-2338409';
+const POSTING_DIRECTORY_NAME =
   '2026-2231960-attache-de-justice-affecte-aupres-des-magistrats-du-parquet-tj-boulogne-sur-mer';
 
 const RECHERCHE_RUN = {
@@ -34,13 +34,13 @@ const LETTRE_RUN = {
   },
 };
 
-// A first Detection on the feed as it was before the Republication, then the actions for the next
+// A first Detection on the feed as it was before the Repost, then the actions for the next
 // one, on the feed as recorded. Out of the Zone, the Zone of Léa's Watch leaves out the court of
 // appeal of Douai, that of Boulogne.
-async function detectBeforeRepublication(aiSession = createFakeAiSession(), { isOutOfZone = false } = {}) {
+async function detectBeforeRepost(aiSession = createFakeAiSession(), { isOutOfZone = false } = {}) {
   const dataDirectory = createDataDirectory();
   const notificationChannel = createFakeNotificationChannel();
-  const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout([REPUBLICATION_REFERENCE]) } });
+  const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout([REPOST_REFERENCE]) } });
   const earlierActions = await createActions({
     dataDirectory,
     aiSession,
@@ -66,29 +66,29 @@ async function detectBeforeRepublication(aiSession = createFakeAiSession(), { is
   return { actions, notificationChannel, dataDirectory };
 }
 
-async function findOffre(actions: Actions, reference: string) {
-  const offreList = await actions.listOffres({ candidateId: 'lea' });
-  return offreList.find((offre) => offre.reference === reference);
+async function findPosting(actions: Actions, reference: string) {
+  const postingList = await actions.listPostings({ candidateId: 'lea' });
+  return postingList.find((posting) => posting.reference === reference);
 }
 
-describe('a Republication detected', () => {
-  it('is linked to the Offre it publishes again, and that Offre to it', async () => {
-    const { actions } = await detectBeforeRepublication();
+describe('a Repost detected', () => {
+  it('is linked to the Posting it publishes again, and that Posting to it', async () => {
+    const { actions } = await detectBeforeRepost();
 
     await actions.detect();
 
-    expect(await findOffre(actions, REPUBLICATION_REFERENCE)).toMatchObject({
-      republicationOf: { reference: REFERENCE },
-      republicationList: [],
+    expect(await findPosting(actions, REPOST_REFERENCE)).toMatchObject({
+      repostOf: { reference: REFERENCE },
+      repostList: [],
     });
-    expect(await findOffre(actions, REFERENCE)).toMatchObject({
-      republicationOf: null,
-      republicationList: [{ reference: REPUBLICATION_REFERENCE }],
+    expect(await findPosting(actions, REFERENCE)).toMatchObject({
+      repostOf: null,
+      repostList: [{ reference: REPOST_REFERENCE }],
     });
   });
 
-  // The feed lists the latest Offres first; the three Béthune Offres, among others, stay apart
-  it('is linked on the first launch too, and is the only one among the 81 Offres recorded', async () => {
+  // The feed lists the latest Postings first; the three Béthune Postings, among others, stay apart
+  it('is linked on the first launch too, and is the only one among the 81 Postings recorded', async () => {
     const actions = await createActions({
       dataDirectory: createDataDirectory(),
       fetch: createRecordedFetch().fetch,
@@ -97,21 +97,21 @@ describe('a Republication detected', () => {
 
     await actions.detect();
 
-    const offreList = await actions.listOffres({ candidateId: 'lea' });
-    expect(
-      offreList.filter(({ republicationOf }) => republicationOf !== null).map(({ reference }) => reference),
-    ).toEqual([REPUBLICATION_REFERENCE]);
-    expect(await findOffre(actions, REPUBLICATION_REFERENCE)).toMatchObject({
-      republicationOf: { reference: REFERENCE },
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(postingList.filter(({ repostOf }) => repostOf !== null).map(({ reference }) => reference)).toEqual([
+      REPOST_REFERENCE,
+    ]);
+    expect(await findPosting(actions, REPOST_REFERENCE)).toMatchObject({
+      repostOf: { reference: REFERENCE },
     });
   });
 });
 
-describe('the Republication of an Offre Postulée', () => {
+describe('the Repost of an Applied Posting', () => {
   it('launches no Recherche and tells the Candidate, who decides whether to apply again', async () => {
     const aiSession = createFakeAiSession();
-    const { actions, notificationChannel } = await detectBeforeRepublication(aiSession);
-    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
+    const { actions, notificationChannel } = await detectBeforeRepost(aiSession);
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
 
     await actions.detect();
 
@@ -132,27 +132,27 @@ describe('the Republication of an Offre Postulée', () => {
   });
 });
 
-describe('the Republication of an Offre Postulée out of the Zone', () => {
-  it('tells the Candidate all the same, who already applied to the Poste', async () => {
-    const { actions, notificationChannel } = await detectBeforeRepublication(createFakeAiSession(), {
+describe('the Repost of an Applied Posting out of the Zone', () => {
+  it('tells the Candidate all the same, who already applied to the Position', async () => {
+    const { actions, notificationChannel } = await detectBeforeRepost(createFakeAiSession(), {
       isOutOfZone: true,
     });
-    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
 
     await actions.detect();
 
-    expect(await findOffre(actions, REPUBLICATION_REFERENCE)).toMatchObject({ isInZone: false });
+    expect(await findPosting(actions, REPOST_REFERENCE)).toMatchObject({ isInZone: false });
     expect(notificationChannel.sentList).toMatchObject([{ title: "Republication d'une Offre Postulée" }]);
     expect(await actions.runQueuedJobs()).toEqual([]);
   });
 
-  // Archivée since, the Offre was Postulée all the same
-  it('tells the Candidate once the Offre Postulée is Archivée', async () => {
-    const { actions, notificationChannel } = await detectBeforeRepublication(createFakeAiSession(), {
+  // Archived since, the Posting was Applied all the same
+  it('tells the Candidate once the Applied Posting is Archived', async () => {
+    const { actions, notificationChannel } = await detectBeforeRepost(createFakeAiSession(), {
       isOutOfZone: true,
     });
-    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
-    await actions.changeStatut({ reference: REFERENCE, statut: 'archivee' });
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await actions.changeStatus({ reference: REFERENCE, status: 'archived' });
 
     await actions.detect();
 
@@ -160,9 +160,9 @@ describe('the Republication of an Offre Postulée out of the Zone', () => {
   });
 });
 
-describe('the Republication of an Offre not Postulée', () => {
-  it('tells the Candidate it publishes again an Offre, named by its reference', async () => {
-    const { actions, notificationChannel } = await detectBeforeRepublication(createFakeAiSession(RECHERCHE_RUN));
+describe('the Repost of a Posting not Applied', () => {
+  it('tells the Candidate it publishes again a Posting, named by its reference', async () => {
+    const { actions, notificationChannel } = await detectBeforeRepost(createFakeAiSession(RECHERCHE_RUN));
 
     await actions.detect();
 
@@ -181,7 +181,7 @@ describe('the Republication of an Offre not Postulée', () => {
   });
 
   it('tells nothing out of the Zone', async () => {
-    const { actions, notificationChannel } = await detectBeforeRepublication(createFakeAiSession(), {
+    const { actions, notificationChannel } = await detectBeforeRepost(createFakeAiSession(), {
       isOutOfZone: true,
     });
 
@@ -190,9 +190,9 @@ describe('the Republication of an Offre not Postulée', () => {
     expect(notificationChannel.sentList).toEqual([]);
   });
 
-  it('launches its Recherche, which reads the Artefacts retenus of the Offre it publishes again', async () => {
+  it('launches its Recherche, which reads the Artefacts retenus of the Posting it publishes again', async () => {
     const aiSession = createFakeAiSession(RECHERCHE_RUN, LETTRE_RUN, RECHERCHE_RUN);
-    const { actions, dataDirectory } = await detectBeforeRepublication(aiSession);
+    const { actions, dataDirectory } = await detectBeforeRepost(aiSession);
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runQueuedJobs();
     await actions.runModule({ module: 'lettre', reference: REFERENCE });
@@ -203,24 +203,24 @@ describe('the Republication of an Offre not Postulée', () => {
     expect(await actions.runQueuedJobs()).toMatchObject([
       {
         module: 'recherche',
-        offre: { reference: REPUBLICATION_REFERENCE },
+        posting: { reference: REPOST_REFERENCE },
         state: 'done',
         version: {
           inputList: [
-            { artefact: 'recherche', number: 1, offre: { reference: REFERENCE } },
-            { artefact: 'lettre', number: 1, offre: { reference: REFERENCE } },
+            { artefact: 'recherche', number: 1, posting: { reference: REFERENCE } },
+            { artefact: 'lettre', number: 1, posting: { reference: REFERENCE } },
           ],
         },
       },
     ]);
-    const offreDirectory = path.join(dataDirectory, 'candidates/lea/offres', OFFRE_DIRECTORY_NAME);
+    const postingDirectory = path.join(dataDirectory, 'candidates/lea/postings', POSTING_DIRECTORY_NAME);
     const session = aiSession.headlessSessionList[2];
     expect(session?.readDirectoryList).toEqual([
-      path.join(offreDirectory, 'recherche/v1'),
-      path.join(offreDirectory, 'lettre/v1'),
+      path.join(postingDirectory, 'recherche/v1'),
+      path.join(postingDirectory, 'lettre/v1'),
     ]);
     expect(session?.fixedPrompt).toContain(REFERENCE);
-    expect(session?.fixedPrompt).toContain(`\`${path.join(offreDirectory, 'recherche/v1')}\``);
-    expect(session?.fixedPrompt).toContain(`\`${path.join(offreDirectory, 'lettre/v1')}\``);
+    expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'recherche/v1')}\``);
+    expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'lettre/v1')}\``);
   });
 });

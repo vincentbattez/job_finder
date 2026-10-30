@@ -6,13 +6,13 @@ import { describe, expect, it } from 'vitest';
 import { type Actions } from '#/actions/index.ts';
 import { LETTRE_DEFAULT_INSTRUCTIONS } from '#/modules/lettre/instructions.ts';
 
-import { detectOffres as detectRecordedOffres, LEA_OFFRES_PATH } from './data-directory.ts';
+import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
 // Béthune, tribunal pour enfants: mail p.tj-bethune@justice.fr, contact 1 the présidente, contact 2
 // « secrétariat en copie : sec.p.tj-bethune@justice.fr » (responses recorded on 2026-10-29)
 const REFERENCE = '2026-2445600';
-const OFFRE_DIRECTORY_NAME =
+const POSTING_DIRECTORY_NAME =
   '2026-2445600-attache-de-justice-affecte-aupres-des-magistrats-du-siege-tribunal-pour-enfants-tj-bethune';
 
 const RECHERCHE_RUN = {
@@ -48,7 +48,7 @@ const AVESNES_RECIPIENTS = {
   justification: "Le mail de candidature nomme le procureur et donne l'adresse de son parquet.",
 };
 
-// Two other Offres of Léa: the second Béthune siège Offre and the Béthune parquet one
+// Two other Postings of Léa: the second Béthune siège Posting and the Béthune parquet one
 const SENT_REFERENCE = '2026-2445609';
 const SENT_DIRECTORY_NAME =
   '2026-2445609-attache-de-justice-affecte-aupres-des-magistrats-du-siege-service-de-l-instruction-tj-bethune';
@@ -60,9 +60,13 @@ const UNSENT_RECIPIENTS = {
   justification: 'Le mail de candidature est celui du cabinet du procureur.',
 };
 
-async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
-  const { actions, dataDirectory } = await detectRecordedOffres(aiSession);
-  return { actions, dataDirectory, offreDirectory: path.join(dataDirectory, LEA_OFFRES_PATH, OFFRE_DIRECTORY_NAME) };
+async function detectPostings(aiSession: ReturnType<typeof createFakeAiSession>) {
+  const { actions, dataDirectory } = await detectRecordedPostings(aiSession);
+  return {
+    actions,
+    dataDirectory,
+    postingDirectory: path.join(dataDirectory, LEA_POSTINGS_PATH, POSTING_DIRECTORY_NAME),
+  };
 }
 
 // Launching a module queues its job, which the worker runs (ADR-0003)
@@ -74,21 +78,21 @@ async function runModule(actions: Actions, module: string, reference: string) {
 
 describe('lettre', () => {
   it('produces a Version holding the Brouillon, the Lettre as its copy, and the recommended recipients', async () => {
-    const { actions, offreDirectory } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, lettreRun()));
+    const { actions, postingDirectory } = await detectPostings(createFakeAiSession(RECHERCHE_RUN, lettreRun()));
     await runModule(actions, 'recherche', REFERENCE);
 
     const job = await runModule(actions, 'lettre', REFERENCE);
 
     expect(job).toMatchObject({ module: 'lettre', state: 'done' });
     expect(job.version).toMatchObject({ artefact: 'lettre', number: 1, state: 'ready', isRetenue: true });
-    expect(readFileSync(path.join(offreDirectory, 'lettre/v1/lettre.md'), 'utf8')).toBe(BROUILLON);
-    expect(readFileSync(path.join(offreDirectory, 'lettre/v1/brouillon.md'), 'utf8')).toBe(BROUILLON);
+    expect(readFileSync(path.join(postingDirectory, 'lettre/v1/lettre.md'), 'utf8')).toBe(BROUILLON);
+    expect(readFileSync(path.join(postingDirectory, 'lettre/v1/brouillon.md'), 'utf8')).toBe(BROUILLON);
     expect(await actions.readRecipients({ reference: REFERENCE })).toEqual(RECIPIENTS);
   });
 
   it('creates a new pair at each launch, and makes each Brouillon read-only', async () => {
     const aiSession = createFakeAiSession(RECHERCHE_RUN, lettreRun(), lettreRun());
-    const { actions, offreDirectory } = await detectOffres(aiSession);
+    const { actions, postingDirectory } = await detectPostings(aiSession);
     await runModule(actions, 'recherche', REFERENCE);
 
     await runModule(actions, 'lettre', REFERENCE);
@@ -100,13 +104,13 @@ describe('lettre', () => {
       { number: 2, isRetenue: true },
     ]);
     for (const version of ['v1', 'v2']) {
-      const brouillonPath = path.join(offreDirectory, 'lettre', version, 'brouillon.md');
+      const brouillonPath = path.join(postingDirectory, 'lettre', version, 'brouillon.md');
       expect(statSync(brouillonPath).mode & 0o222).toBe(0);
-      expect(statSync(path.join(offreDirectory, 'lettre', version, 'lettre.md')).mode & 0o200).toBe(0o200);
+      expect(statSync(path.join(postingDirectory, 'lettre', version, 'lettre.md')).mode & 0o200).toBe(0o200);
     }
   });
 
-  it('reads the Fiche de poste, the Recherche retenue, the Profile and the pairs of the Offres already Postulées', async () => {
+  it('reads the Job Description, the Recherche retenue, the Profile and the pairs of the Postings already Applied', async () => {
     const aiSession = createFakeAiSession(
       RECHERCHE_RUN,
       lettreRun(),
@@ -116,10 +120,10 @@ describe('lettre', () => {
       RECHERCHE_RUN,
       lettreRun(),
     );
-    const { actions, dataDirectory, offreDirectory } = await detectOffres(aiSession);
+    const { actions, dataDirectory, postingDirectory } = await detectPostings(aiSession);
     await runModule(actions, 'recherche', SENT_REFERENCE);
     await runModule(actions, 'lettre', SENT_REFERENCE);
-    await actions.changeStatut({ reference: SENT_REFERENCE, statut: 'postulee' });
+    await actions.changeStatus({ reference: SENT_REFERENCE, status: 'applied' });
     await runModule(actions, 'recherche', UNSENT_REFERENCE);
     await runModule(actions, 'lettre', UNSENT_REFERENCE);
     await runModule(actions, 'recherche', REFERENCE);
@@ -129,20 +133,20 @@ describe('lettre', () => {
     const { version } = await runModule(actions, 'lettre', REFERENCE);
 
     const profileDirectory = path.join(dataDirectory, 'candidates/lea/profile');
-    const sentDirectory = path.join(dataDirectory, 'candidates/lea/offres', SENT_DIRECTORY_NAME, 'lettre/v1');
+    const sentDirectory = path.join(dataDirectory, 'candidates/lea/postings', SENT_DIRECTORY_NAME, 'lettre/v1');
     const session = aiSession.headlessSessionList.at(-1);
-    // The folder of the Offre is the session's own: only the folders outside it are added
+    // The folder of the Posting is the session's own: only the folders outside it are added
     expect(session?.readDirectoryList).toEqual([profileDirectory, sentDirectory]);
-    expect(session?.fixedPrompt).toContain('`fiche-de-poste.md`');
-    expect(session?.fixedPrompt).toContain(`\`${path.join(offreDirectory, 'recherche/v1/recherche.md')}\``);
+    expect(session?.fixedPrompt).toContain('`job-description.md`');
+    expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'recherche/v1/recherche.md')}\``);
     expect(session?.fixedPrompt).toContain(`\`${profileDirectory}\``);
     expect(session?.fixedPrompt).toContain(`\`${sentDirectory}\``);
     expect(session?.fixedPrompt).not.toContain(UNSENT_REFERENCE);
     expect(version?.inputList).toHaveLength(2);
     expect(version?.inputList).toEqual(
       expect.arrayContaining([
-        { artefact: 'recherche', number: 1, offre: { reference: REFERENCE } },
-        { artefact: 'lettre', number: 1, offre: { reference: SENT_REFERENCE } },
+        { artefact: 'recherche', number: 1, posting: { reference: REFERENCE } },
+        { artefact: 'lettre', number: 1, posting: { reference: SENT_REFERENCE } },
       ]),
     );
   });
@@ -151,7 +155,7 @@ describe('lettre', () => {
 describe('the prompt of the Lettre', () => {
   it('forbids inventing a fact on the Candidate and marks each missing one « [à compléter : …] »', async () => {
     const aiSession = createFakeAiSession(RECHERCHE_RUN, lettreRun());
-    const { actions } = await detectOffres(aiSession);
+    const { actions } = await detectPostings(aiSession);
     await runModule(actions, 'recherche', REFERENCE);
 
     const { version } = await runModule(actions, 'lettre', REFERENCE);
@@ -166,7 +170,7 @@ describe('the prompt of the Lettre', () => {
   it("replaces the default Instructions with the Candidate's own, keeping the fixed part", async () => {
     const instructions = 'Une lettre courte, trois paragraphes au plus.\n';
     const aiSession = createFakeAiSession(RECHERCHE_RUN, lettreRun());
-    const { actions, dataDirectory } = await detectOffres(aiSession);
+    const { actions, dataDirectory } = await detectPostings(aiSession);
     mkdirSync(path.join(dataDirectory, 'candidates/lea/instructions'));
     writeFileSync(path.join(dataDirectory, 'candidates/lea/instructions/lettre.md'), instructions);
     await runModule(actions, 'recherche', REFERENCE);
@@ -182,7 +186,7 @@ describe('the prompt of the Lettre', () => {
 describe('the recommended recipients', () => {
   it('reads a mail de candidature written as free text, as in Avesnes', async () => {
     const aiSession = createFakeAiSession(RECHERCHE_RUN, lettreRun(AVESNES_RECIPIENTS));
-    const { actions } = await detectOffres(aiSession);
+    const { actions } = await detectPostings(aiSession);
     await runModule(actions, 'recherche', AVESNES_REFERENCE);
 
     const { version } = await runModule(actions, 'lettre', AVESNES_REFERENCE);
@@ -212,7 +216,7 @@ describe('the recommended recipients', () => {
       log: /recrutement@justice\.fr ne figure pas dans le champ applicationEmail de l'Offre/,
     },
   ])('puts the Version « en échec » when $problem', async ({ recipients, log: expectedLog }) => {
-    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, lettreRun(recipients)));
+    const { actions } = await detectPostings(createFakeAiSession(RECHERCHE_RUN, lettreRun(recipients)));
     await runModule(actions, 'recherche', AVESNES_REFERENCE);
 
     const { log, version } = await runModule(actions, 'lettre', AVESNES_REFERENCE);
@@ -221,8 +225,8 @@ describe('the recommended recipients', () => {
     expect(version).toMatchObject({ state: 'failed', isRetenue: false });
   });
 
-  it('has none for an Offre without a Lettre retenue', async () => {
-    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, {}));
+  it('has none for a Posting without a Lettre retenue', async () => {
+    const { actions } = await detectPostings(createFakeAiSession(RECHERCHE_RUN, {}));
     await runModule(actions, 'recherche', REFERENCE);
     await runModule(actions, 'lettre', REFERENCE);
 
@@ -237,21 +241,21 @@ describe('a Lettre that fails', () => {
     { file: 'brouillon.md', plannedRun: { fileByName: { 'destinataires.json': JSON.stringify(RECIPIENTS) } } },
     { file: 'destinataires.json', plannedRun: { fileByName: { 'brouillon.md': BROUILLON } } },
   ])('puts the Version « en échec », without a Lettre, when $file is absent', async ({ file, plannedRun }) => {
-    const { actions, offreDirectory } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, plannedRun));
+    const { actions, postingDirectory } = await detectPostings(createFakeAiSession(RECHERCHE_RUN, plannedRun));
     await runModule(actions, 'recherche', REFERENCE);
 
     const { log, version } = await runModule(actions, 'lettre', REFERENCE);
 
     expect(log).toContain(`Le fichier attendu ${path.join('lettre/v1', file)} est absent.`);
     expect(version).toMatchObject({ state: 'failed', isRetenue: false });
-    expect(existsSync(path.join(offreDirectory, 'lettre/v1/lettre.md'))).toBe(false);
+    expect(existsSync(path.join(postingDirectory, 'lettre/v1/lettre.md'))).toBe(false);
   });
 
   it('puts the Version « en échec » when its recipients are not JSON', async () => {
     const plannedRun = {
       fileByName: { 'brouillon.md': BROUILLON, 'destinataires.json': 'à : p.tj-bethune@justice.fr' },
     };
-    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, plannedRun));
+    const { actions } = await detectPostings(createFakeAiSession(RECHERCHE_RUN, plannedRun));
     await runModule(actions, 'recherche', REFERENCE);
 
     const job = await runModule(actions, 'lettre', REFERENCE);
@@ -266,7 +270,7 @@ describe('a Lettre refused', () => {
     { case: 'only a Recherche « en échec »', rechercheRunList: [{}] },
   ])('refuses to run without a Recherche retenue ($case), without launching Claude', async ({ rechercheRunList }) => {
     const aiSession = createFakeAiSession(...rechercheRunList);
-    const { actions } = await detectOffres(aiSession);
+    const { actions } = await detectPostings(aiSession);
     if (rechercheRunList.length > 0) {
       await runModule(actions, 'recherche', REFERENCE);
     }
@@ -278,13 +282,13 @@ describe('a Lettre refused', () => {
     expect(await actions.listVersions({ reference: REFERENCE, artefact: 'lettre' })).toEqual([]);
   });
 
-  // A Postulée Offre keeps the Lettre that was sent (spec « Versions »)
-  it('refuses to produce a new Lettre for a Postulée Offre, without launching Claude', async () => {
+  // An Applied Posting keeps the Lettre that was sent (spec « Versions »)
+  it('refuses to produce a new Lettre for an Applied Posting, without launching Claude', async () => {
     const aiSession = createFakeAiSession(RECHERCHE_RUN, lettreRun(), lettreRun());
-    const { actions } = await detectOffres(aiSession);
+    const { actions } = await detectPostings(aiSession);
     await runModule(actions, 'recherche', REFERENCE);
     await runModule(actions, 'lettre', REFERENCE);
-    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
 
     await expect(actions.runModule({ module: 'lettre', reference: REFERENCE })).rejects.toThrow(
       /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/,
@@ -296,12 +300,12 @@ describe('a Lettre refused', () => {
     ]);
   });
 
-  it('fails a Lettre queued before the Offre became Postulée, without launching Claude', async () => {
+  it('fails a Lettre queued before the Posting became Applied, without launching Claude', async () => {
     const aiSession = createFakeAiSession(RECHERCHE_RUN, lettreRun());
-    const { actions } = await detectOffres(aiSession);
+    const { actions } = await detectPostings(aiSession);
     await runModule(actions, 'recherche', REFERENCE);
     const { id } = await actions.runModule({ module: 'lettre', reference: REFERENCE });
-    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
 
     await actions.runQueuedJobs();
 

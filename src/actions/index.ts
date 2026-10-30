@@ -5,13 +5,13 @@ import { openContext, type IActionsOption } from './context.ts';
 import { createDetectActions } from './detect.ts';
 import { createEditionActions } from './edition.ts';
 import { createFactsActions } from './facts.ts';
-import { createImportActions } from './import-fiche-de-poste.ts';
+import { createImportActions } from './import-job-description.ts';
 import { createInstructionsActions } from './instructions.ts';
 import { createJobActions } from './jobs.ts';
 import { createNotificationChannelActions } from './notification-channel.ts';
-import { createOffreActions } from './offres.ts';
+import { createPostingActions } from './postings.ts';
 import { createProfileActions } from './profile.ts';
-import { createStatutActions } from './statut.ts';
+import { createStatusActions } from './status.ts';
 import { createUploadActions } from './uploads.ts';
 import { createWatchActions } from './watches.ts';
 
@@ -25,12 +25,12 @@ export { messageOf } from '#/text/index.ts';
 export async function createActions(option: IActionsOption) {
   const context = await openContext(option);
   return {
-    ...createOffreActions(context),
+    ...createPostingActions(context),
     ...createCandidateActions(context),
     ...createDetectActions(context),
     ...createWatchActions(context),
     ...createImportActions(context),
-    ...createStatutActions(context),
+    ...createStatusActions(context),
     ...createProfileActions(context),
     ...createUploadActions(context),
     ...createNotificationChannelActions(context),

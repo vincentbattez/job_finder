@@ -59,7 +59,7 @@ export function Uploads({
   const isSending = fetcher.state !== 'idle';
   useRevalidateWhile(uploadList.some(({ conversion }) => conversion.etat === 'en_cours'));
 
-  // Multipart, so the PDF reaches the action byte for byte, unlike the text of a Fiche de poste
+  // Multipart, so the PDF reaches the action byte for byte, unlike the text of a Job Description
   async function saveUpload(file: File): Promise<void> {
     const formData = new FormData();
     formData.set('intent', 'upload');

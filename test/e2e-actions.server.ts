@@ -18,18 +18,18 @@ if (!dataDirectory.startsWith(tmpdir())) {
   throw new Error(`JF_DATA_DIRECTORY doit être un dossier temporaire, pas « ${dataDirectory} ».`);
 }
 
-// What the fake Claude writes for each module, whatever the Offre: a Recherche, a Fiche
+// What the fake Claude writes for each module, whatever the Posting: a Recherche, a Fiche
 // d'entretien and its Visualisation in their format, and a Lettre whose recipients come from no
-// field of the Offre, so they hold for any of them
+// field of the Posting, so they hold for any of them
 const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
-  // The fields of test/fixtures/import/greffier-grenoble.md, the Fiche de poste e2e/import.test.ts drops
+  // The fields of test/fixtures/import/greffier-grenoble.md, the Job Description e2e/import.test.ts drops
   extraction: {
     'extraction.json': JSON.stringify({
       title: 'Greffier placé – Tribunal judiciaire de Grenoble',
       employer: 'Ministère de la Justice – Tribunal judiciaire de Grenoble',
       workplace: 'Place Firmin Gautier, 38000 Grenoble',
       city: 'Grenoble',
-      dateLimite: '2026-12-15',
+      deadline: '2026-12-15',
       applicationEmail: 'greffe.tj-grenoble@justice.fr',
       contact1: null,
       contact2: null,
@@ -71,8 +71,8 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
 // Long enough for the front to show the Artefact en cours before it is ready
 const SESSION_DURATION_MS = 1000;
 
-// A session's module is the Artefact its Version folder belongs to: <offre>/<artefact>/v<n>. The
-// extraction of an imported Offre writes in a folder of its own, <offre>/extraction
+// A session's module is the Artefact its Version folder belongs to: <posting>/<artefact>/v<n>. The
+// extraction of an imported Posting writes in a folder of its own, <posting>/extraction
 // (src/modules/source-import), and the conversion of an Upload in profile/uploads/.conversion/<upload>
 // (src/workspace).
 function moduleOf({ outputDirectory }: IHeadlessSession): string {

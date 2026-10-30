@@ -3,10 +3,10 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { detectOffres } from './data-directory.ts';
+import { detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
-// The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
+// The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
 const RECHERCHE_RUN = {
@@ -20,7 +20,7 @@ describe('an error', () => {
     { command: 'jf edit', call: 'openArtefact' },
     { command: 'jf retenir', call: 'retenirVersion' },
   ] as const)('names the Artefacts when $command gets a mistyped one', async ({ call }) => {
-    const { actions } = await detectOffres();
+    const { actions } = await detectPostings();
 
     await expect(actions[call]({ reference: REFERENCE, artefact: 'lettr', number: '1' })).rejects.toThrow(
       'Artefact inconnu : lettr. Artefacts : recherche, lettre, fiche, visualisation.',
@@ -28,13 +28,13 @@ describe('an error', () => {
   });
 
   it('takes the alias of an Artefact, as jf run does', async () => {
-    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN));
+    const { actions } = await detectPostings(createFakeAiSession(RECHERCHE_RUN));
 
     expect(await actions.listVersions({ reference: REFERENCE, artefact: 'fiche' })).toEqual([]);
   });
 
   it('tells where to find the Versions of an Artefact when one is unknown', async () => {
-    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN));
+    const { actions } = await detectPostings(createFakeAiSession(RECHERCHE_RUN));
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runQueuedJobs();
 
@@ -44,24 +44,24 @@ describe('an error', () => {
   });
 
   it('tells where the number of a job comes from when it is unknown', async () => {
-    const { actions } = await detectOffres();
+    const { actions } = await detectPostings();
 
     await expect(actions.followJob({ jobId: 999 })).rejects.toThrow(
       'Job inconnu : 999. Son numéro est celui que « jf run » ou « jf import » a affiché.',
     );
   });
 
-  it('tells how to bring back a Fiche de poste missing from the folder of its Offre', async () => {
-    const { actions, dataDirectory } = await detectOffres();
-    const offreDirectory = path.join(
+  it('tells how to bring back a Job Description missing from the folder of its Posting', async () => {
+    const { actions, dataDirectory } = await detectPostings();
+    const postingDirectory = path.join(
       dataDirectory,
-      'candidates/lea/offres',
+      'candidates/lea/postings',
       '2026-2445600-attache-de-justice-affecte-aupres-des-magistrats-du-siege-tribunal-pour-enfants-tj-bethune',
     );
-    rmSync(path.join(offreDirectory, 'fiche-de-poste.md'));
+    rmSync(path.join(postingDirectory, 'job-description.md'));
 
-    await expect(actions.readOffre({ reference: REFERENCE })).rejects.toThrow(
-      `Fiche de poste introuvable pour l'Offre ${REFERENCE} : ${path.join(offreDirectory, 'fiche-de-poste.md')}. La remettre à cet emplacement, d'où l'outil la lit.`,
+    await expect(actions.readPosting({ reference: REFERENCE })).rejects.toThrow(
+      `Fiche de poste introuvable pour l'Offre ${REFERENCE} : ${path.join(postingDirectory, 'job-description.md')}. La remettre à cet emplacement, d'où l'outil la lit.`,
     );
   });
 });

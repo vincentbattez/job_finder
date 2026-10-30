@@ -1,5 +1,5 @@
 import type { IPromptInput } from '#/ai-module/index.ts';
-import { FICHE_DE_POSTE_FILE_NAME } from '#/domain/index.ts';
+import { JOB_DESCRIPTION_FILE_NAME } from '#/domain/index.ts';
 
 export const FICHE_ENTRETIEN_FILE_NAME = 'fiche-entretien.md';
 
@@ -13,7 +13,7 @@ function describeLettre(readVersionList: IPromptInput['readVersionList']): strin
 
 // The fixed part: its objective, inputs and output, and the rules no Instructions can lift (ADR-0003)
 export function composeFicheEntretienPrompt({
-  offre,
+  posting,
   outputDirectory,
   readVersionList,
   profileDirectory,
@@ -24,17 +24,17 @@ export function composeFicheEntretienPrompt({
 
 ## L'Offre
 
-- Référence : ${offre.reference}
-- Titre : ${offre.title}
-- Employeur : ${offre.employer ?? 'non précisé'}
-- Lieu d'affectation : ${offre.workplace ?? 'non précisé'}
+- Référence : ${posting.reference}
+- Titre : ${posting.title}
+- Employeur : ${posting.employer ?? 'non précisé'}
+- Lieu d'affectation : ${posting.workplace ?? 'non précisé'}
 
 Le dossier courant est celui de l'Offre.
 
 ## Ce que tu lis
 
 Lis tout avant d'écrire :
-- La Fiche de poste, telle qu'elle a été publiée : \`${FICHE_DE_POSTE_FILE_NAME}\`.
+- La Fiche de poste, telle qu'elle a été publiée : \`${JOB_DESCRIPTION_FILE_NAME}\`.
 ${rechercheList.map(({ filePath }) => `- La Recherche retenue, qui établit ce que les recruteurs attendent et dans quel contexte : \`${filePath}\`.`).join('\n')}
 - Le Profil du Candidat, dans \`${profileDirectory}\` : les faits qu'il a validés, son CV et ses lettres passées, quand ils existent. Lis chacun de ses fichiers : c'est la seule source des faits sur le Candidat.
 - ${describeLettre(readVersionList)}

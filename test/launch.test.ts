@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
 
-import { detectOffres } from './data-directory.ts';
+import { detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
-// The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
+// The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
 const RECHERCHE_RUN = {
@@ -13,13 +13,13 @@ const RECHERCHE_RUN = {
 };
 
 async function readEtatByArtefact(actions: Actions) {
-  const { artefactList } = await actions.readOffre({ reference: REFERENCE });
+  const { artefactList } = await actions.readPosting({ reference: REFERENCE });
   return Object.fromEntries(artefactList.map(({ artefact, etat }) => [artefact, etat]));
 }
 
-describe('the état of each Artefact on the fiche of an Offre', () => {
+describe('the état of each Artefact on the Posting page', () => {
   it('is absent, then en cours from the moment its job is queued, then prêt', async () => {
-    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN));
+    const { actions } = await detectPostings(createFakeAiSession(RECHERCHE_RUN));
     const before = await readEtatByArtefact(actions);
 
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
@@ -37,7 +37,7 @@ describe('the état of each Artefact on the fiche of an Offre', () => {
   });
 
   it('is en échec after a failed run, and en cours again once relaunched', async () => {
-    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, { isSuccess: false }));
+    const { actions } = await detectPostings(createFakeAiSession(RECHERCHE_RUN, { isSuccess: false }));
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runQueuedJobs();
@@ -51,13 +51,13 @@ describe('the état of each Artefact on the fiche of an Offre', () => {
 });
 
 async function readModuleByArtefact(actions: Actions) {
-  const { artefactList } = await actions.readOffre({ reference: REFERENCE });
+  const { artefactList } = await actions.readPosting({ reference: REFERENCE });
   return Object.fromEntries(artefactList.map(({ artefact, module }) => [artefact, module]));
 }
 
-describe('the modules the fiche of an Offre offers', () => {
+describe('the modules the Posting page offers', () => {
   it('offers a module for each Artefact a module produces, held back while an input it needs is missing', async () => {
-    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN));
+    const { actions } = await detectPostings(createFakeAiSession(RECHERCHE_RUN));
     const before = await readModuleByArtefact(actions);
 
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
@@ -86,12 +86,12 @@ describe('the modules the fiche of an Offre offers', () => {
     });
   });
 
-  it('holds the Lettre back once the Offre is Postulée', async () => {
-    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN));
+  it('holds the Lettre back once the Posting is Applied', async () => {
+    const { actions } = await detectPostings(createFakeAiSession(RECHERCHE_RUN));
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runQueuedJobs();
 
-    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
 
     expect(await readModuleByArtefact(actions)).toMatchObject({
       recherche: { refusal: null },

@@ -5,7 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
-import type { Detection, Offre } from '#/domain/index.ts';
+import type { Detection, Posting } from '#/domain/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
@@ -98,7 +98,7 @@ const ATTACHE_DE_JUSTICE_REFERENCE_LIST = [
   '2026-2453874',
 ];
 
-// Expirée depends on the day: the clock stays on the day the responses were recorded
+// Expired depends on the day: the clock stays on the day the responses were recorded
 beforeAll(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-10-29T12:00:00Z'));
@@ -119,23 +119,23 @@ describe('detection on the responses recorded on 2026-10-29', () => {
     detectionList = await actions.detect();
   });
 
-  async function findOffre(reference: string): Promise<Offre | undefined> {
-    const offreList = await actions.listOffres({ candidateId: 'lea' });
-    return offreList.find((offre) => offre.reference === reference);
+  async function findPosting(reference: string): Promise<Posting | undefined> {
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    return postingList.find((posting) => posting.reference === reference);
   }
 
   it('retains every attaché de justice offer of the feed, and no known false positive', async () => {
-    const offreList = await actions.listOffres({ candidateId: 'lea' });
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
 
-    expect(offreList.map((offre) => offre.reference).toSorted((left, right) => left.localeCompare(right))).toEqual(
-      ATTACHE_DE_JUSTICE_REFERENCE_LIST,
-    );
+    expect(
+      postingList.map((posting) => posting.reference).toSorted((left, right) => left.localeCompare(right)),
+    ).toEqual(ATTACHE_DE_JUSTICE_REFERENCE_LIST);
   });
 
-  it('places in the Zone the Offres of the courts of appeal of Douai and Amiens, whatever department they show', async () => {
-    const offreList = await actions.listOffres({ candidateId: 'lea' });
+  it('places in the Zone the Postings of the courts of appeal of Douai and Amiens, whatever department they show', async () => {
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
 
-    expect(offreList.filter((offre) => offre.isInZone).map((offre) => offre.reference)).toEqual([
+    expect(postingList.filter((posting) => posting.isInZone).map((posting) => posting.reference)).toEqual([
       '2026-2445609',
       '2026-2445600',
       '2026-2445183',
@@ -149,40 +149,40 @@ describe('detection on the responses recorded on 2026-10-29', () => {
   });
 
   it('records the fields of the detail page as published', async () => {
-    expect(await findOffre('2026-2445600')).toMatchObject({
+    expect(await findPosting('2026-2445600')).toMatchObject({
       candidateId: 'lea',
       reference: '2026-2445600',
       title: 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE',
       url: 'https://choisirleservicepublic.gouv.fr/offre-emploi/2026-2445600/?tracking=1&idOrigine=502',
       publishedAt: new Date('2026-10-20T09:28:40Z'),
-      dateLimite: new Date('2026-11-20'),
+      deadline: new Date('2026-11-20'),
       employer: "Cour d'Appel de Douai",
       workplace: 'Tribunal Judiciaire de Béthune',
       applicationEmail: 'p.tj-bethune@justice.fr',
       contact1: 'Madame Odile SIMART, présidente du Tribunal Judiciaire de Béthune',
       contact2: 'secrétariat en copie : sec.p.tj-bethune@justice.fr',
-      statut: 'a_traiter',
+      status: 'to_apply',
       isInZone: true,
-      isExpiree: false,
+      isExpired: false,
     });
   });
 
-  it('locates an Offre in the commune of its city, with its region and coordinates', async () => {
-    expect(await findOffre('2026-2445600')).toMatchObject({
+  it('locates a Posting in the commune of its city, with its region and coordinates', async () => {
+    expect(await findPosting('2026-2445600')).toMatchObject({
       city: 'Béthune',
       region: 'Hauts-de-France',
       latitude: 50.5299,
       longitude: 2.6438,
     });
     // The commune's own name, whatever the spelling of the place d'affectation
-    expect(await findOffre('2026-2350473')).toMatchObject({ city: 'Boulogne-sur-Mer', region: 'Hauts-de-France' });
+    expect(await findPosting('2026-2350473')).toMatchObject({ city: 'Boulogne-sur-Mer', region: 'Hauts-de-France' });
   });
 
-  it('locates every Offre, those out of the Zone too', async () => {
-    const offreList = await actions.listOffres({ candidateId: 'lea' });
+  it('locates every Posting, those out of the Zone too', async () => {
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
 
-    expect(offreList.filter(({ latitude, longitude }) => latitude === null || longitude === null)).toEqual([]);
-    expect(await findOffre('2026-2430337')).toMatchObject({
+    expect(postingList.filter(({ latitude, longitude }) => latitude === null || longitude === null)).toEqual([]);
+    expect(await findPosting('2026-2430337')).toMatchObject({
       isInZone: false,
       city: 'Nouméa',
       region: 'Nouvelle-Calédonie',
@@ -192,31 +192,31 @@ describe('detection on the responses recorded on 2026-10-29', () => {
   });
 
   it('keeps an application email written in free text as published', async () => {
-    expect(await findOffre('2026-2199164')).toMatchObject({
+    expect(await findPosting('2026-2199164')).toMatchObject({
       applicationEmail: 'Laurent DUMAINE, Procureur de la République : pr.tj-avesnes-sur-helpe@justice.fr',
     });
   });
 
-  it('saves the Fiche de poste in the folder of the Offre, named by its reference and title', () => {
-    const fichePoste = readFileSync(
+  it('saves the Job Description in the folder of the Posting, named by its reference and title', () => {
+    const jobDescription = readFileSync(
       path.join(
         dataDirectory,
-        'candidates/lea/offres',
+        'candidates/lea/postings',
         '2026-2445600-attache-de-justice-affecte-aupres-des-magistrats-du-siege-tribunal-pour-enfants-tj-bethune',
-        'fiche-de-poste.md',
+        'job-description.md',
       ),
       'utf8',
     );
 
-    expect(fichePoste).toContain('### Description du poste');
-    expect(fichePoste).toContain(
+    expect(jobDescription).toContain('### Description du poste');
+    expect(jobDescription).toContain(
       'La présente fiche de poste concerne une affectation auprès du tribunal pour enfants.',
     );
   });
 
-  it('imports the Offres already online on the first launch', () => {
+  it('imports the Postings already online on the first launch', () => {
     expect(detectionList).toMatchObject([{ watchId: LEA_WATCH_ID, isFirstLaunch: true }]);
-    expect(detectionList[0]?.newOffreList).toHaveLength(ATTACHE_DE_JUSTICE_REFERENCE_LIST.length);
+    expect(detectionList[0]?.newPostingList).toHaveLength(ATTACHE_DE_JUSTICE_REFERENCE_LIST.length);
   });
 
   it('reports the titles set aside by a narrow margin', () => {
@@ -239,36 +239,36 @@ async function detectTwice(responseByUrl: Parameters<typeof createRecordedFetch>
 }
 
 describe('a second detection', () => {
-  it('never creates a known Offre again, even when the site changed its publication date', async () => {
-    const republishedFeed = new TextDecoder()
+  it('never creates a known Posting again, even when the site changed its publication date', async () => {
+    const repostedFeed = new TextDecoder()
       .decode(readRecordedFile('flux-dsj.xml'))
       .replaceAll(/<pubDate>[^<]*<\/pubDate>/g, '<pubDate>Fri, 30 Oct 2026 08:00:00 Z</pubDate>');
 
-    const { actions, detectionList } = await detectTwice({ [DSJ_FEED_URL]: { body: republishedFeed } });
+    const { actions, detectionList } = await detectTwice({ [DSJ_FEED_URL]: { body: repostedFeed } });
 
-    expect(detectionList).toMatchObject([{ isFirstLaunch: false, newOffreList: [] }]);
-    const offreList = await actions.listOffres({ candidateId: 'lea' });
-    expect(offreList).toHaveLength(ATTACHE_DE_JUSTICE_REFERENCE_LIST.length);
-    expect(offreList.find(({ reference }) => reference === '2026-2445600')?.publishedAt).toEqual(
+    expect(detectionList).toMatchObject([{ isFirstLaunch: false, newPostingList: [] }]);
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(postingList).toHaveLength(ATTACHE_DE_JUSTICE_REFERENCE_LIST.length);
+    expect(postingList.find(({ reference }) => reference === '2026-2445600')?.publishedAt).toEqual(
       new Date('2026-10-20T09:28:40Z'),
     );
   });
 
-  it('locates the Offres saved before they had a city', async () => {
+  it('locates the Postings saved before they had a city', async () => {
     const dataDirectory = createDataDirectory();
     const firstActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
     await firstActions.detect();
-    // As the Offres detected before the city existed: no city, no region, no coordinates
+    // As the Postings detected before the city existed: no city, no region, no coordinates
     new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite')).exec(
-      'UPDATE "Offre" SET "city" = NULL, "region" = NULL, "latitude" = NULL, "longitude" = NULL',
+      'UPDATE "Posting" SET "city" = NULL, "region" = NULL, "latitude" = NULL, "longitude" = NULL',
     );
     const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
 
     await actions.detect();
 
-    const offreList = await actions.listOffres({ candidateId: 'lea' });
-    expect(offreList.filter(({ latitude }) => latitude === null)).toEqual([]);
-    expect(offreList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(postingList.filter(({ latitude }) => latitude === null)).toEqual([]);
+    expect(postingList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
       city: 'Béthune',
       region: 'Hauts-de-France',
       latitude: 50.5299,
@@ -276,7 +276,7 @@ describe('a second detection', () => {
     });
   });
 
-  it('downloads the detail page of an Offre only once', async () => {
+  it('downloads the detail page of a Posting only once', async () => {
     const { requestedUrlList } = await detectTwice();
 
     expect(requestedUrlList).toEqual([DSJ_FEED_URL]);
@@ -284,9 +284,9 @@ describe('a second detection', () => {
 });
 
 describe('a first launch cut off mid-way', () => {
-  // The Offres saved before the cut stay, but the first launch is over only once a Detection of the
+  // The Postings saved before the cut stay, but the first launch is over only once a Detection of the
   // Watch went through: the next one imports the rest without triggering anything either
-  it('ends with the next Detection, which triggers nothing for the Offres left', async () => {
+  it('ends with the next Detection, which triggers nothing for the Postings left', async () => {
     const dataDirectory = createDataDirectory();
     const cutFetch = createRecordedFetch({
       'https://place-ep-recrute.talent-soft.com/offre-de-emploi/emploi_2445600.aspx': { body: '', status: 500 },
@@ -303,11 +303,11 @@ describe('a first launch cut off mid-way', () => {
     const detectionList = await actions.detect();
 
     expect(detectionList).toMatchObject([{ isFirstLaunch: true }]);
-    expect(detectionList[0]?.newOffreList.map(({ reference }) => reference)).toContain('2026-2445609');
+    expect(detectionList[0]?.newPostingList.map(({ reference }) => reference)).toContain('2026-2445609');
     expect(notificationChannel.sentList).toEqual([]);
     expect(await actions.runQueuedJobs()).toEqual([]);
     const nextDetectionList = await actions.detect();
-    expect(nextDetectionList).toMatchObject([{ isFirstLaunch: false, newOffreList: [] }]);
+    expect(nextDetectionList).toMatchObject([{ isFirstLaunch: false, newPostingList: [] }]);
   });
 });
 
@@ -320,8 +320,8 @@ describe('a city API Géo does not know', () => {
     const recordedFetch = createRecordedFetch({ [BETHUNE_API_GEO_URL]: { body: '[]' } });
     const firstActions = await createActions({ dataDirectory, fetch: recordedFetch.fetch });
     await firstActions.detect();
-    const firstOffreList = await firstActions.listOffres({ candidateId: 'lea' });
-    expect(firstOffreList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
+    const firstPostingList = await firstActions.listPostings({ candidateId: 'lea' });
+    expect(firstPostingList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
       city: 'Béthune',
       region: null,
       latitude: null,
@@ -331,8 +331,8 @@ describe('a city API Géo does not know', () => {
 
     await actions.detect();
 
-    const offreList = await actions.listOffres({ candidateId: 'lea' });
-    expect(offreList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(postingList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
       city: 'Béthune',
       latitude: 50.5299,
     });
@@ -374,7 +374,7 @@ describe('a detection that fails visibly', () => {
 // The feed holds private-use characters (Word bullets), and the site sometimes cuts a character in
 // half: here the « é » of Béthune loses its second byte
 it('reads pages holding invalid UTF-8 and private-use characters', async () => {
-  const page = readRecordedFile('offre-2026-2445600.html');
+  const page = readRecordedFile('posting-2026-2445600.html');
   const workplaceIndex = Buffer.from(page).indexOf('Tribunal Judiciaire de Béthune</p>');
   page[workplaceIndex + 'Tribunal Judiciaire de B'.length + 1] = 'e'.codePointAt(0) ?? 0;
   const recordedFetch = createRecordedFetch({
@@ -384,8 +384,8 @@ it('reads pages holding invalid UTF-8 and private-use characters', async () => {
 
   await actions.detect();
 
-  const offreList = await actions.listOffres({ candidateId: 'lea' });
-  expect(offreList.find(({ reference }) => reference === '2026-2445600')?.workplace).toBe(
+  const postingList = await actions.listPostings({ candidateId: 'lea' });
+  expect(postingList.find(({ reference }) => reference === '2026-2445600')?.workplace).toBe(
     'Tribunal Judiciaire de B\u{FFFD}ethune',
   );
 });

@@ -10,8 +10,8 @@ import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
-// Where the folder of each of Léa's Offres lives, in a data folder
-export const LEA_OFFRES_PATH = 'candidates/lea/offres';
+// Where the folder of each of Léa's Postings lives, in a data folder
+export const LEA_POSTINGS_PATH = 'candidates/lea/postings';
 
 function copyDatabase(databasePath: string): string {
   const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
@@ -31,9 +31,9 @@ export function createDataDirectory(): string {
   return copyDatabase(inject('leaDatabasePath'));
 }
 
-// The Offres already online, imported by a first Detection on the responses recorded on 2026-10-29,
+// The Postings already online, imported by a first Detection on the responses recorded on 2026-10-29,
 // with the fakes of every external boundary; Léa's Notification Channel is the fake one
-export async function detectOffres(aiSession = createFakeAiSession()) {
+export async function detectPostings(aiSession = createFakeAiSession()) {
   const dataDirectory = createDataDirectory();
   const notificationChannel = createFakeNotificationChannel();
   const actions = await createActions({

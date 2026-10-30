@@ -1,6 +1,6 @@
-import type { Artefact, Statut } from './index.ts';
+import type { Artefact, Status } from './index.ts';
 
-// How the CLI, the front and the messages name each Artefact and each statut (GLOSSARY.md)
+// How the CLI, the front and the messages name each Artefact and each status (GLOSSARY.md)
 export const ARTEFACT_LABEL_BY_ARTEFACT: Record<Artefact, string> = {
   recherche: 'Recherche',
   lettre: 'Lettre',
@@ -8,8 +8,8 @@ export const ARTEFACT_LABEL_BY_ARTEFACT: Record<Artefact, string> = {
   visualisation: 'Visualisation',
 };
 
-export const STATUT_LABEL_BY_STATUT: Record<Statut, string> = {
-  a_traiter: 'À traiter',
-  postulee: 'Postulée',
-  archivee: 'Archivée',
+export const STATUS_LABEL_BY_STATUS: Record<Status, string> = {
+  to_apply: 'À traiter',
+  applied: 'Postulée',
+  archived: 'Archivée',
 };

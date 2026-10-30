@@ -13,15 +13,15 @@ import { createRecordedFetch } from './recorded-http.ts';
 // Fills the data folder of the front's e2e tests, which playwright.config.ts names in
 // JF_DATA_DIRECTORY, through the actions and with the fakes of the external boundaries: the HTTP of
 // the PEP Source recorded on 2026-10-29, the fake launch of Claude and the fake Home Assistant that
-// playwright.config.ts starts first. Léa follows the attaché de justice Offres, and the Béthune
-// Offre 2026-2445600 has two Recherches, the first one retenue, and a Lettre; the Melun Offres, past their Date limite, are
-// Postulée, Archivée and À traiter; Camille has no Watch, hence no Offre. The tests
-// that change data work on Offres of their own: Bastia 2026-2426147 (a Recherche and a Lettre to
+// playwright.config.ts starts first. Léa follows the attaché de justice Postings, and the Béthune
+// Posting 2026-2445600 has two Recherches, the first one retenue, and a Lettre; the Melun Postings, past their Deadline, are
+// Applied, Archived and To Apply; Camille has no Watch, hence no Posting. The tests
+// that change data work on Postings of their own: Bastia 2026-2426147 (a Recherche and a Lettre to
 // correct), Versailles 2026-2409178 (two Recherches), Rennes 2026-2420931 (a Recherche, ready for
 // its Lettre) and Narbonne 2026-2412591 (a Recherche en échec). Sacha, Noé, Inès, Malo and Rose, without
 // Watch either, each have their Profile changed by one e2e test only, which writes it first; Sacha
 // also has the Instructions the e2e tests change. Léa, Camille and Sacha have their Notification Channel
-// through the fake Home Assistant; Yanis and Zoé each have theirs changed by one e2e test only. Léa's Offre
+// through the fake Home Assistant; Yanis and Zoé each have theirs changed by one e2e test only. Léa's Posting
 // 2026-2409247 has a Recherche made with the default Instructions, then one made with hers. Jade, without
 // Watch, has hers created, changed and deleted by one e2e test only.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
@@ -50,7 +50,7 @@ const OTHER_CANDIDATE_LIST = [
   { id: 'jade', name: 'Jade' },
 ];
 
-// What the Lettre recommends for the Béthune Offre, from its mail de candidature and contacts
+// What the Lettre recommends for the Béthune Posting, from its mail de candidature and contacts
 const RECIPIENTS = {
   to: { email: 'p.tj-bethune@justice.fr', source: 'applicationEmail' },
   ccList: [{ email: 'sec.p.tj-bethune@justice.fr', source: 'contact2' }],
@@ -79,7 +79,7 @@ function rechercheRun(title: string) {
   return { fileByName: { 'recherche.md': `# ${title}\n\n## Sources\n\n- https://www.justice.fr/\n` } };
 }
 
-// What the fake Claude writes for each Version, by its Offre, Artefact and number, whatever the
+// What the fake Claude writes for each Version, by its Posting, Artefact and number, whatever the
 // order the jobs run in
 const RUN_BY_VERSION: Record<string, Parameters<typeof createFakeAiSession>[number]> = {
   [`${BETHUNE_REFERENCE} recherche v1`]: { fileByName: { 'recherche.md': recherche('Recherche retenue') } },
@@ -97,7 +97,7 @@ const RUN_BY_VERSION: Record<string, Parameters<typeof createFakeAiSession>[numb
   [`${INSTRUCTIONS_REFERENCE} recherche v2`]: rechercheRun('Recherche selon Léa : le TJ de Pontoise'),
 };
 
-// A session writes in <offre>/<artefact>/v<n>, the folder of its Offre starting with its reference
+// A session writes in <posting>/<artefact>/v<n>, the folder of its Posting starting with its reference
 function versionOf({ outputDirectory }: IHeadlessSession): string {
   const artefactDirectory = path.dirname(outputDirectory);
   const reference = path.basename(path.dirname(artefactDirectory)).slice(0, BETHUNE_REFERENCE.length);
@@ -158,5 +158,5 @@ await actions.runModule({ module: 'recherche', reference: INSTRUCTIONS_REFERENCE
 await actions.runQueuedJobs();
 await actions.deleteInstructions({ candidateId: 'lea', module: 'recherche' });
 
-await actions.changeStatut({ reference: '2026-2285305', statut: 'postulee' });
-await actions.changeStatut({ reference: '2026-2290529', statut: 'archivee' });
+await actions.changeStatus({ reference: '2026-2285305', status: 'applied' });
+await actions.changeStatus({ reference: '2026-2290529', status: 'archived' });

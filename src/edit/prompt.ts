@@ -1,27 +1,27 @@
-import { FICHE_DE_POSTE_FILE_NAME, type Artefact, type Candidate, type Offre } from '#/domain/index.ts';
+import { JOB_DESCRIPTION_FILE_NAME, type Artefact, type Candidate, type Posting } from '#/domain/index.ts';
 import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/domain/labels.ts';
 import { BROUILLON_FILE_NAME, LETTRE_MODULE } from '#/modules/lettre/index.ts';
 
 interface IEditedArtefact {
   candidate: Candidate;
-  offre: Offre;
+  posting: Posting;
   artefact: Artefact;
-  // The folder of the Version retenue, relative to the Offre folder
+  // The folder of the Version retenue, relative to the Posting folder
   versionPath: string;
 }
 
-// Fixed, with no Instructions to replace it (ADR-0003); the session runs in the Offre folder, its
+// Fixed, with no Instructions to replace it (ADR-0003); the session runs in the Posting folder, its
 // « dossier courant »
-export function composeEditPrompt({ candidate: { name }, offre, artefact, versionPath }: IEditedArtefact): string {
+export function composeEditPrompt({ candidate: { name }, posting, artefact, versionPath }: IEditedArtefact): string {
   // Every Artefact is feminine
   const artefactName = `la ${ARTEFACT_LABEL_BY_ARTEFACT[artefact]}`;
   const lettreFiles =
     artefact === 'lettre'
       ? ` La Lettre à corriger est \`${versionPath}/${LETTRE_MODULE.fileName}\`, et \`${versionPath}/${BROUILLON_FILE_NAME}\` est son Brouillon, ce que l'IA avait écrit.`
       : '';
-  return `Tu aides ${name} à modifier ${artefactName} de l'Offre ${offre.reference}, « ${offre.title} ». Parle en français.
+  return `Tu aides ${name} à modifier ${artefactName} de l'Offre ${posting.reference}, « ${posting.title} ». Parle en français.
 
-Le dossier courant est celui de cette Offre : \`${FICHE_DE_POSTE_FILE_NAME}\` est sa Fiche de poste, et chaque Artefact y a un dossier par Version, numérotées \`v1\`, \`v2\`…
+Le dossier courant est celui de cette Offre : \`${JOB_DESCRIPTION_FILE_NAME}\` est sa Fiche de poste, et chaque Artefact y a un dossier par Version, numérotées \`v1\`, \`v2\`…
 
 Tu modifies la Version retenue de ${artefactName}, le dossier \`${versionPath}/\` : c'est sur elle que l'outil s'appuie ensuite.${lettreFiles}
 

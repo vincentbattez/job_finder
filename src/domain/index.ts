@@ -37,18 +37,18 @@ export const WATCH_SCHEMA = z
 
 export type Watch = z.infer<typeof WATCH_SCHEMA>;
 
-// An Offre as a Source lists it, before its detail page is read. An imported Fiche de poste has no
-// link, and is published the day it is imported, so that it expires like any Offre.
-export const LISTED_OFFRE_SCHEMA = z
+// A Posting as a Source lists it, before its detail page is read. An imported Job Description has no
+// link, and is published the day it is imported, so that it expires like any Posting.
+export const LISTED_POSTING_SCHEMA = z
   .object({ reference: z.string(), title: z.string(), url: z.string().nullable(), publishedAt: z.date() })
   .brand<'Domain'>();
 
-export type ListedOffre = z.infer<typeof LISTED_OFFRE_SCHEMA>;
+export type ListedPosting = z.infer<typeof LISTED_POSTING_SCHEMA>;
 
-// What the detail page of an Offre says, its fields kept as published, and its Fiche de poste
-export const FICHE_DE_POSTE_SCHEMA = z
+// What the detail page of a Posting says, its fields kept as published, and its Job Description
+export const JOB_DESCRIPTION_SCHEMA = z
   .object({
-    dateLimite: z.date().nullable(),
+    deadline: z.date().nullable(),
     employer: z.string().nullable(),
     workplace: z.string().nullable(),
     applicationEmail: z.string().nullable(),
@@ -58,70 +58,70 @@ export const FICHE_DE_POSTE_SCHEMA = z
   })
   .brand<'Domain'>();
 
-export type FicheDePoste = z.infer<typeof FICHE_DE_POSTE_SCHEMA>;
+export type JobDescription = z.infer<typeof JOB_DESCRIPTION_SCHEMA>;
 
-// The file of the Fiche de poste in the folder of its Offre, where every session runs
-export const FICHE_DE_POSTE_FILE_NAME = 'fiche-de-poste.md';
+// The file of the Job Description in the folder of its Posting, where every session runs
+export const JOB_DESCRIPTION_FILE_NAME = 'job-description.md';
 
-// Where an Offre is: its city, and the region and coordinates API Géo gives its commune. The city
+// Where a Posting is: its city, and the region and coordinates API Géo gives its commune. The city
 // stays as read, without region nor coordinates, while API Géo knows no commune by that name.
-const PLACE_SHAPE = {
+const LOCATION_SHAPE = {
   city: z.string().nullable(),
   region: z.string().nullable(),
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
 };
 
-export const PLACE_SCHEMA = z.object(PLACE_SHAPE).brand<'Domain'>();
+export const LOCATION_SCHEMA = z.object(LOCATION_SHAPE).brand<'Domain'>();
 
-export type Place = z.infer<typeof PLACE_SCHEMA>;
+export type Location = z.infer<typeof LOCATION_SCHEMA>;
 
-export const STATUT_SCHEMA = z.enum(['a_traiter', 'postulee', 'archivee']);
+export const STATUS_SCHEMA = z.enum(['to_apply', 'applied', 'archived']);
 
-export type Statut = z.infer<typeof STATUT_SCHEMA>;
+export type Status = z.infer<typeof STATUS_SCHEMA>;
 
-// Another Offre of the Candidate, named by its reference
-const LINKED_OFFRE_SCHEMA = z.object({ reference: z.string() });
+// Another Posting of the Candidate, named by its reference
+const LINKED_POSTING_SCHEMA = z.object({ reference: z.string() });
 
-export const OFFRE_SCHEMA = z
+export const POSTING_SCHEMA = z
   .object({
-    ...PLACE_SHAPE,
+    ...LOCATION_SHAPE,
     id: z.int(),
     candidateId: z.string(),
-    // Where it comes from: the Source of the Watch that detected it, or the import of its Fiche de poste
+    // Where it comes from: the Source of the Watch that detected it, or the import of its Job Description
     source: z.string(),
     reference: z.string(),
     title: z.string(),
     url: z.string().nullable(),
     publishedAt: z.date().nullable(),
-    dateLimite: z.date().nullable(),
+    deadline: z.date().nullable(),
     employer: z.string().nullable(),
     workplace: z.string().nullable(),
     applicationEmail: z.string().nullable(),
     contact1: z.string().nullable(),
     contact2: z.string().nullable(),
-    statut: STATUT_SCHEMA,
-    // When it was first marked Postulée, null if never
-    postuleeAt: z.date().nullable(),
+    status: STATUS_SCHEMA,
+    // When it was first marked Applied, null if never
+    appliedAt: z.date().nullable(),
     isInZone: z.boolean(),
-    isExpiree: z.boolean(),
-    // The Offre it publishes again, and the Offres that publish it again
-    republicationOf: LINKED_OFFRE_SCHEMA.nullable(),
-    republicationList: z.array(LINKED_OFFRE_SCHEMA),
+    isExpired: z.boolean(),
+    // The Posting it publishes again, and the Postings that publish it again
+    repostOf: LINKED_POSTING_SCHEMA.nullable(),
+    repostList: z.array(LINKED_POSTING_SCHEMA),
   })
   .brand<'Domain'>();
 
-export type Offre = z.infer<typeof OFFRE_SCHEMA>;
+export type Posting = z.infer<typeof POSTING_SCHEMA>;
 
 // What a Detection found for one Watch, and why each notification it could not send failed. On
-// the first launch, the Offres already online are imported without triggering anything.
+// the first launch, the Postings already online are imported without triggering anything.
 export const DETECTION_SCHEMA = z
   .object({
     watchId: z.string(),
     candidateId: z.string(),
     isFirstLaunch: z.boolean(),
-    newOffreList: z.array(OFFRE_SCHEMA),
-    nearMissList: z.array(LISTED_OFFRE_SCHEMA),
+    newPostingList: z.array(POSTING_SCHEMA),
+    nearMissList: z.array(LISTED_POSTING_SCHEMA),
     notificationFailureList: z.array(z.string()),
   })
   .brand<'Domain'>();
@@ -139,11 +139,11 @@ export const MODULE_INSTRUCTIONS_SCHEMA = z
 
 export type ModuleInstructions = z.infer<typeof MODULE_INSTRUCTIONS_SCHEMA>;
 
-// A Version that another Version read as input, of its own Offre or of another one
+// A Version that another Version read as input, of its own Posting or of another one
 const READ_VERSION_SCHEMA = z.object({
   artefact: ARTEFACT_SCHEMA,
   number: z.int(),
-  offre: z.object({ reference: z.string() }),
+  posting: z.object({ reference: z.string() }),
 });
 
 // Each launch of a module creates a new Version, which keeps the Instructions it was produced with
@@ -163,7 +163,7 @@ export const VERSION_SCHEMA = z
 
 export type Version = z.infer<typeof VERSION_SCHEMA>;
 
-// An AI module is named after the Artefact it produces; the extraction fills the imported Offre
+// An AI module is named after the Artefact it produces; the extraction fills the imported Posting
 // itself, without a Version
 const MODULE_SCHEMA = z.enum([...ARTEFACT_SCHEMA.options, 'extraction']);
 
@@ -175,7 +175,7 @@ export const JOB_SCHEMA = z
   .object({
     id: z.int(),
     module: MODULE_SCHEMA,
-    offre: OFFRE_SCHEMA,
+    posting: POSTING_SCHEMA,
     state: JOB_STATE_SCHEMA,
     log: z.string(),
     sessionId: z.string().nullable(),
@@ -185,7 +185,7 @@ export const JOB_SCHEMA = z
 
 export type Job = z.infer<typeof JOB_SCHEMA>;
 
-// The field of the Offre a recommendation comes from, as published: the mail de candidature or a
+// The field of the Posting a recommendation comes from, as published: the mail de candidature or a
 // contact
 const CONTACT_FIELD_SCHEMA = z.enum(['applicationEmail', 'contact1', 'contact2']);
 
@@ -262,30 +262,30 @@ const ARTEFACT_VERSIONS_SCHEMA = z.object({
   // The module that produces it: why it cannot run now, null when it can
   module: z.object({ refusal: z.string().nullable() }),
   // Whether jf edit opens it now: it has a Version retenue, and is neither a Visualisation nor the
-  // Lettre of a Postulée Offre
+  // Lettre of an Applied Posting
   isEditable: z.boolean(),
   versionList: z.array(VERSION_DOCUMENTS_SCHEMA),
 });
 
-// What the fiche of an Offre shows: the Offre with its raw contacts, its Fiche de poste, every
+// What the Posting page shows: the Posting with its raw contacts, its Job Description, every
 // Version of each Artefact with its files, and the recipients its Lettre retenue recommends
-export const OFFRE_FICHE_SCHEMA = z
+export const POSTING_DETAIL_SCHEMA = z
   .object({
-    offre: OFFRE_SCHEMA,
-    // The statuts the Offre can move to, a button each
-    nextStatutList: z.array(STATUT_SCHEMA),
-    ficheDePoste: z.string(),
+    posting: POSTING_SCHEMA,
+    // The statuses the Posting can move to, a button each
+    nextStatusList: z.array(STATUS_SCHEMA),
+    jobDescription: z.string(),
     artefactList: z.array(ARTEFACT_VERSIONS_SCHEMA),
     recipients: RECIPIENTS_SCHEMA.nullable(),
-    // That of its latest extraction job, null for an Offre that was not imported; the log says why
+    // That of its latest extraction job, null for a Posting that was not imported; the log says why
     // it failed
     extraction: z.object({ etat: ETAT_SCHEMA, log: z.string() }).nullable(),
   })
   .brand<'Domain'>();
 
-export type OffreFiche = z.infer<typeof OFFRE_FICHE_SCHEMA>;
+export type PostingDetail = z.infer<typeof POSTING_DETAIL_SCHEMA>;
 
-// A job of the Profile of a Candidate rather than of an Offre: the conversion of an Upload into Markdown
+// A job of the Profile of a Candidate rather than of a Posting: the conversion of an Upload into Markdown
 export const PROFILE_JOB_SCHEMA = z
   .object({
     id: z.int(),
@@ -300,7 +300,7 @@ export const PROFILE_JOB_SCHEMA = z
 
 export type ProfileJob = z.infer<typeof PROFILE_JOB_SCHEMA>;
 
-// What the worker runs: a job of an Offre or of a Profile, a single queue for both (ADR-0003)
+// What the worker runs: a job of a Posting or of a Profile, a single queue for both (ADR-0003)
 export const QUEUED_JOB_SCHEMA = z.union([JOB_SCHEMA, PROFILE_JOB_SCHEMA]);
 
 export type QueuedJob = z.infer<typeof QUEUED_JOB_SCHEMA>;
@@ -324,10 +324,10 @@ export const SESSION_RESULT_SCHEMA = z
 
 export type SessionResult = z.infer<typeof SESSION_RESULT_SCHEMA>;
 
-// The fields an AI session read in an imported Fiche de poste: its title and its city, null when it
-// gives none, and its Fiche de poste
+// The fields an AI session read in an imported Job Description: its title and its city, null when it
+// gives none, and its Job Description
 export const EXTRACTION_SCHEMA = z
-  .object({ title: z.string().nullable(), city: z.string().nullable(), ficheDePoste: FICHE_DE_POSTE_SCHEMA })
+  .object({ title: z.string().nullable(), city: z.string().nullable(), jobDescription: JOB_DESCRIPTION_SCHEMA })
   .brand<'Domain'>();
 
 export type Extraction = z.infer<typeof EXTRACTION_SCHEMA>;

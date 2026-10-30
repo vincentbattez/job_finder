@@ -1,8 +1,8 @@
 /* Hallmark · shape: app screen · genre: modern-minimal · theme: Dose (deal 3/3, seed soft-friendly-app-track-8518·cf75787d·2026-10-29·r0)
- * nav: a top bar, the wordmark, the Candidate's pages (Offres, Profile, Instructions: #14) and the Candidate menu (#11) · signature: the Offre label, reference and Date limite in DM Mono over a dashed stub, above four plastic Artefact compartments · states: full and empty list, the four états · dose: white
+ * nav: a top bar, the wordmark, the Candidate's pages (Postings, Profile, Instructions: #14) and the Candidate menu (#11) · signature: the Posting label, reference and Deadline in DM Mono over a dashed stub, above four plastic Artefact compartments · states: full and empty list, the four états · dose: white
  * axes: light/grotesk-sans/chromatic-green · posture: committed · contrast: pass · v2.0.0 */
-/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a list and a fiche fit any tracker; the Offre became a pharmacy label with its Artefacts as an organiser's compartments */
-/* Hallmark · deviation: Expirée and En échec are red, against Dose's grey for a missed state, because the map of issue #20 asks red for Expirée · no fibre grain: an app screen takes the theme's surfaces, not its ornament */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a list and a Posting page fit any tracker; the Posting became a pharmacy label with its Artefacts as an organiser's compartments */
+/* Hallmark · deviation: Expired and En échec are red, against Dose's grey for a missed state, because the map of issue #20 asks red for Expired · no fibre grain: an app screen takes the theme's surfaces, not its ornament */
 /* Hallmark · finish-review: subagent · 8 findings · 5 resolved 3 partial · gap: the list's loading and error states and the empty list's action (#12) */
 @import url('./tokens.css');
 @import url('./base.css');
@@ -114,7 +114,7 @@
   color: var(--color-error);
 }
 
-/* The drop zone of a file, such as a Fiche de poste or an Upload: a dashed tray that lights up under a file */
+/* The drop zone of a file, such as a Job Description or an Upload: a dashed tray that lights up under a file */
 .drop-zone {
   display: grid;
   justify-items: start;
@@ -151,7 +151,7 @@
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
-/* Waiting for React, or for Claude to read the Fiche de poste */
+/* Waiting for React, or for Claude to read the Job Description */
 .drop-zone__choose[data-disabled='true'] {
   opacity: 0.55;
   cursor: not-allowed;
@@ -159,7 +159,7 @@
 .drop-zone__error {
   color: var(--color-error);
 }
-/* The pages of the Candidate chosen in the menu: their Offres, their Profile, their Instructions */
+/* The pages of the Candidate chosen in the menu: their Postings, their Profile, their Instructions */
 .topbar__nav {
   display: flex;
   flex-wrap: wrap;
@@ -214,7 +214,7 @@ a:active {
   color: var(--color-muted);
   font-family: var(--font-body);
 }
-/* A sunken tray where the Offres will land */
+/* A sunken tray where the Postings will land */
 .empty {
   padding: var(--space-lg);
   border-radius: var(--radius-card);
@@ -242,8 +242,8 @@ a:active {
   list-style: none;
 }
 .badge {
-  --badge-ink: var(--color-statut-a-traiter);
-  --badge-soft: var(--color-statut-a-traiter-soft);
+  --badge-ink: var(--color-status-to-apply);
+  --badge-soft: var(--color-status-to-apply-soft);
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
@@ -256,17 +256,17 @@ a:active {
   font: 500 var(--text-sm) / 1 var(--font-body);
   white-space: nowrap;
 }
-.badge[data-statut='postulee'] {
-  --badge-ink: var(--color-statut-postulee);
-  --badge-soft: var(--color-statut-postulee-soft);
+.badge[data-status='applied'] {
+  --badge-ink: var(--color-status-applied);
+  --badge-soft: var(--color-status-applied-soft);
 }
-.badge[data-statut='expiree'] {
-  --badge-ink: var(--color-statut-expiree);
-  --badge-soft: var(--color-statut-expiree-soft);
+.badge[data-status='expired'] {
+  --badge-ink: var(--color-status-expired);
+  --badge-soft: var(--color-status-expired-soft);
 }
-.badge[data-statut='archivee'] {
-  --badge-ink: var(--color-statut-archivee);
-  --badge-soft: var(--color-statut-archivee-soft);
+.badge[data-status='archived'] {
+  --badge-ink: var(--color-status-archived);
+  --badge-soft: var(--color-status-archived-soft);
 }
 .badge[data-etat='absent'] {
   --badge-ink: var(--color-etat-absent);
@@ -285,7 +285,7 @@ a:active {
   --badge-soft: var(--color-etat-en-echec-soft);
 }
 /* What steps back keeps its place: a dashed rim instead of a fill */
-.badge:is([data-statut='archivee'], [data-etat='absent']) {
+.badge:is([data-status='archived'], [data-etat='absent']) {
   border-style: dashed;
   border-color: var(--color-muted);
 }
@@ -311,11 +311,11 @@ a:active {
   }
 }
 
-.offre-list {
+.posting-list {
   width: 100%;
   border-collapse: collapse;
 }
-.offre-list th {
+.posting-list th {
   padding: 0 var(--space-md) var(--space-xs) 0;
   border-bottom: var(--rule-hair) solid var(--color-rule);
   color: var(--color-muted);
@@ -323,24 +323,24 @@ a:active {
   text-align: start;
   white-space: nowrap;
 }
-.offre-list td {
+.posting-list td {
   padding: var(--space-md) var(--space-md) var(--space-md) 0;
   border-bottom: var(--rule-hair) solid var(--color-rule);
   vertical-align: top;
 }
-.offre-list :is(th, td):last-child {
+.posting-list :is(th, td):last-child {
   padding-inline-end: 0;
 }
-.offre-list__offre {
+.posting-list__posting {
   display: grid;
   justify-items: start;
   gap: var(--space-3xs);
 }
-.offre-list__title {
+.posting-list__title {
   font-weight: 500;
 }
-.offre-list__workplace,
-.offre-list .reference {
+.posting-list__workplace,
+.posting-list .reference {
   color: var(--color-muted);
   font-size: var(--text-sm);
 }
@@ -394,46 +394,46 @@ a:active {
   background: var(--color-accent-deep);
 }
 
-/* A point per Offre in its statut's colour, ringed in white to stand out of the tiles; an
-   Archivée keeps the dashed rim of its badge */
-.offre-map {
+/* A point per Posting in its status's colour, ringed in white to stand out of the tiles; an
+   Archived keeps the dashed rim of its badge */
+.posting-map {
   display: grid;
   gap: var(--space-sm);
 }
-.offre-map__canvas.leaflet-container,
-.offre-map__canvas {
+.posting-map__canvas.leaflet-container,
+.posting-map__canvas {
   height: clamp(320px, 60vh, 560px);
   border: var(--rule-hair) solid var(--color-rule);
   border-radius: var(--radius-card);
   background: var(--color-paper-2);
   font: var(--text-xs) var(--font-body);
 }
-.offre-point,
-.offre-map__legend li {
-  --point: var(--color-statut-a-traiter);
+.posting-point,
+.posting-map__legend li {
+  --point: var(--color-status-to-apply);
 }
-.offre-point,
-.offre-map__legend li::before {
+.posting-point,
+.posting-map__legend li::before {
   border: 2px solid var(--light);
   border-radius: var(--radius-pill);
   background: var(--point);
   box-shadow: 0 1px 3px oklch(21% 0.025 170 / 0.45);
 }
-.offre-point {
+.posting-point {
   cursor: pointer;
 }
-[data-statut='postulee']:is(.offre-point, li) {
-  --point: var(--color-statut-postulee);
+[data-status='applied']:is(.posting-point, li) {
+  --point: var(--color-status-applied);
 }
-[data-statut='expiree']:is(.offre-point, li) {
-  --point: var(--color-statut-expiree);
+[data-status='expired']:is(.posting-point, li) {
+  --point: var(--color-status-expired);
 }
-.offre-point[data-statut='archivee'],
-.offre-map__legend li[data-statut='archivee']::before {
+.posting-point[data-status='archived'],
+.posting-map__legend li[data-status='archived']::before {
   border: 2px dashed var(--color-muted);
-  background: var(--color-statut-archivee-soft);
+  background: var(--color-status-archived-soft);
 }
-.offre-map__legend {
+.posting-map__legend {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-xs) var(--space-md);
@@ -443,43 +443,43 @@ a:active {
   color: var(--color-ink-2);
   font-size: var(--text-sm);
 }
-.offre-map__legend li {
+.posting-map__legend li {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
 }
-.offre-map__legend li::before {
+.posting-map__legend li::before {
   content: '';
   width: 14px;
   height: 14px;
 }
-.offre-map__note {
+.posting-map__note {
   color: var(--color-muted);
   font-size: var(--text-sm);
 }
 
-/* The label above its Artefacts, beside the contacts, the recipients and the Fiche de poste */
-.fiche {
+/* The label above its Artefacts, beside the contacts, the recipients and the Job Description */
+.posting-detail {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   align-items: start;
   gap: var(--space-xl);
 }
-.fiche__column {
+.posting-detail__column {
   display: grid;
   gap: var(--space-xl);
   min-width: 0;
 }
-.fiche__part {
+.posting-detail__part {
   display: grid;
   gap: var(--space-sm);
 }
-.fiche :is(h2, h4) {
+.posting-detail :is(h2, h4) {
   margin: 0;
   font: var(--display-weight) var(--text-md) / 1.2 var(--font-display);
   letter-spacing: var(--tracking-display);
 }
-.fiche__label {
+.posting-detail__label {
   display: grid;
   gap: var(--space-sm);
   padding: var(--space-lg);
@@ -487,21 +487,21 @@ a:active {
   background: var(--light);
   box-shadow: var(--shadow-lift);
 }
-.fiche__title {
+.posting-detail__title {
   display: flex;
   flex-wrap: wrap;
   align-items: start;
   justify-content: space-between;
   gap: var(--space-sm);
 }
-.fiche__title :is(h1, h3) {
+.posting-detail__title :is(h1, h3) {
   font-size: var(--text-xl);
 }
-.fiche__label > p {
+.posting-detail__label > p {
   color: var(--color-ink-2);
 }
-/* The tear-off stub of a pharmacy label: what identifies the Offre and when it closes */
-.fiche__facts {
+/* The tear-off stub of a pharmacy label: what identifies the Posting and when it closes */
+.posting-detail__facts {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm) var(--space-xl);
@@ -509,11 +509,11 @@ a:active {
   padding-top: var(--space-md);
   border-top: var(--rule-hair) dashed var(--color-muted);
 }
-.fiche__facts dd {
+.posting-detail__facts dd {
   margin: 0;
   font-size: var(--text-lg);
 }
-.fiche dt {
+.posting-detail dt {
   color: var(--color-muted);
   font-size: var(--text-sm);
   font-weight: 500;
@@ -569,16 +569,16 @@ a:active {
   --tint: var(--p-fri);
 }
 
-.fiche__contacts {
+.posting-detail__contacts {
   display: grid;
   gap: var(--space-sm);
   margin: 0;
 }
-.fiche__contacts div {
+.posting-detail__contacts div {
   display: grid;
   gap: var(--space-3xs);
 }
-.fiche__contacts dd {
+.posting-detail__contacts dd {
   margin: 0;
   overflow-wrap: break-word;
   min-width: 0;
@@ -615,12 +615,12 @@ a:active {
   color: var(--color-ink-2);
   font-size: var(--text-sm);
 }
-.fiche__poste summary {
+.posting-detail__job-description summary {
   color: var(--color-accent-deep);
   font-weight: 500;
   cursor: pointer;
 }
-.fiche__poste[open] summary {
+.posting-detail__job-description[open] summary {
   margin-bottom: var(--space-sm);
 }
 
@@ -681,12 +681,12 @@ a:active {
 .editor textarea:focus-visible {
   outline-color: var(--color-focus);
 }
-/* A Lettre is frozen once its Offre is Postulée */
+/* A Lettre is frozen once its Posting is Applied */
 .editor textarea:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
-.fiche .prose,
+.posting-detail .prose,
 .editor .prose,
 .document .prose {
   max-width: none;
@@ -797,7 +797,7 @@ a:active {
   display: grid;
   gap: var(--space-sm);
 }
-/* The Visualisation, a page of its own, read in a tall frame on the paper of the fiche */
+/* The Visualisation, a page of its own, read in a tall frame on the paper of the Posting page */
 .visualisation iframe {
   display: block;
   width: 100%;
@@ -809,21 +809,21 @@ a:active {
 
 @media (max-width: 60rem) {
   .editor,
-  .fiche {
+  .posting-detail {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-/* On a phone each Offre restacks as a block whose dates name themselves */
+/* On a phone each Posting restacks as a block whose dates name themselves */
 @media (max-width: 40rem) {
-  .offre-list thead {
+  .posting-list thead {
     position: absolute;
     width: 1px;
     height: 1px;
     overflow: hidden;
     clip-path: inset(50%);
   }
-  .offre-list tr {
+  .posting-list tr {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -831,22 +831,22 @@ a:active {
     padding-block: var(--space-md);
     border-bottom: var(--rule-hair) solid var(--color-rule);
   }
-  .offre-list td {
+  .posting-list td {
     padding: 0;
     border: 0;
   }
-  .offre-list td:first-child {
+  .posting-list td:first-child {
     flex-basis: 100%;
   }
-  .offre-list td[data-label='Publiée le'] {
+  .posting-list td[data-label='Publiée le'] {
     order: 1;
   }
-  .offre-list td[data-label]::before {
+  .posting-list td[data-label]::before {
     content: attr(data-label) ' ';
     color: var(--color-muted);
     font: 500 var(--text-sm) var(--font-body);
   }
-  .fiche__label {
+  .posting-detail__label {
     padding: var(--space-md);
   }
 }

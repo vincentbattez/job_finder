@@ -12,13 +12,13 @@ function findFormatError(markdown: string): string | undefined {
   return /https?:\/\//.test(sources) ? undefined : "il n'a pas de section « ## Sources » avec au moins un lien";
 }
 
-// The Recherche of an Offre: a headless Claude session writes a single sourced Markdown file
+// The Recherche of a Posting: a headless Claude session writes a single sourced Markdown file
 // (ADR-0003)
 export const RECHERCHE_MODULE = {
   fileName: RECHERCHE_FILE_NAME,
   outputFileList: [{ name: RECHERCHE_FILE_NAME, findFormatError }],
   defaultInstructions: RECHERCHE_DEFAULT_INSTRUCTIONS,
   composePrompt: composeRecherchePrompt,
-  // A Republication starts from the work done for the Offre it publishes again
-  isReadingRepublishedOffre: true,
+  // A Repost starts from the work done for the Posting it publishes again
+  isReadingRepostedPosting: true,
 } satisfies IAiModule;

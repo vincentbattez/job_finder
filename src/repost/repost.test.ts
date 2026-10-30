@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { findRepublishedOffre } from './index.ts';
+import { findRepostedPosting } from './index.ts';
 
-// Offres of the DSJ feed recorded on 2026-10-29, their fields as published
+// Postings of the DSJ feed recorded on 2026-10-29, their fields as published
 const BOULOGNE_PARQUET = {
   reference: '2026-2231960',
   title: 'Attaché de justice affecté auprès des magistrats du parquet TJ BOULOGNE SUR MER',
   workplace: 'Tribunal Judiciaire de Boulogne sur mer',
   applicationEmail: 'chcab.pr.tj-boulogne-sur-mer@justice.fr',
 };
-const BOULOGNE_PARQUET_REPUBLISHED = {
+const BOULOGNE_PARQUET_REPOSTED = {
   reference: '2026-2338409',
   title: 'Attaché de justice affecté auprès des magistrats du parquet',
   workplace: 'Tribunal Judiciaire de Boulogne-sur-mer',
@@ -40,58 +40,56 @@ const BETHUNE_PARQUET = {
   applicationEmail: 'chcab.pr.tj-bethune@justice.fr',
 };
 
-describe('the Republication of an Offre', () => {
-  it('links the Boulogne parquet Offre 2026-2338409 to 2026-2231960, the same Poste published earlier', () => {
-    expect(
-      findRepublishedOffre(BOULOGNE_PARQUET_REPUBLISHED, [BOULOGNE_SIEGE, BOULOGNE_PARQUET, BETHUNE_PARQUET]),
-    ).toBe(BOULOGNE_PARQUET);
-  });
-
-  it('links a Poste published a third time to its latest publication', () => {
-    const firstPublication = { ...BOULOGNE_PARQUET, reference: '2026-2100000' };
-
-    expect(findRepublishedOffre(BOULOGNE_PARQUET_REPUBLISHED, [BOULOGNE_PARQUET, firstPublication])).toBe(
+describe('the Repost of a Posting', () => {
+  it('links the Boulogne parquet Posting 2026-2338409 to 2026-2231960, the same Position published earlier', () => {
+    expect(findRepostedPosting(BOULOGNE_PARQUET_REPOSTED, [BOULOGNE_SIEGE, BOULOGNE_PARQUET, BETHUNE_PARQUET])).toBe(
       BOULOGNE_PARQUET,
     );
   });
 
-  it('links a Poste published again in another inclusive writing', () => {
-    const republished = {
+  it('links a Position published a third time to its latest publication', () => {
+    const firstPublication = { ...BOULOGNE_PARQUET, reference: '2026-2100000' };
+
+    expect(findRepostedPosting(BOULOGNE_PARQUET_REPOSTED, [BOULOGNE_PARQUET, firstPublication])).toBe(BOULOGNE_PARQUET);
+  });
+
+  it('links a Position published again in another inclusive writing', () => {
+    const reposted = {
       ...BETHUNE_PARQUET,
       reference: '2026-2500000',
       title: 'Attachée de justice affectée auprès des magistrats du parquet - TJ Béthune',
     };
 
-    expect(findRepublishedOffre(republished, [BETHUNE_PARQUET])).toBe(BETHUNE_PARQUET);
+    expect(findRepostedPosting(reposted, [BETHUNE_PARQUET])).toBe(BETHUNE_PARQUET);
   });
 
   // A generic title is included in every other title of its jurisdiction
-  it('never links a generic title to an Offre of the same workplace and mail', () => {
+  it('never links a generic title to a Posting of the same workplace and mail', () => {
     const generic = { ...BETHUNE_INSTRUCTION, reference: '2026-2500000', title: 'Attaché de justice - TJ Béthune' };
 
-    expect(findRepublishedOffre(generic, [BETHUNE_ENFANTS, BETHUNE_INSTRUCTION])).toBeUndefined();
+    expect(findRepostedPosting(generic, [BETHUNE_ENFANTS, BETHUNE_INSTRUCTION])).toBeUndefined();
   });
 
   // Same jurisdiction, two of them with the same workplace and mail: only the service in the title
-  // tells the Postes apart
+  // tells the Positions apart
   it.each([
-    { offre: BETHUNE_ENFANTS, otherOffreList: [BETHUNE_INSTRUCTION, BETHUNE_PARQUET] },
-    { offre: BETHUNE_INSTRUCTION, otherOffreList: [BETHUNE_ENFANTS, BETHUNE_PARQUET] },
-    { offre: BETHUNE_PARQUET, otherOffreList: [BETHUNE_ENFANTS, BETHUNE_INSTRUCTION] },
-  ])('never mistakes the Béthune Offre $offre.reference for another one', ({ offre, otherOffreList }) => {
-    expect(findRepublishedOffre(offre, otherOffreList)).toBeUndefined();
+    { posting: BETHUNE_ENFANTS, otherPostingList: [BETHUNE_INSTRUCTION, BETHUNE_PARQUET] },
+    { posting: BETHUNE_INSTRUCTION, otherPostingList: [BETHUNE_ENFANTS, BETHUNE_PARQUET] },
+    { posting: BETHUNE_PARQUET, otherPostingList: [BETHUNE_ENFANTS, BETHUNE_INSTRUCTION] },
+  ])('never mistakes the Béthune Posting $posting.reference for another one', ({ posting, otherPostingList }) => {
+    expect(findRepostedPosting(posting, otherPostingList)).toBeUndefined();
   });
 
   it.each([
     {
       case: 'two services of one parquet, same workplace and mail (Evry)',
-      offre: {
+      posting: {
         reference: '2026-2316951',
         title: "Attaché(e) de justice - du parquet du TJ d'Evry - Délinquance routière",
         workplace: "Tribunal judiciaire d'Evry - 9 Rue des Mazières, 91000 Évry-Courcouronnes",
         applicationEmail: 'sg.pr.tj-evry@justice.fr',
       },
-      earlierOffre: {
+      earlierPosting: {
         reference: '2026-2315312',
         title: "Attaché(e) de justice - du parquet du TJ d'Evry - Criminalité organisée",
         workplace: "Tribunal judiciaire d'Evry - 9 Rue des Mazières, 91000 Évry-Courcouronnes",
@@ -100,13 +98,13 @@ describe('the Republication of an Offre', () => {
     },
     {
       case: 'two sections of one parquet, same mail, workplace differing in case only (Aix-en-Provence)',
-      offre: {
+      posting: {
         reference: '2026-2445266',
         title: 'Attaché(e) de justice - action pu. générale - section délinquance des majeurs - parquet TJ Aix-en-Pvce',
         workplace: 'Aix en provence',
         applicationEmail: 'valerie.vincheneux@justice.fr',
       },
-      earlierOffre: {
+      earlierPosting: {
         reference: '2026-2430585',
         title: 'Attaché(e) de justice- VIF  section mineurs famille- Parquet - TJ Aix Jprox',
         workplace: 'Aix en Provence',
@@ -115,13 +113,13 @@ describe('the Republication of an Offre', () => {
     },
     {
       case: 'the siège of one tribunal under nearly the same title, a mail with a note (Melun: pôle civil, then tribunal pour enfants)',
-      offre: {
+      posting: {
         reference: '2026-2290529',
         title: 'Attaché(e) de justice auprès des magistrats du siège du tribunal judiciaire de Melun H/F',
         workplace: 'Tribunal judiciaire de Melun',
         applicationEmail: 'sec.p.tj-melun@justice.fr',
       },
-      earlierOffre: {
+      earlierPosting: {
         reference: '2026-2285305',
         title: 'Attaché(e) de justice affecté auprès des magistrats du siège du Tribunal judiciaire de Melun  H/F',
         workplace: 'Tribunal judiciaire de Melun',
@@ -130,20 +128,20 @@ describe('the Republication of an Offre', () => {
     },
     {
       case: 'two Offres of one title without any mail de candidature (Blois, published once in the feed)',
-      offre: {
+      posting: {
         reference: '2026-2315357',
         title: 'ATTACHE DE JUSTICE - PARQUET DU TRIBUNAL JUDICIAIRE DE BLOIS',
         workplace: 'TRIBUNAL JUDICIAIRE DE BLOIS',
         applicationEmail: null,
       },
-      earlierOffre: {
+      earlierPosting: {
         reference: '2026-2200000',
         title: 'ATTACHE DE JUSTICE - PARQUET DU TRIBUNAL JUDICIAIRE DE BLOIS',
         workplace: 'TRIBUNAL JUDICIAIRE DE BLOIS',
         applicationEmail: null,
       },
     },
-  ])('links nothing for $case', ({ offre, earlierOffre }) => {
-    expect(findRepublishedOffre(offre, [earlierOffre])).toBeUndefined();
+  ])('links nothing for $case', ({ posting, earlierPosting }) => {
+    expect(findRepostedPosting(posting, [earlierPosting])).toBeUndefined();
   });
 });

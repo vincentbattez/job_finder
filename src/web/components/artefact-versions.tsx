@@ -9,7 +9,7 @@ import { ArtefactDocument, RetenirButton } from './edition.tsx';
 import { Markdown } from './markdown.tsx';
 import { InstructionsOrigin } from './module-instructions.tsx';
 import { ModuleLaunch } from './module-launch.tsx';
-import { ETAT_BY_VERSION_STATE, type IArtefactVersions } from './offre-fiche.tsx';
+import { ETAT_BY_VERSION_STATE, type IArtefactVersions } from './posting-detail.tsx';
 
 type VersionDocuments = IArtefactVersions['versionList'][number];
 
@@ -24,7 +24,7 @@ function VersionFiles({
     return (
       <div className="visualisation">
         <iframe
-          src={`/offres/${reference}/visualisation/${String(version.number)}`}
+          src={`/postings/${reference}/visualisation/${String(version.number)}`}
           sandbox=""
           title={`Visualisation v${String(version.number)}`}
         />

@@ -2,8 +2,8 @@ import type { z } from 'zod/v4';
 
 import {
   SOURCE_MODULE_SCHEMA,
-  type FicheDePoste,
-  type ListedOffre,
+  type JobDescription,
+  type ListedPosting,
   type Parameters,
   type SourceModule,
   type Watch,
@@ -13,17 +13,17 @@ import { declareParameters, type ParameterShape, type ParametersOf } from '#/par
 // The contract of the family of the Sources a Watch follows: what each module of
 // src/modules/source-<nom>/ declares, and what the rest of the application knows of them (ADR-0010)
 
-// The Offres of the Source that match the Watch, and those that came close: they reveal a new way
+// The Postings of the Source that match the Watch, and those that came close: they reveal a new way
 // of writing what the Watch looks for
 interface ISearchResult {
-  matchingList: ListedOffre[];
-  nearMissList: ListedOffre[];
+  matchingList: ListedPosting[];
+  nearMissList: ListedPosting[];
 }
 
-// An Offre's detail page, and whether the Offre is in the Zone of the Watch, which the Source alone
+// A Posting's detail page, and whether the Posting is in the Zone of the Watch, which the Source alone
 // knows how to tell
 export interface ISourceReadResult {
-  ficheDePoste: FicheDePoste;
+  jobDescription: JobDescription;
   isInZone: boolean;
 }
 
@@ -34,7 +34,7 @@ interface ISourceDefinition<TShape extends ParameterShape> {
   name: string;
   parameterSchema: z.ZodObject<TShape>;
   search: (parameters: ParametersOf<TShape>, httpFetch: typeof fetch | undefined) => Promise<ISearchResult>;
-  readFicheDePoste: (
+  readJobDescription: (
     reference: string,
     parameters: ParametersOf<TShape>,
     httpFetch: typeof fetch | undefined,
@@ -48,7 +48,7 @@ export interface ISource {
   description: SourceModule;
   parseParameters(rawParameters: unknown): Parameters;
   search(watch: Watch): Promise<ISearchResult>;
-  readFicheDePoste(reference: string, watch: Watch): Promise<ISourceReadResult>;
+  readJobDescription(reference: string, watch: Watch): Promise<ISourceReadResult>;
 }
 
 // What a module of the family exports: it creates the Source, bound to the fetch it reads the site with
@@ -59,7 +59,7 @@ export function defineSource<TShape extends ParameterShape>({
   name,
   parameterSchema,
   search,
-  readFicheDePoste,
+  readJobDescription,
 }: ISourceDefinition<TShape>): SourceFactory {
   const parameters = declareParameters(name, parameterSchema);
   const description = SOURCE_MODULE_SCHEMA.parse({ id, name, parameterList: parameters.parameterList });
@@ -81,6 +81,6 @@ export function defineSource<TShape extends ParameterShape>({
         (labelList) => `La Source ${name} attend d'autres Paramètres : renseigner ${labelList}.`,
       ),
     search: (watch) => search(parseParametersOf(watch), httpFetch),
-    readFicheDePoste: (reference, watch) => readFicheDePoste(reference, parseParametersOf(watch), httpFetch),
+    readJobDescription: (reference, watch) => readJobDescription(reference, parseParametersOf(watch), httpFetch),
   });
 }

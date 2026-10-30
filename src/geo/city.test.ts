@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { readCity } from './city.ts';
 
-// Places d'affectation of the PEP Offres recorded on 2026-10-29, written as free text
+// Places d'affectation of the PEP Postings recorded on 2026-10-29, written as free text
 describe('city of a place d’affectation', () => {
   it.each([
     ['Tribunal Judiciaire de Béthune', 'Béthune'],

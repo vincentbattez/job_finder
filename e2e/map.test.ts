@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// test/seed-front.ts locates Léa's Offres through API Géo's recorded responses, and gives the three
-// Melun Offres, whose Date limite passed in the summer of 2026, a statut each
+// test/seed-front.ts locates Léa's Postings through API Géo's recorded responses, and gives the three
+// Melun Postings, whose Deadline passed in the summer of 2026, a status each
 const BETHUNE_TITLE = 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE';
 
 async function chooseLea(page: Page) {
@@ -19,56 +19,54 @@ async function filter(page: Page, { city = '', region = '' }: { city?: string; r
 }
 
 function findPoints(page: Page) {
-  return page.getByRole('region', { name: 'Carte des Offres' }).locator('.offre-point');
+  return page.getByRole('region', { name: 'Carte des Offres' }).locator('.posting-point');
 }
 
-test.describe('map of the Offres', () => {
+test.describe('map of the Postings', () => {
   // The tiles come from OpenStreetMap over the internet: the points show without them
   test.beforeEach(async ({ page }) => {
     await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
   });
 
-  test('shows a point per Offre of the list', async ({ page }) => {
+  test('shows a point per Posting of the list', async ({ page }) => {
     await chooseLea(page);
 
-    // Other tests may add Offres to the shared data: the list tells how many there are now
-    const offreCount = (await page.getByRole('row').count()) - 1;
-    expect(offreCount).toBeGreaterThanOrEqual(80);
-    await expect(findPoints(page)).toHaveCount(offreCount);
+    // Other tests may add Postings to the shared data: the list tells how many there are now
+    const postingCount = (await page.getByRole('row').count()) - 1;
+    expect(postingCount).toBeGreaterThanOrEqual(80);
+    await expect(findPoints(page)).toHaveCount(postingCount);
   });
 
-  test('opens the fiche of an Offre on a click on its point', async ({ page }) => {
+  test('opens the Posting page on a click on its point', async ({ page }) => {
     await chooseLea(page);
     await filter(page, { city: 'Béthune' });
     const point = findPoints(page).and(page.getByRole('button', { name: /2026-2445600/ }));
-    await expect(point).toHaveAttribute('data-statut', /^(a_traiter|expiree)$/);
+    await expect(point).toHaveAttribute('data-status', /^(to_apply|expired)$/);
 
-    // A click before React hydrates the page does nothing: click again until the fiche opens
+    // A click before React hydrates the page does nothing: click again until the Posting page opens
     await expect(async () => {
       await point.click({ timeout: 1000 });
-      await expect(page).toHaveURL('/offres/2026-2445600', { timeout: 1000 });
+      await expect(page).toHaveURL('/postings/2026-2445600', { timeout: 1000 });
     }).toPass();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(BETHUNE_TITLE);
   });
 
-  test('colours a point by statut: green when Postulée even past its Date limite, red when Expirée', async ({
-    page,
-  }) => {
+  test('colours a point by status: green when Applied even past its Deadline, red when Expired', async ({ page }) => {
     await chooseLea(page);
 
     await filter(page, { city: 'Melun' });
 
     await expect(findPoints(page).and(page.getByRole('button', { name: /2026-2285305/ }))).toHaveAttribute(
-      'data-statut',
-      'postulee',
+      'data-status',
+      'applied',
     );
     await expect(findPoints(page).and(page.getByRole('button', { name: /2026-2316771/ }))).toHaveAttribute(
-      'data-statut',
-      'expiree',
+      'data-status',
+      'expired',
     );
   });
 
-  test('hides the Archivées, from the list as from the map, until asked', async ({ page }) => {
+  test('hides the Archived, from the list as from the map, until asked', async ({ page }) => {
     await chooseLea(page);
     await filter(page, { city: 'Melun' });
     await expect(findPoints(page)).toHaveCount(2);
@@ -79,8 +77,8 @@ test.describe('map of the Offres', () => {
 
     await expect(findPoints(page)).toHaveCount(3);
     await expect(findPoints(page).and(page.getByRole('button', { name: /2026-2290529/ }))).toHaveAttribute(
-      'data-statut',
-      'archivee',
+      'data-status',
+      'archived',
     );
     await expect(page.getByRole('row', { name: /2026-2290529/ })).toHaveCount(1);
   });
@@ -90,7 +88,7 @@ test.describe('map of the Offres', () => {
 
     await filter(page, { region: 'Hauts-de-France' });
 
-    // The Offres of the courts of appeal of Douai and Amiens
+    // The Postings of the courts of appeal of Douai and Amiens
     await expect(findPoints(page)).toHaveCount(9);
     await expect(page.getByRole('row')).toHaveCount(1 + 9);
 

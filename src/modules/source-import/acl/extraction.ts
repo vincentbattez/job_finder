@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { EXTRACTION_SCHEMA, FICHE_DE_POSTE_SCHEMA, type Extraction } from '#/domain/index.ts';
+import { EXTRACTION_SCHEMA, JOB_DESCRIPTION_SCHEMA, type Extraction } from '#/domain/index.ts';
 
 export const EXTRACTION_FILE_NAME = 'extraction.json';
 
@@ -17,7 +17,7 @@ function normalize(text: string): string {
   return text.normalize('NFC').toLowerCase().replaceAll(/[‘’]/g, "'").replaceAll(/\s+/g, ' ').trim();
 }
 
-// The fields the session found in the Fiche de poste, null when it does not give them. Each one is
+// The fields the session found in the Job Description, null when it does not give them. Each one is
 // copied from the Fiche, so a value the Fiche does not contain was invented: refused.
 function extractionSchemaOf(markdown: string) {
   const excerpt = z
@@ -31,7 +31,7 @@ function extractionSchemaOf(markdown: string) {
     employer: excerpt,
     workplace: excerpt,
     city: excerpt,
-    dateLimite: z.iso.date().nullable(),
+    deadline: z.iso.date().nullable(),
     applicationEmail: excerpt,
     contact1: excerpt,
     contact2: excerpt,
@@ -61,14 +61,14 @@ export function readExtraction(directory: string, markdown: string): Extraction 
       `Les champs relevés dans la Fiche de poste ne sont pas valables (${EXTRACTION_FILE_NAME}) : ${error}.`,
     );
   }
-  const { title, dateLimite, city, ...ficheField } = extraction;
+  const { title, deadline, city, ...jobDescriptionField } = extraction;
   return EXTRACTION_SCHEMA.parse({
     title,
     city,
-    ficheDePoste: FICHE_DE_POSTE_SCHEMA.parse({
-      ...ficheField,
+    jobDescription: JOB_DESCRIPTION_SCHEMA.parse({
+      ...jobDescriptionField,
       // The day, at midnight UTC, as the Sources give it
-      dateLimite: dateLimite === null ? null : new Date(dateLimite),
+      deadline: deadline === null ? null : new Date(deadline),
       markdown,
     }),
   });

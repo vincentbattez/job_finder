@@ -162,13 +162,13 @@ describe('the config an older jf left', () => {
   });
 
   // The real data/ already holds the Watches an older jf copied from its config at every launch, each
-  // past its first launch: the next Detection notifies a new Offre as before, and duplicates none
+  // past its first launch: the next Detection notifies a new Posting as before, and duplicates none
   it('keeps when each Watch last went through, so the next Detection goes on as before', async () => {
     const dataDirectory = createMigratedDataDirectory();
     writeConfig(dataDirectory, OLDER_CONFIG);
     const firstActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
     await firstActions.detect();
-    const offreList = await firstActions.listOffres({ candidateId: 'lea' });
+    const postingList = await firstActions.listPostings({ candidateId: 'lea' });
     // As if the database had been there before the import, the Watch past its first launch
     const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'));
     database.exec('DELETE FROM DefaultDeadlinePeriod');
@@ -179,8 +179,8 @@ describe('the config an older jf left', () => {
     const [watch] = await actions.listWatches({ candidateId: 'lea' });
     expect(watch?.detectedAt).toBeInstanceOf(Date);
     expect(await actions.detect()).toMatchObject([
-      { watchId: 'attache-de-justice-hauts-de-france', isFirstLaunch: false, newOffreList: [] },
+      { watchId: 'attache-de-justice-hauts-de-france', isFirstLaunch: false, newPostingList: [] },
     ]);
-    expect(await actions.listOffres({ candidateId: 'lea' })).toEqual(offreList);
+    expect(await actions.listPostings({ candidateId: 'lea' })).toEqual(postingList);
   });
 });

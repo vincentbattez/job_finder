@@ -6,12 +6,12 @@ import { describe, expect, it } from 'vitest';
 import { type Actions } from '#/actions/index.ts';
 import { VISUALISATION_DEFAULT_INSTRUCTIONS } from '#/modules/visualisation/instructions.ts';
 
-import { detectOffres as detectRecordedOffres, LEA_OFFRES_PATH } from './data-directory.ts';
+import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
-// The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
+// The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
-const OFFRE_DIRECTORY_NAME =
+const POSTING_DIRECTORY_NAME =
   '2026-2445600-attache-de-justice-affecte-aupres-des-magistrats-du-siege-tribunal-pour-enfants-tj-bethune';
 
 const RECHERCHE_RUN = {
@@ -47,9 +47,9 @@ function visualisationRun(html = VISUALISATION) {
   return { fileByName: { 'visualisation.html': html } };
 }
 
-async function detectOffres(aiSession: ReturnType<typeof createFakeAiSession>) {
-  const { actions, dataDirectory } = await detectRecordedOffres(aiSession);
-  return { actions, offreDirectory: path.join(dataDirectory, LEA_OFFRES_PATH, OFFRE_DIRECTORY_NAME) };
+async function detectPostings(aiSession: ReturnType<typeof createFakeAiSession>) {
+  const { actions, dataDirectory } = await detectRecordedPostings(aiSession);
+  return { actions, postingDirectory: path.join(dataDirectory, LEA_POSTINGS_PATH, POSTING_DIRECTORY_NAME) };
 }
 
 // Launching a module queues its job, which the worker runs (ADR-0003)
@@ -61,17 +61,17 @@ async function runModule(actions: Actions, module: string) {
 
 // A Visualisation Version, retenue, from a Fiche d'entretien retenue
 async function produceVisualisation(aiSession: ReturnType<typeof createFakeAiSession>) {
-  const offre = await detectOffres(aiSession);
-  await runModule(offre.actions, 'recherche');
-  await runModule(offre.actions, 'fiche');
-  await runModule(offre.actions, 'visualisation');
-  return offre;
+  const posting = await detectPostings(aiSession);
+  await runModule(posting.actions, 'recherche');
+  await runModule(posting.actions, 'fiche');
+  await runModule(posting.actions, 'visualisation');
+  return posting;
 }
 
 describe('visualisation', () => {
   it('produces a new HTML Version at each launch of jf run visualisation, from the Fiche retenue', async () => {
     const aiSession = createFakeAiSession(RECHERCHE_RUN, FICHE_RUN, FICHE_RUN, visualisationRun(), visualisationRun());
-    const { actions, offreDirectory } = await detectOffres(aiSession);
+    const { actions, postingDirectory } = await detectPostings(aiSession);
     await runModule(actions, 'recherche');
     await runModule(actions, 'fiche');
     await runModule(actions, 'fiche');
@@ -85,13 +85,17 @@ describe('visualisation', () => {
       artefact: 'visualisation',
       number: 1,
       state: 'ready',
-      inputList: [{ artefact: 'fiche_entretien', number: 1, offre: { reference: REFERENCE } }],
+      inputList: [{ artefact: 'fiche_entretien', number: 1, posting: { reference: REFERENCE } }],
     });
-    expect(readFileSync(path.join(offreDirectory, 'visualisation/v1/visualisation.html'), 'utf8')).toBe(VISUALISATION);
+    expect(readFileSync(path.join(postingDirectory, 'visualisation/v1/visualisation.html'), 'utf8')).toBe(
+      VISUALISATION,
+    );
     const session = aiSession.headlessSessionList.at(-1);
-    // The Fiche d'entretien is in the folder of the Offre, the session's own
+    // The Fiche d'entretien is in the folder of the Posting, the session's own
     expect(session?.readDirectoryList).toEqual([]);
-    expect(session?.fixedPrompt).toContain(`\`${path.join(offreDirectory, 'fiche_entretien/v1/fiche-entretien.md')}\``);
+    expect(session?.fixedPrompt).toContain(
+      `\`${path.join(postingDirectory, 'fiche_entretien/v1/fiche-entretien.md')}\``,
+    );
     const versionList = await actions.listVersions({ reference: REFERENCE, artefact: 'visualisation' });
     expect(versionList.map(({ number, isRetenue }) => ({ number, isRetenue }))).toEqual([
       { number: 1, isRetenue: false },
@@ -112,7 +116,7 @@ describe('visualisation', () => {
   });
 
   it("refuses to run without a Fiche d'entretien retenue, before queuing anything", async () => {
-    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, { isSuccess: false }));
+    const { actions } = await detectPostings(createFakeAiSession(RECHERCHE_RUN, { isSuccess: false }));
     await runModule(actions, 'recherche');
     await runModule(actions, 'fiche');
 
@@ -142,7 +146,7 @@ describe('visualisation', () => {
     },
   ])('fails the Version of a file that $problem', async ({ html, log }) => {
     const aiSession = createFakeAiSession(RECHERCHE_RUN, FICHE_RUN, visualisationRun(html));
-    const { actions } = await detectOffres(aiSession);
+    const { actions } = await detectPostings(aiSession);
     await runModule(actions, 'recherche');
     await runModule(actions, 'fiche');
 
@@ -165,10 +169,10 @@ describe('correcting a Visualisation', () => {
     expect(aiSession.interactiveSessionList).toEqual([]);
   });
 
-  it('shows the Visualisation on the fiche without a jf edit command, nor any file to correct', async () => {
+  it('shows the Visualisation on the Posting page without a jf edit command, nor any file to correct', async () => {
     const { actions } = await produceVisualisation(createFakeAiSession(RECHERCHE_RUN, FICHE_RUN, visualisationRun()));
 
-    const { artefactList } = await actions.readOffre({ reference: REFERENCE });
+    const { artefactList } = await actions.readPosting({ reference: REFERENCE });
 
     expect(Object.fromEntries(artefactList.map(({ artefact, isEditable }) => [artefact, isEditable]))).toEqual({
       recherche: true,
@@ -195,7 +199,7 @@ describe('reading a Visualisation', () => {
   it('reads the page of each Version', async () => {
     const otherPage = VISUALISATION.replace('<h1>', '<h1>Relancée : ');
     const aiSession = createFakeAiSession(RECHERCHE_RUN, FICHE_RUN, visualisationRun(), visualisationRun(otherPage));
-    const { actions } = await detectOffres(aiSession);
+    const { actions } = await detectPostings(aiSession);
     await runModule(actions, 'recherche');
     await runModule(actions, 'fiche');
     await runModule(actions, 'visualisation');
@@ -218,7 +222,7 @@ describe('reading a Visualisation', () => {
       error: "La Visualisation v1 de l'Offre 2026-2445600 n'a pas de page : relancez la Visualisation.",
     },
   ])('refuses $case', async ({ number, error }) => {
-    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, FICHE_RUN, {}));
+    const { actions } = await detectPostings(createFakeAiSession(RECHERCHE_RUN, FICHE_RUN, {}));
     await runModule(actions, 'recherche');
     await runModule(actions, 'fiche');
     await runModule(actions, 'visualisation');

@@ -1,27 +1,27 @@
-import { ETAT_LIST, EtatBadge, StatutBadge, type Statut } from '#/web/components/badge.tsx';
+import { ETAT_LIST, EtatBadge, StatusBadge, type Status } from '#/web/components/badge.tsx';
 import { MarkdownEditor } from '#/web/components/markdown-editor.tsx';
-import { OffreFiche, type IOffreFiche } from '#/web/components/offre-fiche.tsx';
-import { OffreList, type IOffreRow } from '#/web/components/offre-list.tsx';
+import { PostingDetail, type IPostingDetail } from '#/web/components/posting-detail.tsx';
+import { PostingList, type IPostingRow } from '#/web/components/posting-list.tsx';
 
-// Sample values that read as samples: the real Offres reach the front through the actions (ADR-0003)
-const SAMPLE_OFFRE = {
+// Sample values that read as samples: the real Postings reach the front through the actions (ADR-0003)
+const SAMPLE_POSTING = {
   reference: '2026-0000101',
   title: 'Attaché de justice (F/H), pôle civil',
-  url: 'https://example.org/offres/2026-0000101',
+  url: 'https://example.org/postings/2026-0000101',
   workplace: 'Tribunal judiciaire de Béthune',
   employer: 'Cour d’appel de Douai',
-  statut: 'a_traiter',
-  isExpiree: false,
+  status: 'to_apply',
+  isExpired: false,
   publishedAt: new Date('2026-10-20'),
-  dateLimite: new Date('2026-11-19'),
+  deadline: new Date('2026-11-19'),
   applicationEmail: 'recrutement@example.org',
   contact1: 'Greffe du pôle civil, 03 00 00 00 00',
   contact2: null,
-  republicationOf: { reference: '2026-0000042' },
-  republicationList: [],
-} satisfies IOffreFiche['offre'];
+  repostOf: { reference: '2026-0000042' },
+  repostList: [],
+} satisfies IPostingDetail['posting'];
 
-const SAMPLE_FICHE_DE_POSTE = [
+const SAMPLE_JOB_DESCRIPTION = [
   '## Missions',
   '',
   'L’attaché de justice assiste les magistrats du pôle civil : recherches juridiques, notes de synthèse et projets de décision.',
@@ -48,9 +48,9 @@ function sampleVersion(number: number, state: 'running' | 'ready' | 'failed') {
 }
 
 // One Artefact in each état, that of its latest Version
-const SAMPLE_FICHE: IOffreFiche = {
-  offre: SAMPLE_OFFRE,
-  ficheDePoste: SAMPLE_FICHE_DE_POSTE,
+const SAMPLE_POSTING_DETAIL: IPostingDetail = {
+  posting: SAMPLE_POSTING,
+  jobDescription: SAMPLE_JOB_DESCRIPTION,
   artefactList: [
     {
       artefact: 'recherche',
@@ -100,46 +100,46 @@ const SAMPLE_LETTRE = [
   '- Des notes de synthèse claires et sourcées',
 ].join('\n');
 
-const SAMPLE_OFFRE_LIST: IOffreRow[] = [
-  SAMPLE_OFFRE,
+const SAMPLE_POSTING_LIST: IPostingRow[] = [
+  SAMPLE_POSTING,
   {
     reference: '2026-0000102',
     title: 'Attaché de justice (F/H), parquet',
-    url: 'https://example.org/offres/2026-0000102',
+    url: 'https://example.org/postings/2026-0000102',
     workplace: 'Tribunal judiciaire de Boulogne-sur-Mer',
-    statut: 'postulee',
-    isExpiree: true,
+    status: 'applied',
+    isExpired: true,
     publishedAt: new Date('2026-09-25'),
-    dateLimite: new Date('2026-10-23'),
+    deadline: new Date('2026-10-23'),
   },
   {
     reference: '2026-0000103',
     title: 'Attaché de justice (F/H), pôle mineurs',
-    url: 'https://example.org/offres/2026-0000103',
+    url: 'https://example.org/postings/2026-0000103',
     workplace: 'Tribunal judiciaire d’Avesnes-sur-Helpe',
-    statut: 'a_traiter',
-    isExpiree: true,
+    status: 'to_apply',
+    isExpired: true,
     publishedAt: new Date('2026-09-14'),
-    dateLimite: new Date('2026-10-15'),
+    deadline: new Date('2026-10-15'),
   },
   {
     reference: '2026-0000104',
     title: 'Attaché de justice (F/H), service de l’application des peines',
-    url: 'https://example.org/offres/2026-0000104',
+    url: 'https://example.org/postings/2026-0000104',
     workplace: 'Tribunal judiciaire d’Amiens',
-    statut: 'archivee',
-    isExpiree: false,
+    status: 'archived',
+    isExpired: false,
     publishedAt: new Date('2026-09-30'),
-    dateLimite: null,
+    deadline: null,
   },
 ];
 
-// Each look of the badge: Expirée shows in place of À traiter
-const STATUT_SAMPLE_LIST: { statut: Statut; isExpiree: boolean }[] = [
-  { statut: 'a_traiter', isExpiree: false },
-  { statut: 'postulee', isExpiree: false },
-  { statut: 'a_traiter', isExpiree: true },
-  { statut: 'archivee', isExpiree: false },
+// Each look of the badge: Expired shows in place of To Apply
+const STATUS_SAMPLE_LIST: { status: Status; isExpired: boolean }[] = [
+  { status: 'to_apply', isExpired: false },
+  { status: 'applied', isExpired: false },
+  { status: 'to_apply', isExpired: true },
+  { status: 'archived', isExpired: false },
 ];
 
 export function meta() {
@@ -156,12 +156,12 @@ export default function Design() {
         <h1>Système de design</h1>
         <p>Les composants du front, montrés avec des Offres d’exemple.</p>
       </div>
-      <section aria-labelledby="statuts">
-        <h2 id="statuts">Statuts d’une Offre</h2>
+      <section aria-labelledby="statuses">
+        <h2 id="statuses">Statuts d’une Offre</h2>
         <ul className="badge-list">
-          {STATUT_SAMPLE_LIST.map(({ statut, isExpiree }) => (
-            <li key={`${statut}-${String(isExpiree)}`}>
-              <StatutBadge statut={statut} isExpiree={isExpiree} />
+          {STATUS_SAMPLE_LIST.map(({ status, isExpired }) => (
+            <li key={`${status}-${String(isExpired)}`}>
+              <StatusBadge status={status} isExpired={isExpired} />
             </li>
           ))}
         </ul>
@@ -176,17 +176,17 @@ export default function Design() {
           ))}
         </ul>
       </section>
-      <section aria-labelledby="offres">
-        <h2 id="offres">Liste d’Offres</h2>
-        <OffreList offreList={SAMPLE_OFFRE_LIST} />
+      <section aria-labelledby="postings">
+        <h2 id="postings">Liste d’Offres</h2>
+        <PostingList postingList={SAMPLE_POSTING_LIST} />
       </section>
       <section aria-labelledby="liste-vide">
         <h2 id="liste-vide">Liste vide</h2>
-        <OffreList offreList={[]} />
+        <PostingList postingList={[]} />
       </section>
-      <section aria-labelledby="fiche">
-        <h2 id="fiche">Fiche d’une Offre</h2>
-        <OffreFiche fiche={SAMPLE_FICHE} />
+      <section aria-labelledby="posting-detail">
+        <h2 id="posting-detail">Fiche d’une Offre</h2>
+        <PostingDetail detail={SAMPLE_POSTING_DETAIL} />
       </section>
       <section aria-labelledby="editeur">
         <h2 id="editeur">Éditeur Markdown</h2>

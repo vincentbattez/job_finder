@@ -12,7 +12,7 @@ function findFormatError(html: string): string | undefined {
   return /<script\b/i.test(html) ? "il contient un script, que le front n'exécute pas" : undefined;
 }
 
-// The Visualisation of an Offre: a headless Claude session writes a single HTML page from the Fiche
+// The Visualisation of a Posting: a headless Claude session writes a single HTML page from the Fiche
 // d'entretien retenue, which the front shows (ADR-0003). It is regenerated, never corrected by hand.
 export const VISUALISATION_MODULE = {
   fileName: VISUALISATION_FILE_NAME,

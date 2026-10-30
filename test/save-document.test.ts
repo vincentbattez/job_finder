@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
 
-import { detectOffres as detectRecordedOffres } from './data-directory.ts';
+import { detectPostings as detectRecordedPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
-// The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
+// The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
 function rechercheRun(title: string) {
@@ -31,8 +31,8 @@ const CORRECTED_LETTRE =
   "Madame la Présidente,\n\nTitulaire d'un master 2 de droit privé, je souhaite rejoindre le tribunal.\n";
 
 // Launching a module only queues its job: the worker's turn is taken here
-async function detectOffres(...plannedRunList: Parameters<typeof createFakeAiSession>) {
-  const { actions } = await detectRecordedOffres(createFakeAiSession(...plannedRunList));
+async function detectPostings(...plannedRunList: Parameters<typeof createFakeAiSession>) {
+  const { actions } = await detectRecordedPostings(createFakeAiSession(...plannedRunList));
   return actions;
 }
 
@@ -42,7 +42,7 @@ async function runModule(actions: Actions, module: string) {
 }
 
 async function readDocuments(actions: Actions, artefact: string) {
-  const { artefactList } = await actions.readOffre({ reference: REFERENCE });
+  const { artefactList } = await actions.readPosting({ reference: REFERENCE });
   return artefactList
     .find((artefactVersions) => artefactVersions.artefact === artefact)
     ?.versionList.map(({ version, documentList }) => ({
@@ -51,9 +51,9 @@ async function readDocuments(actions: Actions, artefact: string) {
     }));
 }
 
-// For each Artefact with Versions, the files of each Version the fiche offers to correct
+// For each Artefact with Versions, the files of each Version the Posting page offers to correct
 async function readModifiableFiles(actions: Actions) {
-  const { artefactList } = await actions.readOffre({ reference: REFERENCE });
+  const { artefactList } = await actions.readPosting({ reference: REFERENCE });
   return artefactList
     .filter(({ versionList }) => versionList.length > 0)
     .map(({ artefact, versionList }) => ({
@@ -64,9 +64,9 @@ async function readModifiableFiles(actions: Actions) {
     }));
 }
 
-// For each Artefact with Versions, the numbers of those the fiche offers to retain
+// For each Artefact with Versions, the numbers of those the Posting page offers to retain
 async function readRetenableVersions(actions: Actions) {
-  const { artefactList } = await actions.readOffre({ reference: REFERENCE });
+  const { artefactList } = await actions.readPosting({ reference: REFERENCE });
   return artefactList
     .filter(({ versionList }) => versionList.length > 0)
     .map(({ artefact, versionList }) => ({
@@ -77,7 +77,7 @@ async function readRetenableVersions(actions: Actions) {
 
 describe('saving a correction', () => {
   it('corrects the Version retenue of a Recherche in place, without creating a Version', async () => {
-    const actions = await detectOffres(rechercheRun('Recherche v1'), rechercheRun('Recherche v2'));
+    const actions = await detectPostings(rechercheRun('Recherche v1'), rechercheRun('Recherche v2'));
     await runModule(actions, 'recherche');
     await runModule(actions, 'recherche');
 
@@ -99,7 +99,7 @@ describe('saving a correction', () => {
 
   // The Brouillon stays as the AI wrote it, so that the tool learns from the corrections (spec « Lettre »)
   it('corrects the Lettre and refuses to touch its Brouillon', async () => {
-    const actions = await detectOffres(rechercheRun('Recherche'), LETTRE_RUN);
+    const actions = await detectPostings(rechercheRun('Recherche'), LETTRE_RUN);
     await runModule(actions, 'recherche');
     await runModule(actions, 'lettre');
 
@@ -129,12 +129,12 @@ describe('saving a correction', () => {
     ]);
   });
 
-  // The Lettre retenue of a Postulée Offre is the one sent (spec « Versions »)
-  it('refuses to correct the Lettre of a Postulée Offre', async () => {
-    const actions = await detectOffres(rechercheRun('Recherche'), LETTRE_RUN);
+  // The Lettre retenue of an Applied Posting is the one sent (spec « Versions »)
+  it('refuses to correct the Lettre of an Applied Posting', async () => {
+    const actions = await detectPostings(rechercheRun('Recherche'), LETTRE_RUN);
     await runModule(actions, 'recherche');
     await runModule(actions, 'lettre');
-    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
 
     await expect(
       actions.saveDocument({
@@ -151,25 +151,25 @@ describe('saving a correction', () => {
   });
 
   it('writes only over a Markdown file of the Version retenue', async () => {
-    const actions = await detectOffres(rechercheRun('Recherche'));
+    const actions = await detectPostings(rechercheRun('Recherche'));
     await runModule(actions, 'recherche');
-    const { ficheDePoste } = await actions.readOffre({ reference: REFERENCE });
+    const { jobDescription } = await actions.readPosting({ reference: REFERENCE });
 
     await expect(
       actions.saveDocument({
         reference: REFERENCE,
         artefact: 'recherche',
-        fileName: '../../fiche-de-poste.md',
+        fileName: '../../job-description.md',
         markdown: '# Remplacée\n',
       }),
-    ).rejects.toThrow(/« \.\.\/\.\.\/fiche-de-poste\.md » n'est pas un fichier de la Version retenue/);
+    ).rejects.toThrow(/« \.\.\/\.\.\/job-description\.md » n'est pas un fichier de la Version retenue/);
 
-    const after = await actions.readOffre({ reference: REFERENCE });
-    expect(after.ficheDePoste).toBe(ficheDePoste);
+    const after = await actions.readPosting({ reference: REFERENCE });
+    expect(after.jobDescription).toBe(jobDescription);
   });
 
   it('refuses an Artefact without a Version retenue', async () => {
-    const actions = await detectOffres();
+    const actions = await detectPostings();
 
     await expect(
       actions.saveDocument({ reference: REFERENCE, artefact: 'recherche', fileName: 'recherche.md', markdown: '' }),
@@ -177,16 +177,16 @@ describe('saving a correction', () => {
   });
 
   // The front opens an editor only where saveDocument accepts the file
-  it('tells the fiche which files can be corrected: those of the Versions retenues, until the Lettre is sent', async () => {
-    const actions = await detectOffres(rechercheRun('Recherche v1'), rechercheRun('Recherche v2'), LETTRE_RUN);
+  it('tells the Posting page which files can be corrected: those of the Versions retenues, until the Lettre is sent', async () => {
+    const actions = await detectPostings(rechercheRun('Recherche v1'), rechercheRun('Recherche v2'), LETTRE_RUN);
     await runModule(actions, 'recherche');
     await runModule(actions, 'recherche');
     await runModule(actions, 'lettre');
-    const beforePostuleeList = await readModifiableFiles(actions);
+    const beforeAppliedList = await readModifiableFiles(actions);
 
-    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
 
-    expect(beforePostuleeList).toEqual([
+    expect(beforeAppliedList).toEqual([
       { artefact: 'recherche', fileNameList: [[], ['recherche.md']] },
       { artefact: 'lettre', fileNameList: [['lettre.md']] },
     ]);
@@ -197,8 +197,8 @@ describe('saving a correction', () => {
   });
 
   // The front offers « Retenir » only where retenirVersion accepts the Version
-  it('tells the fiche which Versions can become the Version retenue, the Lettre ones until it is sent', async () => {
-    const actions = await detectOffres(
+  it('tells the Posting page which Versions can become the Version retenue, the Lettre ones until it is sent', async () => {
+    const actions = await detectPostings(
       rechercheRun('Recherche v1'),
       rechercheRun('Recherche v2'),
       { isSuccess: false },
@@ -210,11 +210,11 @@ describe('saving a correction', () => {
     await runModule(actions, 'recherche');
     await runModule(actions, 'lettre');
     await runModule(actions, 'lettre');
-    const beforePostuleeList = await readRetenableVersions(actions);
+    const beforeAppliedList = await readRetenableVersions(actions);
 
-    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
 
-    expect(beforePostuleeList).toEqual([
+    expect(beforeAppliedList).toEqual([
       { artefact: 'recherche', numberList: [1] },
       { artefact: 'lettre', numberList: [1] },
     ]);
@@ -226,7 +226,7 @@ describe('saving a correction', () => {
 
   // The Visualisation is regenerated from the Fiche d'entretien, never corrected (spec « Modules IA »)
   it('refuses to correct a Visualisation by hand', async () => {
-    const actions = await detectOffres();
+    const actions = await detectPostings();
 
     await expect(
       actions.saveDocument({

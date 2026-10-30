@@ -2,23 +2,23 @@ import path from 'node:path';
 
 import type { IAiModule } from '#/ai-module/index.ts';
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { ARTEFACT_SCHEMA, type Artefact, type Job, type Offre, type Version } from '#/domain/index.ts';
+import { ARTEFACT_SCHEMA, type Artefact, type Job, type Posting, type Version } from '#/domain/index.ts';
 import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/domain/labels.ts';
 import { FICHE_ENTRETIEN_MODULE } from '#/modules/fiche-entretien/index.ts';
 import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
 import { RECHERCHE_MODULE } from '#/modules/recherche/index.ts';
 import { VISUALISATION_MODULE } from '#/modules/visualisation/index.ts';
-import { assertLettreModifiable, findLettreFreeze, hasBeenPostulee } from '#/statut/index.ts';
+import { assertLettreModifiable, findLettreFreeze, hasBeenApplied } from '#/status/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
-// A Version a job reads, of its own Offre or of another one
+// A Version a job reads, of its own Posting or of another one
 interface IReadVersion {
-  offre: Offre;
+  posting: Posting;
   version: Version;
 }
 
-export async function findVersionRetenue(workspace: Workspace, offre: Offre, artefact: Artefact) {
-  const versionList = await workspace.listVersions(offre, artefact);
+export async function findVersionRetenue(workspace: Workspace, posting: Posting, artefact: Artefact) {
+  const versionList = await workspace.listVersions(posting, artefact);
   return versionList.find(({ isRetenue }) => isRetenue);
 }
 
@@ -53,48 +53,48 @@ export function findDefaultInstructions(module: Artefact): string {
   return AI_MODULE_BY_ARTEFACT[module].defaultInstructions;
 }
 
-// A Republication starts from the work done for the Offre it publishes again
-async function findRepublishedVersions(workspace: Workspace, { republicationOf, candidateId }: Offre) {
-  const offreList = republicationOf === null ? [] : await workspace.findOffres(republicationOf.reference);
-  const republishedOffre = offreList.find((offre) => offre.candidateId === candidateId);
-  return republishedOffre === undefined
-    ? []
-    : findVersionsRetenues(workspace, republishedOffre, ARTEFACT_SCHEMA.options);
+// A Repost starts from the work done for the Posting it publishes again
+async function findRepostedVersions(workspace: Workspace, { repostOf, candidateId }: Posting) {
+  const postingList = repostOf === null ? [] : await workspace.findPostings(repostOf.reference);
+  const repostedPosting = postingList.find((posting) => posting.candidateId === candidateId);
+  return repostedPosting === undefined ? [] : findVersionsRetenues(workspace, repostedPosting, ARTEFACT_SCHEMA.options);
 }
 
 async function findVersionsRetenues(
   workspace: Workspace,
-  offre: Offre,
+  posting: Posting,
   artefactList: readonly Artefact[],
 ): Promise<IReadVersion[]> {
-  const versionList = await Promise.all(artefactList.map((artefact) => findVersionRetenue(workspace, offre, artefact)));
-  return versionList.filter((version) => version !== undefined).map((version) => ({ offre, version }));
+  const versionList = await Promise.all(
+    artefactList.map((artefact) => findVersionRetenue(workspace, posting, artefact)),
+  );
+  return versionList.filter((version) => version !== undefined).map((version) => ({ posting, version }));
 }
 
-// Those of the Offres once Postulée: what the Candidate sent
-async function findSentVersions(workspace: Workspace, { candidateId }: Offre, artefact: Artefact) {
-  const offreList = await workspace.listOffres(candidateId);
+// Those of the Postings once Applied: what the Candidate sent
+async function findSentVersions(workspace: Workspace, { candidateId }: Posting, artefact: Artefact) {
+  const postingList = await workspace.listPostings(candidateId);
   const sentList = await Promise.all(
-    offreList
-      .filter((offre) => hasBeenPostulee(offre))
-      .map((offre) => findVersionsRetenues(workspace, offre, [artefact])),
+    postingList
+      .filter((posting) => hasBeenApplied(posting))
+      .map((posting) => findVersionsRetenues(workspace, posting, [artefact])),
   );
   return sentList.flat();
 }
 
 type Refusal = { freeze: string } | { missingArtefact: Artefact };
 
-// Why the module cannot run on the Offre now, undefined when it can: its Artefact frozen since the
-// Offre was Postulée, or an Artefact it requires without a Version retenue
-async function findRefusal(workspace: Workspace, offre: Offre, module: Artefact): Promise<Refusal | undefined> {
+// Why the module cannot run on the Posting now, undefined when it can: its Artefact frozen since the
+// Posting was Applied, or an Artefact it requires without a Version retenue
+async function findRefusal(workspace: Workspace, posting: Posting, module: Artefact): Promise<Refusal | undefined> {
   const aiModule = AI_MODULE_BY_ARTEFACT[module];
-  const freeze = aiModule.isFrozenOncePostulee === true ? findLettreFreeze(offre) : undefined;
+  const freeze = aiModule.isFrozenOnceApplied === true ? findLettreFreeze(posting) : undefined;
   if (freeze !== undefined) {
     return { freeze };
   }
   const requiredArtefactList = aiModule.requiredArtefactList ?? [];
   for (const artefact of requiredArtefactList) {
-    if ((await findVersionRetenue(workspace, offre, artefact)) === undefined) {
+    if ((await findVersionRetenue(workspace, posting, artefact)) === undefined) {
       return { missingArtefact: artefact };
     }
   }
@@ -103,47 +103,47 @@ async function findRefusal(workspace: Workspace, offre: Offre, module: Artefact)
 
 // The refusal in the words of the CLI, with the command that lifts it, or of the front, beside the
 // button of the missing Artefact
-function wordRefusal(refusal: Refusal, offre: Offre, module: Artefact, isForFront = false): string {
+function wordRefusal(refusal: Refusal, posting: Posting, module: Artefact, isForFront = false): string {
   if ('freeze' in refusal) {
     return refusal.freeze;
   }
   const { missingArtefact } = refusal;
   const missingLabel = ARTEFACT_LABEL_BY_ARTEFACT[missingArtefact];
-  const reason = `L'Offre ${offre.reference} n'a pas de ${missingLabel} retenue, sur laquelle s'appuie la ${ARTEFACT_LABEL_BY_ARTEFACT[module]}`;
+  const reason = `L'Offre ${posting.reference} n'a pas de ${missingLabel} retenue, sur laquelle s'appuie la ${ARTEFACT_LABEL_BY_ARTEFACT[module]}`;
   return isForFront
     ? `${reason} : lancez d'abord la ${missingLabel}.`
-    : `${reason}. La produire d'abord : jf run ${missingArtefact} ${offre.reference}.`;
+    : `${reason}. La produire d'abord : jf run ${missingArtefact} ${posting.reference}.`;
 }
 
-// What the Candidate sends, the Lettre, is frozen once the Offre was Postulée
-export function assertNotFrozen(offre: Offre, artefact: Artefact): void {
-  if (AI_MODULE_BY_ARTEFACT[artefact].isFrozenOncePostulee === true) {
-    assertLettreModifiable(offre);
+// What the Candidate sends, the Lettre, is frozen once the Posting was Applied
+export function assertNotFrozen(posting: Posting, artefact: Artefact): void {
+  if (AI_MODULE_BY_ARTEFACT[artefact].isFrozenOnceApplied === true) {
+    assertLettreModifiable(posting);
   }
 }
 
 // Throws before anything is written: the actions refuse a job up front, the runner a job queued
-// before the Offre changed
-export async function findInputs(workspace: Workspace, offre: Offre, module: Artefact) {
-  const refusal = await findRefusal(workspace, offre, module);
+// before the Posting changed
+export async function findInputs(workspace: Workspace, posting: Posting, module: Artefact) {
+  const refusal = await findRefusal(workspace, posting, module);
   if (refusal !== undefined) {
-    throw new Error(wordRefusal(refusal, offre, module));
+    throw new Error(wordRefusal(refusal, posting, module));
   }
   const aiModule = AI_MODULE_BY_ARTEFACT[module];
   const artefactList = [...(aiModule.requiredArtefactList ?? []), ...(aiModule.optionalArtefactList ?? [])];
   const versionList = [
-    ...(await findVersionsRetenues(workspace, offre, artefactList)),
-    ...(aiModule.isReadingRepublishedOffre === true ? await findRepublishedVersions(workspace, offre) : []),
-    ...(aiModule.isReadingSentVersions === true ? await findSentVersions(workspace, offre, module) : []),
+    ...(await findVersionsRetenues(workspace, posting, artefactList)),
+    ...(aiModule.isReadingRepostedPosting === true ? await findRepostedVersions(workspace, posting) : []),
+    ...(aiModule.isReadingSentVersions === true ? await findSentVersions(workspace, posting, module) : []),
   ];
-  const directoryList = aiModule.isReadingProfile === true ? [workspace.profileDirectoryOf(offre.candidateId)] : [];
+  const directoryList = aiModule.isReadingProfile === true ? [workspace.profileDirectoryOf(posting.candidateId)] : [];
   return { versionList, directoryList };
 }
 
 // The fiche offers a module with the very checks of a launch
-export async function describeModule(workspace: Workspace, offre: Offre, artefact: Artefact) {
-  const refusal = await findRefusal(workspace, offre, artefact);
-  return { refusal: refusal === undefined ? null : wordRefusal(refusal, offre, artefact, true) };
+export async function describeModule(workspace: Workspace, posting: Posting, artefact: Artefact) {
+  const refusal = await findRefusal(workspace, posting, artefact);
+  return { refusal: refusal === undefined ? null : wordRefusal(refusal, posting, artefact, true) };
 }
 
 // The worker runs each queued job with it (ADR-0003); the Version keeps the Instructions it was made
@@ -152,11 +152,11 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
   // A Version is ready only once each of its files exists, is not empty and has the module's format
   function findOutputProblem(
     { name, findFormatError }: IAiModule['outputFileList'][number],
-    offre: Offre,
+    posting: Posting,
     outputDirectory: string,
   ) {
     const filePath = path.join(outputDirectory, name);
-    const outputPath = path.relative(workspace.offreDirectoryOf(offre), filePath);
+    const outputPath = path.relative(workspace.postingDirectoryOf(posting), filePath);
     const content = workspace.readTextFile(filePath);
     if (content === null) {
       return `Le fichier attendu ${outputPath} est absent.`;
@@ -164,52 +164,52 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
     if (content.trim() === '') {
       return `Le fichier attendu ${outputPath} est vide.`;
     }
-    const formatError = findFormatError?.(content, offre);
+    const formatError = findFormatError?.(content, posting);
     return formatError === undefined ? undefined : `Le fichier ${outputPath} est mal formé : ${formatError}.`;
   }
 
   return async function runJob(job: Job & { module: Artefact }): Promise<{ job: Job; version: Version }> {
-    const { offre, module } = job;
+    const { posting, module } = job;
     const aiModule = AI_MODULE_BY_ARTEFACT[module];
-    const { versionList: inputList, directoryList } = await findInputs(workspace, offre, module);
-    const candidateInstructions = workspace.readInstructions(offre.candidateId, module);
+    const { versionList: inputList, directoryList } = await findInputs(workspace, posting, module);
+    const candidateInstructions = workspace.readInstructions(posting.candidateId, module);
     const instructions = candidateInstructions ?? aiModule.defaultInstructions;
     const hasCandidateInstructions = candidateInstructions !== null;
     const version = await workspace.startJob(job, { instructions, hasCandidateInstructions, inputList });
-    const offreDirectory = workspace.offreDirectoryOf(offre);
-    const outputDirectory = workspace.createVersionDirectory(offre, version);
+    const postingDirectory = workspace.postingDirectoryOf(posting);
+    const outputDirectory = workspace.createVersionDirectory(posting, version);
     const readVersionList = inputList.map((input) => {
-      const directory = workspace.versionDirectoryOf(input.offre, input.version);
+      const directory = workspace.versionDirectoryOf(input.posting, input.version);
       const { fileName } = AI_MODULE_BY_ARTEFACT[input.version.artefact];
       return {
-        reference: input.offre.reference,
+        reference: input.posting.reference,
         artefact: input.version.artefact,
         directory,
         filePath: path.join(directory, fileName),
       };
     });
     const fixedPrompt = aiModule.composePrompt({
-      offre,
-      outputDirectory: path.relative(offreDirectory, outputDirectory),
+      posting,
+      outputDirectory: path.relative(postingDirectory, outputDirectory),
       readVersionList,
-      profileDirectory: workspace.profileDirectoryOf(offre.candidateId),
+      profileDirectory: workspace.profileDirectoryOf(posting.candidateId),
     });
     const session = await aiSession.runHeadless({
       fixedPrompt,
       instructions,
-      directory: offreDirectory,
-      // The session runs in the folder of the Offre: only the folders outside it are added
+      directory: postingDirectory,
+      // The session runs in the folder of the Posting: only the folders outside it are added
       readDirectoryList: [
         ...directoryList,
         ...readVersionList
           .map(({ directory }) => directory)
-          .filter((directory) => path.relative(offreDirectory, directory).startsWith('..')),
+          .filter((directory) => path.relative(postingDirectory, directory).startsWith('..')),
       ],
       outputDirectory,
     });
     const problem = session.isSuccess
       ? aiModule.outputFileList
-          .map((outputFile) => findOutputProblem(outputFile, offre, outputDirectory))
+          .map((outputFile) => findOutputProblem(outputFile, posting, outputDirectory))
           .find((fileProblem) => fileProblem !== undefined)
       : undefined;
     const isReady = session.isSuccess && problem === undefined;

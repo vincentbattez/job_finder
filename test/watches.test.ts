@@ -8,7 +8,7 @@ import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { LEA_WATCH, LEA_WATCH_ID } from './lea.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
-// An attaché de justice Offre of the court of appeal of Versailles, out of the Zone of Léa's first
+// An attaché de justice Posting of the court of appeal of Versailles, out of the Zone of Léa's first
 // Watch, from the responses recorded on 2026-10-29
 const VERSAILLES_REFERENCE = '2026-2409247';
 
@@ -20,8 +20,8 @@ const VERSAILLES_WATCH = {
 
 const RECHERCHE = { fileByName: { 'recherche.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
 
-// Léa's Offres already online, imported by the first Detection of her Watch
-async function detectLeaOffres() {
+// Léa's Postings already online, imported by the first Detection of her Watch
+async function detectLeaPostings() {
   const actions = await createActions({ dataDirectory: createDataDirectory(), fetch: createRecordedFetch().fetch });
   await actions.detect();
   return actions;
@@ -39,7 +39,7 @@ describe('Watches', () => {
   });
 
   it('takes a second Watch into account from the next Detection, on its first launch', async () => {
-    const actions = await detectLeaOffres();
+    const actions = await detectLeaPostings();
 
     await actions.saveWatch({
       candidateId: 'lea',
@@ -61,9 +61,9 @@ describe('Watches', () => {
     ]);
   });
 
-  // A broader title would otherwise start a Recherche for every Offre already online at once
+  // A broader title would otherwise start a Recherche for every Posting already online at once
   it('starts the first launch of a Watch again once its Parameters change', async () => {
-    const actions = await detectLeaOffres();
+    const actions = await detectLeaPostings();
 
     await actions.saveWatch({
       candidateId: 'lea',
@@ -78,7 +78,7 @@ describe('Watches', () => {
   });
 
   it('keeps the Detection of a Watch saved unchanged', async () => {
-    const actions = await detectLeaOffres();
+    const actions = await detectLeaPostings();
 
     await actions.saveWatch({ candidateId: 'lea', watchId: LEA_WATCH_ID, ...LEA_WATCH });
 
@@ -105,14 +105,14 @@ describe('Watches', () => {
     );
   });
 
-  it('deletes a Watch, whose Offres stay with the Candidate', async () => {
-    const actions = await detectLeaOffres();
-    const offreList = await actions.listOffres({ candidateId: 'lea' });
+  it('deletes a Watch, whose Postings stay with the Candidate', async () => {
+    const actions = await detectLeaPostings();
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
 
     await actions.deleteWatch({ candidateId: 'lea', watchId: LEA_WATCH_ID });
 
     expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([]);
-    expect(await actions.listOffres({ candidateId: 'lea' })).toEqual(offreList);
+    expect(await actions.listPostings({ candidateId: 'lea' })).toEqual(postingList);
     expect(await actions.detect()).toEqual([]);
   });
 
@@ -126,8 +126,8 @@ describe('Watches', () => {
     expect(await actions.listWatches({ candidateId: 'lea' })).toHaveLength(1);
   });
 
-  // Each Watch has its own Zone: an Offre one stored out of its Zone may be in that of another
-  describe('an Offre in the Zone of another Watch of the Candidate', () => {
+  // Each Watch has its own Zone: a Posting one stored out of its Zone may be in that of another
+  describe('a Posting in the Zone of another Watch of the Candidate', () => {
     it('gets its Recherche and its notification once, when it is new', async () => {
       const dataDirectory = createDataDirectory();
       const notificationChannel = createFakeNotificationChannel();
@@ -148,15 +148,15 @@ describe('Watches', () => {
       recordedFetch.requestedUrlList.length = 0;
       await actions.detect();
 
-      // Once read by each Watch, no Offre is read again: each Watch reads only its feed
+      // Once read by each Watch, no Posting is read again: each Watch reads only its feed
       expect(recordedFetch.requestedUrlList).toEqual([DSJ_FEED_URL, DSJ_FEED_URL]);
-      const offreList = await actions.listOffres({ candidateId: 'lea' });
-      expect(offreList.filter(({ reference }) => reference === VERSAILLES_REFERENCE)).toMatchObject([
+      const postingList = await actions.listPostings({ candidateId: 'lea' });
+      expect(postingList.filter(({ reference }) => reference === VERSAILLES_REFERENCE)).toMatchObject([
         { isInZone: true },
       ]);
       expect(notificationChannel.sentList.map(({ title }) => title)).toEqual(['Nouvelle Offre dans la Zone']);
       const jobList = await actions.runQueuedJobs();
-      expect(jobList.map((job) => `${job.module} ${'offre' in job ? job.offre.reference : job.upload}`)).toEqual([
+      expect(jobList.map((job) => `${job.module} ${'posting' in job ? job.posting.reference : job.upload}`)).toEqual([
         `recherche ${VERSAILLES_REFERENCE}`,
       ]);
     });
@@ -175,8 +175,8 @@ describe('Watches', () => {
       await actions.saveWatch({ candidateId: 'lea', ...VERSAILLES_WATCH });
       await actions.detect();
 
-      const offreList = await actions.listOffres({ candidateId: 'lea' });
-      expect(offreList.find(({ reference }) => reference === VERSAILLES_REFERENCE)).toMatchObject({ isInZone: true });
+      const postingList = await actions.listPostings({ candidateId: 'lea' });
+      expect(postingList.find(({ reference }) => reference === VERSAILLES_REFERENCE)).toMatchObject({ isInZone: true });
       expect(notificationChannel.sentList).toEqual([]);
       expect(await actions.runQueuedJobs()).toEqual([]);
     });

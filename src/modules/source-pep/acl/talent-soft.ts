@@ -1,4 +1,9 @@
-import { FICHE_DE_POSTE_SCHEMA, LISTED_OFFRE_SCHEMA, type FicheDePoste, type ListedOffre } from '#/domain/index.ts';
+import {
+  JOB_DESCRIPTION_SCHEMA,
+  LISTED_POSTING_SCHEMA,
+  type JobDescription,
+  type ListedPosting,
+} from '#/domain/index.ts';
 
 // Place de l'Emploi Public publishes through Talent-Soft, whose pages are plain server HTML
 const ORIGIN = 'https://place-ep-recrute.talent-soft.com';
@@ -25,7 +30,7 @@ function toText(html: string): string {
   return decodeEntities(html.replaceAll(/<br\s*\/?>/g, '\n').replaceAll(/<[^<>]*>/g, '')).trim();
 }
 
-// Keeps the headings, paragraphs and lists of the detail page, so the Fiche de poste reads as published
+// Keeps the headings, paragraphs and lists of the detail page, so the Job Description reads as published
 function toMarkdown(html: string): string {
   const markdown = html
     .replaceAll(
@@ -47,7 +52,7 @@ function toMarkdown(html: string): string {
 async function get(httpFetch: typeof fetch, url: string): Promise<string> {
   let response: Response;
   try {
-    // A removed offer redirects to the home page: the redirect is an error, not a Fiche de poste
+    // A removed offer redirects to the home page: the redirect is an error, not a Job Description
     response = await httpFetch(url, { redirect: 'manual' });
   } catch (error) {
     throw new Error(`Le site PEP est injoignable (${url}) : ${String(error)}. Vérifier la connexion, puis relancer.`, {
@@ -65,13 +70,13 @@ function readTag(xml: string, tag: string): string {
   return decodeEntities(new RegExp(`<${tag}>([^<]*)</${tag}>`).exec(xml)?.[1] ?? '').trim();
 }
 
-function readItem(item: string): ListedOffre {
+function readItem(item: string): ListedPosting {
   const feedTitle = readTag(item, 'title');
   const [, reference, title] = /^(\d{4}-\d{7}) - (.+)$/.exec(feedTitle) ?? [];
   if (reference === undefined || title === undefined) {
     throw new Error(`Offre du flux PEP sans référence AAAA-NNNNNNN : « ${feedTitle} ». Le format du flux a changé.`);
   }
-  return LISTED_OFFRE_SCHEMA.parse({
+  return LISTED_POSTING_SCHEMA.parse({
     reference,
     title: title.trim(),
     url: readTag(item, 'link'),
@@ -79,7 +84,7 @@ function readItem(item: string): ListedOffre {
   });
 }
 
-export async function readFeed(httpFetch: typeof fetch = fetch): Promise<ListedOffre[]> {
+export async function readFeed(httpFetch: typeof fetch = fetch): Promise<ListedPosting[]> {
   const xml = await get(httpFetch, FEED_URL);
   const channelTitle = readTag(xml, 'title');
   if (!channelTitle.includes(FEED_FILTER)) {
@@ -88,13 +93,13 @@ export async function readFeed(httpFetch: typeof fetch = fetch): Promise<ListedO
         `Le site a ignoré le filtre Rss_Entity=1123 : vérifier l'identifiant de la DSJ (ADR-0001).`,
     );
   }
-  const listedOffreList = Array.from(xml.matchAll(/<item>([\s\S]*?)<\/item>/g), ([, item = '']) => readItem(item));
-  if (listedOffreList.length === 0) {
+  const listedPostingList = Array.from(xml.matchAll(/<item>([\s\S]*?)<\/item>/g), ([, item = '']) => readItem(item));
+  if (listedPostingList.length === 0) {
     throw new Error(
       `Le flux PEP est vide (${FEED_URL}), alors que la DSJ publie toujours des offres. L'ouvrir pour vérifier.`,
     );
   }
-  return listedOffreList;
+  return listedPostingList;
 }
 
 function readField(html: string, id: string): string | null {
@@ -103,11 +108,11 @@ function readField(html: string, id: string): string | null {
 }
 
 // The fields are read by their element ids, stable across offers (ADR-0001). The employing court of
-// appeal tells the Zone, a Parameter of this Source only: it stays out of the Fiche de poste.
-export async function readFicheDePoste(
+// appeal tells the Zone, a Parameter of this Source only: it stays out of the Job Description.
+export async function readJobDescription(
   reference: string,
   httpFetch: typeof fetch = fetch,
-): Promise<{ ficheDePoste: FicheDePoste; courtOfAppeal: string | null }> {
+): Promise<{ jobDescription: JobDescription; courtOfAppeal: string | null }> {
   const url = `${ORIGIN}/offre-de-emploi/emploi_${reference.slice('AAAA-'.length)}.aspx`;
   const html = await get(httpFetch, url);
   const content = /id="contenu-ficheoffre"[^>]*>([\s\S]*?)<div class="ts-offer-page__cta is-bottom/.exec(html)?.[1];
@@ -116,11 +121,11 @@ export async function readFicheDePoste(
       `La fiche détaillée de l'Offre ${reference} est illisible (${url}) : le format de la page a changé.`,
     );
   }
-  const dateLimite = readField(content, 'fldoffer_date1');
+  const deadline = readField(content, 'fldoffer_date1');
   // The employing court of appeal is the offer's entity, such as « Direction des services judiciaires - CA DOUAI »
   const entity = toText(/_divEntityDesc"[^>]*>[\s\S]*?<\/h3>([\s\S]*?)<\/div>/.exec(content)?.[1] ?? '');
-  const ficheDePoste = FICHE_DE_POSTE_SCHEMA.parse({
-    dateLimite: dateLimite === null ? null : new Date(dateLimite.split('/').toReversed().join('-')),
+  const jobDescription = JOB_DESCRIPTION_SCHEMA.parse({
+    deadline: deadline === null ? null : new Date(deadline.split('/').toReversed().join('-')),
     employer: readField(content, 'fldoffer_longtext2'),
     workplace: readField(content, 'fldlocation_shorttext1'),
     applicationEmail: readField(content, 'fldorigin_shorttext1'),
@@ -128,5 +133,5 @@ export async function readFicheDePoste(
     contact2: readField(content, 'fldorigin_shorttext3'),
     markdown: toMarkdown(content),
   });
-  return { ficheDePoste, courtOfAppeal: / - CA (.+)$/.exec(entity)?.[1] ?? null };
+  return { jobDescription, courtOfAppeal: / - CA (.+)$/.exec(entity)?.[1] ?? null };
 }

@@ -36,7 +36,7 @@ test.describe('Candidates', () => {
     await expect(creation.getByRole('alert')).toHaveText("Un Candidat a déjà l'identifiant lea : en choisir un autre.");
   });
 
-  // Saved as it was: the other tests read Expirée at the same time
+  // Saved as it was: the other tests read Expired at the same time
   test('saves the Default Deadline Period', async ({ page }) => {
     await page.goto('/candidates');
     const delay = page.getByRole('region', { name: 'Délai par défaut' });

@@ -3,12 +3,12 @@ import { index, route, type RouteConfig } from '@react-router/dev/routes';
 import { REDIRECT_LIST } from './redirects.ts';
 
 export default [
-  index('routes/offres.tsx'),
-  route('offres/:reference', 'routes/offre.tsx'),
-  route('offres/:reference/statut', 'routes/statut.ts'),
-  route('offres/:reference/:artefact/document', 'routes/document.ts'),
-  route('offres/:reference/:artefact/retenue', 'routes/version-retenue.ts'),
-  route('offres/:reference/visualisation/:number', 'routes/visualisation.ts'),
+  index('routes/postings.tsx'),
+  route('postings/:reference', 'routes/posting.tsx'),
+  route('postings/:reference/status', 'routes/status.ts'),
+  route('postings/:reference/:artefact/document', 'routes/document.ts'),
+  route('postings/:reference/:artefact/retenue', 'routes/version-retenue.ts'),
+  route('postings/:reference/visualisation/:number', 'routes/visualisation.ts'),
   route('candidate', 'routes/candidate.ts'),
   route('profile', 'routes/profile.tsx'),
   route('notification-channel', 'routes/notification-channel.ts'),

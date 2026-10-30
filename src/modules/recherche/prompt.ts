@@ -1,11 +1,11 @@
 import type { IPromptInput } from '#/ai-module/index.ts';
-import { FICHE_DE_POSTE_FILE_NAME } from '#/domain/index.ts';
+import { JOB_DESCRIPTION_FILE_NAME } from '#/domain/index.ts';
 
 export const RECHERCHE_FILE_NAME = 'recherche.md';
 
-// A Republication starts from the Artefacts of the Offre it publishes again, so the work is not
+// A Repost starts from the Artefacts of the Posting it publishes again, so the work is not
 // done twice
-function describeRepublishedOffre(readVersionList: IPromptInput['readVersionList']): string {
+function describeRepostedPosting(readVersionList: IPromptInput['readVersionList']): string {
   const [firstVersion] = readVersionList;
   if (firstVersion === undefined) {
     return '';
@@ -23,7 +23,7 @@ Ne refais pas ce travail : pars de sa Recherche, vérifie ce que la Fiche de pos
 
 // The fixed part sets the objective and the rules no Instructions can lift (ADR-0003); the way to
 // reach it is left to the session and its Instructions
-export function composeRecherchePrompt({ offre, outputDirectory, readVersionList }: IPromptInput): string {
+export function composeRecherchePrompt({ posting, outputDirectory, readVersionList }: IPromptInput): string {
   const outputPath = `${outputDirectory}/${RECHERCHE_FILE_NAME}`;
   return `Tu produis la Recherche d'une Offre d'emploi, pour le Candidat qui va y postuler. Écris en français.
 
@@ -33,14 +33,14 @@ export function composeRecherchePrompt({ offre, outputDirectory, readVersionList
 
 ## L'Offre
 
-- Référence : ${offre.reference}
-- Titre : ${offre.title}
-- Employeur : ${offre.employer ?? 'non précisé'}
-- Lieu d'affectation : ${offre.workplace ?? 'non précisé'}
-- Annonce : ${offre.url ?? 'non précisée'}
+- Référence : ${posting.reference}
+- Titre : ${posting.title}
+- Employeur : ${posting.employer ?? 'non précisé'}
+- Lieu d'affectation : ${posting.workplace ?? 'non précisé'}
+- Annonce : ${posting.url ?? 'non précisée'}
 
-Le dossier courant est celui de l'Offre. Sa Fiche de poste, telle qu'elle a été publiée, est dans \`${FICHE_DE_POSTE_FILE_NAME}\` : lis-la en premier.
-${describeRepublishedOffre(readVersionList)}
+Le dossier courant est celui de l'Offre. Sa Fiche de poste, telle qu'elle a été publiée, est dans \`${JOB_DESCRIPTION_FILE_NAME}\` : lis-la en premier.
+${describeRepostedPosting(readVersionList)}
 ## Ce que tu produis
 
 Un seul fichier Markdown : \`${outputPath}\`.

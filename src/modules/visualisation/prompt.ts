@@ -4,16 +4,16 @@ export const VISUALISATION_FILE_NAME = 'visualisation.html';
 
 // The rules no Instructions can lift (ADR-0003); a single self-contained file without JavaScript,
 // since the front's sandboxed frame runs no script and loads nothing from outside
-export function composeVisualisationPrompt({ offre, outputDirectory, readVersionList }: IPromptInput): string {
+export function composeVisualisationPrompt({ posting, outputDirectory, readVersionList }: IPromptInput): string {
   const outputPath = `${outputDirectory}/${VISUALISATION_FILE_NAME}`;
   const ficheList = readVersionList.filter(({ artefact }) => artefact === 'fiche_entretien');
   return `Tu mets en forme la Fiche d'entretien d'un Candidat en une page HTML, plus agréable pour réviser : des tableaux et des diagrammes plutôt que du texte suivi. Écris en français.
 
 ## L'Offre
 
-- Référence : ${offre.reference}
-- Titre : ${offre.title}
-- Employeur : ${offre.employer ?? 'non précisé'}
+- Référence : ${posting.reference}
+- Titre : ${posting.title}
+- Employeur : ${posting.employer ?? 'non précisé'}
 
 Le dossier courant est celui de l'Offre.
 
