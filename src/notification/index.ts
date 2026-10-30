@@ -1,6 +1,6 @@
 import type { z } from 'zod/v4';
 
-import { catalogueFor } from '#/domain/catalogue/index.ts';
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import {
   NOTIFICATION_CHANNEL_MODULE_SCHEMA,
   type Locale,
@@ -55,8 +55,8 @@ export interface INotificationChannel {
   listChoices(parameterName: string, rawParameters: unknown, locale: Locale): Promise<ParameterChoice[]>;
 }
 
-function copyOf(locale: Locale) {
-  return catalogueFor(locale).notification;
+function tOf(locale: Locale) {
+  return tFor(locale, 'notification');
 }
 
 export function defineNotificationChannel<TShape extends ParameterShape>(
@@ -70,7 +70,11 @@ export function defineNotificationChannel<TShape extends ParameterShape>(
     parameterList: parameters.parameterList,
     isTestable: check !== undefined,
   });
-  const composeMessage = (locale: Locale) => (labelList: string[]) => copyOf(locale).incompleteChannel(name, labelList);
+  const composeMessage = (locale: Locale) => (labelList: string[]) => {
+    const t = tOf(locale);
+    const labels = labelList.map((text) => t('quote', { text })).join(', ');
+    return t('incompleteChannel', { channelName: name, labels });
+  };
 
   return {
     description,
@@ -79,7 +83,7 @@ export function defineNotificationChannel<TShape extends ParameterShape>(
       send(parameters.parse(rawParameters, locale, composeMessage(locale)), notification, locale),
     async check(rawParameters, locale) {
       if (check === undefined) {
-        throw new Error(copyOf(locale).untestableChannel(name));
+        throw new Error(tOf(locale)('untestableChannel', { channelName: name }));
       }
       await check(parameters.parseTrial(rawParameters, locale, composeMessage(locale)), locale);
     },
@@ -88,7 +92,12 @@ export function defineNotificationChannel<TShape extends ParameterShape>(
         ([key]) => key === parameterName,
       )?.[1];
       if (listChoices === undefined) {
-        throw new Error(copyOf(locale).noChoices(labelOf(description.parameterList, parameterName, locale), name));
+        throw new Error(
+          tOf(locale)('noChoices', {
+            parameterLabel: labelOf(description.parameterList, parameterName, locale),
+            channelName: name,
+          }),
+        );
       }
       return listChoices(parameters.parseTrial(rawParameters, locale, composeMessage(locale)), locale);
     },
@@ -97,16 +106,21 @@ export function defineNotificationChannel<TShape extends ParameterShape>(
 
 // The jurisdiction of a Posting is its workplace, such as « Tribunal Judiciaire de Béthune »
 function jurisdictionOf({ workplace }: Posting, locale: Locale): string {
-  return workplace ?? catalogueFor(locale).notification.missingJurisdiction;
+  return workplace ?? tOf(locale)('missingJurisdiction');
+}
+
+// The Deadline line, the Source giving none for some Postings
+function deadlineOf({ deadline }: Posting, locale: Locale): string {
+  const t = tOf(locale);
+  return deadline === null ? t('noDeadline') : t('deadline', { deadline });
 }
 
 // One composer per notified event, whatever the Channel
 export function composeNewPostingNotification(posting: Posting): NotificationComposer {
   return (locale) => {
-    const copy = catalogueFor(locale).notification;
     return {
-      title: copy.newPostingTitle,
-      message: [posting.title, jurisdictionOf(posting, locale), copy.deadline(posting.deadline)].join('\n'),
+      title: tOf(locale)('newPostingTitle'),
+      message: [posting.title, jurisdictionOf(posting, locale), deadlineOf(posting, locale)].join('\n'),
     };
   };
 }
@@ -114,14 +128,14 @@ export function composeNewPostingNotification(posting: Posting): NotificationCom
 // A Repost in the Zone, whose Research starts from that of the Posting it publishes again
 export function composeRepostNotification(posting: Posting, repostedPosting: Posting): NotificationComposer {
   return (locale) => {
-    const copy = catalogueFor(locale).notification;
+    const t = tOf(locale);
     return {
-      title: copy.repostTitle,
+      title: t('repostTitle'),
       message: [
         posting.title,
         jurisdictionOf(posting, locale),
-        copy.repostLine(repostedPosting.reference),
-        copy.deadline(posting.deadline),
+        t('repostLine', { repostedReference: repostedPosting.reference }),
+        deadlineOf(posting, locale),
       ].join('\n'),
     };
   };
@@ -130,14 +144,14 @@ export function composeRepostNotification(posting: Posting, repostedPosting: Pos
 // The Candidate already applied to the Posting published again: they decide whether to apply again
 export function composeRepostAppliedNotification(posting: Posting, repostedPosting: Posting): NotificationComposer {
   return (locale) => {
-    const copy = catalogueFor(locale).notification;
+    const t = tOf(locale);
     return {
-      title: copy.repostAppliedTitle,
+      title: t('repostAppliedTitle'),
       message: [
         posting.title,
         jurisdictionOf(posting, locale),
-        copy.repostAppliedLine(repostedPosting.reference),
-        copy.deadline(posting.deadline),
+        t('repostAppliedLine', { repostedReference: repostedPosting.reference }),
+        deadlineOf(posting, locale),
       ].join('\n'),
     };
   };
@@ -146,14 +160,14 @@ export function composeRepostAppliedNotification(posting: Posting, repostedPosti
 // What the Candidate receives when they try their Notification Channel
 export function composeTestNotification(candidateName: string): NotificationComposer {
   return (locale) => {
-    const copy = catalogueFor(locale).notification;
-    return { title: copy.testTitle, message: copy.testMessage(candidateName) };
+    const t = tOf(locale);
+    return { title: t('testTitle'), message: t('testMessage', { candidateName }) };
   };
 }
 
 export function composeResearchReadyNotification(posting: Posting): NotificationComposer {
   return (locale) => ({
-    title: catalogueFor(locale).notification.researchReadyTitle,
+    title: tOf(locale)('researchReadyTitle'),
     message: [posting.title, jurisdictionOf(posting, locale)].join('\n'),
   });
 }

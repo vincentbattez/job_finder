@@ -2,7 +2,7 @@ import { spawn, spawnSync } from 'node:child_process';
 
 import { z } from 'zod/v4';
 
-import { catalogueFor } from '#/domain/catalogue/index.ts';
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import { SESSION_RESULT_SCHEMA, type Locale, type SessionResult } from '#/domain/index.ts';
 import { messageOf } from '#/text/index.ts';
 
@@ -70,7 +70,7 @@ function readResult(output: string, exitCode: number | null, locale: Locale): Se
     return SESSION_RESULT_SCHEMA.parse({
       isSuccess: false,
       sessionId: null,
-      log: catalogueFor(locale).error.sessionStopped(exitCode, output),
+      log: tFor(locale, 'error')('sessionStopped', { exitCode: String(exitCode), output }),
     });
   }
 }
@@ -96,19 +96,19 @@ export const CLAUDE_CODE: IAiSession = {
       'manual',
       '--append-system-prompt',
       prompt,
-      catalogueFor(locale).cli.sessionGreeting,
+      tFor(locale, 'cli')('sessionGreeting'),
     ];
     const { status, error } = spawnSync('claude', argumentList, {
       cwd: directory,
       env: subscriptionEnvironment(),
       stdio: 'inherit',
     });
-    const { error: message } = catalogueFor(locale);
+    const t = tFor(locale, 'error');
     if (error !== undefined) {
-      throw new Error(message.sessionNotLaunched(error.message));
+      throw new Error(t('sessionNotLaunched', { reason: error.message }));
     }
     if (status !== 0) {
-      throw new Error(message.interactiveSessionFailed(status));
+      throw new Error(t('interactiveSessionFailed', { status: String(status) }));
     }
   },
 
@@ -153,7 +153,7 @@ export const CLAUDE_CODE: IAiSession = {
       });
       return readResult(output, exitCode, locale);
     } catch (error) {
-      const log = catalogueFor(locale).error.sessionNotLaunched(messageOf(error));
+      const log = tFor(locale, 'error')('sessionNotLaunched', { reason: messageOf(error) });
       return SESSION_RESULT_SCHEMA.parse({ isSuccess: false, sessionId: null, log });
     }
   },

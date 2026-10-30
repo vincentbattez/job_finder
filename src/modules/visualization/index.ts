@@ -1,5 +1,5 @@
 import type { IAiModule } from '#/ai-module/index.ts';
-import { catalogueFor } from '#/domain/catalogue/index.ts';
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import type { Locale } from '#/domain/index.ts';
 
 import { composeVisualizationPrompt, VISUALIZATION_FILE_NAME } from './prompt.ts';
@@ -7,11 +7,11 @@ import { composeVisualizationPrompt, VISUALIZATION_FILE_NAME } from './prompt.ts
 // A whole HTML page, without a script: the front's sandboxed frame runs none, so a diagram drawn by
 // one would never show
 function findFormatError(html: string, locale: Locale): string | undefined {
-  const { error } = catalogueFor(locale);
+  const t = tFor(locale, 'error');
   if (!/^<!doctype html>/i.test(html.trimStart()) || !/<\/html>\s*$/i.test(html)) {
-    return error.notACompletePage;
+    return t('notACompletePage');
   }
-  return /<script\b/i.test(html) ? error.hasScript : undefined;
+  return /<script\b/i.test(html) ? t('hasScript') : undefined;
 }
 
 // The Visualization of a Posting: a headless Claude session writes a single HTML page from the Chosen

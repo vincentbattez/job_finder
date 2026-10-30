@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { catalogueFor } from '#/domain/catalogue/index.ts';
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import { EXTRACTION_SCHEMA, JOB_DESCRIPTION_SCHEMA, type Extraction, type Locale } from '#/domain/index.ts';
 
 export const EXTRACTION_FILE_NAME = 'extraction.json';
@@ -24,7 +24,7 @@ function extractionSchemaOf(markdown: string, locale: Locale) {
   const excerpt = z
     .string()
     .refine((value) => normalize(markdown).includes(normalize(value)), {
-      error: catalogueFor(locale).error.extractionInvented,
+      error: tFor(locale, 'error')('extractionInvented'),
     })
     .nullable();
   return z.object({
@@ -44,7 +44,7 @@ function parseExtraction(filePath: string, markdown: string, locale: Locale) {
   try {
     json = readFileSync(filePath, 'utf8');
   } catch {
-    return { error: catalogueFor(locale).error.extractionNotWritten };
+    return { error: tFor(locale, 'error')('extractionNotWritten') };
   }
   try {
     const result = extractionSchemaOf(markdown, locale).safeParse(JSON.parse(json));
@@ -58,7 +58,7 @@ function parseExtraction(filePath: string, markdown: string, locale: Locale) {
 export function readExtraction(directory: string, markdown: string, locale: Locale): Extraction {
   const { extraction, error } = parseExtraction(path.join(directory, EXTRACTION_FILE_NAME), markdown, locale);
   if (extraction === undefined) {
-    throw new Error(catalogueFor(locale).error.invalidExtraction(EXTRACTION_FILE_NAME, error));
+    throw new Error(tFor(locale, 'error')('invalidExtraction', { fileName: EXTRACTION_FILE_NAME, problem: error }));
   }
   const { title, deadline, city, ...jobDescriptionField } = extraction;
   return EXTRACTION_SCHEMA.parse({

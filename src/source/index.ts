@@ -1,6 +1,6 @@
 import type { z } from 'zod/v4';
 
-import { catalogueFor } from '#/domain/catalogue/index.ts';
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import {
   SOURCE_MODULE_SCHEMA,
   type JobDescription,
@@ -62,6 +62,12 @@ export interface ISource {
 // What a module of the family exports: it creates the Source, bound to the fetch it reads the site with
 export type SourceFactory = (httpFetch?: typeof fetch) => ISource;
 
+// The labels of the Parameters to correct, each quoted, in the words of the locale
+function quoteLabels(labelList: string[], locale: Locale): string {
+  const t = tFor(locale, 'error');
+  return labelList.map((text) => t('quote', { text })).join(', ');
+}
+
 export function defineSource<TShape extends ParameterShape>({
   id,
   name,
@@ -75,7 +81,11 @@ export function defineSource<TShape extends ParameterShape>({
   // The front writes the Watches, in the Profile of their Candidate (ADR-0011)
   function parseParametersOf(watch: Watch, locale: Locale): ParametersOf<TShape> {
     return parameters.parse(watch.parameters, locale, (labelList) =>
-      catalogueFor(locale).error.watchParameters(watch.id, name, labelList),
+      tFor(locale, 'error')('watchParameters', {
+        watchId: watch.id,
+        sourceName: name,
+        labels: quoteLabels(labelList, locale),
+      }),
     );
   }
 
@@ -83,7 +93,7 @@ export function defineSource<TShape extends ParameterShape>({
     description,
     parseParameters: (rawParameters, locale) =>
       parameters.parseToSave(rawParameters, locale, (labelList) =>
-        catalogueFor(locale).error.sourceParameters(name, labelList),
+        tFor(locale, 'error')('sourceParameters', { sourceName: name, labels: quoteLabels(labelList, locale) }),
       ),
     search: (watch, locale) => search(parseParametersOf(watch, locale), httpFetch, locale),
     readJobDescription: (reference, watch, locale) =>

@@ -3,7 +3,6 @@ import path from 'node:path';
 import type { IAiModule } from '#/ai-module/index.ts';
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
 import { tFor } from '#/domain/catalogue/i18n.ts';
-import { catalogueFor, catalogueOf } from '#/domain/catalogue/index.ts';
 import {
   ARTIFACT_SCHEMA,
   type Artifact,
@@ -39,29 +38,29 @@ const AI_MODULE_BY_ARTIFACT: Record<Artifact, IAiModule> = {
 };
 
 // An Artifact, or the module that produces it, named after it or by the module's alias
-function parseArtifactName(name: string, composeError: (name: string, nameList: string[]) => string): Artifact {
+function parseArtifactName(name: string, locale: Locale, errorKey: 'unknownModule' | 'unknownArtifact'): Artifact {
   const artifact = ARTIFACT_SCHEMA.options.find(
     (option) => name === option || name === AI_MODULE_BY_ARTIFACT[option].alias,
   );
   if (artifact === undefined) {
     const nameList = Object.entries(AI_MODULE_BY_ARTIFACT).map(([option, aiModule]) => aiModule.alias ?? option);
-    throw new Error(composeError(name, nameList));
+    throw new Error(tFor(locale, 'error')(errorKey, { name, names: nameList.join(', ') }));
   }
   return artifact;
 }
 
 export function parseModule(name: string, locale: Locale): Artifact {
-  return parseArtifactName(name, catalogueFor(locale).error.unknownModule);
+  return parseArtifactName(name, locale, 'unknownModule');
 }
 
 export function parseArtifact(name: string, locale: Locale): Artifact {
-  return parseArtifactName(name, catalogueFor(locale).error.unknownArtifact);
+  return parseArtifactName(name, locale, 'unknownArtifact');
 }
 
 // Those of the Candidate's locale, the ones they read and edit; the Artifact's language is set by the
 // fixed part of the prompt
 export function findDefaultInstructions(module: Artifact, candidate: Candidate): string {
-  return catalogueOf(candidate).defaultInstructions[module];
+  return tFor(candidate.locale, 'defaultInstructions')(module);
 }
 
 // A Repost starts from the work done for the Posting it publishes again
@@ -124,13 +123,14 @@ function wordRefusal(refusal: Refusal, posting: Posting, module: Artifact, local
     return refusal.freeze;
   }
   const { missingArtifact } = refusal;
-  const { error } = catalogueFor(locale);
-  const t = tFor(locale, 'common');
-  const missingLabel = t(`artifactLabelByArtifact.${missingArtifact}`);
-  const moduleLabel = t(`artifactLabelByArtifact.${module}`);
+  const t = tFor(locale, 'error');
+  const tCommon = tFor(locale, 'common');
+  const missingLabel = tCommon(`artifactLabelByArtifact.${missingArtifact}`);
+  const moduleLabel = tCommon(`artifactLabelByArtifact.${module}`);
+  const { reference } = posting;
   return isForFront
-    ? error.missingArtifactForFront(posting.reference, missingLabel, moduleLabel)
-    : error.missingArtifactForCli(posting.reference, missingLabel, moduleLabel, missingArtifact);
+    ? t('missingArtifactForFront', { reference, missingLabel, moduleLabel })
+    : t('missingArtifactForCli', { reference, missingLabel, moduleLabel, missingArtifact });
 }
 
 // What the Candidate sends, the Letter, is frozen once the Posting was Applied
@@ -178,18 +178,18 @@ export function createJobRunner(
     outputDirectory: string,
     locale: Locale,
   ) {
-    const { error } = catalogueFor(locale);
+    const t = tFor(locale, 'error');
     const filePath = path.join(outputDirectory, name);
     const outputPath = path.relative(workspace.postingDirectoryOf(posting), filePath);
     const content = workspace.readTextFile(filePath);
     if (content === null) {
-      return error.missingOutput(outputPath);
+      return t('missingOutput', { outputPath });
     }
     if (content.trim() === '') {
-      return error.emptyOutput(outputPath);
+      return t('emptyOutput', { outputPath });
     }
     const formatError = findFormatError?.(content, locale, posting);
-    return formatError === undefined ? undefined : error.malformedOutput(outputPath, formatError);
+    return formatError === undefined ? undefined : t('malformedOutput', { outputPath, formatError });
   }
 
   return async function runJob(

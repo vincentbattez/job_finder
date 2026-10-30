@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { catalogueFor } from '#/domain/catalogue/index.ts';
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import {
   ARTIFACT_SCHEMA,
   POSTING_DETAIL_SCHEMA,
@@ -118,17 +118,17 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
     async readVisualization(rawInput: unknown): Promise<Visualization> {
       const { reference, number } = VISUALIZATION_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
-      const { error } = catalogueFor(await findLocale(posting.candidateId));
+      const t = tFor(await findLocale(posting.candidateId), 'error');
       const versionList = await workspace.listVersions(posting, 'visualization');
       const version = versionList.find((entry) => entry.number === number);
       if (version === undefined) {
-        throw new Error(error.unknownVersion(reference, 'visualization', number));
+        throw new Error(t('unknownVersion', { reference, artifact: 'visualization', number }));
       }
       const html = workspace.readTextFile(
         path.join(workspace.versionDirectoryOf(posting, version), VISUALIZATION_MODULE.fileName),
       );
       if (html === null) {
-        throw new Error(error.visualizationWithoutPage(reference, number));
+        throw new Error(t('visualizationWithoutPage', { reference, number }));
       }
       return VISUALIZATION_SCHEMA.parse({ html });
     },
@@ -138,8 +138,7 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
       const posting = await findPosting(reference);
       const recipients = await findRecipients(posting);
       if (recipients === null) {
-        const { error } = catalogueFor(await findLocale(posting.candidateId));
-        throw new Error(error.noChosenLetter(reference));
+        throw new Error(tFor(await findLocale(posting.candidateId), 'error')('noChosenLetter', { reference }));
       }
       return recipients;
     },

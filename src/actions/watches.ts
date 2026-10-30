@@ -2,7 +2,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { z } from 'zod/v4';
 
-import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import type { Candidate, Watch } from '#/domain/index.ts';
 
 import { PARAMETERS_INPUT_SCHEMA, type ActionContext } from './context.ts';
@@ -30,7 +30,7 @@ export function createWatchActions({ workspace, findCandidate, findSource }: Act
     const watchList = await workspace.listWatches(candidate.id);
     const watch = watchList.find(({ id }) => id === watchId);
     if (watch === undefined) {
-      throw new Error(catalogueOf(candidate).error.unknownWatch(candidate.name, watchId));
+      throw new Error(tFor(candidate.locale, 'error')('unknownWatch', { candidateName: candidate.name, watchId }));
     }
     return watch;
   }

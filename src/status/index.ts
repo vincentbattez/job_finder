@@ -1,5 +1,4 @@
 import { tFor } from '#/domain/catalogue/i18n.ts';
-import { catalogueFor } from '#/domain/catalogue/index.ts';
 import type { Locale, Posting, Status } from '#/domain/index.ts';
 
 // What the status rules read of a Posting
@@ -69,22 +68,20 @@ export function assertStatusChange(posting: PostingStatus, status: Status, local
   if (status === posting.status || nextStatusList.includes(status)) {
     return;
   }
-  const { error } = catalogueFor(locale);
-  const t = tFor(locale, 'common');
-  const nextLabelList = nextStatusList.map((nextStatus) => t(`statusLabelByStatus.${nextStatus}`));
-  throw new Error(
-    error.statusChange(
-      posting.reference,
-      t(`statusLabelByStatus.${posting.status}`),
-      nextLabelList,
-      hasBeenApplied(posting),
-    ),
-  );
+  const t = tFor(locale, 'error');
+  const tCommon = tFor(locale, 'common');
+  const nextLabelList = nextStatusList.map((nextStatus) => tCommon(`statusLabelByStatus.${nextStatus}`));
+  const values = {
+    reference: posting.reference,
+    statusLabel: tCommon(`statusLabelByStatus.${posting.status}`),
+    nextLabels: nextLabelList.join(t('orSeparator')),
+  };
+  throw new Error(t(hasBeenApplied(posting) ? 'statusChangeAfterApplied' : 'statusChange', values));
 }
 
 // Once the Posting was Applied, the Chosen Letter is the one sent, even once the Posting is Archived
 export function findLetterFreeze(posting: PostingStatus, locale: Locale): string | undefined {
-  return hasBeenApplied(posting) ? catalogueFor(locale).error.letterFrozen(posting.reference) : undefined;
+  return hasBeenApplied(posting) ? tFor(locale, 'error')('letterFrozen', { reference: posting.reference }) : undefined;
 }
 
 // Every action that would change the Chosen Letter calls this first

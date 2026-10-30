@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import type { Candidate, SessionResult, UploadFileName } from '#/domain/index.ts';
 
 import { composeConversionPrompt, CONVERSION_REQUEST } from './prompt.ts';
@@ -43,7 +43,7 @@ export function createUploadConversion(aiSession: IAiSession) {
         locale: candidate.locale,
       });
       if (!session.isSuccess) {
-        throw new Error(catalogueOf(candidate).error.conversionSessionFailed(upload, session.log));
+        throw new Error(tFor(candidate.locale, 'error')('conversionSessionFailed', { upload, log: session.log }));
       }
       return session;
     },

@@ -2,7 +2,7 @@ import { setTimeout } from 'node:timers/promises';
 
 import { z } from 'zod/v4';
 
-import { catalogueFor, catalogueOf } from '#/domain/catalogue/index.ts';
+import { DEFAULT_LOCALE, tFor } from '#/domain/catalogue/i18n.ts';
 import type { Job, QueuedJob } from '#/domain/index.ts';
 import { composeResearchReadyNotification } from '#/notification/index.ts';
 import { messageOf } from '#/text/index.ts';
@@ -30,7 +30,7 @@ export function createJobActions(context: ActionContext) {
       // The extraction of an imported Posting runs again after a failure
       if (module === 'extraction') {
         if (posting.source !== 'import') {
-          throw new Error(catalogueFor(locale).error.notImported(reference));
+          throw new Error(tFor(locale, 'error')('notImported', { reference }));
         }
         return workspace.createJob(posting, 'extraction');
       }
@@ -45,7 +45,7 @@ export function createJobActions(context: ActionContext) {
         const job = await workspace.findJob(jobId);
         // Before the job is found, no Candidate tells the locale: the default one
         if (job === null) {
-          throw new Error(catalogueOf(null).error.unknownJob(jobId));
+          throw new Error(tFor(DEFAULT_LOCALE, 'error')('unknownJob', { jobId }));
         }
         if (job.state === 'done' || job.state === 'failed') {
           return job;
@@ -56,7 +56,7 @@ export function createJobActions(context: ActionContext) {
 
     // At the worker's start, a running job was cut off by its stop: failing it frees the queue
     async failInterruptedJobs(): Promise<QueuedJob[]> {
-      return workspace.failRunningJobs((locale) => catalogueFor(locale).error.interruptedJob);
+      return workspace.failRunningJobs((locale) => tFor(locale, 'error')('interruptedJob'));
     },
 
     // One job at a time, a single Claude session (ADR-0003)

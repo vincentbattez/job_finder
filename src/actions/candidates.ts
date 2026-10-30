@@ -1,7 +1,6 @@
 import { z } from 'zod/v4';
 
-import { DEFAULT_LOCALE } from '#/domain/catalogue/i18n.ts';
-import { catalogueOf, type Catalogue } from '#/domain/catalogue/index.ts';
+import { DEFAULT_LOCALE, tFor } from '#/domain/catalogue/i18n.ts';
 import {
   DEFAULT_DEADLINE_PERIOD_SCHEMA,
   LOCALE_SCHEMA,
@@ -29,18 +28,20 @@ const LOCALE_INPUT_SCHEMA = z.object({ locale: LOCALE_SCHEMA });
 // A field of the front arrives as text
 const DEFAULT_DEADLINE_PERIOD_INPUT_SCHEMA = z.object({ months: z.union([z.string(), z.number()]) });
 
+type ErrorT = ReturnType<typeof tFor<'error'>>;
+
 // The identifier and the name come from the front: checked before anything is saved
-function parseCandidateId(id: string, { error }: Catalogue): string {
+function parseCandidateId(id: string, t: ErrorT): string {
   if (!CANDIDATE_ID_PATTERN.test(id)) {
-    throw new Error(error.invalidCandidateId(id));
+    throw new Error(t('invalidCandidateId', { candidateId: id }));
   }
   return id;
 }
 
-function parseName(name: string, { error }: Catalogue): string {
+function parseName(name: string, t: ErrorT): string {
   const trimmedName = name.trim();
   if (trimmedName === '') {
-    throw new Error(error.emptyCandidateName);
+    throw new Error(t('emptyCandidateName'));
   }
   return trimmedName;
 }
@@ -49,7 +50,7 @@ function parseMonths(typedMonths: string | number): number {
   const months = Number(typedMonths);
   if (!Number.isSafeInteger(months) || months < 1) {
     // Shared by every Candidate: in the default locale
-    throw new Error(catalogueOf(null).error.invalidDefaultDeadlinePeriod);
+    throw new Error(tFor(DEFAULT_LOCALE, 'error')('invalidDefaultDeadlinePeriod'));
   }
   return months;
 }
@@ -61,22 +62,22 @@ export function createCandidateActions({ workspace, findCandidate }: ActionConte
     async createCandidate(rawInput: unknown): Promise<void> {
       const input = NEW_CANDIDATE_INPUT_SCHEMA.parse(rawInput);
       // In the locale of the Candidate being created
-      const catalogue = catalogueOf(input);
+      const t = tFor(input.locale, 'error');
       const candidate = {
-        id: parseCandidateId(input.id, catalogue),
-        name: parseName(input.name, catalogue),
+        id: parseCandidateId(input.id, t),
+        name: parseName(input.name, t),
         locale: input.locale,
       };
       const candidateList = await workspace.listCandidates();
       if (candidateList.some(({ id }) => id === candidate.id)) {
-        throw new Error(catalogue.error.duplicateCandidateId(candidate.id));
+        throw new Error(t('duplicateCandidateId', { candidateId: candidate.id }));
       }
       await workspace.createCandidate(candidate);
     },
 
     async renameCandidate(rawInput: unknown): Promise<void> {
       const candidate = await findCandidate(rawInput);
-      const name = parseName(RENAME_INPUT_SCHEMA.parse(rawInput).name, catalogueOf(candidate));
+      const name = parseName(RENAME_INPUT_SCHEMA.parse(rawInput).name, tFor(candidate.locale, 'error'));
       await workspace.renameCandidate(candidate, name);
     },
 

@@ -4,14 +4,13 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
-import { catalogueFor } from '#/domain/catalogue/index.ts';
+import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructions.ts';
 
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
 // Léa's, in French
-const { defaultInstructions } = catalogueFor('fr');
-const RESEARCH_DEFAULT_INSTRUCTIONS = defaultInstructions.research;
+const RESEARCH_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.research;
 
 // The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';

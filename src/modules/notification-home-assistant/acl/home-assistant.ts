@@ -1,7 +1,8 @@
 import { z } from 'zod/v4';
 
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import { PARAMETER_CHOICE_SCHEMA, type Locale, type ParameterChoice } from '#/domain/index.ts';
-import { COPY_BY_LOCALE } from '#/modules/notification-home-assistant/copy.ts';
+import { COPY_NAMESPACE } from '#/modules/notification-home-assistant/copy.ts';
 import type { INotification } from '#/notification/index.ts';
 import { messageOf } from '#/text/index.ts';
 
@@ -19,9 +20,9 @@ const SERVICE_DOMAIN_LIST_SCHEMA = z.array(z.object({ domain: z.string(), servic
 // Every call to the REST API of Home Assistant, whose failures say what to do; the token never
 // appears in a message, which reaches the front (ADR-0006)
 async function request({ url, token }: IAccess, locale: Locale, pathname: string, body?: unknown): Promise<Response> {
-  const copy = COPY_BY_LOCALE[locale];
+  const t = tFor(locale, COPY_NAMESPACE);
   if (url === undefined || token === undefined) {
-    throw new Error(copy.notConfigured);
+    throw new Error(t('notConfigured'));
   }
   let response: Response;
   try {
@@ -31,10 +32,10 @@ async function request({ url, token }: IAccess, locale: Locale, pathname: string
       ...(body !== undefined && { body: JSON.stringify(body) }),
     });
   } catch (error) {
-    throw new Error(copy.unreachable(url, messageOf(error)), { cause: error });
+    throw new Error(t('unreachable', { url, reason: messageOf(error) }), { cause: error });
   }
   if (response.status === 401 || response.status === 403) {
-    throw new Error(copy.tokenRefused(response.status));
+    throw new Error(t('tokenRefused', { status: response.status }));
   }
   return response;
 }
@@ -43,7 +44,7 @@ async function request({ url, token }: IAccess, locale: Locale, pathname: string
 export async function checkConnection(access: IAccess, locale: Locale): Promise<void> {
   const response = await request(access, locale, '/api/');
   if (!response.ok) {
-    throw new Error(COPY_BY_LOCALE[locale].unexpectedStatus(response.status));
+    throw new Error(tFor(locale, COPY_NAMESPACE)('unexpectedStatus', { status: response.status }));
   }
 }
 
@@ -51,7 +52,7 @@ export async function listNotifyServices(access: IAccess, locale: Locale): Promi
   const response = await request(access, locale, '/api/services');
   const domainList = response.ok ? SERVICE_DOMAIN_LIST_SCHEMA.safeParse(await response.json()) : undefined;
   if (domainList?.success !== true) {
-    throw new Error(COPY_BY_LOCALE[locale].noServiceList(response.status));
+    throw new Error(tFor(locale, COPY_NAMESPACE)('noServiceList', { status: response.status }));
   }
   const services = domainList.data.find(({ domain }) => domain === 'notify')?.services ?? {};
   return Object.entries(services).map(([name, { name: label = name }]) =>
@@ -69,6 +70,6 @@ export async function callNotifyService(
   const servicePath = `/api/services/notify/${service.replace(/^notify\./, '')}`;
   const response = await request(access, locale, servicePath, notification);
   if (!response.ok) {
-    throw new Error(COPY_BY_LOCALE[locale].notificationRefused(service, response.status));
+    throw new Error(tFor(locale, COPY_NAMESPACE)('notificationRefused', { service, status: response.status }));
   }
 }

@@ -1,10 +1,18 @@
-import { createInstance, type i18n } from 'i18next';
+import { createInstance, type FlatNamespace, type i18n } from 'i18next';
 
 import type { Locale } from '#/domain/index.ts';
 
+import { CLI_EN } from './en/cli.ts';
 import { COMMON_EN } from './en/common.ts';
+import { DEFAULT_INSTRUCTIONS_EN } from './en/default-instructions.ts';
+import { ERROR_EN } from './en/error.ts';
+import { NOTIFICATION_EN } from './en/notification.ts';
 import { POSTING_LIST_EN } from './en/posting-list.ts';
+import { CLI_FR } from './fr/cli.ts';
 import { COMMON_FR } from './fr/common.ts';
+import { DEFAULT_INSTRUCTIONS_FR } from './fr/default-instructions.ts';
+import { ERROR_FR } from './fr/error.ts';
+import { NOTIFICATION_FR } from './fr/notification.ts';
 import { POSTING_LIST_FR } from './fr/posting-list.ts';
 
 // Every word a Candidate reads, one i18next namespace per area (ADR-0012). The areas of en/ give their
@@ -12,6 +20,10 @@ import { POSTING_LIST_FR } from './fr/posting-list.ts';
 const EN = {
   common: COMMON_EN,
   postingList: POSTING_LIST_EN,
+  cli: CLI_EN,
+  error: ERROR_EN,
+  notification: NOTIFICATION_EN,
+  defaultInstructions: DEFAULT_INSTRUCTIONS_EN,
 };
 
 type Resources = typeof EN;
@@ -21,6 +33,10 @@ const RESOURCES_BY_LOCALE: Record<Locale, Resources> = {
   fr: {
     common: COMMON_FR,
     postingList: POSTING_LIST_FR,
+    cli: CLI_FR,
+    error: ERROR_FR,
+    notification: NOTIFICATION_FR,
+    defaultInstructions: DEFAULT_INSTRUCTIONS_FR,
   },
 };
 
@@ -52,6 +68,8 @@ function createI18n(locale: Locale): i18n {
   return instance;
 }
 
+const LOCALE_LIST = ['fr', 'en'] as const satisfies readonly Locale[];
+
 const I18N_BY_LOCALE: Record<Locale, i18n> = { fr: createI18n('fr'), en: createI18n('en') };
 
 // The one rule of every entry point: the locale of the Candidate the page, the command or the message
@@ -66,7 +84,18 @@ export function i18nOf(locale: Locale): i18n {
 }
 
 // The t function of an area in a locale, out of React: a route's meta, a loader, an action, the CLI, a
-// notification
-export function tFor<Namespace extends keyof Resources>(locale: Locale, namespace: Namespace) {
+// notification. A module's own namespace counts too, once it added its resources.
+export function tFor<Namespace extends FlatNamespace>(locale: Locale, namespace: Namespace) {
   return I18N_BY_LOCALE[locale].getFixedT(locale, namespace);
+}
+
+// A module's copy stays in its folder, the only place allowed to name it (ADR-0010): the module adds
+// it as a namespace of its own when loaded, and types it by augmenting i18next's ResourceNamespaceMap
+export function addResources<Resource extends object>(
+  namespace: string,
+  resourceByLocale: Record<Locale, Resource>,
+): void {
+  for (const locale of LOCALE_LIST) {
+    I18N_BY_LOCALE[locale].addResourceBundle(locale, namespace, resourceByLocale[locale]);
+  }
 }

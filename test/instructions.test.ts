@@ -1,18 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
-import { catalogueFor } from '#/domain/catalogue/index.ts';
+import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructions.ts';
 
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 // Léa's, in French
-const { defaultInstructions } = catalogueFor('fr');
-const INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS = defaultInstructions.interview_brief;
-const LETTER_DEFAULT_INSTRUCTIONS = defaultInstructions.letter;
-const RESEARCH_DEFAULT_INSTRUCTIONS = defaultInstructions.research;
-const VISUALIZATION_DEFAULT_INSTRUCTIONS = defaultInstructions.visualization;
+const INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.interview_brief;
+const LETTER_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.letter;
+const RESEARCH_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.research;
+const VISUALIZATION_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.visualization;
 
 // The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';

@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { catalogueFor } from '#/domain/catalogue/index.ts';
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import { ARTIFACT_SCHEMA, type Artifact, type Locale, type Posting, type Version } from '#/domain/index.ts';
 import { composeEditPrompt } from '#/edit/prompt.ts';
 import { DRAFT_FILE_NAME } from '#/modules/letter/index.ts';
@@ -22,13 +22,13 @@ export function assertArtifactModifiable(
   locale: Locale,
 ): asserts version is Version {
   const { reference } = posting;
-  const { error } = catalogueFor(locale);
+  const t = tFor(locale, 'error');
   if (artifact === 'visualization') {
-    throw new Error(error.visualizationNotEditable(reference));
+    throw new Error(t('visualizationNotEditable', { reference }));
   }
   assertNotFrozen(posting, artifact, locale);
   if (version?.isChosen !== true) {
-    throw new Error(error.noChosenVersionToEdit(reference, artifact));
+    throw new Error(t('noChosenVersionToEdit', { reference, artifact }));
   }
 }
 
@@ -43,7 +43,7 @@ export function assertDocumentModifiable(
 ): asserts version is Version {
   assertArtifactModifiable(posting, artifact, version, locale);
   if (fileName === DRAFT_FILE_NAME) {
-    throw new Error(catalogueFor(locale).error.draftNotEditable(posting.reference));
+    throw new Error(tFor(locale, 'error')('draftNotEditable', { reference: posting.reference }));
   }
 }
 
@@ -56,15 +56,15 @@ export function assertChoosable(
   locale: Locale,
 ): asserts version is Version {
   const { reference } = posting;
-  const { error } = catalogueFor(locale);
+  const t = tFor(locale, 'error');
   assertNotFrozen(posting, artifact, locale);
   if (version === undefined) {
-    throw new Error(error.unknownVersion(reference, artifact, number));
+    throw new Error(t('unknownVersion', { reference, artifact, number }));
   }
   if (version.state === 'ready') {
     return;
   }
-  throw new Error(error.versionNotReady(reference, artifact, number, version.state === 'failed'));
+  throw new Error(t(version.state === 'failed' ? 'versionFailed' : 'versionRunning', { reference, artifact, number }));
 }
 
 // The front shows a control only where its action accepts it: the same check, read as a flag
@@ -121,7 +121,7 @@ export function createEditionActions({ workspace, aiSession, findCandidate, find
       assertDocumentModifiable(posting, artifact, version, fileName, locale);
       // The front sends the name back: nothing else than a file of the Version may be written
       if (workspace.readVersionDocuments(posting, version).every((document) => document.fileName !== fileName)) {
-        throw new Error(catalogueFor(locale).error.notAVersionFile(fileName, artifact, reference));
+        throw new Error(tFor(locale, 'error')('notAVersionFile', { fileName, artifact, reference }));
       }
       workspace.writeVersionDocument(posting, version, fileName, markdown);
     },

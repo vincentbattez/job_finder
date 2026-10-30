@@ -1,8 +1,7 @@
 import { z } from 'zod/v4';
 
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { localeOf } from '#/domain/catalogue/i18n.ts';
-import { catalogueFor, catalogueOf } from '#/domain/catalogue/index.ts';
+import { DEFAULT_LOCALE, localeOf, tFor } from '#/domain/catalogue/i18n.ts';
 import { LOCATION_SCHEMA, type Candidate, type Locale, type Location, type Posting } from '#/domain/index.ts';
 import { createApiGeo } from '#/geo/acl/api-geo.ts';
 import { createUploadConversion } from '#/modules/conversion/index.ts';
@@ -51,7 +50,7 @@ export async function openContext({
     const { candidateId } = CANDIDATE_INPUT_SCHEMA.parse(rawInput);
     const candidate = await workspace.findCandidate(candidateId);
     if (candidate === null) {
-      throw new Error(catalogueOf(null).error.unknownCandidate(candidateId));
+      throw new Error(tFor(DEFAULT_LOCALE, 'error')('unknownCandidate', { candidateId }));
     }
     return candidate;
   }
@@ -65,11 +64,11 @@ export async function openContext({
   async function findPosting(reference: string): Promise<Posting> {
     const [posting, ...otherPostingList] = await workspace.findPostings(reference);
     if (posting === undefined) {
-      throw new Error(catalogueOf(null).error.unknownPosting(reference));
+      throw new Error(tFor(DEFAULT_LOCALE, 'error')('unknownPosting', { reference }));
     }
     // Two Candidates may follow the same Source: a reference alone then names several Postings
     if (otherPostingList.length > 0) {
-      throw new Error(catalogueOf(null).error.ambiguousPosting(reference));
+      throw new Error(tFor(DEFAULT_LOCALE, 'error')('ambiguousPosting', { reference }));
     }
     return posting;
   }
@@ -88,13 +87,13 @@ export async function openContext({
 
   // The module of the Candidate's Notification Channel, as saved or as they picked it, null until chosen
   function findNotificationChannelModule(moduleId: string | null, candidate: Candidate): INotificationChannel {
-    const copy = catalogueOf(candidate).notification;
+    const t = tFor(candidate.locale, 'notification');
     if (moduleId === null) {
-      throw new Error(copy.noChannel(candidate.name));
+      throw new Error(t('noChannel', { candidateName: candidate.name }));
     }
     const module = notificationChannelModuleOf(moduleId);
     if (module === undefined) {
-      throw new Error(copy.unknownChannel(moduleId));
+      throw new Error(t('unknownChannel', { moduleId }));
     }
     return module;
   }
@@ -104,7 +103,12 @@ export async function openContext({
     const source = sourceList.find(({ description: { id } }) => id === sourceId);
     if (source === undefined) {
       const knownList = sourceList.map(({ description: { id } }) => id).join(', ');
-      throw new Error(catalogueFor(locale).error.unknownSource(sourceId, knownList, watchId));
+      const t = tFor(locale, 'error');
+      throw new Error(
+        watchId === undefined
+          ? t('unknownSource', { sourceId, knownList })
+          : t('unknownSourceOfWatch', { sourceId, knownList, watchId }),
+      );
     }
     return source;
   }
@@ -124,7 +128,11 @@ export async function openContext({
     } catch (error) {
       const locale = await findLocale(posting.candidateId);
       const { title } = composeNotification(locale);
-      return catalogueFor(locale).notification.notSent(title, posting.reference, messageOf(error));
+      return tFor(locale, 'notification')('notSent', {
+        title,
+        reference: posting.reference,
+        reason: messageOf(error),
+      });
     }
   }
 

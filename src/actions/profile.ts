@@ -1,6 +1,6 @@
 import { z } from 'zod/v4';
 
-import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import { PROFILE_FILE_NAME_SCHEMA, type Candidate, type MarkdownFile, type ProfileFileName } from '#/domain/index.ts';
 import { composeProfilePrompt } from '#/profile/prompt.ts';
 
@@ -15,7 +15,7 @@ const NEW_PROFILE_FILE_INPUT_SCHEMA = PROFILE_FILE_NAME_INPUT_SCHEMA.extend({ ma
 function parseProfileFileName(fileName: string, candidate: Candidate): ProfileFileName {
   const result = PROFILE_FILE_NAME_SCHEMA.safeParse(fileName);
   if (!result.success) {
-    throw new Error(catalogueOf(candidate).error.invalidProfileFileName(fileName));
+    throw new Error(tFor(candidate.locale, 'error')('invalidProfileFileName', { fileName }));
   }
   return result.data;
 }
@@ -27,7 +27,13 @@ export function createProfileActions({ workspace, aiSession, findCandidate }: Ac
 
   function assertHasProfileFile(candidate: Candidate, fileName: ProfileFileName): void {
     if (!hasProfileFile(candidate, fileName)) {
-      throw new Error(catalogueOf(candidate).error.missingProfileFile(candidate.name, fileName, candidate.id));
+      throw new Error(
+        tFor(candidate.locale, 'error')('missingProfileFile', {
+          candidateName: candidate.name,
+          fileName,
+          candidateId: candidate.id,
+        }),
+      );
     }
   }
 
@@ -51,7 +57,9 @@ export function createProfileActions({ workspace, aiSession, findCandidate }: Ac
       const input = NEW_PROFILE_FILE_INPUT_SCHEMA.parse(rawInput);
       const fileName = parseProfileFileName(input.fileName, candidate);
       if (hasProfileFile(candidate, fileName)) {
-        throw new Error(catalogueOf(candidate).error.duplicateProfileFile(candidate.name, fileName));
+        throw new Error(
+          tFor(candidate.locale, 'error')('duplicateProfileFile', { candidateName: candidate.name, fileName }),
+        );
       }
       workspace.saveProfileFile(candidate.id, fileName, input.markdown);
     },
