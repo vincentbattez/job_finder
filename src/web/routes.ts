@@ -1,5 +1,7 @@
 import { index, route, type RouteConfig } from '@react-router/dev/routes';
 
+import { REDIRECT_LIST } from './redirects.ts';
+
 export default [
   index('routes/offres.tsx'),
   route('offres/:reference', 'routes/offre.tsx'),
@@ -17,4 +19,5 @@ export default [
   route('detect', 'routes/detect.ts'),
   route('import', 'routes/import.ts'),
   route('design', 'routes/design.tsx'),
+  ...REDIRECT_LIST.map(({ from }) => route(from, 'routes/redirect.ts', { id: `redirect/${from}` })),
 ] satisfies RouteConfig;
