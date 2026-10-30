@@ -5,6 +5,7 @@ import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
 import { FAKE_HOME_ASSISTANT_TOKEN } from './test/fake-home-assistant.ts';
+import { stopLeftoverWebServers } from './test/stop-leftover-web-servers.ts';
 
 // Each git worktree starts its own dev server: without E2E_PORT, a port derived from the checkout
 // path keeps parallel worktrees apart, and stays the same in every process that loads this config
@@ -26,6 +27,10 @@ const DATA_DIRECTORY = path.join(tmpdir(), `job-finder-e2e-${PORT}`);
 // never a real phone; its port follows E2E_PORT so parallel runs stay apart
 const HOME_ASSISTANT_PORT = String(Number(PORT) + 10_000);
 const HOME_ASSISTANT_URL = `http://localhost:${HOME_ASSISTANT_PORT}`;
+// Only the runner, before it starts the web servers: the test workers load this config too
+if (process.env.TEST_WORKER_INDEX === undefined) {
+  stopLeftoverWebServers({ portList: [PORT, HOME_ASSISTANT_PORT], checkoutDirectory: import.meta.dirname });
+}
 const ENV = {
   JF_DATA_DIRECTORY: DATA_DIRECTORY,
   HOME_ASSISTANT_URL,
