@@ -1,5 +1,3 @@
-import 'leaflet/dist/leaflet.css';
-
 import type { LatLngTuple, Map as LeafletMap } from 'leaflet';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';

@@ -100,3 +100,21 @@
   --color-state-failed: var(--color-status-expired);
   --color-state-failed-soft: var(--color-status-expired-soft);
 }
+/* Smaller screens, narrower gutters and gaps */
+@media (max-width: 60rem) {
+  :root {
+    --gutter: 24px;
+    --section-gap-s: 80px;
+    --section-gap: 96px;
+    --section-gap-l: 120px;
+  }
+}
+@media (max-width: 40rem) {
+  :root {
+    --gutter: 16px;
+    --section-gap-s: 56px;
+    --section-gap: 72px;
+    --section-gap-l: 96px;
+    --gap-columns: 16px;
+  }
+}
