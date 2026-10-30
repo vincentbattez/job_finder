@@ -71,8 +71,12 @@ Région administrative de la Ville d'une Offre, par laquelle le Candidat filtre 
 _Avoid_: zone, territoire
 
 **Date limite**:
-Dernier jour pour postuler à une Offre ; quand l'Offre n'en donne pas, sa date de publication plus un délai par défaut, une Fiche de poste importée étant publiée le jour de son import.
+Dernier jour pour postuler à une Offre ; quand l'Offre n'en donne pas, sa date de publication plus le Délai par défaut, une Fiche de poste importée étant publiée le jour de son import.
 _Avoid_: date de fin, échéance
+
+**Délai par défaut**:
+Nombre de mois, commun à tous les Candidats, qui donne sa Date limite à une Offre publiée sans.
+_Avoid_: durée de validité, réglage
 
 ## Statut d'une Offre
 
