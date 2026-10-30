@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { z } from 'zod/v4';
 
 // Each test launches modules on an Offre of its own, which test/seed-front.ts prepares: the data
 // folder is shared by the whole run. The e2e worker runs the queued jobs with the fake Claude, whose
@@ -9,6 +10,10 @@ const FAILED_RECHERCHE_REFERENCE = '2026-2412591';
 // The worker takes the job, then its session lasts a second, and the fiche reads the état again
 // every two seconds
 const READY_TIMEOUT_MS = 15_000;
+
+const RECEIVED_NOTIFICATION_LIST_SCHEMA = z.array(
+  z.object({ service: z.string(), title: z.string(), message: z.string() }),
+);
 
 test.describe('launching the modules of an Offre', () => {
   test('launches the Lettre, then shows it turn ready without a reload', async ({ page }) => {
@@ -25,7 +30,7 @@ test.describe('launching the modules of an Offre', () => {
     await expect(page.locator('.artefact-list [data-artefact="lettre"]')).toContainText('Prêt');
   });
 
-  test('relaunches a failed Recherche, which lets the Lettre run', async ({ page }) => {
+  test('relaunches a failed Recherche, which lets the Lettre run and notifies it ready', async ({ page, request }) => {
     await page.goto(`/offres/${FAILED_RECHERCHE_REFERENCE}`);
     const recherche = page.getByRole('region', { name: 'Recherche' });
     const lettre = page.getByRole('region', { name: 'Lettre' });
@@ -39,6 +44,19 @@ test.describe('launching the modules of an Offre', () => {
     await expect(recherche.locator('li > details > summary')).toHaveText([/^v1\s*En échec/, /^v2\s*Prêt\s*Retenue/]);
     await expect(lettre.getByRole('button', { name: 'Lancer la Lettre' })).toBeEnabled();
     await expect(lettre).not.toContainText("n'a pas de Recherche retenue");
+    // The worker notifies Léa's phone through the fake Home Assistant once the Recherche is saved
+    const { homeAssistantUrl } = z.object({ homeAssistantUrl: z.url() }).parse(test.info().config.metadata);
+    await expect
+      .poll(async () => {
+        const response = await request.get(`${homeAssistantUrl}/fake/notifications`);
+        return RECEIVED_NOTIFICATION_LIST_SCHEMA.parse(await response.json());
+      })
+      .toContainEqual({
+        service: 'mobile_app_iphone_de_lea',
+        title: 'Recherche prête',
+        message:
+          'ATTACHE(E) DE JUSTICE - affecté(e) auprès des magistrats du siège - TJ NARBONNE\nTRIBUNAL JUDICIAIRE DE NARBONNE',
+      });
   });
 });
 

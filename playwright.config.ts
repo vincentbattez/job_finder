@@ -3,22 +3,37 @@ import path from 'node:path';
 
 import { defineConfig, devices } from '@playwright/test';
 
+import { FAKE_HOME_ASSISTANT_TOKEN } from './test/fake-home-assistant.ts';
+
 // Each git worktree starts its own dev server: E2E_PORT keeps parallel runs apart
 const PORT = process.env.E2E_PORT ?? '5173';
 const BASE_URL = `http://localhost:${PORT}`;
 // The front runs on a temporary data folder, never data/: test/seed-front.ts fills it through the
 // actions with the fakes before the dev server starts
 const DATA_DIRECTORY = path.join(tmpdir(), `job-finder-e2e-${PORT}`);
-// Even when the shell exports them: neither the front nor the worker sends a real notification in
-// the tests
-const ENV = { JF_DATA_DIRECTORY: DATA_DIRECTORY, HOME_ASSISTANT_URL: '', HOME_ASSISTANT_TOKEN: '' };
+// Whatever the shell exports, the seed, the front and the worker notify the fake Home Assistant,
+// never a real phone; its port follows E2E_PORT so parallel runs stay apart
+const HOME_ASSISTANT_PORT = String(Number(PORT) + 10_000);
+const HOME_ASSISTANT_URL = `http://localhost:${HOME_ASSISTANT_PORT}`;
+const ENV = {
+  JF_DATA_DIRECTORY: DATA_DIRECTORY,
+  HOME_ASSISTANT_URL,
+  HOME_ASSISTANT_TOKEN: FAKE_HOME_ASSISTANT_TOKEN,
+};
 
 export default defineConfig({
   testDir: 'e2e',
   forbidOnly: process.env.CI !== undefined,
   use: { baseURL: BASE_URL },
+  // How a test reaches the fake Home Assistant, to read the notifications it received
+  metadata: { homeAssistantUrl: HOME_ASSISTANT_URL },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
+    {
+      // Started first: the seed already notifies it
+      command: `node test/fake-home-assistant-server.ts ${HOME_ASSISTANT_PORT}`,
+      wait: { stdout: /Faux Home Assistant prêt/ },
+    },
     {
       // The e2e mode serves the actions with the fakes of the external boundaries (vite.config.ts)
       command: `node test/seed-front.ts && react-router dev --mode e2e --port ${PORT} --strictPort`,

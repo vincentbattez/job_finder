@@ -6,14 +6,13 @@ import { createActions } from '#/actions/index.ts';
 import type { IHeadlessSession } from '#/ai-session/acl/claude-code.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 // Fills the data folder of the front's e2e tests, which playwright.config.ts names in
 // JF_DATA_DIRECTORY, through the actions and with the fakes of the external boundaries: the HTTP of
-// the PEP Source recorded on 2026-10-29, the fake launch of Claude and the fake notification
-// channel. Léa follows the attaché de justice Offres, and the Béthune Offre 2026-2445600 has two
-// Recherches, the first one retenue, and a Lettre; the Melun Offres, past their Date limite, are
+// the PEP Source recorded on 2026-10-29, the fake launch of Claude and the fake Home Assistant that
+// playwright.config.ts starts first. Léa follows the attaché de justice Offres, and the Béthune
+// Offre 2026-2445600 has two Recherches, the first one retenue, and a Lettre; the Melun Offres, past their Date limite, are
 // Postulée, Archivée and À traiter; Camille has no Veille, hence no Offre. The tests
 // that change data work on Offres of their own: Bastia 2026-2426147 (a Recherche and a Lettre to
 // correct), Versailles 2026-2409178 (two Recherches), Rennes 2026-2420931 (a Recherche, ready for
@@ -31,14 +30,17 @@ const VERSAILLES_REFERENCE = '2026-2409178';
 const RENNES_REFERENCE = '2026-2420931';
 const NARBONNE_REFERENCE = '2026-2412591';
 const CONSIGNES_REFERENCE = '2026-2409247';
-const NOTIFICATION = { channel: 'home-assistant', service: 'notify.mobile_app_test' };
+// Notify services of the fake Home Assistant (test/fake-home-assistant.ts)
+function notificationTo(service: string) {
+  return { channel: 'home-assistant', service: `notify.${service}` };
+}
 const CONFIG = {
   defaultDelayMonths: 6,
   candidatList: [
     {
       id: 'lea',
       name: 'Léa',
-      notification: NOTIFICATION,
+      notification: notificationTo('mobile_app_iphone_de_lea'),
       veilleList: [
         {
           id: 'attache-de-justice-hauts-de-france',
@@ -48,8 +50,8 @@ const CONFIG = {
         },
       ],
     },
-    { id: 'camille', name: 'Camille', notification: NOTIFICATION, veilleList: [] },
-    { id: 'sacha', name: 'Sacha', notification: NOTIFICATION, veilleList: [] },
+    { id: 'camille', name: 'Camille', notification: notificationTo('mobile_app_pixel_de_camille'), veilleList: [] },
+    { id: 'sacha', name: 'Sacha', notification: notificationTo('mobile_app_iphone_de_sacha'), veilleList: [] },
   ],
 };
 
@@ -113,7 +115,6 @@ writeFileSync(path.join(dataDirectory, 'config.json'), JSON.stringify(CONFIG));
 const actions = await createActions({
   dataDirectory,
   fetch: createRecordedFetch().fetch,
-  notificationChannel: createFakeNotificationChannel(),
   aiSession: {
     ...createFakeAiSession(),
     runHeadless: (session: IHeadlessSession) =>

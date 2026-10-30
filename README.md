@@ -90,10 +90,11 @@ Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Apr
 - `src/modules/notification/` : le texte de chaque notification, et l'interface commune aux canaux. Seul `acl/home-assistant.ts` sait appeler Home Assistant.
 - `prisma/` : le schéma, les migrations et le seed.
 - `test/fixtures/pep/` : les réponses du site PEP enregistrées le 2026-10-29, que `test/recorded-http.ts` sert aux tests à la place du vrai site.
-- `test/fake-notification-channel.ts` : le faux canal de notification, qui garde les notifications au lieu de les envoyer. Les tests ne lisent jamais `.env`, et `vitest.config.ts` comme `playwright.config.ts` vident les réglages de Home Assistant : un test qui oublie le faux canal n'envoie jamais de vraie notification.
+- `test/fake-notification-channel.ts` : le faux canal de notification, qui garde les notifications au lieu de les envoyer. Les tests ne lisent jamais `.env`, et `vitest.config.ts` vide les réglages de Home Assistant : un test qui oublie le faux canal n'envoie jamais de vraie notification.
+- `test/fake-home-assistant.ts` : le faux Home Assistant, un serveur HTTP sur un port libre qui répond comme sa REST API (jeton, liste des services, `notify`), garde les notifications reçues et sait simuler une panne. `test/home-assistant.test.ts` passe par lui, et `playwright.config.ts` le démarre en premier et y pointe le seed, le front et le worker.
 - `test/fake-ai-session.ts` : le faux lancement de Claude, qui écrit l'Artefact prévu et garde le prompt reçu. `test/fixtures/claude/claude` remplace le binaire `claude` pour tester le vrai lancement sans ouvrir de session.
 - `test/seed-front.ts` : les données des tests Playwright, produites par les actions avec les faux dans un dossier temporaire, jamais `data/`. `playwright.config.ts` le lance avant le serveur de développement, qu'il pointe sur ce dossier.
-- `test/e2e-actions.server.ts` : les actions des tests Playwright, avec les trois faux. Le serveur de développement les sert à la place de `src/web/acl/actions.server.ts` en mode `e2e` (`vite.config.ts`), et `test/e2e-worker.ts`, le worker des tests, exécute avec elles les jobs mis en file par le front.
+- `test/e2e-actions.server.ts` : les actions des tests Playwright, avec les faux. Le serveur de développement les sert à la place de `src/web/acl/actions.server.ts` en mode `e2e` (`vite.config.ts`), et `test/e2e-worker.ts`, le worker des tests, exécute avec elles les jobs mis en file par le front.
 
 ## Commandes
 
