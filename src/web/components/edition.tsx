@@ -45,7 +45,7 @@ export function ArtifactDocument({
             onChange={setEditedMarkdown}
           />
           <div className="edition">
-            <button type="submit" className="button--primary">
+            <button type="submit" className="button button--primary">
               {t('save')}
             </button>
             <CopyMarkdown markdown={editedMarkdown} />
@@ -73,7 +73,9 @@ export function ChooseButton({
   return (
     <Form method="post" action={`/postings/${reference}/${artifact}/chosen`} preventScrollReset className="edition">
       <input type="hidden" name="number" value={number} />
-      <button type="submit">{t('chooseVersion')}</button>
+      <button className="button" type="submit">
+        {t('chooseVersion')}
+      </button>
     </Form>
   );
 }
@@ -92,17 +94,18 @@ export function StatusButtons({
       {nextStatusList.map((status) => {
         if (status !== 'applied') {
           return (
-            <button key={status} type="submit" name="status" value={status}>
+            <button className="button" key={status} type="submit" name="status" value={status}>
               {t(`statusButtonLabelByStatus.${status}`)}
             </button>
           );
         }
         return isConfirming ? (
           <Fragment key={status}>
-            <button type="submit" name="status" value={status} className="button--primary">
+            <button type="submit" name="status" value={status} className="button button--primary">
               {t('confirmApplied')}
             </button>
             <button
+              className="button"
               type="button"
               onClick={() => {
                 setIsConfirming(false);
@@ -115,7 +118,7 @@ export function StatusButtons({
           <button
             key={status}
             type="button"
-            className="button--primary"
+            className="button button--primary"
             disabled={!isHydrated}
             onClick={() => {
               setIsConfirming(true);

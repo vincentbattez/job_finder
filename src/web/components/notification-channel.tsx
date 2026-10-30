@@ -40,6 +40,7 @@ function Step({
   isHydrated,
   children,
   accessibleName,
+  className = 'button',
   ...buttonProperties
 }: Readonly<{
   fetcher: Fetcher;
@@ -54,7 +55,7 @@ function Step({
   const isIdle = fetcher.state === 'idle';
   return (
     <div className="channel__step">
-      <button {...buttonProperties} aria-label={accessibleName} disabled={!isHydrated || !isIdle}>
+      <button {...buttonProperties} className={className} aria-label={accessibleName} disabled={!isHydrated || !isIdle}>
         {children}
       </button>
       {isIdle && fetcher.data?.error != null && <p role="alert">{fetcher.data.error}</p>}
@@ -209,7 +210,7 @@ export function NotificationChannelForm({
             {t('notificationChannel.test')}
           </Step>
         )}
-        <Step type="submit" className="button--primary" fetcher={saveFetcher} isHydrated={isHydrated}>
+        <Step type="submit" className="button button--primary" fetcher={saveFetcher} isHydrated={isHydrated}>
           {t('notificationChannel.save')}
         </Step>
         <Step

@@ -12,7 +12,7 @@
     font: 500 var(--text-sm) var(--font-body);
   }
   /* The front creates Candidates (ADR-0011): a long name stays inside a phone screen */
-  .candidate-menu select {
+  .candidate-menu__select {
     min-width: 0;
     max-width: 12rem;
     text-overflow: ellipsis;
@@ -21,7 +21,7 @@
   .locale-switcher {
     display: flex;
   }
-  .locale-switcher button {
+  .locale-switcher__option {
     min-width: 40px;
     min-height: 40px;
     padding: 0 var(--space-xs);
@@ -32,72 +32,20 @@
     cursor: pointer;
     transition: background-color var(--dur-short) var(--ease-out);
   }
-  .locale-switcher button:first-child {
+  .locale-switcher__option:first-child {
     border-radius: var(--radius-input) 0 0 var(--radius-input);
   }
-  .locale-switcher button:last-child {
+  .locale-switcher__option:last-child {
     border-inline-start: 0;
     border-radius: 0 var(--radius-input) var(--radius-input) 0;
   }
-  .locale-switcher button:hover {
+  .locale-switcher__option:hover {
     background: var(--color-paper-2);
   }
-  .locale-switcher button[aria-pressed='true'] {
+  .locale-switcher__option[aria-pressed='true'] {
     border-color: var(--color-accent);
     background: var(--color-accent);
     color: var(--color-accent-ink);
-  }
-  .candidate-menu select,
-  .candidate-menu button,
-  .command button,
-  .module-launch button,
-  .detection button,
-  .edition button,
-  .channel button,
-  .settings button {
-    min-height: 40px;
-    padding: 0 var(--space-sm);
-    border: var(--rule-hair) solid var(--color-muted);
-    border-radius: var(--radius-input);
-    background: var(--light);
-    color: var(--color-ink);
-    font-size: var(--text-sm);
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color var(--dur-short) var(--ease-out);
-  }
-  .candidate-menu select:hover,
-  .command button:hover,
-  .edition button:hover,
-  .channel button:hover:enabled,
-  .settings button:hover:enabled {
-    background: var(--color-paper-2);
-  }
-  .candidate-menu button,
-  .module-launch button,
-  .detection button,
-  .edition .button--primary,
-  .channel .button--primary,
-  .settings .button--primary {
-    border-color: transparent;
-    background: var(--color-accent);
-    color: var(--color-accent-ink);
-  }
-  .candidate-menu button:hover,
-  .module-launch button:hover:enabled,
-  .detection button:hover:enabled,
-  .edition .button--primary:hover,
-  .channel .button--primary:hover:enabled,
-  .settings .button--primary:hover:enabled {
-    background: var(--color-accent-deep);
-  }
-  /* A module missing an input, an Artifact in progress, a Detection running: the button waits */
-  .module-launch button:disabled,
-  .detection button:disabled,
-  .channel button:disabled,
-  .settings button:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
   }
 
   /* The Detection beside the name of the list: what it found shows below the button */
@@ -137,30 +85,14 @@
     border-color: var(--color-accent);
     background: var(--color-accent-soft);
   }
+  /* A label in the look of a button, for the hidden file input it holds */
   .drop-zone__choose {
     display: inline-flex;
     align-items: center;
-    min-height: 40px;
-    padding: 0 var(--space-sm);
-    border: var(--rule-hair) solid var(--color-muted);
-    border-radius: var(--radius-input);
-    background: var(--light);
-    color: var(--color-ink);
-    font-size: var(--text-sm);
-    font-weight: 500;
-    cursor: pointer;
-  }
-  .drop-zone__choose:hover {
-    background: var(--color-paper-2);
   }
   .drop-zone__choose:focus-within {
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
-  }
-  /* Waiting for React, or for Claude to read the Job Description */
-  .drop-zone__choose[data-disabled='true'] {
-    opacity: 0.55;
-    cursor: not-allowed;
   }
   .drop-zone__error {
     color: var(--color-error);
@@ -357,18 +289,8 @@
     color: var(--color-muted);
     font: 500 var(--text-sm) var(--font-body);
   }
-  .filters select,
-  .filters button {
+  .filters__control {
     max-width: 100%;
-    min-height: 40px;
-    padding: 0 var(--space-sm);
-    border: var(--rule-hair) solid var(--color-muted);
-    border-radius: var(--radius-input);
-    background: var(--light);
-    color: var(--color-ink);
-    font-size: var(--text-sm);
-    font-weight: 500;
-    cursor: pointer;
   }
   .filters .filters__check {
     display: flex;
@@ -381,14 +303,6 @@
     width: 18px;
     height: 18px;
     accent-color: var(--color-accent);
-  }
-  .filters button {
-    border-color: transparent;
-    background: var(--color-accent);
-    color: var(--color-accent-ink);
-  }
-  .filters button:hover {
-    background: var(--color-accent-deep);
   }
 
   /* A point per Posting in its status's color, ringed in white to stand out of the tiles; an
@@ -864,14 +778,6 @@
   .profile-file--new h2 {
     font: 600 var(--text-md) / 1.4 var(--font-body);
   }
-  .edition .button--danger {
-    border-color: transparent;
-    background: var(--color-error);
-    color: var(--color-accent-ink);
-  }
-  .edition .button--danger:hover {
-    background: color-mix(in oklch, var(--color-error), var(--color-ink) 20%);
-  }
 
   /* The Instructions of a module sit in its compartment, under its tint, like its Versions */
   .instructions__head {
@@ -961,26 +867,8 @@
     outline: 2px solid var(--color-focus);
     outline-offset: -3px;
   }
-  .facts__section button {
+  .facts__add {
     justify-self: start;
-    min-height: 40px;
-    padding: 0 var(--space-sm);
-    border: var(--rule-hair) solid var(--color-muted);
-    border-radius: var(--radius-input);
-    background: var(--light);
-    color: var(--color-ink);
-    font-size: var(--text-sm);
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color var(--dur-short) var(--ease-out);
-  }
-  .facts__section button:hover:enabled {
-    background: var(--color-paper-2);
-  }
-  /* Adding or removing an entry waits for React to run the page */
-  .facts__section button:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
   }
 
   /* The PDFs of the Profile, kept as dropped: one row each, name and date, deletion folded */

@@ -27,7 +27,11 @@ export function ModuleLaunch({
       <span role="status">
         <StateBadge state={state} />
       </span>
-      <button type="submit" disabled={!isHydrated || isRunning || module.refusal !== null || fetcher.state !== 'idle'}>
+      <button
+        className="button button--primary"
+        type="submit"
+        disabled={!isHydrated || isRunning || module.refusal !== null || fetcher.state !== 'idle'}
+      >
         {t(state === 'absent' ? 'launchArtifact' : 'relaunchArtifact', {
           artifactLabel: t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' }),
         })}

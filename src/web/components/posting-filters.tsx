@@ -36,7 +36,7 @@ export function PostingFilters({ postingList }: Readonly<{ postingList: IFiltere
     <Form role="search" aria-label={t('filtersLabel')} className="filters" key={searchParameters.toString()}>
       <label>
         {t('cityFilter')}
-        <select name="city" defaultValue={searchParameters.get('city') ?? ''}>
+        <select className="button filters__control" name="city" defaultValue={searchParameters.get('city') ?? ''}>
           <option value="">{t('allChoices')}</option>
           {listChoices(postingList.map(({ city }) => city)).map((city) => (
             <option key={city}>{city}</option>
@@ -45,7 +45,7 @@ export function PostingFilters({ postingList }: Readonly<{ postingList: IFiltere
       </label>
       <label>
         {t('regionFilter')}
-        <select name="region" defaultValue={searchParameters.get('region') ?? ''}>
+        <select className="button filters__control" name="region" defaultValue={searchParameters.get('region') ?? ''}>
           <option value="">{t('allChoices')}</option>
           {listChoices(postingList.map(({ region }) => region)).map((region) => (
             <option key={region}>{region}</option>
@@ -56,7 +56,9 @@ export function PostingFilters({ postingList }: Readonly<{ postingList: IFiltere
         <input type="checkbox" name="archived" defaultChecked={searchParameters.has('archived')} />
         {t('showArchived')}
       </label>
-      <button type="submit">{t('filter')}</button>
+      <button className="button button--primary filters__control" type="submit">
+        {t('filter')}
+      </button>
     </Form>
   );
 }

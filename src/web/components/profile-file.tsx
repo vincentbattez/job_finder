@@ -28,7 +28,7 @@ export function ProfileFile({
           onChange={setEditedMarkdown}
         />
         <div className="edition">
-          <button type="submit" name="intent" value="save" className="button--primary">
+          <button type="submit" name="intent" value="save" className="button button--primary">
             {t('profileFile.save')}
           </button>
           {editedMarkdown !== markdown && <p role="status">{t('unsavedChanges')}</p>}
@@ -45,7 +45,7 @@ export function ProfileFile({
         <Form method="post" preventScrollReset className="edition">
           <input type="hidden" name="fileName" value={fileName} />
           <p>{t('profileFile.deleteWarning')}</p>
-          <button type="submit" name="intent" value="delete" className="button--danger">
+          <button type="submit" name="intent" value="delete" className="button button--danger">
             {t('profileFile.deleteForGood', { fileName })}
           </button>
         </Form>
@@ -82,7 +82,7 @@ export function ProfileFileCreation({ error }: Readonly<{ error: string | null }
           placeholder={t('profileFile.creationContentPlaceholder')}
         />
         <div className="edition">
-          <button type="submit" name="intent" value="create" className="button--primary">
+          <button type="submit" name="intent" value="create" className="button button--primary">
             {t('profileFile.create')}
           </button>
           {error !== null && (

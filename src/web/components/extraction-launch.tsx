@@ -27,7 +27,7 @@ export function ExtractionLaunch({
       </span>
       {state === 'failed' && (
         <>
-          <button type="submit" disabled={!isHydrated || fetcher.state !== 'idle'}>
+          <button className="button button--primary" type="submit" disabled={!isHydrated || fetcher.state !== 'idle'}>
             {t('relaunchExtraction')}
           </button>
           <p className="module-launch__refusal">{log}</p>

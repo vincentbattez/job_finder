@@ -47,7 +47,7 @@ export function DropZone({
       }}
     >
       <p>{intro}</p>
-      <label className="drop-zone__choose" data-disabled={!isHydrated || isBusy}>
+      <label className="button drop-zone__choose" data-disabled={!isHydrated || isBusy}>
         {label}
         <input
           type="file"

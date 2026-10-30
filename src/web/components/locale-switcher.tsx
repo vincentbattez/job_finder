@@ -13,6 +13,7 @@ export function LocaleSwitcher() {
     <Form method="post" action="/locale" className="locale-switcher" aria-label={t('localeSwitcherLabel')}>
       {LOCALE_LIST.map((locale) => (
         <button
+          className="locale-switcher__option"
           key={locale}
           type="submit"
           name="locale"

@@ -20,7 +20,7 @@ export function Detection() {
   const { t } = useTranslation('posting');
   return (
     <fetcher.Form method="post" action="/detect" className="detection">
-      <button type="submit" disabled={!isHydrated || isRunning}>
+      <button className="button button--primary" type="submit" disabled={!isHydrated || isRunning}>
         {isRunning ? t('detectionRunning') : t('runDetection')}
       </button>
       <div role="status">

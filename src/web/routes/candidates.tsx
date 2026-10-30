@@ -95,7 +95,7 @@ export default function Candidates() {
               <input name="name" required defaultValue={name} placeholder={t('candidates.fullNamePlaceholder')} />
             </label>
             <div className="settings__step">
-              <button type="submit" aria-label={t('candidates.renameOf', { candidateId: id })}>
+              <button className="button" type="submit" aria-label={t('candidates.renameOf', { candidateId: id })}>
                 {t('candidates.rename')}
               </button>
               <Refusal message={refusalOf('rename', id)} />
@@ -117,7 +117,7 @@ export default function Candidates() {
             <input name="id" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder={t('candidates.idPlaceholder')} />
           </label>
           <div className="settings__step">
-            <button type="submit" className="button--primary">
+            <button type="submit" className="button button--primary">
               {t('candidates.create')}
             </button>
             <Refusal message={refusalOf('create')} />
@@ -142,7 +142,7 @@ export default function Candidates() {
             />
           </label>
           <div className="settings__step">
-            <button type="submit" className="button--primary">
+            <button type="submit" className="button button--primary">
               {t('candidates.saveDefaultDeadlinePeriod')}
             </button>
             <Refusal message={refusalOf('default-deadline-period')} />

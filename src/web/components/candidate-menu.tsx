@@ -15,7 +15,13 @@ export function CandidateMenu({
   return (
     <Form method="post" action="/candidate" className="candidate-menu">
       <label htmlFor="candidate">{t('menu.candidateLabel')}</label>
-      <select id="candidate" name="candidateId" key={candidate?.id} defaultValue={candidate?.id ?? ''}>
+      <select
+        className="button candidate-menu__select"
+        id="candidate"
+        name="candidateId"
+        key={candidate?.id}
+        defaultValue={candidate?.id ?? ''}
+      >
         {candidate === null && (
           <option value="" disabled>
             {t('menu.namePlaceholder')}
@@ -27,7 +33,9 @@ export function CandidateMenu({
           </option>
         ))}
       </select>
-      <button type="submit">{t('menu.choose')}</button>
+      <button className="button button--primary" type="submit">
+        {t('menu.choose')}
+      </button>
     </Form>
   );
 }

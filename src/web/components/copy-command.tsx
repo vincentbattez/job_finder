@@ -23,6 +23,7 @@ function CopyButton({ text, label, copiedLabel }: Readonly<{ text: string; label
   const [isCopied, setIsCopied] = useState(false);
   return (
     <button
+      className="button"
       type="button"
       onClick={() => {
         copyText(text);

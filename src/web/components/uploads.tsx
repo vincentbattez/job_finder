@@ -42,7 +42,13 @@ function UploadConversion({ fileName, conversion }: Readonly<{ fileName: string;
         <StateBadge state={state} />
       </span>
       {(state === 'absent' || state === 'failed') && (
-        <button type="submit" name="intent" value="convertUpload" disabled={!isHydrated || fetcher.state !== 'idle'}>
+        <button
+          className="button button--primary"
+          type="submit"
+          name="intent"
+          value="convertUpload"
+          disabled={!isHydrated || fetcher.state !== 'idle'}
+        >
           {state === 'absent' ? t('uploads.convert') : t('uploads.convertAgain')}
           <span className="visually-hidden">{t('uploads.ofFile', { fileName })}</span>
         </button>
@@ -93,7 +99,7 @@ export function Uploads({
                 </summary>
                 <fetcher.Form method="post" action="/profile" className="edition">
                   <input type="hidden" name="fileName" value={fileName} />
-                  <button type="submit" name="intent" value="deleteUpload" className="button--danger">
+                  <button type="submit" name="intent" value="deleteUpload" className="button button--danger">
                     {t('uploads.deleteForGood')}
                     <span className="visually-hidden"> {fileName}</span>
                   </button>

@@ -58,11 +58,11 @@ function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; source
           />
         ))}
         <div className="settings__step">
-          <button type="submit" name="intent" value="save" className="button--primary" disabled={isDisabled}>
+          <button type="submit" name="intent" value="save" className="button button--primary" disabled={isDisabled}>
             {watch === null ? t('watches.create') : t('watches.save')}
           </button>
           {watch !== null && (
-            <button type="submit" name="intent" value="delete" disabled={isDisabled} formNoValidate>
+            <button className="button" type="submit" name="intent" value="delete" disabled={isDisabled} formNoValidate>
               {t('watches.delete')}
             </button>
           )}

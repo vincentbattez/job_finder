@@ -52,11 +52,11 @@ export function ModuleInstructions({
           onChange={setEditedInstructions}
         />
         <div className="edition">
-          <button type="submit" name="intent" value="save" className="button--primary">
+          <button type="submit" name="intent" value="save" className="button button--primary">
             {t('instructions.save')}
           </button>
           {hasCandidateInstructions && (
-            <button type="submit" name="intent" value="delete">
+            <button className="button" type="submit" name="intent" value="delete">
               {t('instructions.backToDefault')}
             </button>
           )}

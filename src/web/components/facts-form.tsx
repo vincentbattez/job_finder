@@ -24,6 +24,7 @@ function ListSection({ title, example, entryList }: Readonly<Section>) {
             <textarea name={title} defaultValue={entry} rows={2} placeholder={example} />
           </label>
           <button
+            className="button"
             type="button"
             disabled={!isHydrated}
             aria-label={t('facts.deleteEntry', { number: index + 1 })}
@@ -36,6 +37,7 @@ function ListSection({ title, example, entryList }: Readonly<Section>) {
         </div>
       ))}
       <button
+        className="button facts__add"
         type="button"
         disabled={!isHydrated}
         onClick={() => {
@@ -76,7 +78,7 @@ export function FactsForm({ sectionList }: Readonly<{ sectionList: Section[] }>)
           ),
         )}
         <div className="edition">
-          <button type="submit" className="button--primary">
+          <button type="submit" className="button button--primary">
             {t('facts.save')}
           </button>
         </div>
