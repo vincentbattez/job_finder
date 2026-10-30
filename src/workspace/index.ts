@@ -12,7 +12,7 @@ import {
 } from '#/domain/index.ts';
 import { wordListOf } from '#/text/index.ts';
 
-import { findObsoleteConfig, readLegacyConfig } from './acl/config.ts';
+import { findObsoleteConfig, readObsoleteConfig } from './acl/config.ts';
 import { openDatabase, type INewOffre } from './acl/database.ts';
 import {
   createDirectory,
@@ -40,7 +40,7 @@ function slugify(text: string): string {
 export async function openWorkspace(dataDirectory: string) {
   const database = openDatabase(path.join(dataDirectory, 'job_finder.sqlite'));
   if (!(await database.hasSettings())) {
-    await database.createSettings(readLegacyConfig(dataDirectory));
+    await database.createSettings(readObsoleteConfig(dataDirectory));
   }
   await database.readDefaultDelayMonths();
   const candidatDirectoryOf = (candidatId: string): string => path.join(dataDirectory, 'candidats', candidatId);
