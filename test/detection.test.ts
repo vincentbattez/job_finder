@@ -8,8 +8,8 @@ import { createActions, type Actions } from '#/actions/index.ts';
 import type { Detection, Offre } from '#/domain/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
-import { createFakeCanalNotification } from './fake-canal-notification.ts';
-import { LEA_VEILLE_ID } from './lea.ts';
+import { createFakeNotificationChannel } from './fake-notification-channel.ts';
+import { LEA_WATCH_ID } from './lea.ts';
 import { createRecordedFetch, DSJ_FEED_URL, readRecordedFile } from './recorded-http.ts';
 
 // Every attaché de justice offer of the DSJ feed recorded on 2026-10-29, counted by hand from its
@@ -167,14 +167,14 @@ describe('detection on the responses recorded on 2026-10-29', () => {
     });
   });
 
-  it('locates an Offre in the commune of its ville, with its région and coordinates', async () => {
+  it('locates an Offre in the commune of its city, with its region and coordinates', async () => {
     expect(await findOffre('2026-2445600')).toMatchObject({
       city: 'Béthune',
       region: 'Hauts-de-France',
       latitude: 50.5299,
       longitude: 2.6438,
     });
-    // The commune's own name, whatever the spelling of the lieu d'affectation
+    // The commune's own name, whatever the spelling of the place d'affectation
     expect(await findOffre('2026-2350473')).toMatchObject({ city: 'Boulogne-sur-Mer', region: 'Hauts-de-France' });
   });
 
@@ -215,7 +215,7 @@ describe('detection on the responses recorded on 2026-10-29', () => {
   });
 
   it('imports the Offres already online on the first launch', () => {
-    expect(detectionList).toMatchObject([{ veilleId: LEA_VEILLE_ID, isFirstLaunch: true }]);
+    expect(detectionList).toMatchObject([{ watchId: LEA_WATCH_ID, isFirstLaunch: true }]);
     expect(detectionList[0]?.newOffreList).toHaveLength(ATTACHE_DE_JUSTICE_REFERENCE_LIST.length);
   });
 
@@ -254,11 +254,11 @@ describe('a second detection', () => {
     );
   });
 
-  it('locates the Offres saved before they had a ville', async () => {
+  it('locates the Offres saved before they had a city', async () => {
     const dataDirectory = createDataDirectory();
     const firstActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
     await firstActions.detect();
-    // As the Offres detected before the ville existed: no ville, no région, no coordinates
+    // As the Offres detected before the city existed: no city, no region, no coordinates
     new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite')).exec(
       'UPDATE "Offre" SET "city" = NULL, "region" = NULL, "latitude" = NULL, "longitude" = NULL',
     );
@@ -284,20 +284,20 @@ describe('a second detection', () => {
 });
 
 describe('a first launch cut off mid-way', () => {
-  // The Offres saved before the cut stay, but the first launch is over only once a Détection of the
-  // Veille went through: the next one imports the rest without triggering anything either
-  it('ends with the next Détection, which triggers nothing for the Offres left', async () => {
+  // The Offres saved before the cut stay, but the first launch is over only once a Detection of the
+  // Watch went through: the next one imports the rest without triggering anything either
+  it('ends with the next Detection, which triggers nothing for the Offres left', async () => {
     const dataDirectory = createDataDirectory();
     const cutFetch = createRecordedFetch({
       'https://place-ep-recrute.talent-soft.com/offre-de-emploi/emploi_2445600.aspx': { body: '', status: 500 },
     }).fetch;
     const cutActions = await createActions({ dataDirectory, fetch: cutFetch });
     await expect(cutActions.detect()).rejects.toThrow(/HTTP 500/);
-    const notificationChannel = createFakeCanalNotification();
+    const notificationChannel = createFakeNotificationChannel();
     const actions = await createActions({
       dataDirectory,
       fetch: createRecordedFetch().fetch,
-      canalNotificationList: notificationChannel.canalNotificationList,
+      notificationChannelList: notificationChannel.notificationChannelList,
     });
 
     const detectionList = await actions.detect();
@@ -314,7 +314,7 @@ describe('a first launch cut off mid-way', () => {
 const BETHUNE_API_GEO_URL =
   'https://geo.api.gouv.fr/communes?nom=B%C3%A9thune&fields=nom,centre,region&boost=population&limit=5';
 
-describe('a ville API Géo does not know', () => {
+describe('a city API Géo does not know', () => {
   it('keeps it as read, without coordinates, and looks it up again at the next detection', async () => {
     const dataDirectory = createDataDirectory();
     const recordedFetch = createRecordedFetch({ [BETHUNE_API_GEO_URL]: { body: '[]' } });

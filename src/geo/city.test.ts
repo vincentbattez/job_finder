@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { readCity } from './city.ts';
 
-// Lieux d'affectation of the PEP Offres recorded on 2026-10-29, written as free text
-describe('ville of a lieu d’affectation', () => {
+// Places d'affectation of the PEP Offres recorded on 2026-10-29, written as free text
+describe('city of a place d’affectation', () => {
   it.each([
     ['Tribunal Judiciaire de Béthune', 'Béthune'],
     ['Le siège du Tribunal Judiciaire de Sens', 'Sens'],
@@ -26,7 +26,7 @@ describe('ville of a lieu d’affectation', () => {
     expect(readCity(workplace)).toBe(city);
   });
 
-  it('has no ville without a lieu d’affectation', () => {
+  it('has no city without a place d’affectation', () => {
     expect(readCity(null)).toBeNull();
   });
 });

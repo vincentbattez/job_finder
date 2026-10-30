@@ -19,16 +19,16 @@ function writeConfig(dataDirectory: string, config: object): void {
   writeFileSync(path.join(dataDirectory, 'config.json'), JSON.stringify(config));
 }
 
-const LEA_CONFIG = { id: 'lea', name: 'Léa', veilleList: [] };
+const LEA_CONFIG = { id: 'lea', name: 'Léa', watchList: [] };
 
 const FIRST_MIGRATION = '20261029133617_init';
-// The last migration before the Canaux de notification, which turned each Connexion Home Assistant
+// The last migration before the Notification Channels, which turned each Connexion Home Assistant
 // into one (ADR-0010)
 const CONNEXION_HOME_ASSISTANT_MIGRATION = '20261030090736_job_profil';
 // The last migration before the Sources became a family, which gathered the criteria and the Zone of
-// each Veille into its Paramètres (ADR-0010)
-const CANAL_NOTIFICATION_MIGRATION = '20261030110155_canal_notification';
-// The last migration before the row of the settings became that of the Délai par défaut
+// each Watch into its Parameters (ADR-0010)
+const NOTIFICATION_CHANNEL_MIGRATION = '20261030110155_canal_notification';
+// The last migration before the row of the settings became that of the Default Deadline Period
 const SETTINGS_MIGRATION = '20261030114047_settings';
 
 function listLeaProfileFiles(dataDirectory: string): string[] {
@@ -69,16 +69,16 @@ describe('actions', () => {
 
     const actions = await createActions({ dataDirectory });
 
-    // The Canaux de notification came with a later migration
-    expect(await actions.readCanalNotification({ candidateId: 'lea' })).toEqual({
+    // The Notification Channels came with a later migration
+    expect(await actions.readNotificationChannel({ candidateId: 'lea' })).toEqual({
       module: null,
-      parametres: {},
+      parameters: {},
       configuredSecretList: [],
     });
   });
 
   // The main checkout migrates the real data/: Léa keeps her Connexion, nothing to type again
-  it('turns the Connexion Home Assistant of each Candidate into their Canal de notification, without loss', async () => {
+  it('turns the Connexion Home Assistant of each Candidate into their Notification Channel, without loss', async () => {
     const dataDirectory = createEmptyDataDirectory();
     writeConfig(dataDirectory, { defaultDelayMonths: 6, candidateList: [LEA_CONFIG] });
     const database = new DatabaseSync(writeOlderDatabase(dataDirectory, CONNEXION_HOME_ASSISTANT_MIGRATION));
@@ -89,25 +89,25 @@ describe('actions', () => {
 
     const actions = await createActions({ dataDirectory });
 
-    expect(await actions.readCanalNotification({ candidateId: 'lea' })).toEqual({
+    expect(await actions.readNotificationChannel({ candidateId: 'lea' })).toEqual({
       module: 'home-assistant',
-      parametres: { url: 'https://domotique.example', service: 'notify.mobile_app_iphone_de_lea' },
+      parameters: { url: 'https://domotique.example', service: 'notify.mobile_app_iphone_de_lea' },
       configuredSecretList: ['token'],
     });
     const migrated = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { readOnly: true });
     expect(
-      migrated.prepare("SELECT json_extract(parametres, '$.token') AS token FROM CanalNotification").get(),
+      migrated.prepare("SELECT json_extract(parameters, '$.token') AS token FROM NotificationChannel").get(),
     ).toEqual({
       token: 'jeton-de-lea',
     });
     migrated.close();
   });
 
-  // The main checkout migrates the real data/: each Veille keeps its Paramètres and its first launch
-  // stays over, so the next Détection triggers as before
-  it('gathers the criteria and the Zone of each Veille into the Paramètres of its Source, without loss', () => {
+  // The main checkout migrates the real data/: each Watch keeps its Parameters and its first launch
+  // stays over, so the next Detection triggers as before
+  it('gathers the criteria and the Zone of each Watch into the Parameters of its Source, without loss', () => {
     const dataDirectory = createEmptyDataDirectory();
-    const databasePath = writeOlderDatabase(dataDirectory, CANAL_NOTIFICATION_MIGRATION);
+    const databasePath = writeOlderDatabase(dataDirectory, NOTIFICATION_CHANNEL_MIGRATION);
     const database = new DatabaseSync(databasePath);
     database.exec(`INSERT INTO Candidat (id, name) VALUES ('lea', 'Léa');
       INSERT INTO Veille (id, candidatId, source, criteria, zone, detectedAt)
@@ -118,21 +118,21 @@ describe('actions', () => {
     migrateDeploy(databasePath);
 
     const migrated = new DatabaseSync(databasePath, { readOnly: true });
-    expect(migrated.prepare('SELECT id, candidateId, source, parametres, detectedAt FROM Veille').all()).toEqual([
+    expect(migrated.prepare('SELECT id, candidateId, source, parameters, detectedAt FROM Watch').all()).toEqual([
       {
         id: 'attache-de-justice-hauts-de-france',
         candidateId: 'lea',
         source: 'pep',
-        parametres: '{"title":"attaché de justice","courtOfAppealList":["Douai","Amiens"]}',
+        parameters: '{"title":"attaché de justice","courtOfAppealList":["Douai","Amiens"]}',
         detectedAt: '2026-10-30T10:44:22.500+00:00',
       },
     ]);
     migrated.close();
   });
 
-  // The main checkout migrates the real data/: the Délai par défaut stays, and so does the mark that
+  // The main checkout migrates the real data/: the Default Deadline Period stays, and so does the mark that
   // the config was imported, which is never read again
-  it('keeps the Délai par défaut of the settings, and the import over', async () => {
+  it('keeps the Default Deadline Period of the settings, and the import over', async () => {
     const dataDirectory = createEmptyDataDirectory();
     const database = new DatabaseSync(writeOlderDatabase(dataDirectory, SETTINGS_MIGRATION));
     database.exec(`INSERT INTO Settings (id, defaultDelayMonths) VALUES (1, 7);`);
@@ -141,7 +141,7 @@ describe('actions', () => {
 
     const actions = await createActions({ dataDirectory });
 
-    expect(await actions.readDelaiParDefaut()).toEqual({ months: 7 });
+    expect(await actions.readDefaultDeadlinePeriod()).toEqual({ months: 7 });
     expect(await actions.listCandidates()).toEqual([]);
   });
 

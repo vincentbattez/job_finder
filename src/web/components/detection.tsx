@@ -2,9 +2,9 @@ import { Link, useFetcher } from 'react-router';
 
 import { useIsHydrated } from './use-is-hydrated.ts';
 
-// The shape of the detect action, per Veille
+// The shape of the detect action, per Watch
 interface IDetection {
-  veilleId: string;
+  watchId: string;
   isFirstLaunch: boolean;
   newOffreList: { reference: string; title: string }[];
   notificationFailureList: string[];
@@ -17,7 +17,7 @@ function summarize({ isFirstLaunch, newOffreList }: IDetection): string {
   return isFirstLaunch ? `${summary}, premier lancement : importées sans rien déclencher` : summary;
 }
 
-// Runs a Détection without waiting for the daily one, then says what it found for each Veille; the
+// Runs a Detection without waiting for the daily one, then says what it found for each Watch; the
 // list of Offres below reloads with the new ones
 export function Detection() {
   const fetcher = useFetcher<{ detectionList: IDetection[]; error: string | null }>();
@@ -31,9 +31,9 @@ export function Detection() {
       <div role="status">
         {fetcher.data?.error != null && <p className="detection__error">{fetcher.data.error}</p>}
         {fetcher.data?.detectionList.map((detection) => (
-          <div key={detection.veilleId}>
+          <div key={detection.watchId}>
             <p>
-              Veille {detection.veilleId} : {summarize(detection)}
+              Veille {detection.watchId} : {summarize(detection)}
             </p>
             {detection.newOffreList.length > 0 && (
               <ul>

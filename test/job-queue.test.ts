@@ -6,7 +6,7 @@ import { createActions } from '#/actions/index.ts';
 
 import { createDataDirectory, detectOffres } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeCanalNotification } from './fake-canal-notification.ts';
+import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
 // The two Béthune Offres, both in the Zone, detected from the responses recorded on 2026-10-29
@@ -96,7 +96,7 @@ describe('the job queue', () => {
     const restartedWorker = await createActions({
       dataDirectory,
       aiSession,
-      canalNotificationList: notificationChannel.canalNotificationList,
+      notificationChannelList: notificationChannel.notificationChannelList,
     });
     const failedJobList = await restartedWorker.failInterruptedJobs();
     await restartedWorker.runModule({ module: 'recherche', reference: REFERENCE });
@@ -113,17 +113,17 @@ describe('the job queue', () => {
 });
 
 describe('the Recherche of a new Offre in the Zone', () => {
-  it('is queued by the Détection, and only for the new Offres in the Zone', async () => {
+  it('is queued by the Detection, and only for the new Offres in the Zone', async () => {
     const dataDirectory = createDataDirectory();
     const aiSession = createFakeAiSession(RECHERCHE, RECHERCHE);
     const feed = feedWithout([REFERENCE, OTHER_REFERENCE, OUT_OF_ZONE_REFERENCE]);
     const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feed } }).fetch;
-    const notificationChannel = createFakeCanalNotification();
+    const notificationChannel = createFakeNotificationChannel();
     const earlierActions = await createActions({
       dataDirectory,
       aiSession,
       fetch: earlierFetch,
-      canalNotificationList: notificationChannel.canalNotificationList,
+      notificationChannelList: notificationChannel.notificationChannelList,
     });
     await notificationChannel.saveFor(earlierActions);
     await earlierActions.detect();
@@ -131,7 +131,7 @@ describe('the Recherche of a new Offre in the Zone', () => {
       dataDirectory,
       aiSession,
       fetch: createRecordedFetch().fetch,
-      canalNotificationList: notificationChannel.canalNotificationList,
+      notificationChannelList: notificationChannel.notificationChannelList,
     });
 
     await actions.detect();

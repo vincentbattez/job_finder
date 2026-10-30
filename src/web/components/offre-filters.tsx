@@ -8,10 +8,10 @@ interface IFilteredOffre {
   region: string | null;
 }
 
-// The Offres of the ville and the région chosen, the Archivées only when asked: the list and the
+// The Offres of the city and the region chosen, the Archivées only when asked: the list and the
 // map show the same ones
 export function filterOffres<T extends IFilteredOffre>(offreList: T[], searchParameters: URLSearchParams): T[] {
-  const city = searchParameters.get('ville') ?? '';
+  const city = searchParameters.get('city') ?? '';
   const region = searchParameters.get('region') ?? '';
   const isArchiveeShown = searchParameters.has('archivees');
   return offreList.filter(
@@ -34,7 +34,7 @@ export function OffreFilters({ offreList }: Readonly<{ offreList: IFilteredOffre
     <Form role="search" aria-label="Filtres" className="filters" key={searchParameters.toString()}>
       <label>
         Ville
-        <select name="ville" defaultValue={searchParameters.get('ville') ?? ''}>
+        <select name="city" defaultValue={searchParameters.get('city') ?? ''}>
           <option value="">Toutes</option>
           {listChoices(offreList.map(({ city }) => city)).map((city) => (
             <option key={city}>{city}</option>

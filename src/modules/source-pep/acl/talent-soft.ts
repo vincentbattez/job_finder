@@ -57,7 +57,7 @@ async function get(httpFetch: typeof fetch, url: string): Promise<string> {
   if (response.status !== 200) {
     throw new Error(`Le site PEP a répondu HTTP ${String(response.status)} pour ${url}. Relancer plus tard.`);
   }
-  // text() decodes leniently: invalid UTF-8 becomes U+FFFD instead of failing the Détection
+  // text() decodes leniently: invalid UTF-8 becomes U+FFFD instead of failing the Detection
   return response.text();
 }
 
@@ -103,7 +103,7 @@ function readField(html: string, id: string): string | null {
 }
 
 // The fields are read by their element ids, stable across offers (ADR-0001). The employing court of
-// appeal tells the Zone, a Paramètre of this Source only: it stays out of the Fiche de poste.
+// appeal tells the Zone, a Parameter of this Source only: it stays out of the Fiche de poste.
 export async function readFicheDePoste(
   reference: string,
   httpFetch: typeof fetch = fetch,

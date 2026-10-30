@@ -47,7 +47,7 @@
 .module-launch button,
 .detection button,
 .edition button,
-.canal button,
+.channel button,
 .settings button {
   min-height: 40px;
   padding: 0 var(--space-sm);
@@ -63,7 +63,7 @@
 .candidate-menu select:hover,
 .command button:hover,
 .edition button:hover,
-.canal button:hover:enabled,
+.channel button:hover:enabled,
 .settings button:hover:enabled {
   background: var(--color-paper-2);
 }
@@ -71,7 +71,7 @@
 .module-launch button,
 .detection button,
 .edition .button--primary,
-.canal .button--primary,
+.channel .button--primary,
 .settings .button--primary {
   border-color: transparent;
   background: var(--color-accent);
@@ -81,20 +81,20 @@
 .module-launch button:hover:enabled,
 .detection button:hover:enabled,
 .edition .button--primary:hover,
-.canal .button--primary:hover:enabled,
+.channel .button--primary:hover:enabled,
 .settings .button--primary:hover:enabled {
   background: var(--color-accent-deep);
 }
-/* A module missing an input, an Artefact en cours, a Détection running: the button waits */
+/* A module missing an input, an Artefact en cours, a Detection running: the button waits */
 .module-launch button:disabled,
 .detection button:disabled,
-.canal button:disabled,
+.channel button:disabled,
 .settings button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-/* The Détection beside the name of the list: what it found shows below the button */
+/* The Detection beside the name of the list: what it found shows below the button */
 .detection {
   display: grid;
   justify-items: start;
@@ -1071,29 +1071,29 @@ a:active {
   margin-top: var(--space-xs);
 }
 
-/* The Canal de notification: each field, then the button that tries it and what it answered */
-.canal,
-.canal form,
+/* The Notification Channel: each field, then the button that tries it and what it answered */
+.channel,
+.channel form,
 .settings,
 .settings form {
   display: grid;
   gap: var(--space-md);
   min-width: 0;
 }
-.canal h2,
+.channel h2,
 .settings h2,
 .settings h3 {
   font: 600 var(--text-md) / 1.4 var(--font-body);
 }
-.canal > p,
+.channel > p,
 .settings > p {
   color: var(--color-ink-2);
 }
-.canal form,
+.channel form,
 .settings form {
   max-width: 32rem;
 }
-.canal__field,
+.channel__field,
 .settings__field {
   display: grid;
   gap: var(--space-xs);
@@ -1101,8 +1101,8 @@ a:active {
   color: var(--color-ink-2);
   font: 500 var(--text-sm) / 1.4 var(--font-body);
 }
-.canal__field input,
-.canal__field select,
+.channel__field input,
+.channel__field select,
 .settings__field input,
 .settings__field textarea {
   min-width: 0;
@@ -1116,18 +1116,18 @@ a:active {
   color: var(--color-ink);
   font: 400 var(--text-sm) / 1.4 var(--font-outlier);
 }
-.canal__field input:focus-visible,
-.canal__field select:focus-visible,
+.channel__field input:focus-visible,
+.channel__field select:focus-visible,
 .settings__field input:focus-visible,
 .settings__field textarea:focus-visible {
   outline-color: var(--color-focus);
 }
 /* Write-only, the token never shows again: only whether one is saved (ADR-0006) */
-.parametre-field__configured {
+.parameter-field__configured {
   color: var(--color-success);
   font-weight: 600;
 }
-.canal__step,
+.channel__step,
 .settings__step {
   display: flex;
   flex-wrap: wrap;
@@ -1135,11 +1135,11 @@ a:active {
   gap: var(--space-xs) var(--space-sm);
   font-size: var(--text-sm);
 }
-.canal__step [role='status'],
+.channel__step [role='status'],
 .settings__step [role='status'] {
   color: var(--color-success);
 }
-.canal__step [role='alert'] {
+.channel__step [role='alert'] {
   flex-basis: 100%;
   color: var(--color-error);
 }
@@ -1147,12 +1147,12 @@ a:active {
   flex-basis: 100%;
   color: var(--color-error);
 }
-/* A list Paramètre, one value per line, such as the courts of appeal of a Zone */
+/* A list Parameter, one value per line, such as the courts of appeal of a Zone */
 .settings__field textarea {
   padding: var(--space-xs) var(--space-sm);
   resize: vertical;
 }
-/* Each Veille in its own frame, the new one last */
+/* Each Watch in its own frame, the new one last */
 .settings fieldset {
   display: grid;
   gap: var(--space-md);

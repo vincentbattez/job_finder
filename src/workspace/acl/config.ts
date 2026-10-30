@@ -4,9 +4,9 @@ import path from 'node:path';
 import { z } from 'zod/v4';
 
 import { ERROR } from '#/domain/error.ts';
-import { PARAMETRES_SCHEMA } from '#/domain/index.ts';
+import { PARAMETERS_SCHEMA } from '#/domain/index.ts';
 
-// The file where an older jf read the Candidates, their Veilles and the Délai par défaut. The database
+// The file where an older jf read the Candidates, their Watches and the Default Deadline Period. The database
 // holds them now, written by the front: the file is imported once, at the first launch of a database
 // that has no settings yet, then never read again (ADR-0011). The only file of src/ that names it
 // (test/architecture.test.ts).
@@ -14,22 +14,22 @@ const CONFIG_FILE_NAME = 'config.json';
 
 const SLUG_SCHEMA = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
-// Only the Source a Veille follows knows its Paramètres: the Détection parses them (ADR-0010). A
+// Only the Source a Watch follows knows its Parameters: the Detection parses them (ADR-0010). A
 // config written before the Sources became a family split them into criteria and zone.
-const VEILLE_SCHEMA = z.union([
-  z.strictObject({ id: SLUG_SCHEMA, source: z.string().min(1), parametres: PARAMETRES_SCHEMA }),
+const WATCH_SCHEMA = z.union([
+  z.strictObject({ id: SLUG_SCHEMA, source: z.string().min(1), parameters: PARAMETERS_SCHEMA }),
   z
-    .strictObject({ id: SLUG_SCHEMA, source: z.string().min(1), criteria: PARAMETRES_SCHEMA, zone: PARAMETRES_SCHEMA })
-    .transform(({ criteria, zone, ...veille }) => ({
-      ...veille,
-      parametres: PARAMETRES_SCHEMA.parse({ ...criteria, ...zone }),
+    .strictObject({ id: SLUG_SCHEMA, source: z.string().min(1), criteria: PARAMETERS_SCHEMA, zone: PARAMETERS_SCHEMA })
+    .transform(({ criteria, zone, ...watch }) => ({
+      ...watch,
+      parameters: PARAMETERS_SCHEMA.parse({ ...criteria, ...zone }),
     })),
 ]);
 
 const CANDIDATE_SCHEMA = z.strictObject({
   id: SLUG_SCHEMA,
   name: z.string().min(1),
-  veilleList: z.array(VEILLE_SCHEMA),
+  watchList: z.array(WATCH_SCHEMA),
 });
 
 const CONFIG_SCHEMA = z.strictObject({
@@ -62,7 +62,11 @@ export function readObsoleteConfig(dataDirectory: string): Config | null {
 }
 
 // Each French key of the config and its English name, wherever it sits in the file (#65)
-const CONFIG_KEY_RENAME_LIST = [{ from: 'candidatList', to: 'candidateList' }];
+const CONFIG_KEY_RENAME_LIST = [
+  { from: 'candidatList', to: 'candidateList' },
+  { from: 'veilleList', to: 'watchList' },
+  { from: 'parametres', to: 'parameters' },
+];
 
 function renameKeys(value: unknown, configPath: string): unknown {
   if (Array.isArray(value)) {

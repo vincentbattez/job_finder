@@ -1,6 +1,5 @@
 import type { DomainValue } from '#/domain/index.ts';
 
-import { createCanalNotificationActions } from './canal-notification.ts';
 import { createCandidateActions } from './candidates.ts';
 import { openContext, type IActionsOption } from './context.ts';
 import { createDetectActions } from './detect.ts';
@@ -9,11 +8,12 @@ import { createFactsActions } from './facts.ts';
 import { createImportActions } from './import-fiche-de-poste.ts';
 import { createInstructionsActions } from './instructions.ts';
 import { createJobActions } from './jobs.ts';
+import { createNotificationChannelActions } from './notification-channel.ts';
 import { createOffreActions } from './offres.ts';
 import { createProfileActions } from './profile.ts';
 import { createStatutActions } from './statut.ts';
 import { createUploadActions } from './uploads.ts';
-import { createVeilleActions } from './veilles.ts';
+import { createWatchActions } from './watches.ts';
 
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
@@ -28,12 +28,12 @@ export async function createActions(option: IActionsOption) {
     ...createOffreActions(context),
     ...createCandidateActions(context),
     ...createDetectActions(context),
-    ...createVeilleActions(context),
+    ...createWatchActions(context),
     ...createImportActions(context),
     ...createStatutActions(context),
     ...createProfileActions(context),
     ...createUploadActions(context),
-    ...createCanalNotificationActions(context),
+    ...createNotificationChannelActions(context),
     ...createFactsActions(context),
     ...createInstructionsActions(context),
     ...createEditionActions(context),

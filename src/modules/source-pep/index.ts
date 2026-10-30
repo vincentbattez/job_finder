@@ -1,17 +1,17 @@
 import { z } from 'zod/v4';
 
-import { parametre } from '#/parametre/index.ts';
+import { parameter } from '#/parameter/index.ts';
 import { defineSource } from '#/source/index.ts';
 import { wordListOf } from '#/text/index.ts';
 
 import { readFeed, readFicheDePoste } from './acl/talent-soft.ts';
 import { createTitleMatcher } from './title.ts';
 
-const TITLE_PARAMETRE = parametre(z.string().min(1), { label: 'Titre recherché', placeholder: 'attaché de justice' });
+const TITLE_PARAMETER = parameter(z.string().min(1), { label: 'Titre recherché', placeholder: 'attaché de justice' });
 
 // The Zone is told in courts of appeal: the Hauts-de-France are exactly those of Douai and Amiens
 // (ADR-0001)
-const COURT_OF_APPEAL_LIST_PARAMETRE = parametre(z.array(z.string().min(1)).min(1), {
+const COURT_OF_APPEAL_LIST_PARAMETER = parameter(z.array(z.string().min(1)).min(1), {
   label: 'Cours d’appel de la Zone',
   placeholder: 'Douai',
   type: 'list',
@@ -25,9 +25,9 @@ function normalizeCourtOfAppeal(name: string): string {
 export const PEP = defineSource({
   id: 'pep',
   name: 'Place de l’Emploi Public',
-  parametreSchema: z.object({ title: TITLE_PARAMETRE, courtOfAppealList: COURT_OF_APPEAL_LIST_PARAMETRE }),
+  parameterSchema: z.object({ title: TITLE_PARAMETER, courtOfAppealList: COURT_OF_APPEAL_LIST_PARAMETER }),
 
-  // The Offres of the feed whose title matches that of the Veille, and those that came close
+  // The Offres of the feed whose title matches that of the Watch, and those that came close
   async search({ title }, httpFetch) {
     const matchTitle = createTitleMatcher(title);
     const listedOffreList = await readFeed(httpFetch);

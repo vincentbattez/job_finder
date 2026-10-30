@@ -1,9 +1,9 @@
 import { z } from 'zod/v4';
 
 import {
-  DELAI_PAR_DEFAUT_SCHEMA,
+  DEFAULT_DEADLINE_PERIOD_SCHEMA,
   OBSOLETE_CONFIG_SCHEMA,
-  type DelaiParDefaut,
+  type DefaultDeadlinePeriod,
   type ObsoleteConfig,
 } from '#/domain/index.ts';
 
@@ -18,7 +18,7 @@ const RENAME_INPUT_SCHEMA = z.object({ name: z.string() });
 const NEW_CANDIDATE_INPUT_SCHEMA = RENAME_INPUT_SCHEMA.extend({ id: z.string() });
 
 // A field of the front arrives as text
-const DELAI_PAR_DEFAUT_INPUT_SCHEMA = z.object({ months: z.union([z.string(), z.number()]) });
+const DEFAULT_DEADLINE_PERIOD_INPUT_SCHEMA = z.object({ months: z.union([z.string(), z.number()]) });
 
 // The identifier and the name come from the front: checked before anything is saved
 function parseCandidateId(id: string): string {
@@ -46,7 +46,7 @@ function parseMonths(typedMonths: string | number): number {
   return months;
 }
 
-// Any visitor of the front creates or renames a Candidate and sets the Délai par défaut; no Candidate is
+// Any visitor of the front creates or renames a Candidate and sets the Default Deadline Period; no Candidate is
 // ever deleted (ADR-0002, ADR-0011)
 export function createCandidateActions({ workspace, findCandidate }: ActionContext) {
   return {
@@ -65,14 +65,14 @@ export function createCandidateActions({ workspace, findCandidate }: ActionConte
       await workspace.renameCandidate(candidate, parseName(RENAME_INPUT_SCHEMA.parse(rawInput).name));
     },
 
-    readDelaiParDefaut(): Promise<DelaiParDefaut> {
-      return workspace.readDelaiParDefaut();
+    readDefaultDeadlinePeriod(): Promise<DefaultDeadlinePeriod> {
+      return workspace.readDefaultDeadlinePeriod();
     },
 
     // Expirée follows at once, here, and at their next launch in the other processes (ADR-0011)
-    async saveDelaiParDefaut(rawInput: unknown): Promise<void> {
-      const { months } = DELAI_PAR_DEFAUT_INPUT_SCHEMA.parse(rawInput);
-      await workspace.saveDelaiParDefaut(DELAI_PAR_DEFAUT_SCHEMA.parse({ months: parseMonths(months) }));
+    async saveDefaultDeadlinePeriod(rawInput: unknown): Promise<void> {
+      const { months } = DEFAULT_DEADLINE_PERIOD_INPUT_SCHEMA.parse(rawInput);
+      await workspace.saveDefaultDeadlinePeriod(DEFAULT_DEADLINE_PERIOD_SCHEMA.parse({ months: parseMonths(months) }));
     },
 
     // The config an older jf left, which jf and the Candidates page say to delete once imported

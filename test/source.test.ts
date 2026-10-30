@@ -8,18 +8,18 @@ import { createActions } from '#/actions/index.ts';
 import { createDataDirectory, createMigratedDataDirectory } from './data-directory.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
-// A data folder where Léa has a single Veille, imported from the config an older jf left (ADR-0011):
+// A data folder where Léa has a single Watch, imported from the config an older jf left (ADR-0011):
 // the front would refuse it, but a Source may also leave the registry
-function createDataDirectoryWith(veille: object): string {
+function createDataDirectoryWith(watch: object): string {
   const dataDirectory = createMigratedDataDirectory();
-  const config = { defaultDelayMonths: 6, candidateList: [{ id: 'lea', name: 'Léa', veilleList: [veille] }] };
+  const config = { defaultDelayMonths: 6, candidateList: [{ id: 'lea', name: 'Léa', watchList: [watch] }] };
   writeFileSync(path.join(dataDirectory, 'config.json'), JSON.stringify(config));
   return dataDirectory;
 }
 
-describe('the Sources a Veille follows', () => {
-  // The form of a Veille builds its fields from them, as that of the Canal de notification (ADR-0010)
-  it('describes each Source with the Paramètres a Veille gives it, the Zone among them', async () => {
+describe('the Sources a Watch follows', () => {
+  // The form of a Watch builds its fields from them, as that of the Notification Channel (ADR-0010)
+  it('describes each Source with the Parameters a Watch gives it, the Zone among them', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
     const sourceList = await actions.listSources();
@@ -28,7 +28,7 @@ describe('the Sources a Veille follows', () => {
       {
         id: 'pep',
         name: 'Place de l’Emploi Public',
-        parametreList: [
+        parameterList: [
           {
             name: 'title',
             label: 'Titre recherché',
@@ -52,8 +52,8 @@ describe('the Sources a Veille follows', () => {
     ]);
   });
 
-  // The real data/config.json predates the Paramètres of a Veille: it needs no rewrite
-  it('reads a Veille of an older config, its criteria and Zone as the Paramètres of its Source', async () => {
+  // The real data/config.json predates the Parameters of a Watch: it needs no rewrite
+  it('reads a Watch of an older config, its criteria and Zone as the Parameters of its Source', async () => {
     const dataDirectory = createDataDirectoryWith({
       id: 'attache-de-justice-hauts-de-france',
       source: 'pep',
@@ -68,8 +68,8 @@ describe('the Sources a Veille follows', () => {
     expect(offreList.filter(({ isInZone }) => isInZone).map(({ reference }) => reference)).toContain('2026-2445600');
   });
 
-  it('stops the Détection of a Veille that follows an unknown Source, naming those it may follow', async () => {
-    const dataDirectory = createDataDirectoryWith({ id: 'ailleurs', source: 'inconnue', parametres: {} });
+  it('stops the Detection of a Watch that follows an unknown Source, naming those it may follow', async () => {
+    const dataDirectory = createDataDirectoryWith({ id: 'ailleurs', source: 'inconnue', parameters: {} });
     const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
 
     await expect(actions.detect()).rejects.toThrow(
@@ -77,11 +77,11 @@ describe('the Sources a Veille follows', () => {
     );
   });
 
-  it('stops the Détection of a Veille whose Paramètres its Source refuses, naming them as the form does', async () => {
+  it('stops the Detection of a Watch whose Parameters its Source refuses, naming them as the form does', async () => {
     const dataDirectory = createDataDirectoryWith({
       id: 'sans-zone',
       source: 'pep',
-      parametres: { title: 'attaché de justice', courtOfAppealList: [] },
+      parameters: { title: 'attaché de justice', courtOfAppealList: [] },
     });
     const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
 

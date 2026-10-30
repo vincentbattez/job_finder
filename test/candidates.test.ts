@@ -9,14 +9,14 @@ import { createActions } from '#/actions/index.ts';
 import { createDataDirectory, createMigratedDataDirectory } from './data-directory.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
-// The config an older jf read at every launch, as the real data/config.json still writes its Veille
+// The config an older jf read at every launch, as the real data/config.json still writes its Watch
 const OLDER_CONFIG = {
   defaultDelayMonths: 4,
   candidateList: [
     {
       id: 'lea',
       name: 'Léa',
-      veilleList: [
+      watchList: [
         {
           id: 'attache-de-justice-hauts-de-france',
           source: 'pep',
@@ -25,7 +25,7 @@ const OLDER_CONFIG = {
         },
       ],
     },
-    { id: 'camille', name: 'Camille', veilleList: [] },
+    { id: 'camille', name: 'Camille', watchList: [] },
   ],
 };
 
@@ -36,11 +36,11 @@ function writeConfig(dataDirectory: string, config: object): string {
 }
 
 describe('Candidates', () => {
-  it('starts without a config, with no Candidate and a Délai par défaut of 6 months', async () => {
+  it('starts without a config, with no Candidate and a Default Deadline Period of 6 months', async () => {
     const actions = await createActions({ dataDirectory: createMigratedDataDirectory() });
 
     expect(await actions.listCandidates()).toEqual([]);
-    expect(await actions.readDelaiParDefaut()).toEqual({ months: 6 });
+    expect(await actions.readDefaultDeadlinePeriod()).toEqual({ months: 6 });
     expect(await actions.findObsoleteConfig()).toEqual({ path: null });
   });
 
@@ -98,7 +98,7 @@ describe('Candidates', () => {
 // The real data/ has a config an older jf read at every launch: it is imported once, then never read
 // again (ADR-0011)
 describe('the config an older jf left', () => {
-  it('is imported at the first launch: its Candidates, their Veilles and the Délai par défaut', async () => {
+  it('is imported at the first launch: its Candidates, their Watches and the Default Deadline Period', async () => {
     const dataDirectory = createMigratedDataDirectory();
     const configPath = writeConfig(dataDirectory, OLDER_CONFIG);
 
@@ -108,17 +108,17 @@ describe('the config an older jf left', () => {
       { id: 'camille', name: 'Camille' },
       { id: 'lea', name: 'Léa' },
     ]);
-    expect(await actions.listVeilles({ candidateId: 'lea' })).toEqual([
+    expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([
       {
         id: 'attache-de-justice-hauts-de-france',
         candidateId: 'lea',
         source: 'pep',
-        parametres: { title: 'attaché de justice', courtOfAppealList: ['Douai', 'Amiens'] },
+        parameters: { title: 'attaché de justice', courtOfAppealList: ['Douai', 'Amiens'] },
         detectedAt: null,
       },
     ]);
     // Left in place, but no longer read: jf says so until it is deleted
-    expect(await actions.readDelaiParDefaut()).toEqual({ months: 4 });
+    expect(await actions.readDefaultDeadlinePeriod()).toEqual({ months: 4 });
     expect(await actions.findObsoleteConfig()).toEqual({ path: configPath });
   });
 
@@ -127,12 +127,12 @@ describe('the config an older jf left', () => {
     writeConfig(dataDirectory, OLDER_CONFIG);
     const frontActions = await createActions({ dataDirectory });
     await frontActions.renameCandidate({ candidateId: 'lea', name: 'Léa Martin' });
-    await frontActions.saveDelaiParDefaut({ months: 8 });
-    await frontActions.deleteVeille({ candidateId: 'lea', veilleId: 'attache-de-justice-hauts-de-france' });
+    await frontActions.saveDefaultDeadlinePeriod({ months: 8 });
+    await frontActions.deleteWatch({ candidateId: 'lea', watchId: 'attache-de-justice-hauts-de-france' });
     writeConfig(dataDirectory, {
       ...OLDER_CONFIG,
       defaultDelayMonths: 2,
-      candidateList: [{ id: 'noe', name: 'Noé', veilleList: [] }],
+      candidateList: [{ id: 'noe', name: 'Noé', watchList: [] }],
     });
 
     const actions = await createActions({ dataDirectory });
@@ -141,11 +141,11 @@ describe('the config an older jf left', () => {
       { id: 'camille', name: 'Camille' },
       { id: 'lea', name: 'Léa Martin' },
     ]);
-    expect(await actions.listVeilles({ candidateId: 'lea' })).toEqual([]);
-    expect(await actions.readDelaiParDefaut()).toEqual({ months: 8 });
+    expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([]);
+    expect(await actions.readDefaultDeadlinePeriod()).toEqual({ months: 8 });
   });
 
-  it('is never read again once invalid either, once the Délai par défaut exists', async () => {
+  it('is never read again once invalid either, once the Default Deadline Period exists', async () => {
     const dataDirectory = createDataDirectory();
     writeConfig(dataDirectory, { candidateList: 'invalide' });
 
@@ -161,25 +161,25 @@ describe('the config an older jf left', () => {
     await expect(createActions({ dataDirectory })).rejects.toThrow(/candidateList\[0\]\.name/);
   });
 
-  // The real data/ already holds the Veilles an older jf copied from its config at every launch, each
-  // past its first launch: the next Détection notifies a new Offre as before, and duplicates none
-  it('keeps when each Veille last went through, so the next Détection goes on as before', async () => {
+  // The real data/ already holds the Watches an older jf copied from its config at every launch, each
+  // past its first launch: the next Detection notifies a new Offre as before, and duplicates none
+  it('keeps when each Watch last went through, so the next Detection goes on as before', async () => {
     const dataDirectory = createMigratedDataDirectory();
     writeConfig(dataDirectory, OLDER_CONFIG);
     const firstActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
     await firstActions.detect();
     const offreList = await firstActions.listOffres({ candidateId: 'lea' });
-    // As if the database had been there before the import, the Veille past its first launch
+    // As if the database had been there before the import, the Watch past its first launch
     const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'));
-    database.exec('DELETE FROM DelaiParDefaut');
+    database.exec('DELETE FROM DefaultDeadlinePeriod');
     database.close();
 
     const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
 
-    const [veille] = await actions.listVeilles({ candidateId: 'lea' });
-    expect(veille?.detectedAt).toBeInstanceOf(Date);
+    const [watch] = await actions.listWatches({ candidateId: 'lea' });
+    expect(watch?.detectedAt).toBeInstanceOf(Date);
     expect(await actions.detect()).toMatchObject([
-      { veilleId: 'attache-de-justice-hauts-de-france', isFirstLaunch: false, newOffreList: [] },
+      { watchId: 'attache-de-justice-hauts-de-france', isFirstLaunch: false, newOffreList: [] },
     ]);
     expect(await actions.listOffres({ candidateId: 'lea' })).toEqual(offreList);
   });

@@ -4,8 +4,8 @@ import {
   FICHE_DE_POSTE_FILE_NAME,
   type Artefact,
   type FicheDePoste,
-  type Lieu,
   type Offre,
+  type Place,
   type ProfileFileName,
   type UploadFileName,
   type Version,
@@ -36,17 +36,17 @@ function slugify(text: string): string {
 }
 
 // Safe to call on every launch; the database and the files are only read in acl/ (ADR-0005). The
-// database holds the Candidates, their Veilles and the Délai par défaut: the config an older jf left
-// is imported at the first launch of a database without a Délai par défaut, then never read again
+// database holds the Candidates, their Watches and the Default Deadline Period: the config an older jf left
+// is imported at the first launch of a database without a Default Deadline Period, then never read again
 // (ADR-0011). The French layout an older jf left moves to the English one first, before anything reads
 // the data folder.
 export async function openWorkspace(dataDirectory: string) {
   migrateLayout(dataDirectory);
   const database = openDatabase(path.join(dataDirectory, 'job_finder.sqlite'));
-  if (!(await database.hasDelaiParDefaut())) {
-    await database.createDelaiParDefaut(readObsoleteConfig(dataDirectory));
+  if (!(await database.hasDefaultDeadlinePeriod())) {
+    await database.createDefaultDeadlinePeriod(readObsoleteConfig(dataDirectory));
   }
-  await database.readDelaiParDefaut();
+  await database.readDefaultDeadlinePeriod();
   const candidateDirectoryOf = (candidateId: string): string => path.join(dataDirectory, 'candidates', candidateId);
   const profileDirectoryOf = (candidateId: string): string => path.join(candidateDirectoryOf(candidateId), 'profile');
   // Its own subfolder, which the Markdown files of the Profile leave out
@@ -165,7 +165,7 @@ export async function openWorkspace(dataDirectory: string) {
     },
 
     // The folder of an Offre is named after its title: it follows a new title
-    async fillOffre(offre: Offre, fields: { title: string; ficheDePoste: FicheDePoste; lieu: Lieu }): Promise<Offre> {
+    async fillOffre(offre: Offre, fields: { title: string; ficheDePoste: FicheDePoste; place: Place }): Promise<Offre> {
       const filledOffre = await database.fillOffre(offre, fields);
       moveDirectory(offreDirectoryOf(offre), offreDirectoryOf(filledOffre));
       return filledOffre;

@@ -15,15 +15,15 @@ import { createRecordedFetch } from './recorded-http.ts';
 // the PEP Source recorded on 2026-10-29, the fake launch of Claude and the fake Home Assistant that
 // playwright.config.ts starts first. Léa follows the attaché de justice Offres, and the Béthune
 // Offre 2026-2445600 has two Recherches, the first one retenue, and a Lettre; the Melun Offres, past their Date limite, are
-// Postulée, Archivée and À traiter; Camille has no Veille, hence no Offre. The tests
+// Postulée, Archivée and À traiter; Camille has no Watch, hence no Offre. The tests
 // that change data work on Offres of their own: Bastia 2026-2426147 (a Recherche and a Lettre to
 // correct), Versailles 2026-2409178 (two Recherches), Rennes 2026-2420931 (a Recherche, ready for
 // its Lettre) and Narbonne 2026-2412591 (a Recherche en échec). Sacha, Noé, Inès, Malo and Rose, without
-// Veille either, each have their Profile changed by one e2e test only, which writes it first; Sacha
-// also has the Instructions the e2e tests change. Léa, Camille and Sacha have their Canal de notification
+// Watch either, each have their Profile changed by one e2e test only, which writes it first; Sacha
+// also has the Instructions the e2e tests change. Léa, Camille and Sacha have their Notification Channel
 // through the fake Home Assistant; Yanis and Zoé each have theirs changed by one e2e test only. Léa's Offre
 // 2026-2409247 has a Recherche made with the default Instructions, then one made with hers. Jade, without
-// Veille, has hers created, changed and deleted by one e2e test only.
+// Watch, has hers created, changed and deleted by one e2e test only.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 // The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
 if (!dataDirectory.startsWith(tmpdir())) {
@@ -37,7 +37,7 @@ const NARBONNE_REFERENCE = '2026-2412591';
 const INSTRUCTIONS_REFERENCE = '2026-2409247';
 // Where playwright.config.ts started the fake Home Assistant
 const FAKE_HOME_ASSISTANT_URL = process.env.FAKE_HOME_ASSISTANT_URL ?? '';
-// Without a Veille, beside Léa (test/lea.ts)
+// Without a Watch, beside Léa (test/lea.ts)
 const OTHER_CANDIDATE_LIST = [
   { id: 'camille', name: 'Camille' },
   { id: 'sacha', name: 'Sacha' },
@@ -126,10 +126,10 @@ for (const [candidateId, service] of [
   ['camille', 'notify.mobile_app_pixel_de_camille'],
   ['sacha', 'notify.mobile_app_iphone_de_sacha'],
 ]) {
-  await actions.saveCanalNotification({
+  await actions.saveNotificationChannel({
     candidateId,
-    canal: 'home-assistant',
-    parametres: { url: FAKE_HOME_ASSISTANT_URL, token: FAKE_HOME_ASSISTANT_TOKEN, service },
+    channel: 'home-assistant',
+    parameters: { url: FAKE_HOME_ASSISTANT_URL, token: FAKE_HOME_ASSISTANT_TOKEN, service },
   });
 }
 await actions.detect();

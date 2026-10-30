@@ -23,7 +23,7 @@ const BASE_URL = `http://localhost:${PORT}`;
 // The front runs on a temporary data folder, never data/: test/seed-front.ts fills it through the
 // actions with the fakes before the dev server starts
 const DATA_DIRECTORY = path.join(tmpdir(), `job-finder-e2e-${PORT}`);
-// The seed saves Canaux de notification through the fake Home Assistant, never a real phone; its port
+// The seed saves Notification Channels through the fake Home Assistant, never a real phone; its port
 // follows E2E_PORT so parallel runs stay apart
 const HOME_ASSISTANT_PORT = String(Number(PORT) + 10_000);
 const FAKE_HOME_ASSISTANT_URL = `http://localhost:${HOME_ASSISTANT_PORT}`;
@@ -46,7 +46,7 @@ export default defineConfig({
   ...(process.env.CI !== undefined && { workers: 2 }),
   use: { baseURL: BASE_URL },
   // How a test reaches the fake Home Assistant, to read the notifications it received or save its
-  // token in a Canal de notification (e2e/notifications.test.ts), and the data
+  // token in a Notification Channel (e2e/notifications.test.ts), and the data
   // folder, to put back the Profile it changes (e2e/profile.test.ts)
   metadata: {
     homeAssistantUrl: FAKE_HOME_ASSISTANT_URL,

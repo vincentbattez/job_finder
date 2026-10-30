@@ -19,17 +19,17 @@ function stemOf(word: string): string {
   return stem;
 }
 
-// The Poste a title names, set apart from its inclusive writing and from its juridiction, already in
+// The Poste a title names, set apart from its inclusive writing and from its jurisdiction, already in
 // the workplace (« TJ » abbreviates the Tribunal judiciaire it names in full)
 function posteOf(title: string, workplace: string | null): string {
-  const juridictionStemSet = new Set([...wordListOf(workplace ?? '').map((word) => stemOf(word)), 'tj']);
+  const jurisdictionStemSet = new Set([...wordListOf(workplace ?? '').map((word) => stemOf(word)), 'tj']);
   return wordListOf(title)
     .map((word) => stemOf(word))
-    .filter((stem) => stem !== '' && !juridictionStemSet.has(stem))
+    .filter((stem) => stem !== '' && !jurisdictionStemSet.has(stem))
     .join(' ');
 }
 
-// The service in the title tells apart the Postes of one juridiction, which share workplace and
+// The service in the title tells apart the Postes of one jurisdiction, which share workplace and
 // mail; the latest Offre when the Poste was published several times
 export function findRepublishedOffre<T extends IComparedOffre>(offre: IComparedOffre, offreList: T[]): T | undefined {
   return offreList

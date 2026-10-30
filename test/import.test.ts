@@ -4,10 +4,10 @@ import { createActions, type Actions } from '#/actions/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeCanalNotification } from './fake-canal-notification.ts';
+import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
-// A Fiche de poste found elsewhere than on the Sources the Veilles read
+// A Fiche de poste found elsewhere than on the Sources the Watches read
 const FICHE_DE_POSTE = `# Greffier placé – Tribunal judiciaire de Lille
 
 **Employeur :** Ministère de la Justice – Tribunal judiciaire de Lille
@@ -60,7 +60,7 @@ async function openActions(aiSession: ReturnType<typeof createFakeAiSession>) {
     dataDirectory,
     aiSession,
     fetch: createRecordedFetch().fetch,
-    canalNotificationList: createFakeCanalNotification().canalNotificationList,
+    notificationChannelList: createFakeNotificationChannel().notificationChannelList,
   });
 }
 
@@ -88,7 +88,7 @@ describe('import of a Fiche de poste in Markdown', () => {
       employer: null,
       url: null,
       statut: 'a_traiter',
-      // No Zone of a Veille holds it: the import queues its Recherche whatever the Zone
+      // No Zone of a Watch holds it: the import queues its Recherche whatever the Zone
       isInZone: false,
     });
     const { ficheDePoste, extraction } = await actions.readOffre({ reference: job.offre.reference });

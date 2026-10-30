@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-// Any visitor of the front creates or renames a Candidate, and sets the Délai par défaut (ADR-0011)
+// Any visitor of the front creates or renames a Candidate, and sets the Default Deadline Period (ADR-0011)
 test.describe('Candidates', () => {
   test('creates a Candidate, who joins the menu, then renames them', async ({ page }) => {
     // A Candidate of its own on each run, since none is ever deleted
@@ -37,7 +37,7 @@ test.describe('Candidates', () => {
   });
 
   // Saved as it was: the other tests read Expirée at the same time
-  test('saves the Délai par défaut', async ({ page }) => {
+  test('saves the Default Deadline Period', async ({ page }) => {
     await page.goto('/candidates');
     const delay = page.getByRole('region', { name: 'Délai par défaut' });
 

@@ -10,12 +10,12 @@ import {
 import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
-import { CanalNotificationForm } from '#/web/components/canal-notification.tsx';
 import { CopyCommand } from '#/web/components/copy-command.tsx';
 import { FactsForm } from '#/web/components/facts-form.tsx';
+import { NotificationChannelForm } from '#/web/components/notification-channel.tsx';
 import { ProfileFile, ProfileFileCreation } from '#/web/components/profile-file.tsx';
 import { Uploads } from '#/web/components/uploads.tsx';
-import { Veilles } from '#/web/components/veilles.tsx';
+import { Watches } from '#/web/components/watches.tsx';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { candidate } = await readCandidate(request);
@@ -24,9 +24,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
     profileFileList: candidate === null ? [] : await ACTIONS.listProfileFiles({ candidateId: candidate.id }),
     uploadList: candidate === null ? [] : await ACTIONS.listUploads({ candidateId: candidate.id }),
     sectionList: candidate === null ? [] : await ACTIONS.readFacts({ candidateId: candidate.id }),
-    canal: candidate === null ? null : await ACTIONS.readCanalNotification({ candidateId: candidate.id }),
-    canalModuleList: await ACTIONS.listCanauxNotification(),
-    veilleList: candidate === null ? [] : await ACTIONS.listVeilles({ candidateId: candidate.id }),
+    channel: candidate === null ? null : await ACTIONS.readNotificationChannel({ candidateId: candidate.id }),
+    channelModuleList: await ACTIONS.listNotificationChannels(),
+    watchList: candidate === null ? [] : await ACTIONS.listWatches({ candidateId: candidate.id }),
     sourceList: await ACTIONS.listSources(),
   };
 }
@@ -99,7 +99,7 @@ export function meta() {
 }
 
 export default function Profile() {
-  const { candidate, profileFileList, uploadList, sectionList, canal, canalModuleList, veilleList, sourceList } =
+  const { candidate, profileFileList, uploadList, sectionList, channel, channelModuleList, watchList, sourceList } =
     useLoaderData<typeof loader>();
   const refusal = useActionData<typeof action>()?.refusal ?? null;
   return (
@@ -149,8 +149,8 @@ export default function Profile() {
             key={profileFileList.map(({ fileName }) => fileName).join('/')}
             error={refusal?.isCreation === true ? refusal.message : null}
           />
-          <Veilles veilleList={veilleList} sourceList={sourceList} />
-          {canal !== null && <CanalNotificationForm canal={canal} moduleList={canalModuleList} />}
+          <Watches watchList={watchList} sourceList={sourceList} />
+          {channel !== null && <NotificationChannelForm channel={channel} moduleList={channelModuleList} />}
         </>
       )}
     </main>

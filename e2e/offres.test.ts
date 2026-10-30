@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 // The front runs on the data that test/seed-front.ts made through the actions, with the HTTP of
 // the PEP Source recorded on 2026-10-29: Léa follows the attaché de justice Offres, Camille has
-// no Veille
+// no Watch
 const BETHUNE_TITLE = 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE';
 
 async function chooseCandidate(page: Page, name: string) {

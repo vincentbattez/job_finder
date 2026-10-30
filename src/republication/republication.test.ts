@@ -65,14 +65,14 @@ describe('the Republication of an Offre', () => {
     expect(findRepublishedOffre(republished, [BETHUNE_PARQUET])).toBe(BETHUNE_PARQUET);
   });
 
-  // A generic title is included in every other title of its juridiction
+  // A generic title is included in every other title of its jurisdiction
   it('never links a generic title to an Offre of the same workplace and mail', () => {
     const generic = { ...BETHUNE_INSTRUCTION, reference: '2026-2500000', title: 'Attaché de justice - TJ Béthune' };
 
     expect(findRepublishedOffre(generic, [BETHUNE_ENFANTS, BETHUNE_INSTRUCTION])).toBeUndefined();
   });
 
-  // Same juridiction, two of them with the same workplace and mail: only the service in the title
+  // Same jurisdiction, two of them with the same workplace and mail: only the service in the title
   // tells the Postes apart
   it.each([
     { offre: BETHUNE_ENFANTS, otherOffreList: [BETHUNE_INSTRUCTION, BETHUNE_PARQUET] },

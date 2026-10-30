@@ -98,7 +98,7 @@ function findJobsRunOutsideWorker(projectDirectory: string): string[] {
 }
 
 // The families of interchangeable modules, each module in src/modules/<famille>-<nom>/ (ADR-0010).
-// source-import is no Source a Veille chooses but the import of a Fiche de poste by hand: an
+// source-import is no Source a Watch chooses but the import of a Fiche de poste by hand: an
 // ordinary module, out of the family.
 const FAMILY_LIST = ['notification', 'source'];
 const ORDINARY_MODULE_SET = new Set(['source-import']);
@@ -152,7 +152,7 @@ function findModuleNamesOutsideTheirFolder(projectDirectory: string): string[] {
   });
 }
 
-// The database holds the Candidates, their Veilles and the Délai par défaut, which the front writes:
+// The database holds the Candidates, their Watches and the Default Deadline Period, which the front writes:
 // data/config.json is read only by the anti-corruption layer that imports it once (ADR-0011). Any
 // mention counts, a message or a comment included, since each points someone back to the file.
 const LEGACY_CONFIG_READER_PATH = 'src/workspace/acl/config.ts';

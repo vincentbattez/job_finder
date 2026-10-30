@@ -9,31 +9,31 @@ import { z } from 'zod/v4';
 
 import {
   CANDIDATE_SCHEMA,
-  DELAI_PAR_DEFAUT_SCHEMA,
+  DEFAULT_DEADLINE_PERIOD_SCHEMA,
   JOB_SCHEMA,
   OFFRE_SCHEMA,
   PROFILE_JOB_SCHEMA,
   QUEUED_JOB_SCHEMA,
-  SAVED_CANAL_NOTIFICATION_SCHEMA,
-  VEILLE_SCHEMA,
+  SAVED_NOTIFICATION_CHANNEL_SCHEMA,
   VERSION_SCHEMA,
+  WATCH_SCHEMA,
   type Artefact,
   type Candidate,
-  type DelaiParDefaut,
+  type DefaultDeadlinePeriod,
   type FicheDePoste,
   type Job,
-  type Lieu,
   type ListedOffre,
   type Module,
   type Offre,
-  type Parametres,
+  type Parameters,
+  type Place,
   type ProfileJob,
   type QueuedJob,
-  type SavedCanalNotification,
+  type SavedNotificationChannel,
   type Statut,
   type UploadFileName,
-  type Veille,
   type Version,
+  type Watch,
 } from '#/domain/index.ts';
 import { findPostuleeAt, isExpiree } from '#/statut/index.ts';
 import { PrismaClient } from '#/workspace/generated/client.ts';
@@ -53,9 +53,9 @@ const OFFRE_INCLUDE = {
   republicationOf: LINKED_OFFRE_SELECT,
   republicationList: { ...LINKED_OFFRE_SELECT, orderBy: { reference: 'asc' } },
 } as const;
-// The single row of the Délai par défaut every Candidate shares
-const DELAI_PAR_DEFAUT_ID = 1;
-// The Délai par défaut of a new database, that of the example config of older versions
+// The single row of the Default Deadline Period every Candidate shares
+const DEFAULT_DEADLINE_PERIOD_ID = 1;
+// The Default Deadline Period of a new database, that of the example config of older versions
 const DEFAULT_DELAY_MONTHS = 6;
 
 const JOB_INCLUDE = { offre: { include: OFFRE_INCLUDE }, version: { include: VERSION_INCLUDE } };
@@ -67,7 +67,7 @@ export interface INewOffre {
   ficheDePoste: FicheDePoste;
   isInZone: boolean;
   republicationOf: Offre | undefined;
-  lieu: Lieu;
+  place: Place;
 }
 
 // Read where Prisma records the migrations it applied (ADR-0004): a database it has not created
@@ -105,7 +105,7 @@ export function openDatabase(databasePath: string) {
       stdio: 'pipe',
     });
   }
-  // Read at launch once the Délai par défaut exists, then changed by the process that saves them (ADR-0011)
+  // Read at launch once the Default Deadline Period exists, then changed by the process that saves them (ADR-0011)
   let defaultDelayMonths = DEFAULT_DELAY_MONTHS;
   // Expirée depends on the day, so every Offre read computes it rather than storing it
   const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url }) }).$extends({
@@ -140,28 +140,28 @@ export function openDatabase(databasePath: string) {
       return z.array(CANDIDATE_SCHEMA).parse(await prisma.candidate.findMany({ orderBy: { name: 'asc' } }));
     },
 
-    // Secret Paramètres included, for the actions to reduce or send, never to return (ADR-0006)
-    async findCanalNotification(candidateId: string): Promise<SavedCanalNotification> {
-      const { name, canalNotification } = await prisma.candidate.findUniqueOrThrow({
+    // Secret Parameters included, for the actions to reduce or send, never to return (ADR-0006)
+    async findNotificationChannel(candidateId: string): Promise<SavedNotificationChannel> {
+      const { name, notificationChannel } = await prisma.candidate.findUniqueOrThrow({
         where: { id: candidateId },
-        include: { canalNotification: true },
+        include: { notificationChannel: true },
       });
-      return SAVED_CANAL_NOTIFICATION_SCHEMA.parse({
+      return SAVED_NOTIFICATION_CHANNEL_SCHEMA.parse({
         candidateName: name,
-        module: canalNotification?.module ?? null,
-        parametres: canalNotification?.parametres ?? {},
+        module: notificationChannel?.module ?? null,
+        parameters: notificationChannel?.parameters ?? {},
       });
     },
 
-    // The Paramètres replace the saved ones as a whole: the actions merge them first (ADR-0010)
-    async saveCanalNotification(
+    // The Parameters replace the saved ones as a whole: the actions merge them first (ADR-0010)
+    async saveNotificationChannel(
       candidateId: string,
-      { module, parametres }: { module: string; parametres: Parametres },
+      { module, parameters }: { module: string; parameters: Parameters },
     ) {
-      await prisma.canalNotification.upsert({
+      await prisma.notificationChannel.upsert({
         where: { candidateId },
-        create: { candidateId, module, parametres },
-        update: { module, parametres },
+        create: { candidateId, module, parameters },
+        update: { module, parameters },
       });
     },
 
@@ -173,32 +173,32 @@ export function openDatabase(databasePath: string) {
       await prisma.candidate.update({ where: { id }, data: { name } });
     },
 
-    // Whether the Délai par défaut exists: from then on, the config an older jf left is never read
+    // Whether the Default Deadline Period exists: from then on, the config an older jf left is never read
     // again (ADR-0011)
-    async hasDelaiParDefaut(): Promise<boolean> {
-      return (await prisma.delaiParDefaut.count()) > 0;
+    async hasDefaultDeadlinePeriod(): Promise<boolean> {
+      return (await prisma.defaultDeadlinePeriod.count()) > 0;
     },
 
-    // Creates the Délai par défaut, from the config an older jf left when there is one: its Candidates
-    // and Veilles are added or updated, never deleted, and each Veille keeps when its Détection last
+    // Creates the Default Deadline Period, from the config an older jf left when there is one: its Candidates
+    // and Watches are added or updated, never deleted, and each Watch keeps when its Detection last
     // went through. The row is claimed first, so a process launched at the same time imports nothing.
-    async createDelaiParDefaut(config: Config | null): Promise<void> {
+    async createDefaultDeadlinePeriod(config: Config | null): Promise<void> {
       const delayMonths = config?.defaultDelayMonths ?? DEFAULT_DELAY_MONTHS;
       await prisma.$transaction(async (transaction) => {
         const claimedCount = await transaction.$executeRaw`
-          INSERT INTO "DelaiParDefaut" ("id", "months") VALUES (${DELAI_PAR_DEFAUT_ID}, ${delayMonths})
+          INSERT INTO "DefaultDeadlinePeriod" ("id", "months") VALUES (${DEFAULT_DEADLINE_PERIOD_ID}, ${delayMonths})
           ON CONFLICT DO NOTHING`;
         if (claimedCount === 0 || config === null) {
           return;
         }
-        for (const { id, name, veilleList } of config.candidateList) {
+        for (const { id, name, watchList } of config.candidateList) {
           await transaction.candidate.upsert({ where: { id }, create: { id, name }, update: { name } });
-          for (const { id: veilleId, source, parametres } of veilleList) {
-            const veille = { candidateId: id, source, parametres };
-            await transaction.veille.upsert({
-              where: { id: veilleId },
-              create: { id: veilleId, ...veille },
-              update: veille,
+          for (const { id: watchId, source, parameters } of watchList) {
+            const watch = { candidateId: id, source, parameters };
+            await transaction.watch.upsert({
+              where: { id: watchId },
+              create: { id: watchId, ...watch },
+              update: watch,
             });
           }
         }
@@ -206,42 +206,45 @@ export function openDatabase(databasePath: string) {
     },
 
     // Also what Expirée computes with from then on, in this process
-    async readDelaiParDefaut(): Promise<DelaiParDefaut> {
-      const delaiParDefaut = DELAI_PAR_DEFAUT_SCHEMA.parse(
-        await prisma.delaiParDefaut.findUniqueOrThrow({ where: { id: DELAI_PAR_DEFAUT_ID }, select: { months: true } }),
+    async readDefaultDeadlinePeriod(): Promise<DefaultDeadlinePeriod> {
+      const defaultDeadlinePeriod = DEFAULT_DEADLINE_PERIOD_SCHEMA.parse(
+        await prisma.defaultDeadlinePeriod.findUniqueOrThrow({
+          where: { id: DEFAULT_DEADLINE_PERIOD_ID },
+          select: { months: true },
+        }),
       );
-      defaultDelayMonths = delaiParDefaut.months;
-      return delaiParDefaut;
+      defaultDelayMonths = defaultDeadlinePeriod.months;
+      return defaultDeadlinePeriod;
     },
 
-    async saveDelaiParDefaut({ months }: DelaiParDefaut): Promise<void> {
-      await prisma.delaiParDefaut.update({ where: { id: DELAI_PAR_DEFAUT_ID }, data: { months } });
+    async saveDefaultDeadlinePeriod({ months }: DefaultDeadlinePeriod): Promise<void> {
+      await prisma.defaultDeadlinePeriod.update({ where: { id: DEFAULT_DEADLINE_PERIOD_ID }, data: { months } });
       defaultDelayMonths = months;
     },
 
-    // Every Veille, for the Détection, or those of a Candidate
-    async listVeilles(candidateId?: string): Promise<Veille[]> {
-      return z.array(VEILLE_SCHEMA).parse(
-        await prisma.veille.findMany({
+    // Every Watch, for the Detection, or those of a Candidate
+    async listWatches(candidateId?: string): Promise<Watch[]> {
+      return z.array(WATCH_SCHEMA).parse(
+        await prisma.watch.findMany({
           where: candidateId === undefined ? {} : { candidateId },
           orderBy: { id: 'asc' },
         }),
       );
     },
 
-    // A new Veille is on its first launch: detectedAt stays null
-    async createVeille(veille: { id: string; candidateId: string; source: string; parametres: Parametres }) {
-      await prisma.veille.create({ data: veille });
+    // A new Watch is on its first launch: detectedAt stays null
+    async createWatch(watch: { id: string; candidateId: string; source: string; parameters: Parameters }) {
+      await prisma.watch.create({ data: watch });
     },
 
-    // A Veille whose Source or Paramètres change starts its first launch again (ADR-0011)
-    async updateVeille({ id }: Veille, { source, parametres }: { source: string; parametres: Parametres }) {
-      await prisma.veille.update({ where: { id }, data: { source, parametres, detectedAt: null } });
+    // A Watch whose Source or Parameters change starts its first launch again (ADR-0011)
+    async updateWatch({ id }: Watch, { source, parameters }: { source: string; parameters: Parameters }) {
+      await prisma.watch.update({ where: { id }, data: { source, parameters, detectedAt: null } });
     },
 
-    // Its Offres stay: they belong to the Candidate, not to the Veille
-    async deleteVeille({ id }: Veille): Promise<void> {
-      await prisma.veille.delete({ where: { id } });
+    // Its Offres stay: they belong to the Candidate, not to the Watch
+    async deleteWatch({ id }: Watch): Promise<void> {
+      await prisma.watch.delete({ where: { id } });
     },
 
     async listOffres(candidateId: string): Promise<Offre[]> {
@@ -401,13 +404,13 @@ export function openDatabase(databasePath: string) {
       await prisma.$transaction(retenirStatementList({ offreId: offre.id, artefact, number }));
     },
 
-    async setDetected({ id }: Veille): Promise<void> {
-      await prisma.veille.update({ where: { id }, data: { detectedAt: new Date() } });
+    async setDetected({ id }: Watch): Promise<void> {
+      await prisma.watch.update({ where: { id }, data: { detectedAt: new Date() } });
     },
 
-    // The Offres of its Candidate and Source that another Veille stored out of its own Zone since this
+    // The Offres of its Candidate and Source that another Watch stored out of its own Zone since this
     // one last went through, all of them on its first launch: they may be in the Zone of this one
-    async listOutOfZoneOffresSince({ candidateId, source, detectedAt }: Veille): Promise<Offre[]> {
+    async listOutOfZoneOffresSince({ candidateId, source, detectedAt }: Watch): Promise<Offre[]> {
       const since = detectedAt === null ? {} : { detectedAt: { gt: detectedAt } };
       return z.array(OFFRE_SCHEMA).parse(
         await prisma.offre.findMany({
@@ -417,7 +420,7 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    // An Offre is in the Zone as soon as it is in that of one of its Candidate's Veilles
+    // An Offre is in the Zone as soon as it is in that of one of its Candidate's Watches
     async setInZone({ id }: Offre): Promise<Offre> {
       return OFFRE_SCHEMA.parse(
         await prisma.offre.update({ where: { id }, data: { isInZone: true }, include: OFFRE_INCLUDE }),
@@ -434,17 +437,17 @@ export function openDatabase(databasePath: string) {
         .parse(await prisma.offre.findMany({ where: { latitude: null }, include: OFFRE_INCLUDE }));
     },
 
-    async setLieu({ id }: Offre, lieu: Lieu): Promise<void> {
-      await prisma.offre.update({ where: { id }, data: lieu });
+    async setPlace({ id }: Offre, place: Place): Promise<void> {
+      await prisma.offre.update({ where: { id }, data: place });
     },
 
     // The fields read in its Fiche de poste replace those of the Offre, its title included
     async fillOffre(
       { id }: Offre,
-      { title, ficheDePoste, lieu }: { title: string; ficheDePoste: FicheDePoste; lieu: Lieu },
+      { title, ficheDePoste, place }: { title: string; ficheDePoste: FicheDePoste; place: Place },
     ) {
       const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = ficheDePoste;
-      const data = { title, dateLimite, employer, workplace, applicationEmail, contact1, contact2, ...lieu };
+      const data = { title, dateLimite, employer, workplace, applicationEmail, contact1, contact2, ...place };
       return OFFRE_SCHEMA.parse(await prisma.offre.update({ where: { id }, data, include: OFFRE_INCLUDE }));
     },
 
@@ -460,7 +463,7 @@ export function openDatabase(databasePath: string) {
       ficheDePoste,
       isInZone,
       republicationOf,
-      lieu,
+      place,
     }: INewOffre): Promise<Offre> {
       const { reference, title, url, publishedAt } = listedOffre;
       const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = ficheDePoste;
@@ -469,7 +472,7 @@ export function openDatabase(databasePath: string) {
         await prisma.offre.create({
           data: {
             ...data,
-            ...lieu,
+            ...place,
             applicationEmail,
             contact1,
             contact2,

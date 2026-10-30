@@ -3,13 +3,13 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createActions, type Actions } from '#/actions/index.ts';
 
 import { createDataDirectory, createMigratedDataDirectory } from './data-directory.ts';
-import { LEA_VEILLE } from './lea.ts';
+import { LEA_WATCH } from './lea.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
-// The Délai par défaut set as from the front, before the Détection
+// The Default Deadline Period set as from the front, before the Detection
 async function detectWithDefaultDelay(months: number): Promise<Actions> {
   const actions = await createActions({ dataDirectory: createDataDirectory(), fetch: createRecordedFetch().fetch });
-  await actions.saveDelaiParDefaut({ months });
+  await actions.saveDefaultDeadlinePeriod({ months });
   await actions.detect();
   return actions;
 }
@@ -29,7 +29,7 @@ afterAll(() => {
   vi.useRealTimers();
 });
 
-// Each test changes the statut of its own Offres, so they share one Détection
+// Each test changes the statut of its own Offres, so they share one Detection
 describe('statut of an Offre', () => {
   let actions: Actions;
 
@@ -147,7 +147,7 @@ it('refuses a reference shared by the Offres of two Candidates', async () => {
   });
   for (const candidateId of ['lea', 'camille']) {
     await actions.createCandidate({ id: candidateId, name: candidateId });
-    await actions.saveVeille({ candidateId, ...LEA_VEILLE });
+    await actions.saveWatch({ candidateId, ...LEA_WATCH });
   }
   await actions.detect();
 
@@ -169,7 +169,7 @@ describe('Expirée', () => {
   });
 
   // 2026-2412620 has no Date limite and was published on 2026-09-24
-  it('flags an Offre without a Date limite once its publication plus the Délai par défaut is over', async () => {
+  it('flags an Offre without a Date limite once its publication plus the Default Deadline Period is over', async () => {
     const offreList = [
       await findOffre(await detectWithDefaultDelay(6), '2026-2412620'),
       await findOffre(await detectWithDefaultDelay(1), '2026-2412620'),
@@ -181,24 +181,24 @@ describe('Expirée', () => {
     ]);
   });
 
-  it('follows the Délai par défaut set from the front at once, and at the next launch', async () => {
+  it('follows the Default Deadline Period set from the front at once, and at the next launch', async () => {
     const dataDirectory = createDataDirectory();
     const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
     await actions.detect();
 
-    await actions.saveDelaiParDefaut({ months: '1' });
+    await actions.saveDefaultDeadlinePeriod({ months: '1' });
 
-    expect(await actions.readDelaiParDefaut()).toEqual({ months: 1 });
+    expect(await actions.readDefaultDeadlinePeriod()).toEqual({ months: 1 });
     expect(await findOffre(actions, '2026-2412620')).toMatchObject({ isExpiree: true });
     expect(await findOffre(await createActions({ dataDirectory }), '2026-2412620')).toMatchObject({ isExpiree: true });
   });
 
-  it('refuses a Délai par défaut that is not a whole number of months', async () => {
+  it('refuses a Default Deadline Period that is not a whole number of months', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
-    await expect(actions.saveDelaiParDefaut({ months: '0' })).rejects.toThrow(
+    await expect(actions.saveDefaultDeadlinePeriod({ months: '0' })).rejects.toThrow(
       'Le Délai par défaut est un nombre entier de mois, au moins 1.',
     );
-    expect(await actions.readDelaiParDefaut()).toEqual({ months: 6 });
+    expect(await actions.readDefaultDeadlinePeriod()).toEqual({ months: 6 });
   });
 });

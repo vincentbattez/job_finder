@@ -49,7 +49,7 @@ run = "node node_modules/@react-router/dev/bin.cjs dev --host --port 5180 --stri
 # Regenerate first: a client older than the schema crashes at the first query
 depends = ["db:generate"]
 description = "Serve the front of dev-data/, the fake Offres of development, on port 5181 of this machine only"
-# The Canaux de notification saved in dev-data/, never those of data/: no real phone gets notified
+# The Notification Channels saved in dev-data/, never those of data/: no real phone gets notified
 env = { JF_DATA_DIRECTORY = "dev-data" }
 run = "node node_modules/@react-router/dev/bin.cjs dev --port 5181 --strictPort"
 

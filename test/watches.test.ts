@@ -4,142 +4,142 @@ import { createActions } from '#/actions/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeCanalNotification } from './fake-canal-notification.ts';
-import { LEA_VEILLE, LEA_VEILLE_ID } from './lea.ts';
+import { createFakeNotificationChannel } from './fake-notification-channel.ts';
+import { LEA_WATCH, LEA_WATCH_ID } from './lea.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
 // An attaché de justice Offre of the court of appeal of Versailles, out of the Zone of Léa's first
-// Veille, from the responses recorded on 2026-10-29
+// Watch, from the responses recorded on 2026-10-29
 const VERSAILLES_REFERENCE = '2026-2409247';
 
-// A second Veille of Léa, on the same title, whose Zone is Versailles
-const VERSAILLES_VEILLE = {
+// A second Watch of Léa, on the same title, whose Zone is Versailles
+const VERSAILLES_WATCH = {
   source: 'pep',
-  parametres: { title: 'attaché de justice', courtOfAppealList: ['Versailles'] },
+  parameters: { title: 'attaché de justice', courtOfAppealList: ['Versailles'] },
 };
 
 const RECHERCHE = { fileByName: { 'recherche.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
 
-// Léa's Offres already online, imported by the first Détection of her Veille
+// Léa's Offres already online, imported by the first Detection of her Watch
 async function detectLeaOffres() {
   const actions = await createActions({ dataDirectory: createDataDirectory(), fetch: createRecordedFetch().fetch });
   await actions.detect();
   return actions;
 }
 
-// Léa sets her Veilles in her Profile, each the Source it follows and the Paramètres this Source asks
+// Léa sets her Watches in her Profile, each the Source it follows and the Parameters this Source asks
 // for (ADR-0010, ADR-0011)
-describe('Veilles', () => {
-  it('lists the Veilles of a Candidate, on its first launch until a Détection went through', async () => {
+describe('Watches', () => {
+  it('lists the Watches of a Candidate, on its first launch until a Detection went through', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
-    expect(await actions.listVeilles({ candidateId: 'lea' })).toEqual([
-      { id: LEA_VEILLE_ID, candidateId: 'lea', detectedAt: null, ...LEA_VEILLE },
+    expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([
+      { id: LEA_WATCH_ID, candidateId: 'lea', detectedAt: null, ...LEA_WATCH },
     ]);
   });
 
-  it('takes a second Veille into account from the next Détection, on its first launch', async () => {
+  it('takes a second Watch into account from the next Detection, on its first launch', async () => {
     const actions = await detectLeaOffres();
 
-    await actions.saveVeille({
+    await actions.saveWatch({
       candidateId: 'lea',
       source: 'pep',
-      parametres: { title: 'attaché de justice', courtOfAppealList: ['Paris', '', 'Versailles'] },
+      parameters: { title: 'attaché de justice', courtOfAppealList: ['Paris', '', 'Versailles'] },
     });
 
-    expect(await actions.listVeilles({ candidateId: 'lea' })).toMatchObject([
-      { id: LEA_VEILLE_ID },
-      { id: 'lea-2', parametres: { title: 'attaché de justice', courtOfAppealList: ['Paris', 'Versailles'] } },
+    expect(await actions.listWatches({ candidateId: 'lea' })).toMatchObject([
+      { id: LEA_WATCH_ID },
+      { id: 'lea-2', parameters: { title: 'attaché de justice', courtOfAppealList: ['Paris', 'Versailles'] } },
     ]);
     expect(await actions.detect()).toMatchObject([
-      { veilleId: LEA_VEILLE_ID, isFirstLaunch: false },
-      { veilleId: 'lea-2', isFirstLaunch: true },
+      { watchId: LEA_WATCH_ID, isFirstLaunch: false },
+      { watchId: 'lea-2', isFirstLaunch: true },
     ]);
     expect(await actions.detect()).toMatchObject([
-      { veilleId: LEA_VEILLE_ID, isFirstLaunch: false },
-      { veilleId: 'lea-2', isFirstLaunch: false },
+      { watchId: LEA_WATCH_ID, isFirstLaunch: false },
+      { watchId: 'lea-2', isFirstLaunch: false },
     ]);
   });
 
   // A broader title would otherwise start a Recherche for every Offre already online at once
-  it('starts the first launch of a Veille again once its Paramètres change', async () => {
+  it('starts the first launch of a Watch again once its Parameters change', async () => {
     const actions = await detectLeaOffres();
 
-    await actions.saveVeille({
+    await actions.saveWatch({
       candidateId: 'lea',
-      veilleId: LEA_VEILLE_ID,
+      watchId: LEA_WATCH_ID,
       source: 'pep',
-      parametres: { title: 'attaché de justice', courtOfAppealList: ['Douai'] },
+      parameters: { title: 'attaché de justice', courtOfAppealList: ['Douai'] },
     });
 
-    expect(await actions.listVeilles({ candidateId: 'lea' })).toMatchObject([
-      { parametres: { courtOfAppealList: ['Douai'] }, detectedAt: null },
+    expect(await actions.listWatches({ candidateId: 'lea' })).toMatchObject([
+      { parameters: { courtOfAppealList: ['Douai'] }, detectedAt: null },
     ]);
   });
 
-  it('keeps the Détection of a Veille saved unchanged', async () => {
+  it('keeps the Detection of a Watch saved unchanged', async () => {
     const actions = await detectLeaOffres();
 
-    await actions.saveVeille({ candidateId: 'lea', veilleId: LEA_VEILLE_ID, ...LEA_VEILLE });
+    await actions.saveWatch({ candidateId: 'lea', watchId: LEA_WATCH_ID, ...LEA_WATCH });
 
-    const [veille] = await actions.listVeilles({ candidateId: 'lea' });
-    expect(veille?.detectedAt).toBeInstanceOf(Date);
+    const [watch] = await actions.listWatches({ candidateId: 'lea' });
+    expect(watch?.detectedAt).toBeInstanceOf(Date);
   });
 
-  it('refuses the Paramètres its Source refuses, naming them as the form does', async () => {
+  it('refuses the Parameters its Source refuses, naming them as the form does', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
     await expect(
-      actions.saveVeille({ candidateId: 'lea', source: 'pep', parametres: { title: '', courtOfAppealList: [''] } }),
+      actions.saveWatch({ candidateId: 'lea', source: 'pep', parameters: { title: '', courtOfAppealList: [''] } }),
     ).rejects.toThrow(
       "La Source Place de l’Emploi Public attend d'autres Paramètres : renseigner « Titre recherché », « Cours d’appel de la Zone ».",
     );
-    expect(await actions.listVeilles({ candidateId: 'lea' })).toHaveLength(1);
+    expect(await actions.listWatches({ candidateId: 'lea' })).toHaveLength(1);
   });
 
   it('refuses a Source the registry does not know, naming those it knows', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
-    await expect(actions.saveVeille({ candidateId: 'lea', source: 'inconnue', parametres: {} })).rejects.toThrow(
+    await expect(actions.saveWatch({ candidateId: 'lea', source: 'inconnue', parameters: {} })).rejects.toThrow(
       'Source inconnue : inconnue. En choisir une parmi pep',
     );
   });
 
-  it('deletes a Veille, whose Offres stay with the Candidate', async () => {
+  it('deletes a Watch, whose Offres stay with the Candidate', async () => {
     const actions = await detectLeaOffres();
     const offreList = await actions.listOffres({ candidateId: 'lea' });
 
-    await actions.deleteVeille({ candidateId: 'lea', veilleId: LEA_VEILLE_ID });
+    await actions.deleteWatch({ candidateId: 'lea', watchId: LEA_WATCH_ID });
 
-    expect(await actions.listVeilles({ candidateId: 'lea' })).toEqual([]);
+    expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([]);
     expect(await actions.listOffres({ candidateId: 'lea' })).toEqual(offreList);
     expect(await actions.detect()).toEqual([]);
   });
 
-  it('changes only the Veilles of the Candidate named', async () => {
+  it('changes only the Watches of the Candidate named', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
     await actions.createCandidate({ id: 'camille', name: 'Camille' });
 
-    await expect(actions.deleteVeille({ candidateId: 'camille', veilleId: LEA_VEILLE_ID })).rejects.toThrow(
-      `Camille n'a pas de Veille ${LEA_VEILLE_ID} : recharger la page de son Profil.`,
+    await expect(actions.deleteWatch({ candidateId: 'camille', watchId: LEA_WATCH_ID })).rejects.toThrow(
+      `Camille n'a pas de Veille ${LEA_WATCH_ID} : recharger la page de son Profil.`,
     );
-    expect(await actions.listVeilles({ candidateId: 'lea' })).toHaveLength(1);
+    expect(await actions.listWatches({ candidateId: 'lea' })).toHaveLength(1);
   });
 
-  // Each Veille has its own Zone: an Offre one stored out of its Zone may be in that of another
-  describe('an Offre in the Zone of another Veille of the Candidate', () => {
+  // Each Watch has its own Zone: an Offre one stored out of its Zone may be in that of another
+  describe('an Offre in the Zone of another Watch of the Candidate', () => {
     it('gets its Recherche and its notification once, when it is new', async () => {
       const dataDirectory = createDataDirectory();
-      const notificationChannel = createFakeCanalNotification();
+      const notificationChannel = createFakeNotificationChannel();
       const option = {
         dataDirectory,
         aiSession: createFakeAiSession(RECHERCHE),
-        canalNotificationList: notificationChannel.canalNotificationList,
+        notificationChannelList: notificationChannel.notificationChannelList,
       };
       const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout([VERSAILLES_REFERENCE]) } });
       const earlierActions = await createActions({ ...option, fetch: earlierFetch.fetch });
       await notificationChannel.saveFor(earlierActions);
-      await earlierActions.saveVeille({ candidateId: 'lea', ...VERSAILLES_VEILLE });
+      await earlierActions.saveWatch({ candidateId: 'lea', ...VERSAILLES_WATCH });
       await earlierActions.detect();
       const recordedFetch = createRecordedFetch();
       const actions = await createActions({ ...option, fetch: recordedFetch.fetch });
@@ -148,7 +148,7 @@ describe('Veilles', () => {
       recordedFetch.requestedUrlList.length = 0;
       await actions.detect();
 
-      // Once read by each Veille, no Offre is read again: each Veille reads only its feed
+      // Once read by each Watch, no Offre is read again: each Watch reads only its feed
       expect(recordedFetch.requestedUrlList).toEqual([DSJ_FEED_URL, DSJ_FEED_URL]);
       const offreList = await actions.listOffres({ candidateId: 'lea' });
       expect(offreList.filter(({ reference }) => reference === VERSAILLES_REFERENCE)).toMatchObject([
@@ -162,17 +162,17 @@ describe('Veilles', () => {
     });
 
     it('is placed in the Zone without anything started, when it was online at the first launch', async () => {
-      const notificationChannel = createFakeCanalNotification();
+      const notificationChannel = createFakeNotificationChannel();
       const actions = await createActions({
         dataDirectory: createDataDirectory(),
         aiSession: createFakeAiSession(),
         fetch: createRecordedFetch().fetch,
-        canalNotificationList: notificationChannel.canalNotificationList,
+        notificationChannelList: notificationChannel.notificationChannelList,
       });
       await notificationChannel.saveFor(actions);
       await actions.detect();
 
-      await actions.saveVeille({ candidateId: 'lea', ...VERSAILLES_VEILLE });
+      await actions.saveWatch({ candidateId: 'lea', ...VERSAILLES_WATCH });
       await actions.detect();
 
       const offreList = await actions.listOffres({ candidateId: 'lea' });

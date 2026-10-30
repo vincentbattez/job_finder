@@ -1,15 +1,15 @@
 import type { z } from 'zod/v4';
 
 import {
-  CANAL_NOTIFICATION_MODULE_SCHEMA,
-  type CanalNotificationModule,
+  NOTIFICATION_CHANNEL_MODULE_SCHEMA,
+  type NotificationChannelModule,
   type Offre,
-  type ParametreChoice,
-  type Parametres,
+  type ParameterChoice,
+  type Parameters,
 } from '#/domain/index.ts';
-import { declareParametres, labelOf, type ParametreShape, type ParametresOf } from '#/parametre/index.ts';
+import { declareParameters, labelOf, type ParameterShape, type ParametersOf } from '#/parameter/index.ts';
 
-// The contract of the family of the Canaux de notification: what each module of
+// The contract of the family of the Notification Channels: what each module of
 // src/modules/notification-<nom>/ declares, and what the rest of the application knows of them (ADR-0010)
 
 // What the Candidate reads on their phone
@@ -18,43 +18,43 @@ export interface INotification {
   message: string;
 }
 
-// What the Candidate typed, each Paramètre perhaps missing
-type TrialOf<TShape extends ParametreShape> = z.output<
+// What the Candidate typed, each Parameter perhaps missing
+type TrialOf<TShape extends ParameterShape> = z.output<
   z.ZodObject<{ -readonly [TName in keyof TShape]: z.ZodOptional<TShape[TName]> }>
 >;
 
-type ChoiceLister<TShape extends ParametreShape> = (parametres: TrialOf<TShape>) => Promise<ParametreChoice[]>;
+type ChoiceLister<TShape extends ParameterShape> = (parameters: TrialOf<TShape>) => Promise<ParameterChoice[]>;
 
-// What a module of the family exports, through defineCanalNotification. Testing the Canal and
-// listing the choices of a Paramètre try what the Candidate typed, so each Paramètre may be missing.
-interface ICanalNotificationDefinition<TShape extends ParametreShape> {
+// What a module of the family exports, through defineNotificationChannel. Testing the Channel and
+// listing the choices of a Parameter try what the Candidate typed, so each Parameter may be missing.
+interface INotificationChannelDefinition<TShape extends ParameterShape> {
   id: string;
   name: string;
-  parametreSchema: z.ZodObject<TShape>;
-  send: (parametres: ParametresOf<TShape>, notification: INotification) => Promise<void>;
-  check?: (parametres: TrialOf<TShape>) => Promise<void>;
-  listChoicesByParametre?: Partial<Record<keyof TShape, ChoiceLister<TShape>>>;
+  parameterSchema: z.ZodObject<TShape>;
+  send: (parameters: ParametersOf<TShape>, notification: INotification) => Promise<void>;
+  check?: (parameters: TrialOf<TShape>) => Promise<void>;
+  listChoicesByParameter?: Partial<Record<keyof TShape, ChoiceLister<TShape>>>;
 }
 
-// A module as the actions use it, whatever its Paramètres: each operation parses them with the
+// A module as the actions use it, whatever its Parameters: each operation parses them with the
 // module's own schema, since the database keeps them as JSON (ADR-0010)
-export interface ICanalNotification {
-  description: CanalNotificationModule;
-  parseParametres(rawParametres: unknown): Parametres;
-  send(rawParametres: unknown, notification: INotification): Promise<void>;
-  check(rawParametres: unknown): Promise<void>;
-  listChoices(parametreName: string, rawParametres: unknown): Promise<ParametreChoice[]>;
+export interface INotificationChannel {
+  description: NotificationChannelModule;
+  parseParameters(rawParameters: unknown): Parameters;
+  send(rawParameters: unknown, notification: INotification): Promise<void>;
+  check(rawParameters: unknown): Promise<void>;
+  listChoices(parameterName: string, rawParameters: unknown): Promise<ParameterChoice[]>;
 }
 
-export function defineCanalNotification<TShape extends ParametreShape>(
-  definition: ICanalNotificationDefinition<TShape>,
-): ICanalNotification {
-  const { id, name, parametreSchema, send, check, listChoicesByParametre = {} } = definition;
-  const parametres = declareParametres(name, parametreSchema, Object.keys(listChoicesByParametre));
-  const description = CANAL_NOTIFICATION_MODULE_SCHEMA.parse({
+export function defineNotificationChannel<TShape extends ParameterShape>(
+  definition: INotificationChannelDefinition<TShape>,
+): INotificationChannel {
+  const { id, name, parameterSchema, send, check, listChoicesByParameter = {} } = definition;
+  const parameters = declareParameters(name, parameterSchema, Object.keys(listChoicesByParameter));
+  const description = NOTIFICATION_CHANNEL_MODULE_SCHEMA.parse({
     id,
     name,
-    parametreList: parametres.parametreList,
+    parameterList: parameters.parameterList,
     isTestable: check !== undefined,
   });
   const composeMessage = (labelList: string) =>
@@ -62,24 +62,24 @@ export function defineCanalNotification<TShape extends ParametreShape>(
 
   return {
     description,
-    parseParametres: (rawParametres) => parametres.parseToSave(rawParametres, composeMessage),
-    send: (rawParametres, notification) => send(parametres.parse(rawParametres, composeMessage), notification),
-    async check(rawParametres) {
+    parseParameters: (rawParameters) => parameters.parseToSave(rawParameters, composeMessage),
+    send: (rawParameters, notification) => send(parameters.parse(rawParameters, composeMessage), notification),
+    async check(rawParameters) {
       if (check === undefined) {
         throw new Error(`Le Canal de notification ${name} ne se teste pas : envoyer une notification de test.`);
       }
-      await check(parametres.parseTrial(rawParametres, composeMessage));
+      await check(parameters.parseTrial(rawParameters, composeMessage));
     },
-    async listChoices(parametreName, rawParametres) {
-      const listChoices = Object.entries<ChoiceLister<TShape> | undefined>(listChoicesByParametre).find(
-        ([key]) => key === parametreName,
+    async listChoices(parameterName, rawParameters) {
+      const listChoices = Object.entries<ChoiceLister<TShape> | undefined>(listChoicesByParameter).find(
+        ([key]) => key === parameterName,
       )?.[1];
       if (listChoices === undefined) {
         throw new Error(
-          `Le Paramètre ${labelOf(description.parametreList, parametreName)} du Canal ${name} n'a pas de choix à lister.`,
+          `Le Paramètre ${labelOf(description.parameterList, parameterName)} du Canal ${name} n'a pas de choix à lister.`,
         );
       }
-      return listChoices(parametres.parseTrial(rawParametres, composeMessage));
+      return listChoices(parameters.parseTrial(rawParameters, composeMessage));
     },
   };
 }
@@ -87,8 +87,8 @@ export function defineCanalNotification<TShape extends ParametreShape>(
 // The Source gives the Date limite as a day, at midnight UTC
 const DATE_LIMITE_FORMAT = new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC' });
 
-// The juridiction of an Offre is its workplace, such as « Tribunal Judiciaire de Béthune »
-function juridictionOf({ workplace }: Offre): string {
+// The jurisdiction of an Offre is its workplace, such as « Tribunal Judiciaire de Béthune »
+function jurisdictionOf({ workplace }: Offre): string {
   return workplace ?? 'Juridiction non précisée';
 }
 
@@ -96,11 +96,11 @@ function dateLimiteOf({ dateLimite }: Offre): string {
   return `Date limite : ${dateLimite === null ? 'non précisée' : DATE_LIMITE_FORMAT.format(dateLimite)}`;
 }
 
-// One composer per notified event, whatever the Canal
+// One composer per notified event, whatever the Channel
 export function composeNouvelleOffreNotification(offre: Offre): INotification {
   return {
     title: 'Nouvelle Offre dans la Zone',
-    message: [offre.title, juridictionOf(offre), dateLimiteOf(offre)].join('\n'),
+    message: [offre.title, jurisdictionOf(offre), dateLimiteOf(offre)].join('\n'),
   };
 }
 
@@ -110,7 +110,7 @@ export function composeRepublicationNotification(offre: Offre, republishedOffre:
     title: 'Republication dans la Zone',
     message: [
       offre.title,
-      juridictionOf(offre),
+      jurisdictionOf(offre),
       `Republication de l'Offre ${republishedOffre.reference} : sa Recherche part de celle de cette Offre`,
       dateLimiteOf(offre),
     ].join('\n'),
@@ -123,18 +123,18 @@ export function composeRepublicationPostuleeNotification(offre: Offre, republish
     title: "Republication d'une Offre Postulée",
     message: [
       offre.title,
-      juridictionOf(offre),
+      jurisdictionOf(offre),
       `Republication de l'Offre ${republishedOffre.reference}, Postulée : aucune Recherche lancée`,
       dateLimiteOf(offre),
     ].join('\n'),
   };
 }
 
-// What the Candidate receives when they try their Canal de notification
+// What the Candidate receives when they try their Notification Channel
 export function composeTestNotification(candidateName: string): INotification {
   return { title: 'Notification de test', message: `Le Canal de notification de ${candidateName} fonctionne.` };
 }
 
 export function composeRecherchePreteNotification(offre: Offre): INotification {
-  return { title: 'Recherche prête', message: [offre.title, juridictionOf(offre)].join('\n') };
+  return { title: 'Recherche prête', message: [offre.title, jurisdictionOf(offre)].join('\n') };
 }

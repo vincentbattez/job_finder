@@ -4,7 +4,7 @@ import { createActions } from '#/actions/index.ts';
 
 import { createDataDirectory, detectOffres } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeCanalNotification, LEA_TARGET } from './fake-canal-notification.ts';
+import { createFakeNotificationChannel, LEA_TARGET } from './fake-notification-channel.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
 // The two Béthune Offres, both in the Zone, and an attaché de justice Offre outside it, from the
@@ -19,29 +19,29 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// A first Détection on the feed as it was before the given Offres were published, then the actions
+// A first Detection on the feed as it was before the given Offres were published, then the actions
 // for the next one, on the feed as recorded
 async function detectBefore(referenceList: string[]) {
   const dataDirectory = createDataDirectory();
-  const notificationChannel = createFakeCanalNotification();
+  const notificationChannel = createFakeNotificationChannel();
   const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout(referenceList) } }).fetch;
   const earlierActions = await createActions({
     dataDirectory,
     fetch: earlierFetch,
-    canalNotificationList: notificationChannel.canalNotificationList,
+    notificationChannelList: notificationChannel.notificationChannelList,
   });
   await notificationChannel.saveFor(earlierActions);
   await earlierActions.detect();
   const actions = await createActions({
     dataDirectory,
     fetch: createRecordedFetch().fetch,
-    canalNotificationList: notificationChannel.canalNotificationList,
+    notificationChannelList: notificationChannel.notificationChannelList,
   });
   return { actions, notificationChannel };
 }
 
 describe('the notification of a new Offre in the Zone', () => {
-  it('tells the Candidate its title, its juridiction and its Date limite, for each new Offre in the Zone only', async () => {
+  it('tells the Candidate its title, its jurisdiction and its Date limite, for each new Offre in the Zone only', async () => {
     const { actions, notificationChannel } = await detectBefore([REFERENCE, OTHER_REFERENCE, OUT_OF_ZONE_REFERENCE]);
 
     await actions.detect();
@@ -63,11 +63,11 @@ describe('the notification of a new Offre in the Zone', () => {
   });
 
   it('sends nothing on the first launch, which imports the Offres already online', async () => {
-    const notificationChannel = createFakeCanalNotification();
+    const notificationChannel = createFakeNotificationChannel();
     const actions = await createActions({
       dataDirectory: createDataDirectory(),
       fetch: createRecordedFetch().fetch,
-      canalNotificationList: notificationChannel.canalNotificationList,
+      notificationChannelList: notificationChannel.notificationChannelList,
     });
 
     await actions.detect();
@@ -75,7 +75,7 @@ describe('the notification of a new Offre in the Zone', () => {
     expect(notificationChannel.sentList).toEqual([]);
   });
 
-  it('sends nothing when the Détection finds nothing new', async () => {
+  it('sends nothing when the Detection finds nothing new', async () => {
     const { actions, notificationChannel } = await detectBefore([]);
 
     await actions.detect();
@@ -115,7 +115,7 @@ describe('the notification of a Recherche ready', () => {
 describe('a notification that cannot be sent', () => {
   const ERROR_MESSAGE = 'Home Assistant injoignable.';
 
-  it('reports each notification not sent with what the Détection found, once every new Offre is saved and its Recherche queued', async () => {
+  it('reports each notification not sent with what the Detection found, once every new Offre is saved and its Recherche queued', async () => {
     const dataDirectory = createDataDirectory();
     const aiSession = createFakeAiSession(RECHERCHE, RECHERCHE);
     const earlierFetch = createRecordedFetch({
@@ -123,12 +123,12 @@ describe('a notification that cannot be sent', () => {
     }).fetch;
     const earlierActions = await createActions({ dataDirectory, fetch: earlierFetch });
     await earlierActions.detect();
-    const notificationChannel = createFakeCanalNotification({ errorMessage: ERROR_MESSAGE });
+    const notificationChannel = createFakeNotificationChannel({ errorMessage: ERROR_MESSAGE });
     const actions = await createActions({
       dataDirectory,
       aiSession,
       fetch: createRecordedFetch().fetch,
-      canalNotificationList: notificationChannel.canalNotificationList,
+      notificationChannelList: notificationChannel.notificationChannelList,
     });
     await notificationChannel.saveFor(actions);
 
@@ -147,7 +147,7 @@ describe('a notification that cannot be sent', () => {
     const worker = await createActions({
       dataDirectory,
       aiSession,
-      canalNotificationList: createFakeCanalNotification().canalNotificationList,
+      notificationChannelList: createFakeNotificationChannel().notificationChannelList,
     });
     const jobList = await worker.runQueuedJobs();
     expect(jobList).toMatchObject([
@@ -168,11 +168,11 @@ describe('a notification that cannot be sent', () => {
     const dataDirectory = createDataDirectory();
     const earlierActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
     await earlierActions.detect();
-    const notificationChannel = createFakeCanalNotification({ errorMessage: ERROR_MESSAGE });
+    const notificationChannel = createFakeNotificationChannel({ errorMessage: ERROR_MESSAGE });
     const actions = await createActions({
       dataDirectory,
       aiSession,
-      canalNotificationList: notificationChannel.canalNotificationList,
+      notificationChannelList: notificationChannel.notificationChannelList,
     });
     await notificationChannel.saveFor(actions);
     await actions.runModule({ module: 'recherche', reference: REFERENCE });

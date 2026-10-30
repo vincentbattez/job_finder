@@ -65,7 +65,7 @@ const offreList = await database.$transaction(
     Array.from({ length: OFFRE_COUNT_PER_CANDIDATE }, () => database.offre.create({ data: fakeOffre(id) })),
   ),
 );
-// Every Offre has its Fiche de poste in its folder, as the Détection saves it
+// Every Offre has its Fiche de poste in its folder, as the Detection saves it
 for (const offre of offreList) {
   const offreDirectory = workspace.offreDirectoryOf(offre);
   mkdirSync(offreDirectory, { recursive: true });

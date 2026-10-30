@@ -18,8 +18,8 @@ export async function runExtraction(
     workspace.readFicheDePoste(offre),
   );
   // A Fiche de poste without a title keeps the name of its file: nothing is invented
-  const lieu = await locate(city);
-  const filledOffre = await workspace.fillOffre(offre, { title: title ?? offre.title, ficheDePoste, lieu });
+  const place = await locate(city);
+  const filledOffre = await workspace.fillOffre(offre, { title: title ?? offre.title, ficheDePoste, place });
   // Imported by the Candidate, it gets its Recherche whatever the Zone
   await workspace.createJob(filledOffre, 'recherche');
   return { job: await workspace.finishJobWithoutVersion(job, { log: session.log, sessionId: session.sessionId }) };
@@ -47,8 +47,8 @@ export function createImportActions({ workspace, importSource, findCandidate, lo
         source: 'import',
         listedOffre,
         ficheDePoste,
-        lieu: await locate(null),
-        // No Veille detected it, so no Zone holds it; chosen by the Candidate, it gets its Recherche
+        place: await locate(null),
+        // No Watch detected it, so no Zone holds it; chosen by the Candidate, it gets its Recherche
         // once extracted, whatever the Zone (ADR-0003)
         isInZone: false,
         republicationOf: undefined,

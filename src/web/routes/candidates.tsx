@@ -7,12 +7,12 @@ import { ACTIONS } from '#/web/acl/actions.server.ts';
 export async function loader() {
   return {
     candidateList: await ACTIONS.listCandidates(),
-    delaiParDefaut: await ACTIONS.readDelaiParDefaut(),
+    defaultDeadlinePeriod: await ACTIONS.readDefaultDeadlinePeriod(),
     obsoleteConfig: await ACTIONS.findObsoleteConfig(),
   };
 }
 
-// Any visitor of the front creates or renames a Candidate and sets the Délai par défaut; no Candidate is
+// Any visitor of the front creates or renames a Candidate and sets the Default Deadline Period; no Candidate is
 // deleted (ADR-0002, ADR-0011). A refusal goes back to the form it concerns, in the words of the action.
 export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -30,8 +30,8 @@ export async function action({ request }: ActionFunctionArgs) {
         await ACTIONS.renameCandidate({ candidateId, name: formData.get('name') });
         break;
       }
-      case 'delai-par-defaut': {
-        await ACTIONS.saveDelaiParDefaut({ months: formData.get('months') });
+      case 'default-deadline-period': {
+        await ACTIONS.saveDefaultDeadlinePeriod({ months: formData.get('months') });
         break;
       }
     }
@@ -50,7 +50,7 @@ function Refusal({ message }: Readonly<{ message: string | undefined }>) {
 }
 
 export default function Candidates() {
-  const { candidateList, delaiParDefaut, obsoleteConfig } = useLoaderData<typeof loader>();
+  const { candidateList, defaultDeadlinePeriod, obsoleteConfig } = useLoaderData<typeof loader>();
   const refusal = useActionData<typeof action>()?.refusal;
   const refusalOf = (intent: string, candidateId?: string) =>
     refusal?.intent === intent && (candidateId === undefined || refusal.candidateId === candidateId)
@@ -117,8 +117,8 @@ export default function Candidates() {
       <section className="settings" aria-labelledby={delayHeadingId}>
         <h2 id={delayHeadingId}>Délai par défaut</h2>
         <p>Une Offre publiée sans Date limite est Expirée ce nombre de mois après sa publication, pour tous.</p>
-        <Form key={delaiParDefaut.months} method="post">
-          <input type="hidden" name="intent" value="delai-par-defaut" />
+        <Form key={defaultDeadlinePeriod.months} method="post">
+          <input type="hidden" name="intent" value="default-deadline-period" />
           <label className="settings__field">
             Délai par défaut, en mois
             <input
@@ -127,7 +127,7 @@ export default function Candidates() {
               min={1}
               step={1}
               required
-              defaultValue={delaiParDefaut.months}
+              defaultValue={defaultDeadlinePeriod.months}
               placeholder="6"
             />
           </label>
@@ -135,7 +135,7 @@ export default function Candidates() {
             <button type="submit" className="button--primary">
               Enregistrer le Délai par défaut
             </button>
-            <Refusal message={refusalOf('delai-par-defaut')} />
+            <Refusal message={refusalOf('default-deadline-period')} />
           </div>
         </Form>
       </section>

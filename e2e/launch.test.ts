@@ -60,14 +60,14 @@ test.describe('launching the modules of an Offre', () => {
   });
 });
 
-test('launches a Détection and shows its result', async ({ page }) => {
+test('launches a Detection and shows its result', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Léa');
   await page.getByRole('button', { name: 'Choisir' }).click();
 
   await page.getByRole('button', { name: 'Lancer une Détection' }).click();
 
-  // test/seed-front.ts already ran a Détection on the same recorded responses
+  // test/seed-front.ts already ran a Detection on the same recorded responses
   await expect(page.getByRole('status')).toHaveText('Veille lea-1 : aucune nouvelle Offre');
   await expect(page.getByRole('row', { name: /2026-2445600/ })).toBeVisible();
 });

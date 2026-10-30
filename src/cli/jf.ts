@@ -222,11 +222,11 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     run: async (actions) => {
       const detectionList = await actions.detect();
       for (const detection of detectionList) {
-        const { veilleId, candidateId, isFirstLaunch, newOffreList, nearMissList } = detection;
+        const { watchId, candidateId, isFirstLaunch, newOffreList, nearMissList } = detection;
         const summary =
           newOffreList.length === 0 ? 'aucune nouvelle Offre' : `${String(newOffreList.length)} nouvelles Offres`;
         const firstLaunch = isFirstLaunch ? ', premier lancement : importées sans rien déclencher' : '';
-        process.stdout.write(`Veille ${veilleId} (${candidateId}) : ${summary}${firstLaunch}\n`);
+        process.stdout.write(`Veille ${watchId} (${candidateId}) : ${summary}${firstLaunch}\n`);
         for (const offre of newOffreList) {
           process.stdout.write(`  ${formatOffre(offre)}\n`);
         }
@@ -237,7 +237,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
           process.stdout.write(`  ${reference}\t${title}\n`);
         }
       }
-      // What the Détection found is printed first; a notification not sent then fails the run in lpm
+      // What the Detection found is printed first; a notification not sent then fails the run in lpm
       const failureList = detectionList.flatMap(({ notificationFailureList }) => notificationFailureList);
       if (failureList.length > 0) {
         throw new Error(failureList.join('\n'));

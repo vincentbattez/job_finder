@@ -11,7 +11,7 @@ import { createRecordedFetch } from './recorded-http.ts';
 // In the e2e tests, vite.config.ts serves this module in place of src/web/acl/actions.server.ts, and
 // test/e2e-worker.ts runs its queued jobs: the front and the worker work on the temporary data
 // folder of playwright.config.ts, with the fakes of the external boundaries. No real Claude
-// session, no real site, no real notification: test/seed-front.ts saves the Canaux de notification
+// session, no real site, no real notification: test/seed-front.ts saves the Notification Channels
 // through the fake Home Assistant of playwright.config.ts.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 if (!dataDirectory.startsWith(tmpdir())) {

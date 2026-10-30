@@ -6,10 +6,10 @@ export const CANDIDATE_SCHEMA = z.object({ id: z.string(), name: z.string() }).b
 
 export type Candidate = z.infer<typeof CANDIDATE_SCHEMA>;
 
-// The Délai par défaut every Candidate shares, in months
-export const DELAI_PAR_DEFAUT_SCHEMA = z.object({ months: z.int().positive() }).brand<'Domain'>();
+// The Default Deadline Period every Candidate shares, in months
+export const DEFAULT_DEADLINE_PERIOD_SCHEMA = z.object({ months: z.int().positive() }).brand<'Domain'>();
 
-export type DelaiParDefaut = z.infer<typeof DELAI_PAR_DEFAUT_SCHEMA>;
+export type DefaultDeadlinePeriod = z.infer<typeof DEFAULT_DEADLINE_PERIOD_SCHEMA>;
 
 // The config an older jf left, imported once and no longer read (ADR-0011): its path, null once
 // deleted
@@ -17,25 +17,25 @@ export const OBSOLETE_CONFIG_SCHEMA = z.object({ path: z.string().nullable() }).
 
 export type ObsoleteConfig = z.infer<typeof OBSOLETE_CONFIG_SCHEMA>;
 
-// The Paramètres of a module of a family, as JSON: only the module's schema knows their shape (ADR-0010)
-export const PARAMETRES_SCHEMA = z.record(z.string(), z.json()).brand<'Domain'>();
+// The Parameters of a module of a family, as JSON: only the module's schema knows their shape (ADR-0010)
+export const PARAMETERS_SCHEMA = z.record(z.string(), z.json()).brand<'Domain'>();
 
-export type Parametres = z.infer<typeof PARAMETRES_SCHEMA>;
+export type Parameters = z.infer<typeof PARAMETERS_SCHEMA>;
 
-// A Veille follows one of the Sources, which alone knows its Paramètres, its Zone among them
-// (ADR-0010). detectedAt stays null until a Détection of the Veille went through: until then, it is
+// A Watch follows one of the Sources, which alone knows its Parameters, its Zone among them
+// (ADR-0010). detectedAt stays null until a Detection of the Watch went through: until then, it is
 // the first launch.
-export const VEILLE_SCHEMA = z
+export const WATCH_SCHEMA = z
   .object({
     id: z.string(),
     candidateId: z.string(),
     source: z.string(),
-    parametres: PARAMETRES_SCHEMA,
+    parameters: PARAMETERS_SCHEMA,
     detectedAt: z.date().nullable(),
   })
   .brand<'Domain'>();
 
-export type Veille = z.infer<typeof VEILLE_SCHEMA>;
+export type Watch = z.infer<typeof WATCH_SCHEMA>;
 
 // An Offre as a Source lists it, before its detail page is read. An imported Fiche de poste has no
 // link, and is published the day it is imported, so that it expires like any Offre.
@@ -63,18 +63,18 @@ export type FicheDePoste = z.infer<typeof FICHE_DE_POSTE_SCHEMA>;
 // The file of the Fiche de poste in the folder of its Offre, where every session runs
 export const FICHE_DE_POSTE_FILE_NAME = 'fiche-de-poste.md';
 
-// Where an Offre is: its ville, and the région and coordinates API Géo gives its commune. The ville
-// stays as read, without région nor coordinates, while API Géo knows no commune by that name.
-const LIEU_SHAPE = {
+// Where an Offre is: its city, and the region and coordinates API Géo gives its commune. The city
+// stays as read, without region nor coordinates, while API Géo knows no commune by that name.
+const PLACE_SHAPE = {
   city: z.string().nullable(),
   region: z.string().nullable(),
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
 };
 
-export const LIEU_SCHEMA = z.object(LIEU_SHAPE).brand<'Domain'>();
+export const PLACE_SCHEMA = z.object(PLACE_SHAPE).brand<'Domain'>();
 
-export type Lieu = z.infer<typeof LIEU_SCHEMA>;
+export type Place = z.infer<typeof PLACE_SCHEMA>;
 
 export const STATUT_SCHEMA = z.enum(['a_traiter', 'postulee', 'archivee']);
 
@@ -85,10 +85,10 @@ const LINKED_OFFRE_SCHEMA = z.object({ reference: z.string() });
 
 export const OFFRE_SCHEMA = z
   .object({
-    ...LIEU_SHAPE,
+    ...PLACE_SHAPE,
     id: z.int(),
     candidateId: z.string(),
-    // Where it comes from: the Source of the Veille that detected it, or the import of its Fiche de poste
+    // Where it comes from: the Source of the Watch that detected it, or the import of its Fiche de poste
     source: z.string(),
     reference: z.string(),
     title: z.string(),
@@ -113,11 +113,11 @@ export const OFFRE_SCHEMA = z
 
 export type Offre = z.infer<typeof OFFRE_SCHEMA>;
 
-// What a Détection found for one Veille, and why each notification it could not send failed. On
+// What a Detection found for one Watch, and why each notification it could not send failed. On
 // the first launch, the Offres already online are imported without triggering anything.
 export const DETECTION_SCHEMA = z
   .object({
-    veilleId: z.string(),
+    watchId: z.string(),
     candidateId: z.string(),
     isFirstLaunch: z.boolean(),
     newOffreList: z.array(OFFRE_SCHEMA),
@@ -324,7 +324,7 @@ export const SESSION_RESULT_SCHEMA = z
 
 export type SessionResult = z.infer<typeof SESSION_RESULT_SCHEMA>;
 
-// The fields an AI session read in an imported Fiche de poste: its title and its ville, null when it
+// The fields an AI session read in an imported Fiche de poste: its title and its city, null when it
 // gives none, and its Fiche de poste
 export const EXTRACTION_SCHEMA = z
   .object({ title: z.string().nullable(), city: z.string().nullable(), ficheDePoste: FICHE_DE_POSTE_SCHEMA })
@@ -337,9 +337,9 @@ export const VISUALISATION_SCHEMA = z.object({ html: z.string() }).brand<'Domain
 
 export type Visualisation = z.infer<typeof VISUALISATION_SCHEMA>;
 
-// A Paramètre as the front builds its field: typed in, a list of values, secret, or chosen among what
+// A Parameter as the front builds its field: typed in, a list of values, secret, or chosen among what
 // the module lists
-export const PARAMETRE_SCHEMA = z
+export const PARAMETER_SCHEMA = z
   .object({
     name: z.string(),
     label: z.string(),
@@ -351,43 +351,43 @@ export const PARAMETRE_SCHEMA = z
   })
   .brand<'Domain'>();
 
-export type Parametre = z.infer<typeof PARAMETRE_SCHEMA>;
+export type Parameter = z.infer<typeof PARAMETER_SCHEMA>;
 
 // A module of a family of interchangeable modules, as its descriptor presents it to the Candidate: the
-// form asks for its Paramètres (ADR-0010)
-const MODULE_DESCRIPTION_SHAPE = { id: z.string(), name: z.string(), parametreList: z.array(PARAMETRE_SCHEMA) };
+// form asks for its Parameters (ADR-0010)
+const MODULE_DESCRIPTION_SHAPE = { id: z.string(), name: z.string(), parameterList: z.array(PARAMETER_SCHEMA) };
 
-// A Canal de notification may also be tested
-export const CANAL_NOTIFICATION_MODULE_SCHEMA = z
+// A Notification Channel may also be tested
+export const NOTIFICATION_CHANNEL_MODULE_SCHEMA = z
   .object({ ...MODULE_DESCRIPTION_SHAPE, isTestable: z.boolean() })
   .brand<'Domain'>();
 
-export type CanalNotificationModule = z.infer<typeof CANAL_NOTIFICATION_MODULE_SCHEMA>;
+export type NotificationChannelModule = z.infer<typeof NOTIFICATION_CHANNEL_MODULE_SCHEMA>;
 
-// A Source a Veille follows
+// A Source a Watch follows
 export const SOURCE_MODULE_SCHEMA = z.object(MODULE_DESCRIPTION_SHAPE).brand<'Domain'>();
 
 export type SourceModule = z.infer<typeof SOURCE_MODULE_SCHEMA>;
 
-// A Candidate's Canal de notification as the actions return it: its module, null until chosen, and its
-// Paramètres, each secret one reduced to whether it is configured, since it is write-only (ADR-0006)
-export const CANAL_NOTIFICATION_SCHEMA = z
-  .object({ module: z.string().nullable(), parametres: PARAMETRES_SCHEMA, configuredSecretList: z.array(z.string()) })
+// A Candidate's Notification Channel as the actions return it: its module, null until chosen, and its
+// Parameters, each secret one reduced to whether it is configured, since it is write-only (ADR-0006)
+export const NOTIFICATION_CHANNEL_SCHEMA = z
+  .object({ module: z.string().nullable(), parameters: PARAMETERS_SCHEMA, configuredSecretList: z.array(z.string()) })
   .brand<'Domain'>();
 
-export type CanalNotification = z.infer<typeof CANAL_NOTIFICATION_SCHEMA>;
+export type NotificationChannel = z.infer<typeof NOTIFICATION_CHANNEL_SCHEMA>;
 
-// A Candidate's Canal de notification as saved, secret Paramètres included. Its own brand keeps it out
+// A Candidate's Notification Channel as saved, secret Parameters included. Its own brand keeps it out
 // of the values an action may return (src/actions/index.ts, ADR-0006).
-export const SAVED_CANAL_NOTIFICATION_SCHEMA = z
-  .object({ candidateName: z.string(), module: z.string().nullable(), parametres: PARAMETRES_SCHEMA })
+export const SAVED_NOTIFICATION_CHANNEL_SCHEMA = z
+  .object({ candidateName: z.string(), module: z.string().nullable(), parameters: PARAMETERS_SCHEMA })
   .brand<'Secret'>();
 
-export type SavedCanalNotification = z.infer<typeof SAVED_CANAL_NOTIFICATION_SCHEMA>;
+export type SavedNotificationChannel = z.infer<typeof SAVED_NOTIFICATION_CHANNEL_SCHEMA>;
 
-// One of the values a module offers for a Paramètre, with what the Candidate reads
-export const PARAMETRE_CHOICE_SCHEMA = z.object({ value: z.string(), label: z.string() }).brand<'Domain'>();
+// One of the values a module offers for a Parameter, with what the Candidate reads
+export const PARAMETER_CHOICE_SCHEMA = z.object({ value: z.string(), label: z.string() }).brand<'Domain'>();
 
-export type ParametreChoice = z.infer<typeof PARAMETRE_CHOICE_SCHEMA>;
+export type ParameterChoice = z.infer<typeof PARAMETER_CHOICE_SCHEMA>;
 
 export type DomainValue = z.$brand<'Domain'>;

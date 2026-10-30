@@ -1,6 +1,6 @@
 import { z } from 'zod/v4';
 
-import { PARAMETRE_CHOICE_SCHEMA, type ParametreChoice } from '#/domain/index.ts';
+import { PARAMETER_CHOICE_SCHEMA, type ParameterChoice } from '#/domain/index.ts';
 import type { INotification } from '#/notification/index.ts';
 import { messageOf } from '#/text/index.ts';
 
@@ -54,7 +54,7 @@ export async function checkConnexion(access: IAccess): Promise<void> {
   }
 }
 
-export async function listNotifyServices(access: IAccess): Promise<ParametreChoice[]> {
+export async function listNotifyServices(access: IAccess): Promise<ParameterChoice[]> {
   const response = await request(access, '/api/services');
   const domainList = response.ok ? SERVICE_DOMAIN_LIST_SCHEMA.safeParse(await response.json()) : undefined;
   if (domainList?.success !== true) {
@@ -64,7 +64,7 @@ export async function listNotifyServices(access: IAccess): Promise<ParametreChoi
   }
   const services = domainList.data.find(({ domain }) => domain === 'notify')?.services ?? {};
   return Object.entries(services).map(([name, { name: label = name }]) =>
-    PARAMETRE_CHOICE_SCHEMA.parse({ value: `notify.${name}`, label }),
+    PARAMETER_CHOICE_SCHEMA.parse({ value: `notify.${name}`, label }),
   );
 }
 

@@ -6,8 +6,8 @@ import { createActions, type Actions } from '#/actions/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeCanalNotification } from './fake-canal-notification.ts';
-import { LEA_VEILLE, LEA_VEILLE_ID } from './lea.ts';
+import { createFakeNotificationChannel } from './fake-notification-channel.ts';
+import { LEA_WATCH, LEA_WATCH_ID } from './lea.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
 // The Boulogne parquet Poste, published as 2026-2231960 then again as 2026-2338409, both in Léa's
@@ -34,25 +34,25 @@ const LETTRE_RUN = {
   },
 };
 
-// A first Détection on the feed as it was before the Republication, then the actions for the next
-// one, on the feed as recorded. Out of the Zone, the Zone of Léa's Veille leaves out the court of
+// A first Detection on the feed as it was before the Republication, then the actions for the next
+// one, on the feed as recorded. Out of the Zone, the Zone of Léa's Watch leaves out the court of
 // appeal of Douai, that of Boulogne.
 async function detectBeforeRepublication(aiSession = createFakeAiSession(), { isOutOfZone = false } = {}) {
   const dataDirectory = createDataDirectory();
-  const notificationChannel = createFakeCanalNotification();
+  const notificationChannel = createFakeNotificationChannel();
   const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout([REPUBLICATION_REFERENCE]) } });
   const earlierActions = await createActions({
     dataDirectory,
     aiSession,
     fetch: earlierFetch.fetch,
-    canalNotificationList: notificationChannel.canalNotificationList,
+    notificationChannelList: notificationChannel.notificationChannelList,
   });
   if (isOutOfZone) {
-    await earlierActions.saveVeille({
+    await earlierActions.saveWatch({
       candidateId: 'lea',
-      veilleId: LEA_VEILLE_ID,
+      watchId: LEA_WATCH_ID,
       source: 'pep',
-      parametres: { ...LEA_VEILLE.parametres, courtOfAppealList: ['Amiens'] },
+      parameters: { ...LEA_WATCH.parameters, courtOfAppealList: ['Amiens'] },
     });
   }
   await notificationChannel.saveFor(earlierActions);
@@ -61,7 +61,7 @@ async function detectBeforeRepublication(aiSession = createFakeAiSession(), { is
     dataDirectory,
     aiSession,
     fetch: createRecordedFetch().fetch,
-    canalNotificationList: notificationChannel.canalNotificationList,
+    notificationChannelList: notificationChannel.notificationChannelList,
   });
   return { actions, notificationChannel, dataDirectory };
 }
@@ -92,7 +92,7 @@ describe('a Republication detected', () => {
     const actions = await createActions({
       dataDirectory: createDataDirectory(),
       fetch: createRecordedFetch().fetch,
-      canalNotificationList: createFakeCanalNotification().canalNotificationList,
+      notificationChannelList: createFakeNotificationChannel().notificationChannelList,
     });
 
     await actions.detect();

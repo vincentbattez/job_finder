@@ -1,11 +1,11 @@
 import type { Actions } from '#/actions/index.ts';
 
-type Parametre = Awaited<ReturnType<Actions['listSources']>>[number]['parametreList'][number];
+type Parameter = Awaited<ReturnType<Actions['listSources']>>[number]['parameterList'][number];
 
-// The name of a Paramètre's field, apart from the fields of the form itself, such as the intent
-export const PARAMETRE_FIELD_PREFIX = 'parametres.';
+// The name of a Parameter's field, apart from the fields of the form itself, such as the intent
+export const PARAMETER_FIELD_PREFIX = 'parameters.';
 
-// The value a field shows: a list Paramètre one value per line, such as the courts of appeal of a Zone
+// The value a field shows: a list Parameter one value per line, such as the courts of appeal of a Zone
 function valueOf(value: unknown): string {
   if (Array.isArray(value)) {
     return value.filter((item) => typeof item === 'string').join('\n');
@@ -13,28 +13,28 @@ function valueOf(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
-// A Paramètre typed in, the field built from the descriptor of its module (ADR-0010). A secret one
+// A Parameter typed in, the field built from the descriptor of its module (ADR-0010). A secret one
 // always starts empty: it is write-only, and left empty it keeps the saved one (ADR-0006).
-export function ParametreField({
-  parametre: { name, label, placeholder, type, isRequired, isSecret },
+export function ParameterField({
+  parameter: { name, label, placeholder, type, isRequired, isSecret },
   savedValue,
   className,
   isConfigured = false,
   secretReference,
 }: Readonly<{
-  parametre: Parametre;
+  parameter: Parameter;
   savedValue: unknown;
   className: string;
   isConfigured?: boolean;
   secretReference?: (input: HTMLInputElement | null) => void;
 }>) {
-  const fieldName = `${PARAMETRE_FIELD_PREFIX}${name}`;
+  const fieldName = `${PARAMETER_FIELD_PREFIX}${name}`;
   if (isSecret) {
     return (
       <label className={className}>
         <span>
           {label}
-          {isConfigured && <span className="parametre-field__configured"> configuré ✓</span>}
+          {isConfigured && <span className="parameter-field__configured"> configuré ✓</span>}
         </span>
         <input
           ref={secretReference}

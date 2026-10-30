@@ -3,11 +3,11 @@ import type { ActionFunctionArgs } from 'react-router';
 import { messageOf, type Actions } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
-import { readParametres } from '#/web/parametres.server.ts';
+import { readParameters } from '#/web/parameters.server.ts';
 
-type ParametreChoice = Awaited<ReturnType<Actions['listParametreChoices']>>[number];
+type ParameterChoice = Awaited<ReturnType<Actions['listParameterChoices']>>[number];
 
-function answer(message: string, choiceList: ParametreChoice[] | null = null) {
+function answer(message: string, choiceList: ParameterChoice[] | null = null) {
   return { message, error: null, choiceList };
 }
 
@@ -16,30 +16,30 @@ function refuse(error: string) {
 }
 
 // The buttons of the Notifications section of the Profile, for the Candidate of the menu; each answers
-// its own fetcher, a refusal in the words of the action. No secret Paramètre comes back (ADR-0006).
+// its own fetcher, a refusal in the words of the action. No secret Parameter comes back (ADR-0006).
 export async function action({ request }: ActionFunctionArgs) {
   const { candidate } = await readCandidate(request);
   const formData = await request.formData();
-  const moduleId = formData.get('canal');
-  const moduleList = await ACTIONS.listCanauxNotification();
+  const moduleId = formData.get('channel');
+  const moduleList = await ACTIONS.listNotificationChannels();
   const input = {
     candidateId: candidate?.id,
-    canal: moduleId ?? undefined,
-    parametre: formData.get('parametre') ?? undefined,
-    parametres: readParametres(formData, moduleList.find(({ id }) => id === moduleId)?.parametreList),
+    channel: moduleId ?? undefined,
+    parameter: formData.get('parameter') ?? undefined,
+    parameters: readParameters(formData, moduleList.find(({ id }) => id === moduleId)?.parameterList),
   };
   try {
     switch (formData.get('intent')) {
       case 'save': {
-        await ACTIONS.saveCanalNotification(input);
+        await ACTIONS.saveNotificationChannel(input);
         return answer('Canal de notification enregistré.');
       }
       case 'test': {
-        await ACTIONS.testCanalNotification(input);
+        await ACTIONS.testNotificationChannel(input);
         return answer('Le Canal de notification répond.');
       }
       case 'choices': {
-        const choiceList = await ACTIONS.listParametreChoices(input);
+        const choiceList = await ACTIONS.listParameterChoices(input);
         return answer(`${String(choiceList.length)} choix trouvés.`, choiceList);
       }
       case 'notify': {

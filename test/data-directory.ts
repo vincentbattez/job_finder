@@ -7,7 +7,7 @@ import { inject } from 'vitest';
 import { createActions } from '#/actions/index.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeCanalNotification } from './fake-canal-notification.ts';
+import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 // Where the folder of each of Léa's Offres lives, in a data folder
@@ -25,22 +25,22 @@ export function createMigratedDataDirectory(): string {
   return copyDatabase(inject('migratedDatabasePath'));
 }
 
-// A temporary data folder, never data/, where Léa was created as from the front, with her Veille
-// (test/lea.ts). She has no Canal de notification yet.
+// A temporary data folder, never data/, where Léa was created as from the front, with her Watch
+// (test/lea.ts). She has no Notification Channel yet.
 export function createDataDirectory(): string {
   return copyDatabase(inject('leaDatabasePath'));
 }
 
-// The Offres already online, imported by a first Détection on the responses recorded on 2026-10-29,
-// with the fakes of every external boundary; Léa's Canal de notification is the fake one
+// The Offres already online, imported by a first Detection on the responses recorded on 2026-10-29,
+// with the fakes of every external boundary; Léa's Notification Channel is the fake one
 export async function detectOffres(aiSession = createFakeAiSession()) {
   const dataDirectory = createDataDirectory();
-  const notificationChannel = createFakeCanalNotification();
+  const notificationChannel = createFakeNotificationChannel();
   const actions = await createActions({
     dataDirectory,
     aiSession,
     fetch: createRecordedFetch().fetch,
-    canalNotificationList: notificationChannel.canalNotificationList,
+    notificationChannelList: notificationChannel.notificationChannelList,
   });
   await notificationChannel.saveFor(actions);
   await actions.detect();

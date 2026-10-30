@@ -11,9 +11,9 @@ async function chooseLea(page: Page) {
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Léa');
 }
 
-async function filter(page: Page, { ville = '', region = '' }: { ville?: string; region?: string }) {
+async function filter(page: Page, { city = '', region = '' }: { city?: string; region?: string }) {
   const filters = page.getByRole('search', { name: 'Filtres' });
-  await filters.getByRole('combobox', { name: 'Ville' }).selectOption(ville);
+  await filters.getByRole('combobox', { name: 'Ville' }).selectOption(city);
   await filters.getByRole('combobox', { name: 'Région' }).selectOption(region);
   await filters.getByRole('button', { name: 'Filtrer' }).click();
 }
@@ -39,7 +39,7 @@ test.describe('map of the Offres', () => {
 
   test('opens the fiche of an Offre on a click on its point', async ({ page }) => {
     await chooseLea(page);
-    await filter(page, { ville: 'Béthune' });
+    await filter(page, { city: 'Béthune' });
     const point = findPoints(page).and(page.getByRole('button', { name: /2026-2445600/ }));
     await expect(point).toHaveAttribute('data-statut', /^(a_traiter|expiree)$/);
 
@@ -56,7 +56,7 @@ test.describe('map of the Offres', () => {
   }) => {
     await chooseLea(page);
 
-    await filter(page, { ville: 'Melun' });
+    await filter(page, { city: 'Melun' });
 
     await expect(findPoints(page).and(page.getByRole('button', { name: /2026-2285305/ }))).toHaveAttribute(
       'data-statut',
@@ -70,7 +70,7 @@ test.describe('map of the Offres', () => {
 
   test('hides the Archivées, from the list as from the map, until asked', async ({ page }) => {
     await chooseLea(page);
-    await filter(page, { ville: 'Melun' });
+    await filter(page, { city: 'Melun' });
     await expect(findPoints(page)).toHaveCount(2);
     await expect(page.getByRole('row', { name: /2026-2290529/ })).toHaveCount(0);
 
@@ -85,7 +85,7 @@ test.describe('map of the Offres', () => {
     await expect(page.getByRole('row', { name: /2026-2290529/ })).toHaveCount(1);
   });
 
-  test('filters the list and the map by région, then by ville', async ({ page }) => {
+  test('filters the list and the map by region, then by city', async ({ page }) => {
     await chooseLea(page);
 
     await filter(page, { region: 'Hauts-de-France' });
@@ -94,7 +94,7 @@ test.describe('map of the Offres', () => {
     await expect(findPoints(page)).toHaveCount(9);
     await expect(page.getByRole('row')).toHaveCount(1 + 9);
 
-    await filter(page, { ville: 'Béthune', region: 'Hauts-de-France' });
+    await filter(page, { city: 'Béthune', region: 'Hauts-de-France' });
 
     await expect(findPoints(page)).toHaveCount(3);
     await expect(page.getByRole('row')).toHaveCount(1 + 3);

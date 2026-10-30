@@ -3,8 +3,8 @@ import path from 'node:path';
 
 import { expect, test } from '@playwright/test';
 
-// The fake Claude of test/e2e-actions.server.ts extracts this Fiche de poste: a ville outside
-// Hauts-de-France, whose Offres the région filter of the map counts
+// The fake Claude of test/e2e-actions.server.ts extracts this Fiche de poste: a city outside
+// Hauts-de-France, whose Offres the region filter of the map counts
 const FICHE_DE_POSTE = readFileSync(
   path.join(import.meta.dirname, '..', 'test', 'fixtures', 'import', 'greffier-grenoble.md'),
   'utf8',
