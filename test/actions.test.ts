@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { createActions } from '#/actions/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
+import { migrateDeploy } from './prisma-cli.ts';
 
 function createEmptyDataDirectory(): string {
   return mkdtempSync(path.join(tmpdir(), 'job-finder-'));
@@ -18,6 +19,28 @@ function writeConfig(dataDirectory: string, config: object): void {
 
 function candidatConfig(id: string, name: string): object {
   return { id, name, notification: { channel: 'home-assistant', service: `notify.mobile_app_${id}` }, veilleList: [] };
+}
+
+const PRISMA_DIRECTORY = path.join(import.meta.dirname, '..', 'prisma');
+const FIRST_MIGRATION = '20261029133617_init';
+
+// The database the first jf left, migrated through a config that only knows the first migration
+function writeFirstMigrationDatabase(dataDirectory: string): void {
+  const prismaDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-prisma-'));
+  for (const fileName of [FIRST_MIGRATION, 'migration_lock.toml']) {
+    cpSync(path.join(PRISMA_DIRECTORY, 'migrations', fileName), path.join(prismaDirectory, 'migrations', fileName), {
+      recursive: true,
+    });
+  }
+  const databasePath = path.join(dataDirectory, 'job_finder.sqlite');
+  const config = {
+    schema: path.join(PRISMA_DIRECTORY, 'schema.prisma'),
+    migrations: { path: path.join(prismaDirectory, 'migrations') },
+    datasource: { url: `file:${databasePath}` },
+  };
+  const configPath = path.join(prismaDirectory, 'prisma.config.ts');
+  writeFileSync(configPath, `export default ${JSON.stringify(config)};`);
+  migrateDeploy(databasePath, configPath);
 }
 
 function listLeaProfilFiles(dataDirectory: string): string[] {
@@ -62,6 +85,19 @@ describe('actions', () => {
     const actions = await createActions({ dataDirectory });
 
     expect(await actions.listCandidats()).toEqual([{ id: 'lea', name: 'Léa' }]);
+  });
+
+  it('brings the database an older jf left up to date', async () => {
+    const dataDirectory = createEmptyDataDirectory();
+    writeConfig(dataDirectory, { defaultDelayMonths: 6, candidatList: [candidatConfig('lea', 'Léa')] });
+    writeFirstMigrationDatabase(dataDirectory);
+
+    const actions = await createActions({ dataDirectory });
+
+    // The Connexion Home Assistant came with a later migration
+    expect(await actions.readConnexionHomeAssistant({ candidatId: 'lea' })).toMatchObject({
+      service: 'notify.mobile_app_lea',
+    });
   });
 
   it('refuses to list the Offres of an unknown Candidat', async () => {

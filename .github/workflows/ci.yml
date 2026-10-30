@@ -1,27 +1,52 @@
 name: CI
 
+# A push to a PR branch runs once, as the pull_request: running it as a push too doubled every run
 on:
   push:
+    branches: [main]
   pull_request:
 
+# A new push to a PR cancels the run it makes obsolete; main runs to the end
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  MISE_ENABLE_TOOLS: node
+
+# Three jobs side by side: the run lasts as long as the slowest, the end-to-end tests
 jobs:
-  ci:
+  checks:
     runs-on: ubuntu-latest
-    env:
-      MISE_ENABLE_TOOLS: node
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v5
-      - run: npm ci
+      - uses: ./.github/actions/setup
       - name: Lint
         run: mise run lint
       - name: Typecheck
         run: mise run typecheck
-      - name: Vitest
-        run: mise run test:unit
       - name: Seed
         run: mise run db:seed
+
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Vitest
+        run: mise run test:unit
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      # Headless, the tests only need Chromium's headless shell, not the full browser
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps --only-shell chromium
       - name: Playwright
         run: mise run test:e2e

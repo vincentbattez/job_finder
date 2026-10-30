@@ -1,5 +1,7 @@
 import { execFileSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
@@ -40,6 +42,8 @@ import type { Config } from './config.ts';
 
 const ROOT_DIRECTORY = path.join(import.meta.dirname, '..', '..', '..');
 const PRISMA_CLI_PATH = fileURLToPath(import.meta.resolve('prisma/build/index.js'));
+const MIGRATIONS_DIRECTORY = path.join(ROOT_DIRECTORY, 'prisma', 'migrations');
+const APPLIED_MIGRATION_LIST_SCHEMA = z.array(z.object({ migration_name: z.string() }));
 
 const VERSION_INCLUDE = {
   inputList: { select: { artefact: true, number: true, offre: { select: { reference: true } } } },
@@ -61,15 +65,41 @@ export interface INewOffre {
   lieu: Lieu;
 }
 
-// Migrates first, so the schema exists from the first launch and follows every upgrade (ADR-0004);
-// Prisma never leaves this file (ADR-0005)
+// Read where Prisma records the migrations it applied (ADR-0004): a database it has not created
+// yet, or one it cannot read, has them all pending
+function hasPendingMigration(databasePath: string): boolean {
+  const migrationList = readdirSync(MIGRATIONS_DIRECTORY, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map(({ name }) => name);
+  try {
+    const database = new DatabaseSync(databasePath, { readOnly: true });
+    try {
+      const rowList = database
+        .prepare(
+          'SELECT "migration_name" FROM "_prisma_migrations" WHERE "finished_at" IS NOT NULL AND "rolled_back_at" IS NULL',
+        )
+        .all();
+      const appliedSet = new Set(APPLIED_MIGRATION_LIST_SCHEMA.parse(rowList).map(({ migration_name: name }) => name));
+      return migrationList.some((name) => !appliedSet.has(name));
+    } finally {
+      database.close();
+    }
+  } catch {
+    return true;
+  }
+}
+
+// Migrates first, but only when a migration is pending: the Prisma CLI takes 0.3 s to start
+// (ADR-0004). Prisma never leaves this file (ADR-0005).
 export function openDatabase(databasePath: string, defaultDelayMonths: number) {
   const url = `file:${databasePath}`;
-  execFileSync(process.execPath, [PRISMA_CLI_PATH, 'migrate', 'deploy'], {
-    cwd: ROOT_DIRECTORY,
-    env: { ...process.env, DATABASE_URL: url, CHECKPOINT_DISABLE: '1' },
-    stdio: 'pipe',
-  });
+  if (hasPendingMigration(databasePath)) {
+    execFileSync(process.execPath, [PRISMA_CLI_PATH, 'migrate', 'deploy'], {
+      cwd: ROOT_DIRECTORY,
+      env: { ...process.env, DATABASE_URL: url, CHECKPOINT_DISABLE: '1' },
+      stdio: 'pipe',
+    });
+  }
   // Expirée depends on the day, so every Offre read computes it rather than storing it
   const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url }) }).$extends({
     result: {

@@ -16,6 +16,7 @@ const RAW_DATA_ACCESS_LIST = [
     pattern: /['"](?:@prisma\/|[^'"]*\/generated\/)/,
     exampleList: ["import { PrismaClient } from '#/workspace/generated/client.ts';"],
   },
+  { name: 'SQLite', pattern: /['"]node:sqlite['"]/, exampleList: ["import { DatabaseSync } from 'node:sqlite';"] },
   { name: 'HTTP', pattern: /\bfetch\(/, exampleList: ["await fetch('https://example.org');"] },
   // Any use of the file system, read or write, goes through its module: matching the module rather
   // than each function also catches the one nobody listed
