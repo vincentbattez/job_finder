@@ -20,9 +20,13 @@ _Avoid_: renseignements, informations, fiche
 Document d'origine, comme un CV ou une lettre passée en PDF, que le Candidat dépose dans son Profil ; il est gardé tel quel, et le Profil en contient la conversion en Markdown.
 _Avoid_: upload, pièce jointe, fichier source
 
-**Connexion Home Assistant**:
-Accès d'un Candidat à son Home Assistant (adresse, jeton et service de notification) par lequel l'outil le prévient sur son téléphone.
-_Avoid_: intégration, compte Home Assistant, canal
+**Canal de notification**:
+Moyen par lequel l'outil prévient un Candidat, comme son Home Assistant qui envoie la notification sur son téléphone ; chaque Candidat choisit le sien et en règle les Paramètres.
+_Avoid_: Connexion Home Assistant, intégration, provider
+
+**Paramètre**:
+Valeur que demande un Canal de notification ou une Source pour fonctionner, comme l'adresse et le jeton d'un Home Assistant ; chacun déclare les siens, obligatoires ou optionnels, et un Paramètre secret ne se relit jamais.
+_Avoid_: réglage, option, config
 
 **Veille**:
 Recherche permanente d'un Candidat sur une Source, définie par ses critères et sa Zone.
