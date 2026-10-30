@@ -2,12 +2,17 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it, onTestFinished } from 'vitest';
+import { z } from 'zod/v4';
 
 import { createActions, messageOf } from '#/actions/index.ts';
+import { CANAL_NOTIFICATION_LIST } from '#/actions/modules.ts';
+import { defineCanalNotification, type ICanalNotification } from '#/notification/index.ts';
+import { parametre } from '#/parametre/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { startFakeHomeAssistant } from './fake-home-assistant.ts';
+import { LEA_VEILLE, LEA_VEILLE_ID } from './lea.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 // A Béthune Offre in Léa's Zone, from the responses recorded on 2026-10-29
@@ -40,15 +45,21 @@ const INPUT_BY_ACTION: Record<string, object> = {
   },
   convertPiece: PIECE,
   deletePiece: PIECE,
+  createCandidat: { id: 'camille', name: 'Camille' },
+  renameCandidat: { name: 'Léa' },
+  saveDelaiParDefaut: { months: 6 },
+  saveVeille: LEA_VEILLE,
+  deleteVeille: { veilleId: LEA_VEILLE_ID },
 };
 
 type ActionMap = Record<string, (rawInput: unknown) => Promise<unknown>>;
 
-// The token is write-only (ADR-0006): every action, called with the fields every input takes, once a
-// token is saved, must neither return it nor throw it. Any action counts, those to come included: one
-// whose input this one does not fit is reported, until INPUT_BY_ACTION gives it what it needs. Each action runs
-// once, on that input: a leak on another branch of it would pass.
-async function findTokenLeaks(actionMap: ActionMap, input: object, token: string): Promise<string[]> {
+// Secret Paramètres are write-only (ADR-0006, ADR-0010): every action, called with the fields every
+// input takes, once the Canal is saved, must neither return nor throw any of them. Any action counts,
+// those to come included: one whose input this one does not fit is reported, until INPUT_BY_ACTION
+// gives it what it needs. Each action runs once, on that input: a leak on another branch of it would
+// pass.
+async function findSecretLeaks(actionMap: ActionMap, input: object, secretByName: Record<string, string>) {
   const leakList: string[] = [];
   for (const [name, action] of Object.entries(actionMap)) {
     let output: string;
@@ -59,31 +70,64 @@ async function findTokenLeaks(actionMap: ActionMap, input: object, token: string
       leakList.push(`${name} fails on the input of the check (${messageOf(error)}): give it what it needs`);
       output = error instanceof Error ? `${error.message} ${String(error.cause)}` : String(error);
     }
-    if (output.includes(token)) {
-      leakList.push(`${name} returns the token`);
+    for (const [secretName, secret] of Object.entries(secretByName)) {
+      if (output.includes(secret)) {
+        leakList.push(`${name} returns the secret Paramètre ${secretName}`);
+      }
     }
   }
   return leakList;
 }
 
-// Léa's Offres detected, a Version of each Artefact ready, and her Connexion Home Assistant saved with the token of
-// the fake, which accepts it: the actions that reach Home Assistant then succeed too
-async function saveToken() {
-  const homeAssistant = await startFakeHomeAssistant();
-  onTestFinished(() => homeAssistant.close());
-  const { url, token } = homeAssistant;
+// For each module of the registry, Paramètres its fake accepts, so that the actions that reach the
+// Canal succeed too. A module missing here fails the check: its secrets would go unchecked.
+const PARAMETRES_BY_MODULE = new Map<string, () => Promise<Record<string, string>>>([
+  [
+    'home-assistant',
+    async () => {
+      const homeAssistant = await startFakeHomeAssistant();
+      onTestFinished(() => homeAssistant.close());
+      return { url: homeAssistant.url, token: homeAssistant.token, service: 'notify.mobile_app_iphone_de_lea' };
+    },
+  ],
+]);
+
+// A module of two secret Paramètres, beside a plain one: the check covers each secret, not one token
+const ADDRESS_PARAMETRE = parametre(z.string(), { label: 'Adresse' });
+const LOGIN_PARAMETRE = parametre(z.string(), { label: 'Identifiant', isSecret: true });
+const PASSWORD_PARAMETRE = parametre(z.string(), { label: 'Mot de passe', isSecret: true });
+const FAKE_VAULT = defineCanalNotification({
+  id: 'coffre',
+  name: 'Coffre',
+  parametreSchema: z.object({ address: ADDRESS_PARAMETRE, login: LOGIN_PARAMETRE, password: PASSWORD_PARAMETRE }),
+  send: () => Promise.resolve(),
+  check: () => Promise.resolve(),
+  listChoicesByParametre: { address: () => Promise.resolve([]) },
+});
+const FAKE_VAULT_PARAMETRES = {
+  address: 'coffre-de-lea',
+  login: 'identifiant-secret',
+  password: 'mot-de-passe-secret',
+};
+
+// Léa's Offres detected, a Version of each Artefact ready, and her Canal de notification saved with
+// the given Paramètres. The input of the check gives back its non-secret Paramètres only: a save
+// without the secrets keeps them.
+async function saveCanal(module: ICanalNotification, parametres: Record<string, string>) {
   const actions = await createActions({
     dataDirectory: createDataDirectory(),
     aiSession: createFakeAiSession(...Object.values(RUN_BY_MODULE)),
     fetch: createRecordedFetch().fetch,
+    canalNotificationList: [module],
   });
-  await actions.saveConnexionHomeAssistant({ candidatId: 'lea', url, token });
+  const { id, parametreList } = module.description;
+  await actions.saveCanalNotification({ candidatId: 'lea', canal: id, parametres });
   await actions.detect();
-  for (const module of Object.keys(RUN_BY_MODULE)) {
-    await actions.runModule({ module, reference: REFERENCE });
+  for (const artefactModule of Object.keys(RUN_BY_MODULE)) {
+    await actions.runModule({ module: artefactModule, reference: REFERENCE });
     await actions.runQueuedJobs();
   }
-  // The fields of every action's input, the token left out: a save without it keeps it
+  const secretSet = new Set(parametreList.filter(({ isSecret }) => isSecret).map(({ name }) => name));
   const input = {
     candidatId: 'lea',
     reference: REFERENCE,
@@ -96,32 +140,54 @@ async function saveToken() {
     markdown: '# Recherche\n',
     consignes: 'Citer chaque source.',
     entryListByTitle: {},
-    url,
-    service: 'notify.mobile_app_iphone_de_lea',
+    canal: id,
+    parametre: parametreList.find(({ hasChoices }) => hasChoices)?.name,
+    parametres: Object.fromEntries(Object.entries(parametres).filter(([name]) => !secretSet.has(name))),
   };
-  return { actions, input, token };
+  const secretByName = Object.fromEntries(Object.entries(parametres).filter(([name]) => secretSet.has(name)));
+  return { actions, input, secretByName };
 }
 
-describe('the write-only token of the Connexion Home Assistant', () => {
-  it('catches an action that returns the token', async () => {
-    const { actions, input, token } = await saveToken();
-    const leakyActionMap = { ...actions, readFullConnexion: () => Promise.resolve({ url: input.url, token }) };
+describe('the write-only secret Paramètres of a Canal de notification', () => {
+  it('catches an action that returns any secret Paramètre', async () => {
+    const { actions, input, secretByName } = await saveCanal(FAKE_VAULT, FAKE_VAULT_PARAMETRES);
+    const leakyActionMap = {
+      ...actions,
+      readFullCanal: () => Promise.resolve({ password: FAKE_VAULT_PARAMETRES.password }),
+    };
 
-    expect(await findTokenLeaks(leakyActionMap, input, token)).toEqual(['readFullConnexion returns the token']);
-  });
-
-  it('catches an action the check cannot call', async () => {
-    const { actions, input, token } = await saveToken();
-    const uncalledActionMap = { ...actions, renameConnexion: () => Promise.reject(new Error('Nom manquant.')) };
-
-    expect(await findTokenLeaks(uncalledActionMap, input, token)).toEqual([
-      'renameConnexion fails on the input of the check (Nom manquant.): give it what it needs',
+    expect(await findSecretLeaks(leakyActionMap, input, secretByName)).toEqual([
+      'readFullCanal returns the secret Paramètre password',
     ]);
   });
 
-  it('is returned by no action', async () => {
-    const { actions, input, token } = await saveToken();
+  it('catches an action the check cannot call', async () => {
+    const { actions, input, secretByName } = await saveCanal(FAKE_VAULT, FAKE_VAULT_PARAMETRES);
+    const uncalledActionMap = { ...actions, renameCanal: () => Promise.reject(new Error('Nom manquant.')) };
 
-    expect(await findTokenLeaks(actions, input, token)).toEqual([]);
+    expect(await findSecretLeaks(uncalledActionMap, input, secretByName)).toEqual([
+      'renameCanal fails on the input of the check (Nom manquant.): give it what it needs',
+    ]);
   });
+
+  it('are returned by no action, whichever secret', async () => {
+    const { actions, input, secretByName } = await saveCanal(FAKE_VAULT, FAKE_VAULT_PARAMETRES);
+
+    expect(Object.keys(secretByName)).toEqual(['login', 'password']);
+    expect(await findSecretLeaks(actions, input, secretByName)).toEqual([]);
+  });
+
+  it.each(CANAL_NOTIFICATION_LIST.map((module) => ({ module, id: module.description.id })))(
+    'are returned by no action for the module $id',
+    async ({ module, id }) => {
+      const parametresOf = PARAMETRES_BY_MODULE.get(id);
+      if (parametresOf === undefined) {
+        throw new Error(`Give PARAMETRES_BY_MODULE the Paramètres its fake accepts for the module ${id}.`);
+      }
+      const { actions, input, secretByName } = await saveCanal(module, await parametresOf());
+
+      expect(Object.keys(secretByName)).not.toEqual([]);
+      expect(await findSecretLeaks(actions, input, secretByName)).toEqual([]);
+    },
+  );
 });

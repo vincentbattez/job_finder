@@ -25,11 +25,11 @@ Moyen par lequel l'outil prévient un Candidat, comme son Home Assistant qui env
 _Avoid_: Connexion Home Assistant, intégration, provider
 
 **Paramètre**:
-Valeur que demande un Canal de notification ou une Source pour fonctionner, comme l'adresse et le jeton d'un Home Assistant ; chacun déclare les siens, obligatoires ou optionnels, et un Paramètre secret ne se relit jamais.
+Valeur que demande un Canal de notification ou une Source pour fonctionner, comme l'adresse et le jeton d'un Home Assistant, ou le titre recherché et la Zone d'une Veille ; chacun déclare les siens, obligatoires ou optionnels, et un Paramètre secret ne se relit jamais.
 _Avoid_: réglage, option, config
 
 **Veille**:
-Recherche permanente d'un Candidat sur une Source, définie par ses critères et sa Zone.
+Recherche permanente d'un Candidat sur une Source, définie par les Paramètres que demande cette Source, sa Zone comprise.
 _Avoid_: alerte, abonnement, recherche sauvegardée
 
 ## Offres
@@ -59,7 +59,7 @@ Passage qui interroge la Source de chaque Veille et enregistre les Offres qu'on 
 _Avoid_: scan, crawl, alerte
 
 **Zone**:
-Territoire d'une Veille où une Offre détectée lance automatiquement sa Recherche ; une Offre hors Zone est conservée mais pas traitée.
+Territoire d'une Veille où une Offre détectée lance automatiquement sa Recherche ; chaque Source l'exprime à sa façon, et une Offre hors Zone est conservée mais pas traitée.
 _Avoid_: périmètre, secteur
 
 **Ville**:
@@ -71,8 +71,12 @@ Région administrative de la Ville d'une Offre, par laquelle le Candidat filtre 
 _Avoid_: zone, territoire
 
 **Date limite**:
-Dernier jour pour postuler à une Offre ; quand l'Offre n'en donne pas, sa date de publication plus un délai par défaut, une Fiche de poste importée étant publiée le jour de son import.
+Dernier jour pour postuler à une Offre ; quand l'Offre n'en donne pas, sa date de publication plus le Délai par défaut, une Fiche de poste importée étant publiée le jour de son import.
 _Avoid_: date de fin, échéance
+
+**Délai par défaut**:
+Nombre de mois, commun à tous les Candidats, qui donne sa Date limite à une Offre publiée sans.
+_Avoid_: durée de validité, réglage
 
 ## Statut d'une Offre
 

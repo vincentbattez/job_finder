@@ -4,12 +4,13 @@ import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
 import { LIEU_SCHEMA, type Candidat, type Lieu, type Offre } from '#/domain/index.ts';
 import { createApiGeo } from '#/geo/acl/api-geo.ts';
 import { createPieceConversion } from '#/modules/conversion/index.ts';
-import { HOME_ASSISTANT, type INotification, type INotificationChannel } from '#/modules/notification/index.ts';
 import { createImportSource } from '#/modules/source-import/index.ts';
-import { createPepSource } from '#/modules/source-pep/index.ts';
+import type { ICanalNotification, INotification } from '#/notification/index.ts';
+import type { ISource, SourceFactory } from '#/source/index.ts';
 import { messageOf } from '#/text/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
+import { CANAL_NOTIFICATION_LIST, SOURCE_LIST } from './modules.ts';
 import { createJobRunner } from './run-job.ts';
 
 const CANDIDAT_INPUT_SCHEMA = z.object({ candidatId: z.string() });
@@ -18,11 +19,17 @@ export const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
 
 export const ARTEFACT_INPUT_SCHEMA = z.object({ reference: z.string(), artefact: z.string() });
 
+// The Paramètres the Candidat typed in the form of a module, before the module parses them (ADR-0010)
+export const PARAMETRES_INPUT_SCHEMA = z.record(z.string(), z.json());
+
 export interface IActionsOption {
   dataDirectory: string;
   aiSession?: IAiSession;
   fetch?: typeof globalThis.fetch;
-  notificationChannel?: INotificationChannel;
+  // The modules a Candidat chooses their Canal de notification from: the registry, or a fake one
+  canalNotificationList?: readonly ICanalNotification[];
+  // The Sources a Veille follows, created with fetch: the registry, or a fake one
+  sourceFactoryList?: readonly SourceFactory[];
 }
 
 // What the actions of every feature share: the data folder, the external boundaries, which the
@@ -31,10 +38,12 @@ export async function openContext({
   dataDirectory,
   aiSession = CLAUDE_CODE,
   fetch,
-  notificationChannel = HOME_ASSISTANT,
+  canalNotificationList = CANAL_NOTIFICATION_LIST,
+  sourceFactoryList = SOURCE_LIST,
 }: IActionsOption) {
   const workspace = await openWorkspace(dataDirectory);
   const apiGeo = createApiGeo(fetch);
+  const sourceList = sourceFactoryList.map((createSource) => createSource(fetch));
 
   async function findCandidat(rawInput: unknown): Promise<Candidat> {
     const { candidatId } = CANDIDAT_INPUT_SCHEMA.parse(rawInput);
@@ -66,10 +75,50 @@ export async function openContext({
     return lieu ?? LIEU_SCHEMA.parse({ city, region: null, latitude: null, longitude: null });
   }
 
+  // A module of the family by its identifier, undefined when the registry does not have it (ADR-0010)
+  function canalNotificationModuleOf(moduleId: string | null): ICanalNotification | undefined {
+    return canalNotificationList.find(({ description: { id } }) => id === moduleId);
+  }
+
+  // The module of the Candidat's Canal de notification, as saved or as they picked it, null until chosen
+  function findCanalNotificationModule(moduleId: string | null, candidatName: string): ICanalNotification {
+    if (moduleId === null) {
+      throw new Error(
+        `Aucun Canal de notification pour ${candidatName} : en choisir un dans la section Notifications de son Profil.`,
+      );
+    }
+    const module = canalNotificationModuleOf(moduleId);
+    if (module === undefined) {
+      throw new Error(
+        `Canal de notification inconnu : ${moduleId}. En choisir un autre dans la section Notifications du Profil.`,
+      );
+    }
+    return module;
+  }
+
+  // A Source by its identifier, as the Candidat picked it, or as the Veille named saved it (ADR-0010)
+  function findSource(sourceId: string, veilleId?: string): ISource {
+    const source = sourceList.find(({ description: { id } }) => id === sourceId);
+    if (source === undefined) {
+      const knownList = sourceList.map(({ description: { id } }) => id).join(', ');
+      const ofVeille = veilleId === undefined ? '' : ` pour la Veille ${veilleId}`;
+      throw new Error(
+        `Source inconnue${ofVeille} : ${sourceId}. En choisir une parmi ${knownList} dans les Veilles du Profil.`,
+      );
+    }
+    return source;
+  }
+
+  // Through the Canal the Candidat saved, with its saved Paramètres
+  async function sendNotification(candidatId: string, notification: INotification): Promise<void> {
+    const { candidatName, module, parametres } = await workspace.findCanalNotification(candidatId);
+    await findCanalNotificationModule(module, candidatName).send(parametres, notification);
+  }
+
   // A notification not sent undoes and skips nothing: it comes back as the failure to report
   async function notify(offre: Offre, notification: INotification): Promise<string | undefined> {
     try {
-      await notificationChannel.send(await workspace.findHomeAssistantAccess(offre.candidatId), notification);
+      await sendNotification(offre.candidatId, notification);
       return undefined;
     } catch (error) {
       const reason = messageOf(error);
@@ -80,11 +129,15 @@ export async function openContext({
   return {
     workspace,
     aiSession,
-    pepSource: createPepSource(fetch),
+    sourceList,
+    findSource,
     importSource: createImportSource(aiSession),
     pieceConversion: createPieceConversion(aiSession),
     runJob: createJobRunner(workspace, aiSession),
-    notificationChannel,
+    canalNotificationList,
+    canalNotificationModuleOf,
+    findCanalNotificationModule,
+    sendNotification,
     findCandidat,
     findOffre,
     locate,

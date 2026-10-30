@@ -17,7 +17,7 @@ function readLast(pattern: RegExp, text: string): string | undefined {
   return Array.from(text.matchAll(pattern), ([, name]) => name).at(-1);
 }
 
-// The ville of a lieu d'affectation written as free text, as the PEP Offres publish it: the
+// The ville of a lieu d'affectation written as free text, as the Sources publish it: the
 // address's ville, else the court's, else the text itself, which is often the ville alone
 export function readCity(workplace: string | null): string | null {
   if (workplace === null) {

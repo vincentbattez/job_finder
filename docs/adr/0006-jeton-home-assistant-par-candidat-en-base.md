@@ -1,6 +1,6 @@
 # Le jeton Home Assistant de chaque Candidat est stocké en base, et ne repart jamais vers le front
 
-> Remplacée en partie par ADR-0010 : la table propre à Home Assistant laisse sa place à celle de la famille des Canaux de notification. L'écriture seule tient toujours, et s'étend à tout Paramètre secret.
+> Remplacée en partie par ADR-0010 : la table propre à Home Assistant laisse sa place à celle de la famille des Canaux de notification (`CanalNotification`), et la migration y a recopié chaque Connexion Home Assistant. L'écriture seule tient toujours, et s'étend à tout Paramètre secret. Le repli sur `.env` et `data/config.json` a disparu. Depuis ADR-0011, les lignes `Candidat` ne sont plus recopiées depuis la config : le front les écrit.
 
 Chaque Candidat règle sa Connexion Home Assistant depuis sa page Profil : l'adresse de son Home Assistant, un jeton d'accès longue durée et le service de notification qui atteint son téléphone. Elles sont enregistrées dans la base SQLite de `data/`, dans une table à part, et plus dans `.env` ni dans `data/config.json`. C'est le premier secret que `data/` contient. Le front n'a aucune authentification (ADR-0002) : tout ce qu'une action lui renvoie, n'importe qui sur le LAN ou le VPN peut le lire. Le jeton est donc en écriture seule. Le front peut l'enregistrer ou le remplacer, mais aucune action ne le renvoie : la page affiche seulement « configuré ✓ ». Un test d'architecture le vérifie, une simple convention finirait contournée par oubli.
 
@@ -16,5 +16,6 @@ Chaque Candidat règle sa Connexion Home Assistant depuis sa page Profil : l'adr
 
 - Une sauvegarde ou une copie de `data/` contient désormais un secret : elle se traite comme `.env`.
 - Le test, le bouton « envoyer une notification de test » et la liste des services de notification passent par des actions côté serveur, qui lisent le jeton en base sans le renvoyer.
-- Pendant la migration, un Candidat sans Connexion Home Assistant en base retombe sur `HOME_ASSISTANT_URL` et `HOME_ASSISTANT_TOKEN` de `.env`, et le service de `data/config.json` est recopié en base. Ce repli disparaît une fois la connexion de chaque Candidat enregistrée.
+- Un secret enregistré ne part qu'avec les Paramètres saisis avec lui, comme l'adresse. Si le Candidat, ou n'importe qui sur le LAN, change l'un d'eux sans ressaisir le secret, le test et la liste des choix partent sans le secret enregistré, et l'enregistrement le laisse derrière. Un Paramètre choisi dans une liste du module, comme le service de notification, ne compte pas : changer de service garde le jeton. Ce qui vaut pour le jeton vaut pour tout Paramètre secret (ADR-0010).
+- Pendant la migration, un Candidat sans Connexion Home Assistant en base retombait sur `HOME_ASSISTANT_URL` et `HOME_ASSISTANT_TOKEN` de `.env`, et le service de `data/config.json` était recopié en base. Ce repli a disparu avec ADR-0010, une fois la Connexion de chaque Candidat enregistrée : sans Canal de notification en base, aucune notification ne part, et l'échec le dit.
 - Le jeton se lit en clair dans la base SQLite : quiconque a un accès shell au Mac mini le lit, comme il lisait `.env`.

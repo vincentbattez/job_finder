@@ -6,9 +6,6 @@ export default defineConfig({
     globals: true,
     globalSetup: ['test/global-setup.ts'],
     include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
-    // Even when the shell exports them: no test may send a real notification
-    // (test/home-assistant.test.ts)
-    env: { HOME_ASSISTANT_URL: '', HOME_ASSISTANT_TOKEN: '' },
     // A first launch still waits for the Prisma CLI (ADR-0004), twice in the test of an older
     // database: up to seconds on the GitHub runner or beside the linters and Playwright
     testTimeout: 15_000,

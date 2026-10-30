@@ -67,9 +67,8 @@ export function readExtraction(directory: string, markdown: string): Extraction 
     city,
     ficheDePoste: FICHE_DE_POSTE_SCHEMA.parse({
       ...ficheField,
-      // The day, at midnight UTC, as the Source PEP gives it
+      // The day, at midnight UTC, as the Sources give it
       dateLimite: dateLimite === null ? null : new Date(dateLimite),
-      courtOfAppeal: null,
       markdown,
     }),
   });

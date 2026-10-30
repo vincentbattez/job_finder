@@ -3,7 +3,7 @@ import { setTimeout } from 'node:timers/promises';
 import { z } from 'zod/v4';
 
 import type { Job, QueuedJob } from '#/domain/index.ts';
-import { composeRecherchePreteNotification } from '#/modules/notification/index.ts';
+import { composeRecherchePreteNotification } from '#/notification/index.ts';
 import { messageOf } from '#/text/index.ts';
 
 import type { ActionContext } from './context.ts';

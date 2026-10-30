@@ -97,9 +97,9 @@ export default defineConfig(
     rules: { 'sonarjs/deprecation': 'off', '@typescript-eslint/no-deprecated': 'off' },
   },
   {
-    // The example address of the Connexion Home Assistant is a Home Assistant on the LAN, which
-    // serves plain http by default (ADR-0002); no request goes to it
-    files: ['src/web/components/connexion-home-assistant.tsx'],
+    // The example address of a Home Assistant is one on the LAN, which serves plain http by default
+    // (ADR-0002); no request goes to it
+    files: ['src/modules/notification-home-assistant/index.ts'],
     rules: { 'sonarjs/no-clear-text-protocols': 'off' },
   },
   {

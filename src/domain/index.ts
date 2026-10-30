@@ -6,17 +6,31 @@ export const CANDIDAT_SCHEMA = z.object({ id: z.string(), name: z.string() }).br
 
 export type Candidat = z.infer<typeof CANDIDAT_SCHEMA>;
 
-const ZONE_SCHEMA = z.object({ courtOfAppealList: z.array(z.string()) });
+// The Délai par défaut every Candidat shares, in months
+export const DELAI_PAR_DEFAUT_SCHEMA = z.object({ months: z.int().positive() }).brand<'Domain'>();
 
-// Criteria and Zone are shaped by the Source; PEP is the only one so far. detectedAt stays null
-// until a Détection of the Veille went through: until then, it is the first launch.
+export type DelaiParDefaut = z.infer<typeof DELAI_PAR_DEFAUT_SCHEMA>;
+
+// The config an older jf left, imported once and no longer read (ADR-0011): its path, null once
+// deleted
+export const OBSOLETE_CONFIG_SCHEMA = z.object({ path: z.string().nullable() }).brand<'Domain'>();
+
+export type ObsoleteConfig = z.infer<typeof OBSOLETE_CONFIG_SCHEMA>;
+
+// The Paramètres of a module of a family, as JSON: only the module's schema knows their shape (ADR-0010)
+export const PARAMETRES_SCHEMA = z.record(z.string(), z.json()).brand<'Domain'>();
+
+export type Parametres = z.infer<typeof PARAMETRES_SCHEMA>;
+
+// A Veille follows one of the Sources, which alone knows its Paramètres, its Zone among them
+// (ADR-0010). detectedAt stays null until a Détection of the Veille went through: until then, it is
+// the first launch.
 export const VEILLE_SCHEMA = z
   .object({
     id: z.string(),
     candidatId: z.string(),
-    source: z.literal('pep'),
-    criteria: z.object({ title: z.string() }),
-    zone: ZONE_SCHEMA,
+    source: z.string(),
+    parametres: PARAMETRES_SCHEMA,
     detectedAt: z.date().nullable(),
   })
   .brand<'Domain'>();
@@ -40,7 +54,6 @@ export const FICHE_DE_POSTE_SCHEMA = z
     applicationEmail: z.string().nullable(),
     contact1: z.string().nullable(),
     contact2: z.string().nullable(),
-    courtOfAppeal: z.string().nullable(),
     markdown: z.string(),
   })
   .brand<'Domain'>();
@@ -63,11 +76,6 @@ export const LIEU_SCHEMA = z.object(LIEU_SHAPE).brand<'Domain'>();
 
 export type Lieu = z.infer<typeof LIEU_SCHEMA>;
 
-// Where an Offre comes from: a site a Veille reads, or a Fiche de poste the Candidat imported
-const SOURCE_SCHEMA = z.enum(['pep', 'import']);
-
-export type Source = z.infer<typeof SOURCE_SCHEMA>;
-
 export const STATUT_SCHEMA = z.enum(['a_traiter', 'postulee', 'archivee']);
 
 export type Statut = z.infer<typeof STATUT_SCHEMA>;
@@ -80,7 +88,8 @@ export const OFFRE_SCHEMA = z
     ...LIEU_SHAPE,
     id: z.int(),
     candidatId: z.string(),
-    source: SOURCE_SCHEMA,
+    // Where it comes from: the Source of the Veille that detected it, or the import of its Fiche de poste
+    source: z.string(),
     reference: z.string(),
     title: z.string(),
     url: z.string().nullable(),
@@ -328,30 +337,57 @@ export const VISUALISATION_SCHEMA = z.object({ html: z.string() }).brand<'Domain
 
 export type Visualisation = z.infer<typeof VISUALISATION_SCHEMA>;
 
-// A Candidat's Connexion Home Assistant as the actions return it: whether a token is configured,
-// never the token, which is write-only (ADR-0006)
-export const CONNEXION_HOME_ASSISTANT_SCHEMA = z
-  .object({ url: z.string().nullable(), service: z.string().nullable(), isTokenConfigured: z.boolean() })
+// A Paramètre as the front builds its field: typed in, a list of values, secret, or chosen among what
+// the module lists
+export const PARAMETRE_SCHEMA = z
+  .object({
+    name: z.string(),
+    label: z.string(),
+    placeholder: z.string().nullable(),
+    type: z.enum(['text', 'url', 'list']),
+    isRequired: z.boolean(),
+    isSecret: z.boolean(),
+    hasChoices: z.boolean(),
+  })
   .brand<'Domain'>();
 
-export type ConnexionHomeAssistant = z.infer<typeof CONNEXION_HOME_ASSISTANT_SCHEMA>;
+export type Parametre = z.infer<typeof PARAMETRE_SCHEMA>;
 
-// What reaching a Candidat's Home Assistant takes, token included. Its own brand keeps it out of the
-// values an action may return (src/actions/index.ts, ADR-0006); a null field falls back on .env.
-export const HOME_ASSISTANT_ACCESS_SCHEMA = z
-  .object({
-    candidatName: z.string(),
-    url: z.string().nullable(),
-    token: z.string().nullable(),
-    service: z.string().nullable(),
-  })
+// A module of a family of interchangeable modules, as its descriptor presents it to the Candidat: the
+// form asks for its Paramètres (ADR-0010)
+const MODULE_DESCRIPTION_SHAPE = { id: z.string(), name: z.string(), parametreList: z.array(PARAMETRE_SCHEMA) };
+
+// A Canal de notification may also be tested
+export const CANAL_NOTIFICATION_MODULE_SCHEMA = z
+  .object({ ...MODULE_DESCRIPTION_SHAPE, isTestable: z.boolean() })
+  .brand<'Domain'>();
+
+export type CanalNotificationModule = z.infer<typeof CANAL_NOTIFICATION_MODULE_SCHEMA>;
+
+// A Source a Veille follows
+export const SOURCE_MODULE_SCHEMA = z.object(MODULE_DESCRIPTION_SHAPE).brand<'Domain'>();
+
+export type SourceModule = z.infer<typeof SOURCE_MODULE_SCHEMA>;
+
+// A Candidat's Canal de notification as the actions return it: its module, null until chosen, and its
+// Paramètres, each secret one reduced to whether it is configured, since it is write-only (ADR-0006)
+export const CANAL_NOTIFICATION_SCHEMA = z
+  .object({ module: z.string().nullable(), parametres: PARAMETRES_SCHEMA, configuredSecretList: z.array(z.string()) })
+  .brand<'Domain'>();
+
+export type CanalNotification = z.infer<typeof CANAL_NOTIFICATION_SCHEMA>;
+
+// A Candidat's Canal de notification as saved, secret Paramètres included. Its own brand keeps it out
+// of the values an action may return (src/actions/index.ts, ADR-0006).
+export const SAVED_CANAL_NOTIFICATION_SCHEMA = z
+  .object({ candidatName: z.string(), module: z.string().nullable(), parametres: PARAMETRES_SCHEMA })
   .brand<'Secret'>();
 
-export type HomeAssistantAccess = z.infer<typeof HOME_ASSISTANT_ACCESS_SCHEMA>;
+export type SavedCanalNotification = z.infer<typeof SAVED_CANAL_NOTIFICATION_SCHEMA>;
 
-// A notify service of a Home Assistant, such as notify.mobile_app_iphone_de_lea, which pushes to a phone
-export const NOTIFY_SERVICE_SCHEMA = z.object({ service: z.string(), name: z.string() }).brand<'Domain'>();
+// One of the values a module offers for a Paramètre, with what the Candidat reads
+export const PARAMETRE_CHOICE_SCHEMA = z.object({ value: z.string(), label: z.string() }).brand<'Domain'>();
 
-export type NotifyService = z.infer<typeof NOTIFY_SERVICE_SCHEMA>;
+export type ParametreChoice = z.infer<typeof PARAMETRE_CHOICE_SCHEMA>;
 
 export type DomainValue = z.$brand<'Domain'>;

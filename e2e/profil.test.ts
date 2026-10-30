@@ -36,6 +36,7 @@ test.describe('Profil of a Candidat', () => {
       'cv.md',
       'faits.md',
       'Nouveau fichier',
+      'Veilles',
       'Notifications',
     ]);
     const faits = page.getByRole('region', { name: 'faits.md' });
@@ -85,6 +86,7 @@ test.describe('Profil of a Candidat', () => {
       'cv.md',
       'faits.md',
       'Nouveau fichier',
+      'Veilles',
       'Notifications',
     ]);
   });
@@ -141,6 +143,7 @@ test.describe('Profil of a Candidat', () => {
       'cv.md',
       'faits.md',
       'Nouveau fichier',
+      'Veilles',
       'Notifications',
     ]);
     await expect(pieces.getByRole('listitem')).toContainText('cv.pdf');

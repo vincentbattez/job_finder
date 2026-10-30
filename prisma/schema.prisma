@@ -9,35 +9,43 @@ datasource db {
   provider = "sqlite"
 }
 
-// Candidats and Veilles are copied from data/config.json at every launch: the config is
-// their source of truth, never edit these rows, except Veille.detectedAt, which only jf writes.
+// Candidats, their Veilles and the Délai par défaut are written from the front: the database is
+// their source of truth (ADR-0011). A Candidat is never deleted, so the rows tied to them stay.
 model Candidat {
-  id                     String                  @id
-  name                   String
-  veilleList             Veille[]
-  offreList              Offre[]
-  connexionHomeAssistant ConnexionHomeAssistant?
-  jobList                Job[]
+  id                String             @id
+  name              String
+  veilleList        Veille[]
+  offreList         Offre[]
+  canalNotification CanalNotification?
+  jobList           Job[]
 }
 
-// Apart from Candidat, which only data/config.json writes: the Candidat saves it from the front. Its
-// token is write-only, no action returns it (ADR-0006). A field left null falls back on .env.
-model ConnexionHomeAssistant {
+// The Délai par défaut every Candidat shares, in a single row. Created at the first launch, from the
+// data/config.json an older jf read when one is left, imported once and never read again (ADR-0011).
+model DelaiParDefaut {
+  id     Int @id
+  // In months
+  months Int
+}
+
+// The Canal de notification a Candidat chose, saved from the front. Its Paramètres are those of its
+// module, parsed by the module's schema (ADR-0010); a secret one is write-only, no action returns it
+// (ADR-0006).
+model CanalNotification {
   candidat   Candidat @relation(fields: [candidatId], references: [id], onDelete: Cascade)
   candidatId String   @id
-  url        String?
-  token      String?
-  service    String?
+  module     String
+  parametres Json
 }
 
 model Veille {
   id         String    @id
   candidat   Candidat  @relation(fields: [candidatId], references: [id])
   candidatId String
+  // The Source the Veille follows, and its Paramètres, its Zone among them: they are those of the
+  // Source, parsed by the Source's schema (ADR-0010)
   source     String
-  // Shaped by the Source
-  criteria   Json
-  zone       Json
+  parametres Json
   // When a Détection of this Veille last went through; null during its first launch, which may take
   // several Détections when one is cut off
   detectedAt DateTime?

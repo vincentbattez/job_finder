@@ -8,7 +8,8 @@ import { createActions, type Actions } from '#/actions/index.ts';
 import type { Detection, Offre } from '#/domain/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
+import { createFakeCanalNotification } from './fake-canal-notification.ts';
+import { LEA_VEILLE_ID } from './lea.ts';
 import { createRecordedFetch, DSJ_FEED_URL, readRecordedFile } from './recorded-http.ts';
 
 // Every attaché de justice offer of the DSJ feed recorded on 2026-10-29, counted by hand from its
@@ -214,7 +215,7 @@ describe('detection on the responses recorded on 2026-10-29', () => {
   });
 
   it('imports the Offres already online on the first launch', () => {
-    expect(detectionList).toMatchObject([{ veilleId: 'attache-de-justice-hauts-de-france', isFirstLaunch: true }]);
+    expect(detectionList).toMatchObject([{ veilleId: LEA_VEILLE_ID, isFirstLaunch: true }]);
     expect(detectionList[0]?.newOffreList).toHaveLength(ATTACHE_DE_JUSTICE_REFERENCE_LIST.length);
   });
 
@@ -292,8 +293,12 @@ describe('a first launch cut off mid-way', () => {
     }).fetch;
     const cutActions = await createActions({ dataDirectory, fetch: cutFetch });
     await expect(cutActions.detect()).rejects.toThrow(/HTTP 500/);
-    const notificationChannel = createFakeNotificationChannel();
-    const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch, notificationChannel });
+    const notificationChannel = createFakeCanalNotification();
+    const actions = await createActions({
+      dataDirectory,
+      fetch: createRecordedFetch().fetch,
+      canalNotificationList: notificationChannel.canalNotificationList,
+    });
 
     const detectionList = await actions.detect();
 

@@ -9,28 +9,28 @@ import { z } from 'zod/v4';
 
 import {
   CANDIDAT_SCHEMA,
-  CONNEXION_HOME_ASSISTANT_SCHEMA,
-  HOME_ASSISTANT_ACCESS_SCHEMA,
+  DELAI_PAR_DEFAUT_SCHEMA,
   JOB_SCHEMA,
   OFFRE_SCHEMA,
   PROFIL_JOB_SCHEMA,
   QUEUED_JOB_SCHEMA,
+  SAVED_CANAL_NOTIFICATION_SCHEMA,
   VEILLE_SCHEMA,
   VERSION_SCHEMA,
   type Artefact,
   type Candidat,
-  type ConnexionHomeAssistant,
+  type DelaiParDefaut,
   type FicheDePoste,
-  type HomeAssistantAccess,
   type Job,
   type Lieu,
   type ListedOffre,
   type Module,
   type Offre,
+  type Parametres,
   type PieceFileName,
   type ProfilJob,
   type QueuedJob,
-  type Source,
+  type SavedCanalNotification,
   type Statut,
   type Veille,
   type Version,
@@ -53,11 +53,16 @@ const OFFRE_INCLUDE = {
   republicationOf: LINKED_OFFRE_SELECT,
   republicationList: { ...LINKED_OFFRE_SELECT, orderBy: { reference: 'asc' } },
 } as const;
+// The single row of the Délai par défaut every Candidat shares
+const DELAI_PAR_DEFAUT_ID = 1;
+// The Délai par défaut of a new database, that of the example config of older versions
+const DEFAULT_DELAY_MONTHS = 6;
+
 const JOB_INCLUDE = { offre: { include: OFFRE_INCLUDE }, version: { include: VERSION_INCLUDE } };
 
 export interface INewOffre {
   candidatId: string;
-  source: Source;
+  source: string;
   listedOffre: ListedOffre;
   ficheDePoste: FicheDePoste;
   isInZone: boolean;
@@ -91,7 +96,7 @@ function hasPendingMigration(databasePath: string): boolean {
 
 // Migrates first, but only when a migration is pending: the Prisma CLI takes 0.3 s to start
 // (ADR-0004). Prisma never leaves this file (ADR-0005).
-export function openDatabase(databasePath: string, defaultDelayMonths: number) {
+export function openDatabase(databasePath: string) {
   const url = `file:${databasePath}`;
   if (hasPendingMigration(databasePath)) {
     execFileSync(process.execPath, [PRISMA_CLI_PATH, 'migrate', 'deploy'], {
@@ -100,6 +105,8 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       stdio: 'pipe',
     });
   }
+  // Read at launch once the Délai par défaut exists, then changed by the process that saves them (ADR-0011)
+  let defaultDelayMonths = DEFAULT_DELAY_MONTHS;
   // Expirée depends on the day, so every Offre read computes it rather than storing it
   const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url }) }).$extends({
     result: {
@@ -133,41 +140,108 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       return z.array(CANDIDAT_SCHEMA).parse(await prisma.candidat.findMany({ orderBy: { name: 'asc' } }));
     },
 
-    // Never the token: what an action may return (ADR-0006)
-    async readConnexionHomeAssistant({ id }: Candidat): Promise<ConnexionHomeAssistant> {
-      const connexion = await prisma.connexionHomeAssistant.findUnique({ where: { candidatId: id } });
-      return CONNEXION_HOME_ASSISTANT_SCHEMA.parse({
-        url: connexion?.url ?? null,
-        service: connexion?.service ?? null,
-        isTokenConfigured: (connexion?.token ?? null) !== null,
-      });
-    },
-
-    // The token included, for the notification channel only, never for an action to return (ADR-0006)
-    async findHomeAssistantAccess(candidatId: string): Promise<HomeAssistantAccess> {
-      const candidat = await prisma.candidat.findUniqueOrThrow({
+    // Secret Paramètres included, for the actions to reduce or send, never to return (ADR-0006)
+    async findCanalNotification(candidatId: string): Promise<SavedCanalNotification> {
+      const { name, canalNotification } = await prisma.candidat.findUniqueOrThrow({
         where: { id: candidatId },
-        include: { connexionHomeAssistant: true },
+        include: { canalNotification: true },
       });
-      const { url = null, token = null, service = null } = candidat.connexionHomeAssistant ?? {};
-      return HOME_ASSISTANT_ACCESS_SCHEMA.parse({ candidatName: candidat.name, url, token, service });
-    },
-
-    // A field left undefined keeps its saved value: the front never gets the token back to resend it
-    async saveConnexionHomeAssistant(
-      { id }: Candidat,
-      { url, token, service }: { url: string; token: string | undefined; service: string | undefined },
-    ): Promise<void> {
-      const data = { url, ...(token !== undefined && { token }), ...(service !== undefined && { service }) };
-      await prisma.connexionHomeAssistant.upsert({
-        where: { candidatId: id },
-        create: { candidatId: id, ...data },
-        update: data,
+      return SAVED_CANAL_NOTIFICATION_SCHEMA.parse({
+        candidatName: name,
+        module: canalNotification?.module ?? null,
+        parametres: canalNotification?.parametres ?? {},
       });
     },
 
-    async listVeilles(): Promise<Veille[]> {
-      return z.array(VEILLE_SCHEMA).parse(await prisma.veille.findMany({ orderBy: { id: 'asc' } }));
+    // The Paramètres replace the saved ones as a whole: the actions merge them first (ADR-0010)
+    async saveCanalNotification(
+      candidatId: string,
+      { module, parametres }: { module: string; parametres: Parametres },
+    ) {
+      await prisma.canalNotification.upsert({
+        where: { candidatId },
+        create: { candidatId, module, parametres },
+        update: { module, parametres },
+      });
+    },
+
+    async createCandidat({ id, name }: { id: string; name: string }): Promise<void> {
+      await prisma.candidat.create({ data: { id, name } });
+    },
+
+    async renameCandidat({ id }: Candidat, name: string): Promise<void> {
+      await prisma.candidat.update({ where: { id }, data: { name } });
+    },
+
+    // Whether the Délai par défaut exists: from then on, the config an older jf left is never read
+    // again (ADR-0011)
+    async hasDelaiParDefaut(): Promise<boolean> {
+      return (await prisma.delaiParDefaut.count()) > 0;
+    },
+
+    // Creates the Délai par défaut, from the config an older jf left when there is one: its Candidats
+    // and Veilles are added or updated, never deleted, and each Veille keeps when its Détection last
+    // went through. The row is claimed first, so a process launched at the same time imports nothing.
+    async createDelaiParDefaut(config: Config | null): Promise<void> {
+      const delayMonths = config?.defaultDelayMonths ?? DEFAULT_DELAY_MONTHS;
+      await prisma.$transaction(async (transaction) => {
+        const claimedCount = await transaction.$executeRaw`
+          INSERT INTO "DelaiParDefaut" ("id", "months") VALUES (${DELAI_PAR_DEFAUT_ID}, ${delayMonths})
+          ON CONFLICT DO NOTHING`;
+        if (claimedCount === 0 || config === null) {
+          return;
+        }
+        for (const { id, name, veilleList } of config.candidatList) {
+          await transaction.candidat.upsert({ where: { id }, create: { id, name }, update: { name } });
+          for (const { id: veilleId, source, parametres } of veilleList) {
+            const veille = { candidatId: id, source, parametres };
+            await transaction.veille.upsert({
+              where: { id: veilleId },
+              create: { id: veilleId, ...veille },
+              update: veille,
+            });
+          }
+        }
+      });
+    },
+
+    // Also what Expirée computes with from then on, in this process
+    async readDelaiParDefaut(): Promise<DelaiParDefaut> {
+      const delaiParDefaut = DELAI_PAR_DEFAUT_SCHEMA.parse(
+        await prisma.delaiParDefaut.findUniqueOrThrow({ where: { id: DELAI_PAR_DEFAUT_ID }, select: { months: true } }),
+      );
+      defaultDelayMonths = delaiParDefaut.months;
+      return delaiParDefaut;
+    },
+
+    async saveDelaiParDefaut({ months }: DelaiParDefaut): Promise<void> {
+      await prisma.delaiParDefaut.update({ where: { id: DELAI_PAR_DEFAUT_ID }, data: { months } });
+      defaultDelayMonths = months;
+    },
+
+    // Every Veille, for the Détection, or those of a Candidat
+    async listVeilles(candidatId?: string): Promise<Veille[]> {
+      return z.array(VEILLE_SCHEMA).parse(
+        await prisma.veille.findMany({
+          where: candidatId === undefined ? {} : { candidatId },
+          orderBy: { id: 'asc' },
+        }),
+      );
+    },
+
+    // A new Veille is on its first launch: detectedAt stays null
+    async createVeille(veille: { id: string; candidatId: string; source: string; parametres: Parametres }) {
+      await prisma.veille.create({ data: veille });
+    },
+
+    // A Veille whose Source or Paramètres change starts its first launch again (ADR-0011)
+    async updateVeille({ id }: Veille, { source, parametres }: { source: string; parametres: Parametres }) {
+      await prisma.veille.update({ where: { id }, data: { source, parametres, detectedAt: null } });
+    },
+
+    // Its Offres stay: they belong to the Candidat, not to the Veille
+    async deleteVeille({ id }: Veille): Promise<void> {
+      await prisma.veille.delete({ where: { id } });
     },
 
     async listOffres(candidatId: string): Promise<Offre[]> {
@@ -331,9 +405,23 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       await prisma.veille.update({ where: { id }, data: { detectedAt: new Date() } });
     },
 
-    async listReferences(candidatId: string, source: Source): Promise<string[]> {
-      const offreList = await prisma.offre.findMany({ where: { candidatId, source }, select: { reference: true } });
-      return z.array(z.string()).parse(offreList.map(({ reference }) => reference));
+    // The Offres of its Candidat and Source that another Veille stored out of its own Zone since this
+    // one last went through, all of them on its first launch: they may be in the Zone of this one
+    async listOutOfZoneOffresSince({ candidatId, source, detectedAt }: Veille): Promise<Offre[]> {
+      const since = detectedAt === null ? {} : { detectedAt: { gt: detectedAt } };
+      return z.array(OFFRE_SCHEMA).parse(
+        await prisma.offre.findMany({
+          where: { candidatId, source, isInZone: false, ...since },
+          include: OFFRE_INCLUDE,
+        }),
+      );
+    },
+
+    // An Offre is in the Zone as soon as it is in that of one of its Candidat's Veilles
+    async setInZone({ id }: Offre): Promise<Offre> {
+      return OFFRE_SCHEMA.parse(
+        await prisma.offre.update({ where: { id }, data: { isInZone: true }, include: OFFRE_INCLUDE }),
+      );
     },
 
     async findOffres(reference: string): Promise<Offre[]> {
@@ -391,37 +479,6 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
           include: OFFRE_INCLUDE,
         }),
       );
-    },
-
-    // The config is the source of truth, except when a Veille's Détection last went through; a
-    // Candidat removed with Offres left fails the launch on the foreign key rather than orphan them
-    async copyConfig(config: Config): Promise<void> {
-      const veilleList = config.candidatList.flatMap((candidat) =>
-        candidat.veilleList.map((veille) => ({ ...veille, candidatId: candidat.id })),
-      );
-      await prisma.$transaction([
-        prisma.veille.deleteMany({ where: { id: { notIn: veilleList.map(({ id }) => id) } } }),
-        prisma.candidat.deleteMany({ where: { id: { notIn: config.candidatList.map((candidat) => candidat.id) } } }),
-        ...config.candidatList.map(({ id, name }) =>
-          prisma.candidat.upsert({ where: { id }, create: { id, name }, update: { name } }),
-        ),
-        ...veilleList.map((veille) =>
-          prisma.veille.upsert({ where: { id: veille.id }, create: veille, update: veille }),
-        ),
-        // The notify service the config used to hold seeds a Candidat's first Connexion, then the
-        // database wins (ADR-0006)
-        ...config.candidatList.flatMap(({ id, notification }) =>
-          notification === undefined
-            ? []
-            : [
-                prisma.connexionHomeAssistant.upsert({
-                  where: { candidatId: id },
-                  create: { candidatId: id, service: notification.service },
-                  update: {},
-                }),
-              ],
-        ),
-      ]);
     },
   };
 }

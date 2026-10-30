@@ -54,6 +54,7 @@ export function Layout({ children }: Readonly<{ children: ReactNode }>) {
               </NavLink>
               <NavLink to="/profil">Profil</NavLink>
               <NavLink to="/consignes">Consignes</NavLink>
+              <NavLink to="/candidats">Candidats</NavLink>
             </nav>
             {candidatData !== undefined && <CandidatMenu {...candidatData} />}
           </div>

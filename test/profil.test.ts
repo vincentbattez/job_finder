@@ -135,16 +135,17 @@ describe('profil', () => {
 
   // The file name comes from the front: nothing outside the files of the Profil may be touched
   describe.each(['createProfilFile', 'saveProfilFile', 'deleteProfilFile'] as const)('%s', (actionName) => {
-    it.each(['../../config.json', '../faits.md', 'sous-dossier/faits.md', 'faits', '.md', 'faits.md/'])(
+    it.each(['../../notes.md', '../faits.md', 'sous-dossier/faits.md', 'faits', '.md', 'faits.md/'])(
       'refuses « %s », not a name of a Profil file, and touches nothing',
       async (fileName) => {
         const { actions, dataDirectory } = await openProfil();
-        const config = readFileSync(path.join(dataDirectory, 'config.json'), 'utf8');
+        // A file of the data folder, out of the Profil
+        writeFileSync(path.join(dataDirectory, 'notes.md'), '# Notes\n');
 
         await expect(actions[actionName]({ candidatId: 'lea', fileName, markdown: 'Remplacé\n' })).rejects.toThrow(
           `« ${fileName} » n'est pas un nom de fichier du Profil`,
         );
-        expect(readFileSync(path.join(dataDirectory, 'config.json'), 'utf8')).toBe(config);
+        expect(readFileSync(path.join(dataDirectory, 'notes.md'), 'utf8')).toBe('# Notes\n');
         expect(
           readdirSync(path.join(dataDirectory, 'candidats/lea'), { recursive: true, encoding: 'utf8' }).toSorted(
             (first, second) => first.localeCompare(second),

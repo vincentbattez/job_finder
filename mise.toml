@@ -15,11 +15,8 @@ CHECKPOINT_DISABLE = "1"
 postinstall = "npm install && lefthook install"
 
 [tasks.init]
-description = "Create data/config.json from config.example.json if it is missing, and seed dev-data/"
-run = [
-  "mkdir -p data && { [ -f data/config.json ] || cp config.example.json data/config.json; }",
-  "mise run db:seed",
-]
+description = "Seed dev-data/; the Candidats of data/ are created from the front"
+run = "mise run db:seed"
 
 # The db: tasks work on dev-data/, fake data for development. The app migrates data/ itself at launch.
 [tasks."db:migrate"]
@@ -37,19 +34,22 @@ run = ["mkdir -p dev-data && prisma migrate reset --force", "mise run db:seed"]
 [tasks."db:generate"]
 description = "Generate the Prisma client of prisma/schema.prisma into src/workspace/generated (out of git)"
 run = "prisma generate"
+# Skipped while the client is newer than the schema and the Prisma version: lpm starts web and worker
+# together, and two prisma generate emptying the same folder at once left a half-written client
+sources = ["prisma/schema.prisma", "prisma.config.ts", "package-lock.json"]
+outputs = ["src/workspace/generated/client.ts"]
 
 [tasks.web]
 # Regenerate first: a client older than the schema crashes at the first query
 depends = ["db:generate"]
 description = "Serve the front of data/ on port 5180, open to the LAN and WireGuard: the lpm service web (ADR-0002)"
-# .env holds the Home Assistant fallback of the notifications, which the Détection button sends (ADR-0006)
-run = "node --env-file-if-exists=.env node_modules/@react-router/dev/bin.cjs dev --host --port 5180 --strictPort"
+run = "node node_modules/@react-router/dev/bin.cjs dev --host --port 5180 --strictPort"
 
 [tasks."web:dev"]
 # Regenerate first: a client older than the schema crashes at the first query
 depends = ["db:generate"]
 description = "Serve the front of dev-data/, the fake Offres of development, on port 5181 of this machine only"
-# Never .env: a Détection from dev-data/ sends no notification to a real phone
+# The Canaux de notification saved in dev-data/, never those of data/: no real phone gets notified
 env = { JF_DATA_DIRECTORY = "dev-data" }
 run = "node node_modules/@react-router/dev/bin.cjs dev --port 5181 --strictPort"
 
@@ -57,8 +57,7 @@ run = "node node_modules/@react-router/dev/bin.cjs dev --port 5181 --strictPort"
 # Regenerate first: a client older than the schema crashes at the first query
 depends = ["db:generate"]
 description = "Run the queued jobs of data/, one Claude session at a time: the lpm service worker (ADR-0003)"
-# .env holds the Home Assistant fallback of the notifications (ADR-0006)
-run = "node --env-file-if-exists=.env src/worker/worker.ts"
+run = "node src/worker/worker.ts"
 
 [tasks."lint:ts"]
 description = "Lint with ESLint"

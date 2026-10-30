@@ -23,18 +23,17 @@ const BASE_URL = `http://localhost:${PORT}`;
 // The front runs on a temporary data folder, never data/: test/seed-front.ts fills it through the
 // actions with the fakes before the dev server starts
 const DATA_DIRECTORY = path.join(tmpdir(), `job-finder-e2e-${PORT}`);
-// Whatever the shell exports, the seed, the front and the worker notify the fake Home Assistant,
-// never a real phone; its port follows E2E_PORT so parallel runs stay apart
+// The seed saves Canaux de notification through the fake Home Assistant, never a real phone; its port
+// follows E2E_PORT so parallel runs stay apart
 const HOME_ASSISTANT_PORT = String(Number(PORT) + 10_000);
-const HOME_ASSISTANT_URL = `http://localhost:${HOME_ASSISTANT_PORT}`;
+const FAKE_HOME_ASSISTANT_URL = `http://localhost:${HOME_ASSISTANT_PORT}`;
 // Only the runner, before it starts the web servers: the test workers load this config too
 if (process.env.TEST_WORKER_INDEX === undefined) {
   stopLeftoverWebServers({ portList: [PORT, HOME_ASSISTANT_PORT], checkoutDirectory: import.meta.dirname });
 }
 const ENV = {
   JF_DATA_DIRECTORY: DATA_DIRECTORY,
-  HOME_ASSISTANT_URL,
-  HOME_ASSISTANT_TOKEN: FAKE_HOME_ASSISTANT_TOKEN,
+  FAKE_HOME_ASSISTANT_URL,
 };
 
 export default defineConfig({
@@ -47,10 +46,10 @@ export default defineConfig({
   ...(process.env.CI !== undefined && { workers: 2 }),
   use: { baseURL: BASE_URL },
   // How a test reaches the fake Home Assistant, to read the notifications it received or save its
-  // token in a Connexion Home Assistant (e2e/notifications.test.ts), and the data
+  // token in a Canal de notification (e2e/notifications.test.ts), and the data
   // folder, to put back the Profil it changes (e2e/profil.test.ts)
   metadata: {
-    homeAssistantUrl: HOME_ASSISTANT_URL,
+    homeAssistantUrl: FAKE_HOME_ASSISTANT_URL,
     homeAssistantToken: FAKE_HOME_ASSISTANT_TOKEN,
     dataDirectory: DATA_DIRECTORY,
   },

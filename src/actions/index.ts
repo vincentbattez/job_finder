@@ -1,6 +1,7 @@
 import type { DomainValue } from '#/domain/index.ts';
 
-import { createConnexionHomeAssistantActions } from './connexion-home-assistant.ts';
+import { createCanalNotificationActions } from './canal-notification.ts';
+import { createCandidatActions } from './candidats.ts';
 import { createConsignesActions } from './consignes.ts';
 import { openContext, type IActionsOption } from './context.ts';
 import { createDetectActions } from './detect.ts';
@@ -12,6 +13,7 @@ import { createOffreActions } from './offres.ts';
 import { createPieceActions } from './pieces.ts';
 import { createProfilActions } from './profil.ts';
 import { createStatutActions } from './statut.ts';
+import { createVeilleActions } from './veilles.ts';
 
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
@@ -24,12 +26,14 @@ export async function createActions(option: IActionsOption) {
   const context = await openContext(option);
   return {
     ...createOffreActions(context),
+    ...createCandidatActions(context),
     ...createDetectActions(context),
+    ...createVeilleActions(context),
     ...createImportActions(context),
     ...createStatutActions(context),
     ...createProfilActions(context),
     ...createPieceActions(context),
-    ...createConnexionHomeAssistantActions(context),
+    ...createCanalNotificationActions(context),
     ...createFaitsActions(context),
     ...createConsignesActions(context),
     ...createEditionActions(context),

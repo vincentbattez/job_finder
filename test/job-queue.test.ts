@@ -6,7 +6,7 @@ import { createActions } from '#/actions/index.ts';
 
 import { createDataDirectory, detectOffres } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
+import { createFakeCanalNotification } from './fake-canal-notification.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
 // The two Béthune Offres, both in the Zone, detected from the responses recorded on 2026-10-29
@@ -93,7 +93,11 @@ describe('the job queue', () => {
       expect(aiSession.headlessSessionList).toHaveLength(1);
     });
 
-    const restartedWorker = await createActions({ dataDirectory, aiSession, notificationChannel });
+    const restartedWorker = await createActions({
+      dataDirectory,
+      aiSession,
+      canalNotificationList: notificationChannel.canalNotificationList,
+    });
     const failedJobList = await restartedWorker.failInterruptedJobs();
     await restartedWorker.runModule({ module: 'recherche', reference: REFERENCE });
     await restartedWorker.runQueuedJobs();
@@ -114,14 +118,20 @@ describe('the Recherche of a new Offre in the Zone', () => {
     const aiSession = createFakeAiSession(RECHERCHE, RECHERCHE);
     const feed = feedWithout([REFERENCE, OTHER_REFERENCE, OUT_OF_ZONE_REFERENCE]);
     const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feed } }).fetch;
-    const notificationChannel = createFakeNotificationChannel();
-    const earlierActions = await createActions({ dataDirectory, aiSession, fetch: earlierFetch, notificationChannel });
+    const notificationChannel = createFakeCanalNotification();
+    const earlierActions = await createActions({
+      dataDirectory,
+      aiSession,
+      fetch: earlierFetch,
+      canalNotificationList: notificationChannel.canalNotificationList,
+    });
+    await notificationChannel.saveFor(earlierActions);
     await earlierActions.detect();
     const actions = await createActions({
       dataDirectory,
       aiSession,
       fetch: createRecordedFetch().fetch,
-      notificationChannel,
+      canalNotificationList: notificationChannel.canalNotificationList,
     });
 
     await actions.detect();

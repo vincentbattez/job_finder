@@ -48,6 +48,8 @@ export async function startFakeHomeAssistant({ port = 0 }: { port?: number } = {
   // A failure of Home Assistant: a refused token, a server error, or no answer at all
   type Failure = 401 | 500 | 'unreachable' | undefined;
   const notificationList: IReceivedNotification[] = [];
+  // The Authorization header of every request to its API, to check where a token went
+  const authorizationList: string[] = [];
   let failure: Failure;
 
   async function route(request: IncomingMessage, response: ServerResponse) {
@@ -57,6 +59,7 @@ export async function startFakeHomeAssistant({ port = 0 }: { port?: number } = {
       answer(response, 200, notificationList);
       return;
     }
+    authorizationList.push(request.headers.authorization ?? '');
     if (failure === 'unreachable') {
       request.socket.destroy();
       return;
@@ -108,6 +111,7 @@ export async function startFakeHomeAssistant({ port = 0 }: { port?: number } = {
     url: `http://localhost:${String(address.port)}`,
     token: FAKE_HOME_ASSISTANT_TOKEN,
     notificationList,
+    authorizationList,
     simulateFailure: (nextFailure: Failure) => {
       failure = nextFailure;
     },
