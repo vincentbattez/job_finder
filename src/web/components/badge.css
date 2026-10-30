@@ -1,3 +1,6 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: Dose (deal 3/3, seed soft-friendly-app-track-8518·cf75787d·2026-10-29·r0)
+ * nav: a top bar, the wordmark, the Candidate's pages (Postings, Profile, Instructions: #14) and the Candidate menu (#11) · signature: the Posting label, reference and Deadline in DM Mono over a dashed stub, above four plastic Artifact compartments · states: full and empty list, the four states · dose: white
+ * axes: light/grotesk-sans/chromatic-green · posture: committed · contrast: pass · v2.0.0 */
 /* A status of a Posting or a state of an Artifact: a pill in the soft tint of its signal */
 @layer components {
   .badge {
