@@ -1,0 +1,59 @@
+# The project's words that are not in the English dictionary (cspell.config.yaml)
+
+# Glossary terms
+Choosable
+repost
+reposted
+reposts
+unarchiving
+
+# Tools and their APIs
+wayfinder
+Wayfinding
+archunit
+autoincrement
+CLAUDECODE
+commitlint
+ianvs
+isbot
+knip
+lefthook
+nums
+Revalidator
+Schibsted
+spinbutton
+topbar
+unstub
+vitest
+vincentbattez
+wordmark
+worktrees
+
+# The feed of the Source PEP (ADR-0001)
+ashx
+LCID
+
+# Léa's content format: the sections of facts.md, whatever the locale
+Compétences
+Coordonnées
+Diplômes
+Expériences
+Identité
+Mobilité
+
+# Places, institutions and people: the PEP, the courts and their cities, Léa and the Candidates of
+# the tests
+l'Emploi
+l’Emploi
+judiciaire
+bethune
+Avesnes
+Béthune
+Helpe
+Hauts
+Melun
+Inès
+Malo
+Noé
+Sacha
+Yanis

@@ -1,0 +1,49 @@
+# Everything is in English; French only in the fr catalogue, checked with the French dictionary
+version: '0.2'
+language: en-US
+import:
+  - '@cspell/dict-fr-fr/cspell-ext.json'
+dictionaryDefinitions:
+  - name: project-words
+    path: ./cspell-words.txt
+    addWords: true
+dictionaries:
+  - project-words
+useGitignore: true
+# Léa's content format: the marker of a missing fact, in the French of her Artifacts, with its detail
+ignoreRegExpList:
+  - '/à compléter[^\]\n]*/gu'
+  # The name of a committed migration, kept as is
+  - '/\b\d{14}_\w+/g'
+ignorePaths:
+  - .git
+  - package-lock.json
+  # Its patterns are not words
+  - cspell.config.yaml
+  # Recorded fixtures, kept byte for byte
+  - test/fixtures/**
+  # The migration history is kept as is
+  - prisma/migrations/**
+overrides:
+  - filename: src/domain/catalogue/fr/**
+    language: en,fr
+  # A module's copy stays in its folder, in both locales (ADR-0010): its copy file, and its fr labels
+  - filename: src/modules/*/copy.ts
+    language: en,fr
+  # The former French names that the data layout migration, the config import and the redirects match
+  - filename: [src/web/redirects.ts, src/workspace/layout.ts, src/workspace/acl/config.ts]
+    ignoreRegExpList:
+      - "/\\bfrom: *(['\"`])(?:\\\\.|(?!\\1)[^\\\\\\n])*\\1/gu"
+  # The glossary keeps each former French term, so that older issues and commits stay readable
+  - filename: GLOSSARY.md
+    ignoreRegExpList:
+      - '/^_Formerly_:.*$/gm'
+  - filename: src/modules/**
+    ignoreRegExpList:
+      - "/\\bfr: *(['\"`])(?:\\\\.|(?!\\1)[^\\\\\\n])*\\1/gu"
+  # A test drives the French locale and Léa's French content: French is allowed in its string and
+  # regex literals, never in its identifiers, comments or test names
+  - filename: ['test/**', 'e2e/**', '**/*.test.ts']
+    ignoreRegExpList:
+      - "/(?<=(?:^|[(,=:\\[!&|?{};])[ \\t]*)\\/(?![\\/*])(?:\\\\.|\\[(?:\\\\.|[^\\]\\\\\\n])*\\]|[^\\/\\\\\\n])+\\/[dgimsuyv]*/gmu"
+      - "/(?<!\\b(?:it|test|describe|step)(?:\\.\\w+)?\\(\\s*)(?<![\\p{L}\\p{N}’)\\].])(?:'(?:\\\\.|[^'\\\\\\n])*'|\"(?:\\\\.|[^\"\\\\\\n])*\"|`(?:\\\\.|[^`\\\\])*`)/gu"
