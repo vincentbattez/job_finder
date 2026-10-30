@@ -53,7 +53,7 @@ export default function Instructions() {
           </div>
           {instructionsList.map((instructions) => (
             <ModuleInstructions
-              key={`${instructions.module}-${instructions.candidateInstructions === null ? 'defaut' : 'candidate'}`}
+              key={`${instructions.module}-${instructions.candidateInstructions === null ? 'default' : 'candidate'}`}
               {...instructions}
             />
           ))}

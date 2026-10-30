@@ -37,7 +37,7 @@ export function ModuleInstructions({
     <section className="artefact instructions" data-artefact={module} aria-labelledby={headingId}>
       <div className="instructions__head">
         <h2 id={headingId}>{ARTEFACT_LABEL_BY_ARTEFACT[module]}</h2>
-        <span className="badge" data-instructions={hasCandidateInstructions ? 'candidate' : 'defaut'}>
+        <span className="badge" data-instructions={hasCandidateInstructions ? 'candidate' : 'default'}>
           {hasCandidateInstructions ? 'Vos Consignes' : 'Consignes par défaut'}
         </span>
       </div>
