@@ -1,5 +1,5 @@
 import { catalogueOf } from '#/domain/catalogue/index.ts';
-import type { Posting, Status } from '#/domain/index.ts';
+import type { Locale, Posting, Status } from '#/domain/index.ts';
 
 // What the status rules read of a Posting
 type PostingStatus = Pick<Posting, 'reference' | 'status' | 'appliedAt'>;
@@ -63,30 +63,31 @@ export function listNextStatuses(posting: Pick<Posting, 'status' | 'appliedAt'>)
 }
 
 // Moving to the status it already has changes nothing
-export function assertStatusChange(posting: PostingStatus, status: Status): void {
+export function assertStatusChange(posting: PostingStatus, status: Status, locale: Locale): void {
   const nextStatusList = listNextStatuses(posting);
   if (status === posting.status || nextStatusList.includes(status)) {
     return;
   }
-  // In French, as the rest of the message, until it speaks the Candidate's locale (#74)
-  const { statusLabelByStatus } = catalogueOf(null).common;
-  const nextLabelList = nextStatusList.map((nextStatus) => statusLabelByStatus[nextStatus]);
-  const reason = hasBeenApplied(posting) ? ", Postulée ne s'annulant jamais : sa Lettre retenue est celle envoyée" : '';
+  const { common, error } = catalogueOf({ locale });
+  const nextLabelList = nextStatusList.map((nextStatus) => common.statusLabelByStatus[nextStatus]);
   throw new Error(
-    `L'Offre ${posting.reference} est ${statusLabelByStatus[posting.status]} : elle ne peut passer qu'en ${nextLabelList.join(' ou ')}${reason}.`,
+    error.statusChange(
+      posting.reference,
+      common.statusLabelByStatus[posting.status],
+      nextLabelList,
+      hasBeenApplied(posting),
+    ),
   );
 }
 
 // Once the Posting was Applied, the Chosen Letter is the one sent, even once the Posting is Archived
-export function findLetterFreeze(posting: PostingStatus): string | undefined {
-  return hasBeenApplied(posting)
-    ? `L'Offre ${posting.reference} a été Postulée : sa Lettre retenue est figée telle qu'envoyée. Elle ne se modifie plus, ne se régénère plus et ne se remplace plus par une autre Version.`
-    : undefined;
+export function findLetterFreeze(posting: PostingStatus, locale: Locale): string | undefined {
+  return hasBeenApplied(posting) ? catalogueOf({ locale }).error.letterFrozen(posting.reference) : undefined;
 }
 
 // Every action that would change the Chosen Letter calls this first
-export function assertLetterModifiable(posting: PostingStatus): void {
-  const freeze = findLetterFreeze(posting);
+export function assertLetterModifiable(posting: PostingStatus, locale: Locale): void {
+  const freeze = findLetterFreeze(posting, locale);
   if (freeze !== undefined) {
     throw new Error(freeze);
   }

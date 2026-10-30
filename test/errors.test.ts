@@ -3,7 +3,9 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { detectPostings } from './data-directory.ts';
+import { createActions } from '#/actions/index.ts';
+
+import { createMigratedDataDirectory, detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
 // The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
@@ -62,6 +64,54 @@ describe('an error', () => {
 
     await expect(actions.readPosting({ reference: REFERENCE })).rejects.toThrow(
       `Fiche de poste introuvable pour l'Offre ${REFERENCE} : ${path.join(postingDirectory, 'job-description.md')}. La remettre à cet emplacement, d'où l'outil la lit.`,
+    );
+  });
+});
+
+// Emma, who reads English, with a Posting she imported
+async function createEmma() {
+  const actions = await createActions({ dataDirectory: createMigratedDataDirectory() });
+  await actions.createCandidate({ id: 'emma', name: 'Emma', locale: 'en' });
+  const { posting } = await actions.importJobDescription({
+    candidateId: 'emma',
+    fileName: 'court-clerk-lille.md',
+    markdown: '# Court clerk in Lille\n',
+  });
+  return { actions, reference: posting.reference };
+}
+
+// Emma reads English: an error raised for her speaks English, and still says what to do
+describe('an error for an English-speaking Candidate', () => {
+  it('refuses a Status the Posting cannot move to, in English', async () => {
+    const { actions, reference } = await createEmma();
+    await actions.changeStatus({ reference, status: 'archived' });
+
+    await expect(actions.changeStatus({ reference, status: 'applied' })).rejects.toThrow(
+      `Posting ${reference} is Archived: it can only move to To Apply.`,
+    );
+  });
+
+  it('refuses a module whose required Artifact has no Chosen Version, in English', async () => {
+    const { actions, reference } = await createEmma();
+
+    await expect(actions.runModule({ module: 'letter', reference })).rejects.toThrow(
+      `Posting ${reference} has no Chosen Research, which the Letter relies on. Produce it first: jf run research ${reference}.`,
+    );
+  });
+
+  it('names the Artifacts when one is mistyped, in English', async () => {
+    const { actions, reference } = await createEmma();
+
+    await expect(actions.listVersions({ reference, artifact: 'lettr' })).rejects.toThrow(
+      'Unknown Artifact: lettr. Artifacts: research, letter, brief, visualization.',
+    );
+  });
+
+  it('refuses an empty name, in English', async () => {
+    const { actions } = await createEmma();
+
+    await expect(actions.renameCandidate({ candidateId: 'emma', name: ' ' })).rejects.toThrow(
+      'The Candidate’s name is empty: fill it in.',
     );
   });
 });

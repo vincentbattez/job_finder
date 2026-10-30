@@ -10,10 +10,8 @@ import { composeConversionPrompt, CONVERSION_REQUEST } from './prompt.ts';
 const CONVERSION_FILE_NAME_PATTERN = /^(?:cv|lettre-[\p{L}\p{N}_.-]+-\d{4})\.md$/u;
 
 // The job moves only these into the Profile: any other file the session wrote is refused
-export function findConversionFileNameError(fileName: string): string | undefined {
-  return CONVERSION_FILE_NAME_PATTERN.test(fileName)
-    ? undefined
-    : `« ${fileName} » n'est ni « cv.md » ni une lettre « lettre-<employeur>-<année>.md »`;
+export function isConversionFileName(fileName: string): boolean {
+  return CONVERSION_FILE_NAME_PATTERN.test(fileName);
 }
 
 // The conversion of an Upload into Markdown: a headless Claude session, with a fixed prompt, reads the

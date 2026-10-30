@@ -60,7 +60,7 @@ export function createNotificationChannelActions({
   async function mergeInput(rawInput: unknown, channel: string | undefined, givenParameters: TypedParameters) {
     const candidate = await findCandidate(rawInput);
     const saved = await workspace.findNotificationChannel(candidate.id);
-    const module = findNotificationChannelModule(channel ?? saved.module, candidate.name);
+    const module = findNotificationChannelModule(channel ?? saved.module, candidate);
     return { candidate, module, parameters: mergeParameters(module.description, saved, givenParameters) };
   }
 
@@ -89,21 +89,21 @@ export function createNotificationChannelActions({
       const { candidate, module, parameters } = await mergeInput(rawInput, channel, givenParameters);
       await workspace.saveNotificationChannel(candidate.id, {
         module: module.description.id,
-        parameters: module.parseParameters(parameters),
+        parameters: module.parseParameters(parameters, candidate.locale),
       });
     },
 
     // The Profile tries what the Candidate typed before saving it
     async testNotificationChannel(rawInput: unknown): Promise<void> {
       const { channel, parameters: givenParameters } = TRIAL_INPUT_SCHEMA.parse(rawInput);
-      const { module, parameters } = await mergeInput(rawInput, channel, givenParameters);
-      await module.check(parameters);
+      const { candidate, module, parameters } = await mergeInput(rawInput, channel, givenParameters);
+      await module.check(parameters, candidate.locale);
     },
 
     async listParameterChoices(rawInput: unknown): Promise<ParameterChoice[]> {
       const { channel, parameters: givenParameters, parameter } = CHOICES_INPUT_SCHEMA.parse(rawInput);
-      const { module, parameters } = await mergeInput(rawInput, channel, givenParameters);
-      return module.listChoices(parameter, parameters);
+      const { candidate, module, parameters } = await mergeInput(rawInput, channel, givenParameters);
+      return module.listChoices(parameter, parameters, candidate.locale);
     },
 
     // Through what is saved, as a new Posting would be

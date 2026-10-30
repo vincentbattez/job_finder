@@ -1,9 +1,11 @@
 import path from 'node:path';
 
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 import {
   JOB_DESCRIPTION_FILE_NAME,
   type Artifact,
   type JobDescription,
+  type Locale,
   type Location,
   type Posting,
   type ProfileFileName,
@@ -174,13 +176,12 @@ export async function openWorkspace(dataDirectory: string) {
       return filledPosting;
     },
 
-    readJobDescription(posting: Posting): string {
+    // The locale of the Candidate of the Posting, in which a missing file is told
+    readJobDescription(posting: Posting, locale: Locale): string {
       const filePath = path.join(postingDirectoryOf(posting), JOB_DESCRIPTION_FILE_NAME);
       const jobDescription = readTextFile(filePath);
       if (jobDescription === null) {
-        throw new Error(
-          `Fiche de poste introuvable pour l'Offre ${posting.reference} : ${filePath}. La remettre à cet emplacement, d'où l'outil la lit.`,
-        );
+        throw new Error(catalogueOf({ locale }).error.missingJobDescription(posting.reference, filePath));
       }
       return jobDescription;
     },

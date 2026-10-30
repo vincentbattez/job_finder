@@ -9,13 +9,13 @@ const IMPORT_INPUT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string(
 // The extraction job of an imported Posting (ADR-0003); a failure throws, which fails the job and
 // leaves the Posting as imported
 export async function runExtraction(
-  { workspace, importSource, locate }: ActionContext,
+  { workspace, importSource, findLocale, locate }: ActionContext,
   job: Job,
 ): Promise<{ job: Job }> {
   const { posting } = job;
   const { title, jobDescription, city, session } = await importSource.extract(
     workspace.postingDirectoryOf(posting),
-    workspace.readJobDescription(posting),
+    workspace.readJobDescription(posting, await findLocale(posting.candidateId)),
   );
   // A Job Description without a title keeps the name of its file: nothing is invented
   const location = await locate(city);

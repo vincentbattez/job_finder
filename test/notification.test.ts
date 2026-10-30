@@ -2,9 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createActions } from '#/actions/index.ts';
 
-import { createDataDirectory, detectPostings } from './data-directory.ts';
+import { createDataDirectory, createMigratedDataDirectory, detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel, LEA_TARGET } from './fake-notification-channel.ts';
+import { LEA_WATCH } from './lea.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
 // The two Béthune Postings, both in the Zone, and an attaché de justice Posting outside it, from the
@@ -187,6 +188,60 @@ describe('a notification that cannot be sent', () => {
     expect(stderrList).toEqual([
       `Notification « Recherche prête » de l'Offre ${REFERENCE} non envoyée : ${ERROR_MESSAGE}\n`,
       `Notification « Recherche prête » de l'Offre ${OTHER_REFERENCE} non envoyée : ${ERROR_MESSAGE}\n`,
+    ]);
+  });
+});
+
+// Emma reads English: her Watch is Léa's, in a data folder of her own
+async function detectBeforeForEmma(referenceList: string[]) {
+  const dataDirectory = createMigratedDataDirectory();
+  const notificationChannel = createFakeNotificationChannel();
+  const earlierActions = await createActions({
+    dataDirectory,
+    fetch: createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout(referenceList) } }).fetch,
+    notificationChannelList: notificationChannel.notificationChannelList,
+  });
+  await earlierActions.createCandidate({ id: 'emma', name: 'Emma', locale: 'en' });
+  await earlierActions.saveWatch({ candidateId: 'emma', ...LEA_WATCH });
+  await notificationChannel.saveFor(earlierActions, 'emma', EMMA_TARGET);
+  await earlierActions.detect();
+  const actions = await createActions({
+    dataDirectory,
+    fetch: createRecordedFetch().fetch,
+    notificationChannelList: notificationChannel.notificationChannelList,
+  });
+  return { actions, notificationChannel };
+}
+
+const EMMA_TARGET = 'notify.mobile_app_emma';
+
+describe('a notification in the Candidate’s locale', () => {
+  it('tells an English-speaking Candidate of a new Posting in English', async () => {
+    const { actions, notificationChannel } = await detectBeforeForEmma([REFERENCE]);
+
+    await actions.detect();
+
+    expect(notificationChannel.sentList).toEqual([
+      {
+        target: EMMA_TARGET,
+        title: 'New Posting in the Zone',
+        message:
+          'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE\nTribunal Judiciaire de Béthune\nDeadline: Nov 20, 2026',
+      },
+    ]);
+  });
+
+  it('tries the Notification Channel of an English-speaking Candidate in English, and Léa’s in French', async () => {
+    const { actions, notificationChannel } = await detectBeforeForEmma([]);
+    await actions.createCandidate({ id: 'lea', name: 'Léa' });
+    await notificationChannel.saveFor(actions);
+
+    await actions.sendTestNotification({ candidateId: 'emma' });
+    await actions.sendTestNotification({ candidateId: 'lea' });
+
+    expect(notificationChannel.sentList).toEqual([
+      { target: EMMA_TARGET, title: 'Test notification', message: 'Emma’s Notification Channel works.' },
+      { target: LEA_TARGET, title: 'Notification de test', message: 'Le Canal de notification de Léa fonctionne.' },
     ]);
   });
 });

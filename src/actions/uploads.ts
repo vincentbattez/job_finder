@@ -1,5 +1,6 @@
 import { z } from 'zod/v4';
 
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 import {
   PROFILE_FILE_NAME_SCHEMA,
   UPLOAD_CONVERSION_SCHEMA,
@@ -9,7 +10,7 @@ import {
   type UploadConversion,
   type UploadFileName,
 } from '#/domain/index.ts';
-import { findConversionFileNameError } from '#/modules/conversion/index.ts';
+import { isConversionFileName } from '#/modules/conversion/index.ts';
 
 import type { ActionContext } from './context.ts';
 
@@ -25,28 +26,26 @@ const UPLOAD_INPUT_SCHEMA = UPLOAD_NAME_INPUT_SCHEMA.extend({ content: z.instanc
 
 // The name comes from the front: parsed before anything touches the disk, so it never leads out of
 // the folder of the Uploads
-function parseUploadFileName(fileName: string): UploadFileName {
+function parseUploadFileName(fileName: string, candidate: Candidate): UploadFileName {
+  const { error } = catalogueOf(candidate);
   // The front sends an unnamed, empty file when the request carries none
   if (fileName === '') {
-    throw new Error('Aucun fichier reçu. Déposer un PDF ou le choisir, puis recommencer.');
+    throw new Error(error.noFileReceived);
   }
   const result = UPLOAD_FILE_NAME_SCHEMA.safeParse(fileName);
   if (!result.success) {
-    throw new Error(
-      `« ${fileName} » n'est pas un nom de Pièce : un nom sans dossier, en lettres, chiffres, « - », « _ » ou « . », terminé par « .pdf ».`,
-    );
+    throw new Error(error.invalidUploadName(fileName));
   }
   return result.data;
 }
 
-function assertIsAcceptedPdf(fileName: string, content: Uint8Array): void {
+function assertIsAcceptedPdf(fileName: string, content: Uint8Array, candidate: Candidate): void {
+  const { error } = catalogueOf(candidate);
   if (new TextDecoder().decode(content.subarray(0, PDF_SIGNATURE.length)) !== PDF_SIGNATURE) {
-    throw new Error(`« ${fileName} » n'est pas un PDF. Exporter le document en PDF, puis le déposer à nouveau.`);
+    throw new Error(error.notAPdf(fileName));
   }
   if (content.byteLength > MAX_UPLOAD_MEGABYTES * 1024 * 1024) {
-    throw new Error(
-      `« ${fileName} » dépasse ${String(MAX_UPLOAD_MEGABYTES)} Mo. Réduire le PDF (moins d'images), puis le déposer à nouveau.`,
-    );
+    throw new Error(error.uploadTooLarge(fileName, MAX_UPLOAD_MEGABYTES));
   }
 }
 
@@ -60,28 +59,24 @@ export async function runConversion(context: ActionContext, job: ProfileJob): Pr
   const { workspace, uploadConversion, findCandidate } = context;
   const { candidateId, upload } = job;
   const candidate = await findCandidate({ candidateId });
+  const { error } = catalogueOf(candidate);
   if (!hasUpload(context, candidateId, upload)) {
-    throw new Error(
-      `« ${upload} » n'est plus dans le Profil de ${candidate.name} : la déposer à nouveau pour la convertir.`,
-    );
+    throw new Error(error.uploadGone(upload, candidate.name));
   }
   const conversion = workspace.startConversion(candidateId, upload);
   const session = await uploadConversion.convert(candidate, { upload, ...conversion });
   const convertedFileList = workspace.readConversionFiles(conversion.outputDirectory);
   if (convertedFileList.length === 0) {
-    throw new Error(`La conversion de « ${upload} » n'a écrit aucun fichier Markdown.\n${session.log}`);
+    throw new Error(error.conversionWithoutFile(upload, session.log));
   }
   const profileFileList = workspace.readProfileFiles(candidateId);
   const fileList = convertedFileList.map(({ fileName, markdown }) => {
-    const nameError = findConversionFileNameError(fileName);
-    if (nameError !== undefined) {
-      throw new Error(`La conversion de « ${upload} » est refusée : ${nameError}.`);
+    if (!isConversionFileName(fileName)) {
+      throw new Error(error.conversionRefused(upload, fileName));
     }
     const existingFile = profileFileList.find((profileFile) => profileFile.fileName === fileName);
     if (existingFile !== undefined && existingFile.markdown !== markdown) {
-      throw new Error(
-        `« ${upload} » se convertit en « ${fileName} », que le Profil a déjà : il n'est pas écrasé. Supprimer ou renommer « ${fileName} », puis relancer la conversion.`,
-      );
+      throw new Error(error.conversionOverwrite(upload, fileName));
     }
     return { fileName: PROFILE_FILE_NAME_SCHEMA.parse(fileName), markdown };
   });
@@ -96,7 +91,7 @@ export function createUploadActions(context: ActionContext) {
 
   function assertHasUpload(candidate: Candidate, fileName: UploadFileName): void {
     if (!hasUpload(context, candidate.id, fileName)) {
-      throw new Error(`Le Profil de ${candidate.name} n'a pas de Pièce « ${fileName} ».`);
+      throw new Error(catalogueOf(candidate).error.missingUpload(candidate.name, fileName));
     }
   }
 
@@ -130,22 +125,22 @@ export function createUploadActions(context: ActionContext) {
     async saveUpload(rawInput: unknown): Promise<void> {
       const candidate = await findCandidate(rawInput);
       const input = UPLOAD_INPUT_SCHEMA.parse(rawInput);
-      const fileName = parseUploadFileName(input.fileName);
-      assertIsAcceptedPdf(fileName, input.content);
+      const fileName = parseUploadFileName(input.fileName, candidate);
+      assertIsAcceptedPdf(fileName, input.content, candidate);
       workspace.saveUpload(candidate.id, fileName, input.content);
       await queueConversion(candidate, fileName);
     },
 
     async convertUpload(rawInput: unknown): Promise<void> {
       const candidate = await findCandidate(rawInput);
-      const fileName = parseUploadFileName(UPLOAD_NAME_INPUT_SCHEMA.parse(rawInput).fileName);
+      const fileName = parseUploadFileName(UPLOAD_NAME_INPUT_SCHEMA.parse(rawInput).fileName, candidate);
       assertHasUpload(candidate, fileName);
       await queueConversion(candidate, fileName);
     },
 
     async deleteUpload(rawInput: unknown): Promise<void> {
       const candidate = await findCandidate(rawInput);
-      const fileName = parseUploadFileName(UPLOAD_NAME_INPUT_SCHEMA.parse(rawInput).fileName);
+      const fileName = parseUploadFileName(UPLOAD_NAME_INPUT_SCHEMA.parse(rawInput).fileName, candidate);
       assertHasUpload(candidate, fileName);
       workspace.deleteUpload(candidate.id, fileName);
     },

@@ -1,5 +1,6 @@
 import { z } from 'zod/v4';
 
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 import { PROFILE_FILE_NAME_SCHEMA, type Candidate, type MarkdownFile, type ProfileFileName } from '#/domain/index.ts';
 import { composeProfilePrompt } from '#/profile/prompt.ts';
 
@@ -11,12 +12,10 @@ const NEW_PROFILE_FILE_INPUT_SCHEMA = PROFILE_FILE_NAME_INPUT_SCHEMA.extend({ ma
 
 // The name comes from the front: parsed before anything touches the disk, so it never leads out of
 // the Profile folder
-function parseProfileFileName(fileName: string): ProfileFileName {
+function parseProfileFileName(fileName: string, candidate: Candidate): ProfileFileName {
   const result = PROFILE_FILE_NAME_SCHEMA.safeParse(fileName);
   if (!result.success) {
-    throw new Error(
-      `« ${fileName} » n'est pas un nom de fichier du Profil : un nom sans dossier, en lettres, chiffres, « - », « _ » ou « . », terminé par « .md ».`,
-    );
+    throw new Error(catalogueOf(candidate).error.invalidProfileFileName(fileName));
   }
   return result.data;
 }
@@ -28,9 +27,7 @@ export function createProfileActions({ workspace, aiSession, findCandidate }: Ac
 
   function assertHasProfileFile(candidate: Candidate, fileName: ProfileFileName): void {
     if (!hasProfileFile(candidate, fileName)) {
-      throw new Error(
-        `Le Profil de ${candidate.name} n'a pas de fichier « ${fileName} ». La page Profil ou « jf profile ${candidate.id} » le crée.`,
-      );
+      throw new Error(catalogueOf(candidate).error.missingProfileFile(candidate.name, fileName, candidate.id));
     }
   }
 
@@ -51,9 +48,9 @@ export function createProfileActions({ workspace, aiSession, findCandidate }: Ac
     async createProfileFile(rawInput: unknown): Promise<void> {
       const candidate = await findCandidate(rawInput);
       const input = NEW_PROFILE_FILE_INPUT_SCHEMA.parse(rawInput);
-      const fileName = parseProfileFileName(input.fileName);
+      const fileName = parseProfileFileName(input.fileName, candidate);
       if (hasProfileFile(candidate, fileName)) {
-        throw new Error(`Le Profil de ${candidate.name} a déjà un fichier « ${fileName} ». Choisir un autre nom.`);
+        throw new Error(catalogueOf(candidate).error.duplicateProfileFile(candidate.name, fileName));
       }
       workspace.saveProfileFile(candidate.id, fileName, input.markdown);
     },
@@ -62,14 +59,14 @@ export function createProfileActions({ workspace, aiSession, findCandidate }: Ac
     async saveProfileFile(rawInput: unknown): Promise<void> {
       const candidate = await findCandidate(rawInput);
       const input = PROFILE_FILE_INPUT_SCHEMA.parse(rawInput);
-      const fileName = parseProfileFileName(input.fileName);
+      const fileName = parseProfileFileName(input.fileName, candidate);
       assertHasProfileFile(candidate, fileName);
       workspace.saveProfileFile(candidate.id, fileName, input.markdown);
     },
 
     async deleteProfileFile(rawInput: unknown): Promise<void> {
       const candidate = await findCandidate(rawInput);
-      const fileName = parseProfileFileName(PROFILE_FILE_NAME_INPUT_SCHEMA.parse(rawInput).fileName);
+      const fileName = parseProfileFileName(PROFILE_FILE_NAME_INPUT_SCHEMA.parse(rawInput).fileName, candidate);
       assertHasProfileFile(candidate, fileName);
       workspace.deleteProfileFile(candidate.id, fileName);
     },

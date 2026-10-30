@@ -36,7 +36,8 @@ function describeParameters(
   return Object.entries(parameterSchema.shape).map(([parameterName, schema]) => {
     const meta = PARAMETER_REGISTRY.get(schema);
     if (meta === undefined) {
-      throw new Error(`Le Paramètre ${parameterName} du module ${moduleName} n'est pas déclaré par parameter().`);
+      // A mistake of the module's author, never of the Candidate: in English, as the code
+      throw new Error(`The ${parameterName} Parameter of the ${moduleName} module is not declared with parameter().`);
     }
     return PARAMETER_SCHEMA.parse({
       name: parameterName,
@@ -60,13 +61,13 @@ export function declareParameters<TShape extends ParameterShape>(
 ) {
   const parameterList = describeParameters(moduleName, parameterSchema, choiceNameList);
   // The error a module gives when some Parameters are missing or wrong, given their labels
-  type MessageComposer = (labelList: string) => string;
+  type MessageComposer = (labelList: string[]) => string;
 
   function parseWith<T extends z.ZodType>(schema: T, rawParameters: unknown, composeMessage: MessageComposer) {
     const result = schema.safeParse(rawParameters);
     if (!result.success) {
       const labelList = result.error.issues.map((issue) => labelOf(parameterList, issue.path[0]));
-      throw new Error(composeMessage([...new Set(labelList)].map((label) => `« ${label} »`).join(', ')));
+      throw new Error(composeMessage([...new Set(labelList)]));
     }
     return result.data;
   }

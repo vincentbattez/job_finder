@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { IAiModule } from '#/ai-module/index.ts';
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
 import { catalogueOf } from '#/domain/catalogue/index.ts';
-import { ARTIFACT_SCHEMA, type Artifact, type Job, type Posting, type Version } from '#/domain/index.ts';
+import { ARTIFACT_SCHEMA, type Artifact, type Job, type Locale, type Posting, type Version } from '#/domain/index.ts';
 import { INTERVIEW_BRIEF_MODULE } from '#/modules/interview-brief/index.ts';
 import { LETTER_MODULE } from '#/modules/letter/index.ts';
 import { RESEARCH_MODULE } from '#/modules/research/index.ts';
@@ -30,23 +30,23 @@ const AI_MODULE_BY_ARTIFACT: Record<Artifact, IAiModule> = {
 };
 
 // An Artifact, or the module that produces it, named after it or by the module's alias
-function parseArtifactName(name: string, noun: 'Artefact' | 'Module'): Artifact {
+function parseArtifactName(name: string, composeError: (name: string, nameList: string[]) => string): Artifact {
   const artifact = ARTIFACT_SCHEMA.options.find(
     (option) => name === option || name === AI_MODULE_BY_ARTIFACT[option].alias,
   );
   if (artifact === undefined) {
     const nameList = Object.entries(AI_MODULE_BY_ARTIFACT).map(([option, aiModule]) => aiModule.alias ?? option);
-    throw new Error(`${noun} inconnu : ${name}. ${noun}s : ${nameList.join(', ')}.`);
+    throw new Error(composeError(name, nameList));
   }
   return artifact;
 }
 
-export function parseModule(name: string): Artifact {
-  return parseArtifactName(name, 'Module');
+export function parseModule(name: string, locale: Locale): Artifact {
+  return parseArtifactName(name, catalogueOf({ locale }).error.unknownModule);
 }
 
-export function parseArtifact(name: string): Artifact {
-  return parseArtifactName(name, 'Artefact');
+export function parseArtifact(name: string, locale: Locale): Artifact {
+  return parseArtifactName(name, catalogueOf({ locale }).error.unknownArtifact);
 }
 
 export function findDefaultInstructions(module: Artifact): string {
@@ -86,9 +86,14 @@ type Refusal = { freeze: string } | { missingArtifact: Artifact };
 
 // Why the module cannot run on the Posting now, undefined when it can: its Artifact frozen since the
 // Posting was Applied, or an Artifact it requires without a Chosen Version
-async function findRefusal(workspace: Workspace, posting: Posting, module: Artifact): Promise<Refusal | undefined> {
+async function findRefusal(
+  workspace: Workspace,
+  posting: Posting,
+  module: Artifact,
+  locale: Locale,
+): Promise<Refusal | undefined> {
   const aiModule = AI_MODULE_BY_ARTIFACT[module];
-  const freeze = aiModule.isFrozenOnceApplied === true ? findLetterFreeze(posting) : undefined;
+  const freeze = aiModule.isFrozenOnceApplied === true ? findLetterFreeze(posting, locale) : undefined;
   if (freeze !== undefined) {
     return { freeze };
   }
@@ -103,33 +108,32 @@ async function findRefusal(workspace: Workspace, posting: Posting, module: Artif
 
 // The refusal in the words of the CLI, with the command that lifts it, or of the front, beside the
 // button of the missing Artifact
-function wordRefusal(refusal: Refusal, posting: Posting, module: Artifact, isForFront = false): string {
+function wordRefusal(refusal: Refusal, posting: Posting, module: Artifact, locale: Locale, isForFront = false): string {
   if ('freeze' in refusal) {
     return refusal.freeze;
   }
   const { missingArtifact } = refusal;
-  // In French, as the rest of the refusal, until it speaks the Candidate's locale (#74)
-  const { artifactLabelByArtifact } = catalogueOf(null).common;
-  const missingLabel = artifactLabelByArtifact[missingArtifact];
-  const reason = `L'Offre ${posting.reference} n'a pas de ${missingLabel} retenue, sur laquelle s'appuie la ${artifactLabelByArtifact[module]}`;
+  const { common, error } = catalogueOf({ locale });
+  const missingLabel = common.artifactLabelByArtifact[missingArtifact];
+  const moduleLabel = common.artifactLabelByArtifact[module];
   return isForFront
-    ? `${reason} : lancez d'abord la ${missingLabel}.`
-    : `${reason}. La produire d'abord : jf run ${missingArtifact} ${posting.reference}.`;
+    ? error.missingArtifactForFront(posting.reference, missingLabel, moduleLabel)
+    : error.missingArtifactForCli(posting.reference, missingLabel, moduleLabel, missingArtifact);
 }
 
 // What the Candidate sends, the Letter, is frozen once the Posting was Applied
-export function assertNotFrozen(posting: Posting, artifact: Artifact): void {
+export function assertNotFrozen(posting: Posting, artifact: Artifact, locale: Locale): void {
   if (AI_MODULE_BY_ARTIFACT[artifact].isFrozenOnceApplied === true) {
-    assertLetterModifiable(posting);
+    assertLetterModifiable(posting, locale);
   }
 }
 
 // Throws before anything is written: the actions refuse a job up front, the runner a job queued
 // before the Posting changed
-export async function findInputs(workspace: Workspace, posting: Posting, module: Artifact) {
-  const refusal = await findRefusal(workspace, posting, module);
+export async function findInputs(workspace: Workspace, posting: Posting, module: Artifact, locale: Locale) {
+  const refusal = await findRefusal(workspace, posting, module, locale);
   if (refusal !== undefined) {
-    throw new Error(wordRefusal(refusal, posting, module));
+    throw new Error(wordRefusal(refusal, posting, module, locale));
   }
   const aiModule = AI_MODULE_BY_ARTIFACT[module];
   const artifactList = [...(aiModule.requiredArtifactList ?? []), ...(aiModule.optionalArtifactList ?? [])];
@@ -143,9 +147,9 @@ export async function findInputs(workspace: Workspace, posting: Posting, module:
 }
 
 // The Posting page offers a module with the very checks of a launch
-export async function describeModule(workspace: Workspace, posting: Posting, artifact: Artifact) {
-  const refusal = await findRefusal(workspace, posting, artifact);
-  return { refusal: refusal === undefined ? null : wordRefusal(refusal, posting, artifact, true) };
+export async function describeModule(workspace: Workspace, posting: Posting, artifact: Artifact, locale: Locale) {
+  const refusal = await findRefusal(workspace, posting, artifact, locale);
+  return { refusal: refusal === undefined ? null : wordRefusal(refusal, posting, artifact, locale, true) };
 }
 
 // The worker runs each queued job with it (ADR-0003); the Version keeps the Instructions it was made
@@ -156,24 +160,29 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
     { name, findFormatError }: IAiModule['outputFileList'][number],
     posting: Posting,
     outputDirectory: string,
+    locale: Locale,
   ) {
+    const { error } = catalogueOf({ locale });
     const filePath = path.join(outputDirectory, name);
     const outputPath = path.relative(workspace.postingDirectoryOf(posting), filePath);
     const content = workspace.readTextFile(filePath);
     if (content === null) {
-      return `Le fichier attendu ${outputPath} est absent.`;
+      return error.missingOutput(outputPath);
     }
     if (content.trim() === '') {
-      return `Le fichier attendu ${outputPath} est vide.`;
+      return error.emptyOutput(outputPath);
     }
     const formatError = findFormatError?.(content, posting);
-    return formatError === undefined ? undefined : `Le fichier ${outputPath} est mal formé : ${formatError}.`;
+    return formatError === undefined ? undefined : error.malformedOutput(outputPath, formatError);
   }
 
-  return async function runJob(job: Job & { module: Artifact }): Promise<{ job: Job; version: Version }> {
+  return async function runJob(
+    job: Job & { module: Artifact },
+    locale: Locale,
+  ): Promise<{ job: Job; version: Version }> {
     const { posting, module } = job;
     const aiModule = AI_MODULE_BY_ARTIFACT[module];
-    const { versionList: inputList, directoryList } = await findInputs(workspace, posting, module);
+    const { versionList: inputList, directoryList } = await findInputs(workspace, posting, module, locale);
     const candidateInstructions = workspace.readInstructions(posting.candidateId, module);
     const instructions = candidateInstructions ?? aiModule.defaultInstructions;
     const hasCandidateInstructions = candidateInstructions !== null;
@@ -211,7 +220,7 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
     });
     const problem = session.isSuccess
       ? aiModule.outputFileList
-          .map((outputFile) => findOutputProblem(outputFile, posting, outputDirectory))
+          .map((outputFile) => findOutputProblem(outputFile, posting, outputDirectory, locale))
           .find((fileProblem) => fileProblem !== undefined)
       : undefined;
     const isReady = session.isSuccess && problem === undefined;
