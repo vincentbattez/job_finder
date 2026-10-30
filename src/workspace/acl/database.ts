@@ -7,13 +7,17 @@ import { z } from 'zod/v4';
 
 import {
   CANDIDAT_SCHEMA,
+  CONNEXION_HOME_ASSISTANT_SCHEMA,
+  HOME_ASSISTANT_ACCESS_SCHEMA,
   JOB_SCHEMA,
   OFFRE_SCHEMA,
   VEILLE_SCHEMA,
   VERSION_SCHEMA,
   type Artefact,
   type Candidat,
+  type ConnexionHomeAssistant,
   type FicheDePoste,
+  type HomeAssistantAccess,
   type Job,
   type Lieu,
   type ListedOffre,
@@ -92,6 +96,39 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
   return {
     async listCandidats(): Promise<Candidat[]> {
       return z.array(CANDIDAT_SCHEMA).parse(await prisma.candidat.findMany({ orderBy: { name: 'asc' } }));
+    },
+
+    // Never the token: what an action may return (ADR-0006)
+    async readConnexionHomeAssistant({ id }: Candidat): Promise<ConnexionHomeAssistant> {
+      const connexion = await prisma.connexionHomeAssistant.findUnique({ where: { candidatId: id } });
+      return CONNEXION_HOME_ASSISTANT_SCHEMA.parse({
+        url: connexion?.url ?? null,
+        service: connexion?.service ?? null,
+        isTokenConfigured: (connexion?.token ?? null) !== null,
+      });
+    },
+
+    // The token included, for the notification channel only, never for an action to return (ADR-0006)
+    async findHomeAssistantAccess(candidatId: string): Promise<HomeAssistantAccess> {
+      const candidat = await prisma.candidat.findUniqueOrThrow({
+        where: { id: candidatId },
+        include: { connexionHomeAssistant: true },
+      });
+      const { url = null, token = null, service = null } = candidat.connexionHomeAssistant ?? {};
+      return HOME_ASSISTANT_ACCESS_SCHEMA.parse({ candidatName: candidat.name, url, token, service });
+    },
+
+    // A field left undefined keeps its saved value: the front never gets the token back to resend it
+    async saveConnexionHomeAssistant(
+      { id }: Candidat,
+      { url, token, service }: { url: string; token: string | undefined; service: string | undefined },
+    ): Promise<void> {
+      const data = { url, ...(token !== undefined && { token }), ...(service !== undefined && { service }) };
+      await prisma.connexionHomeAssistant.upsert({
+        where: { candidatId: id },
+        create: { candidatId: id, ...data },
+        update: data,
+      });
     },
 
     async listVeilles(): Promise<Veille[]> {
@@ -316,6 +353,19 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
         ),
         ...veilleList.map((veille) =>
           prisma.veille.upsert({ where: { id: veille.id }, create: veille, update: veille }),
+        ),
+        // The notify service the config used to hold seeds a Candidat's first Connexion, then the
+        // database wins (ADR-0006)
+        ...config.candidatList.flatMap(({ id, notification }) =>
+          notification === undefined
+            ? []
+            : [
+                prisma.connexionHomeAssistant.upsert({
+                  where: { candidatId: id },
+                  create: { candidatId: id, service: notification.service },
+                  update: {},
+                }),
+              ],
         ),
       ]);
     },

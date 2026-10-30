@@ -12,10 +12,21 @@ datasource db {
 // Candidats and Veilles are copied from data/config.json at every launch: the config is
 // their source of truth, never edit these rows, except Veille.detectedAt, which only jf writes.
 model Candidat {
-  id         String   @id
-  name       String
-  veilleList Veille[]
-  offreList  Offre[]
+  id                     String                  @id
+  name                   String
+  veilleList             Veille[]
+  offreList              Offre[]
+  connexionHomeAssistant ConnexionHomeAssistant?
+}
+
+// Apart from Candidat, which only data/config.json writes: the Candidat saves it from the front. Its
+// token is write-only, no action returns it (ADR-0006). A field left null falls back on .env.
+model ConnexionHomeAssistant {
+  candidat   Candidat @relation(fields: [candidatId], references: [id], onDelete: Cascade)
+  candidatId String   @id
+  url        String?
+  token      String?
+  service    String?
 }
 
 model Veille {

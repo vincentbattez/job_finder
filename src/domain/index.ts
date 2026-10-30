@@ -294,4 +294,30 @@ export const VISUALISATION_SCHEMA = z.object({ html: z.string() }).brand<'Domain
 
 export type Visualisation = z.infer<typeof VISUALISATION_SCHEMA>;
 
+// A Candidat's Connexion Home Assistant as the actions return it: whether a token is configured,
+// never the token, which is write-only (ADR-0006)
+export const CONNEXION_HOME_ASSISTANT_SCHEMA = z
+  .object({ url: z.string().nullable(), service: z.string().nullable(), isTokenConfigured: z.boolean() })
+  .brand<'Domain'>();
+
+export type ConnexionHomeAssistant = z.infer<typeof CONNEXION_HOME_ASSISTANT_SCHEMA>;
+
+// What reaching a Candidat's Home Assistant takes, token included. Its own brand keeps it out of the
+// values an action may return (src/actions/index.ts, ADR-0006); a null field falls back on .env.
+export const HOME_ASSISTANT_ACCESS_SCHEMA = z
+  .object({
+    candidatName: z.string(),
+    url: z.string().nullable(),
+    token: z.string().nullable(),
+    service: z.string().nullable(),
+  })
+  .brand<'Secret'>();
+
+export type HomeAssistantAccess = z.infer<typeof HOME_ASSISTANT_ACCESS_SCHEMA>;
+
+// A notify service of a Home Assistant, such as notify.mobile_app_iphone_de_lea, which pushes to a phone
+export const NOTIFY_SERVICE_SCHEMA = z.object({ service: z.string(), name: z.string() }).brand<'Domain'>();
+
+export type NotifyService = z.infer<typeof NOTIFY_SERVICE_SCHEMA>;
+
 export type DomainValue = z.$brand<'Domain'>;

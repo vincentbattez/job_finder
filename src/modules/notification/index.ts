@@ -1,6 +1,8 @@
-import type { Offre } from '#/domain/index.ts';
+import type { HomeAssistantAccess, Offre } from '#/domain/index.ts';
 
 import { callNotifyService } from './acl/home-assistant.ts';
+
+export { checkConnexion, listNotifyServices } from './acl/home-assistant.ts';
 
 // What the Candidat reads on their phone
 export interface INotification {
@@ -8,12 +10,12 @@ export interface INotification {
   message: string;
 }
 
-// The channels are interchangeable, each Candidat with their own target (ADR-0003)
+// The channels are interchangeable, each Candidat with their own Connexion (ADR-0003, ADR-0006)
 export interface INotificationChannel {
-  send(target: string, notification: INotification): Promise<void>;
+  send(access: HomeAssistantAccess, notification: INotification): Promise<void>;
 }
 
-// The only channel of the v0: the target is a notify service of Home Assistant
+// The only channel of the v0: a notify service of the Candidat's Home Assistant
 export const HOME_ASSISTANT: INotificationChannel = { send: callNotifyService };
 
 // The Source gives the Date limite as a day, at midnight UTC
@@ -60,6 +62,11 @@ export function composeRepublicationPostuleeNotification(offre: Offre, republish
       dateLimiteOf(offre),
     ].join('\n'),
   };
+}
+
+// What the Candidat receives when they try their Connexion Home Assistant
+export function composeTestNotification(candidatName: string): INotification {
+  return { title: 'Notification de test', message: `La Connexion Home Assistant de ${candidatName} fonctionne.` };
 }
 
 export function composeRecherchePreteNotification(offre: Offre): INotification {

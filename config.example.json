@@ -4,10 +4,6 @@
     {
       "id": "lea",
       "name": "Léa",
-      "notification": {
-        "channel": "home-assistant",
-        "service": "notify.mobile_app_iphone_de_lea"
-      },
       "veilleList": [
         {
           "id": "attache-de-justice-hauts-de-france",

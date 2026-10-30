@@ -68,7 +68,7 @@ export async function openContext({
   // A notification not sent undoes and skips nothing: it comes back as the failure to report
   async function notify(offre: Offre, notification: INotification): Promise<string | undefined> {
     try {
-      await notificationChannel.send(workspace.notificationTargetOf(offre.candidatId), notification);
+      await notificationChannel.send(await workspace.findHomeAssistantAccess(offre.candidatId), notification);
       return undefined;
     } catch (error) {
       const reason = messageOf(error);
@@ -82,6 +82,7 @@ export async function openContext({
     pepSource: createPepSource(fetch),
     importSource: createImportSource(aiSession),
     runJob: createJobRunner(workspace, aiSession),
+    notificationChannel,
     findCandidat,
     findOffre,
     locate,

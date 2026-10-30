@@ -18,7 +18,7 @@ Les règles génériques du code. Le pourquoi d'une décision est dans son ADR (
 
 ## Anti-corruption layer (ADR-0005)
 
-- **Domaine.** Chaque concept du domaine a son schéma Zod dans `src/domain/`, terminé par `.brand<'Domain'>()`. Son type en est tiré par `z.infer`. Une énumération (`z.enum`) reste sans brand, pour que ses littéraux s'écrivent dans le code : l'objet qui la porte a le sien.
+- **Domaine.** Chaque concept du domaine a son schéma Zod dans `src/domain/`, terminé par `.brand<'Domain'>()`. Son type en est tiré par `z.infer`. Une énumération (`z.enum`) reste sans brand, pour que ses littéraux s'écrivent dans le code : l'objet qui la porte a le sien. Un schéma qui porte un secret, comme le jeton d'une Connexion Home Assistant, a le brand `'Secret'` : le typecheck refuse alors qu'une action le renvoie (ADR-0006).
 - **ACL.** La donnée brute (base, fichiers, HTTP, sous-processus, environnement) se lit dans un dossier `acl/`. Il la parse avec un schéma du domaine et n'exporte que des types domaine. **(CI)**
 - Une action reçoit son entrée en `unknown` et la parse. Elle renvoie `void` ou des valeurs du domaine. **(CI)**
 - Une valeur du domaine s'obtient toujours par `parse`. Les assertions `as` sont refusées. **(CI)**
