@@ -1,8 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
-import { useCatalogue } from '#/web/catalogue.ts';
-
 import { StateBadge } from './badge.tsx';
 import type { IArtifactVersions } from './posting-detail.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
@@ -16,8 +14,7 @@ export function ModuleLaunch({
   state,
   module,
 }: Readonly<Pick<IArtifactVersions, 'artifact' | 'state' | 'module'> & { reference: string }>) {
-  const { t } = useTranslation();
-  const { posting: copy } = useCatalogue();
+  const { t } = useTranslation('posting');
   const fetcher = useFetcher<{ error: string | null }>();
   const isHydrated = useIsHydrated();
   const isRunning = state === 'in_progress';
@@ -31,7 +28,9 @@ export function ModuleLaunch({
         <StateBadge state={state} />
       </span>
       <button type="submit" disabled={!isHydrated || isRunning || module.refusal !== null || fetcher.state !== 'idle'}>
-        {(state === 'absent' ? copy.launchArtifact : copy.relaunchArtifact)(t(`artifactLabelByArtifact.${artifact}`))}
+        {t(state === 'absent' ? 'launchArtifact' : 'relaunchArtifact', {
+          artifactLabel: t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' }),
+        })}
       </button>
       {module.refusal !== null && <p className="module-launch__refusal">{module.refusal}</p>}
       {error !== null && <p role="alert">{error}</p>}

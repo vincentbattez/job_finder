@@ -1,8 +1,6 @@
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useCatalogue } from '#/web/catalogue.ts';
-
 import { StateBadge } from './badge.tsx';
 import { CopyCommand } from './copy-command.tsx';
 import { DateText } from './date.tsx';
@@ -21,20 +19,20 @@ function VersionFiles({
   version,
   documentList,
 }: Readonly<Omit<VersionDocuments, 'isChoosable'> & { reference: string; artifact: IArtifactVersions['artifact'] }>) {
-  const { posting: copy } = useCatalogue();
+  const { t } = useTranslation('posting');
   if (artifact === 'visualization' && version.state === 'ready') {
     return (
       <div className="visualization">
         <iframe
           src={`/postings/${reference}/visualization/${String(version.number)}`}
           sandbox=""
-          title={copy.visualizationFrameTitle(version.number)}
+          title={t('visualizationFrameTitle', { versionNumber: version.number })}
         />
       </div>
     );
   }
   if (documentList.length === 0) {
-    return <p className="missing">{copy.noFile}</p>;
+    return <p className="missing">{t('noFile')}</p>;
   }
   return (
     <>
@@ -55,27 +53,26 @@ export function ArtifactVersions({
   isEditable,
   versionList,
 }: Readonly<IArtifactVersions & { reference: string }>) {
-  const { t } = useTranslation();
-  const { posting: copy } = useCatalogue();
+  const { t } = useTranslation('posting');
   const headingId = useId();
   return (
     <section className="artifact" id={artifact} data-artifact={artifact} aria-labelledby={headingId}>
-      <h2 id={headingId}>{t(`artifactLabelByArtifact.${artifact}`)}</h2>
+      <h2 id={headingId}>{t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' })}</h2>
       <ModuleLaunch reference={reference} artifact={artifact} state={state} module={module} />
       {isEditable && <CopyCommand command={`jf edit ${reference} ${artifact}`} />}
       {versionList.length === 0 ? (
-        <p className="missing">{copy.noVersion}</p>
+        <p className="missing">{t('noVersion')}</p>
       ) : (
         <ol className="version-list">
           {versionList.map(({ version, isChoosable, documentList }) => (
             <li key={version.number}>
               <details open={version.isChosen}>
                 <summary>
-                  <span className="reference">{copy.versionNumber(version.number)}</span>
+                  <span className="reference">{t('versionNumber', { versionNumber: version.number })}</span>
                   <StateBadge state={STATE_BY_VERSION_STATE[version.state]} />
                   {version.isChosen && (
                     <span className="badge" data-chosen>
-                      {copy.chosenBadge}
+                      {t('chosenBadge')}
                     </span>
                   )}
                   <InstructionsOrigin hasCandidateInstructions={version.hasCandidateInstructions} />
@@ -85,7 +82,7 @@ export function ArtifactVersions({
                 </summary>
                 {isChoosable && <ChooseButton reference={reference} artifact={artifact} number={version.number} />}
                 <details className="version-instructions">
-                  <summary>{copy.versionInstructions}</summary>
+                  <summary>{t('versionInstructions')}</summary>
                   <Markdown markdown={version.instructions} />
                 </details>
                 <VersionFiles reference={reference} artifact={artifact} version={version} documentList={documentList} />

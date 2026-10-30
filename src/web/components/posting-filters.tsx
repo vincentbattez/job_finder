@@ -1,6 +1,5 @@
+import { useTranslation } from 'react-i18next';
 import { Form, useSearchParams } from 'react-router';
-
-import { useCatalogue } from '#/web/catalogue.ts';
 
 import type { Status } from './badge.tsx';
 
@@ -31,23 +30,23 @@ function listChoices(valueList: (string | null)[]): string[] {
 
 // A plain GET form: the filters live in the URL and work before React hydrates the page
 export function PostingFilters({ postingList }: Readonly<{ postingList: IFilteredPosting[] }>) {
-  const { posting: copy } = useCatalogue();
+  const { t } = useTranslation('posting');
   const [searchParameters] = useSearchParams();
   return (
-    <Form role="search" aria-label={copy.filtersLabel} className="filters" key={searchParameters.toString()}>
+    <Form role="search" aria-label={t('filtersLabel')} className="filters" key={searchParameters.toString()}>
       <label>
-        {copy.cityFilter}
+        {t('cityFilter')}
         <select name="city" defaultValue={searchParameters.get('city') ?? ''}>
-          <option value="">{copy.allChoices}</option>
+          <option value="">{t('allChoices')}</option>
           {listChoices(postingList.map(({ city }) => city)).map((city) => (
             <option key={city}>{city}</option>
           ))}
         </select>
       </label>
       <label>
-        {copy.regionFilter}
+        {t('regionFilter')}
         <select name="region" defaultValue={searchParameters.get('region') ?? ''}>
-          <option value="">{copy.allChoices}</option>
+          <option value="">{t('allChoices')}</option>
           {listChoices(postingList.map(({ region }) => region)).map((region) => (
             <option key={region}>{region}</option>
           ))}
@@ -55,9 +54,9 @@ export function PostingFilters({ postingList }: Readonly<{ postingList: IFiltere
       </label>
       <label className="filters__check">
         <input type="checkbox" name="archived" defaultChecked={searchParameters.has('archived')} />
-        {copy.showArchived}
+        {t('showArchived')}
       </label>
-      <button type="submit">{copy.filter}</button>
+      <button type="submit">{t('filter')}</button>
     </Form>
   );
 }

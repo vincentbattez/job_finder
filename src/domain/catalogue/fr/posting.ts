@@ -1,14 +1,7 @@
 import type { POSTING_EN } from '#/domain/catalogue/en/posting.ts';
 
-function countNewPostings(count: number): string {
-  if (count === 0) {
-    return 'aucune nouvelle Offre';
-  }
-  return count === 1 ? '1 nouvelle Offre' : `${String(count)} nouvelles Offres`;
-}
-
 export const POSTING_FR: typeof POSTING_EN = {
-  pageTitle: (postingTitle: string) => `${postingTitle} · Job Finder`,
+  pageTitle: '{{postingTitle}} · Job Finder',
   unreadPosting: 'Offre',
   stateLabelByState: {
     absent: 'Absent',
@@ -51,17 +44,17 @@ export const POSTING_FR: typeof POSTING_EN = {
   appliedFreezesLetter: 'Une fois Postulée, la Lettre retenue ne change plus : c’est celle envoyée.',
 
   // Every Artifact is feminine in French: la Recherche, la Lettre, la Fiche d’entretien, la Visualisation
-  launchArtifact: (artifactLabel: string) => `Lancer la ${artifactLabel}`,
-  relaunchArtifact: (artifactLabel: string) => `Relancer la ${artifactLabel}`,
+  launchArtifact: 'Lancer la {{artifactLabel}}',
+  relaunchArtifact: 'Relancer la {{artifactLabel}}',
   extractionLabel: 'Champs relevés par Claude',
   relaunchExtraction: 'Relancer l’extraction',
 
-  versionNumber: (versionNumber: number) => `v${String(versionNumber)}`,
+  versionNumber: 'v{{versionNumber}}',
   noVersion: 'Aucune Version pour l’instant.',
   chosenBadge: 'Retenue',
   versionInstructions: 'Consignes de cette Version',
   noFile: 'Aucun fichier dans cette Version.',
-  visualizationFrameTitle: (versionNumber: number) => `Visualisation v${String(versionNumber)}`,
+  visualizationFrameTitle: 'Visualisation v{{versionNumber}}',
   chooseVersion: 'Retenir cette Version',
 
   documentLabel: 'Markdown',
@@ -76,11 +69,16 @@ export const POSTING_FR: typeof POSTING_EN = {
 
   runDetection: 'Lancer une Détection',
   detectionRunning: 'Détection en cours…',
-  detectionSummary: (watchId: string, newPostingCount: number, isFirstLaunch: boolean) => {
-    const found = countNewPostings(newPostingCount);
-    const summary = isFirstLaunch ? `${found}, premier lancement : importées sans rien déclencher` : found;
-    return `Veille ${watchId} : ${summary}`;
-  },
+  // French counts 0 as singular: zero has a sentence of its own
+  detectionSummary_zero: 'Veille {{watchId}} : aucune nouvelle Offre',
+  detectionSummary_one: 'Veille {{watchId}} : {{count}} nouvelle Offre',
+  detectionSummary_other: 'Veille {{watchId}} : {{count}} nouvelles Offres',
+  firstLaunchDetectionSummary_zero:
+    'Veille {{watchId}} : aucune nouvelle Offre, premier lancement : importées sans rien déclencher',
+  firstLaunchDetectionSummary_one:
+    'Veille {{watchId}} : {{count}} nouvelle Offre, premier lancement : importées sans rien déclencher',
+  firstLaunchDetectionSummary_other:
+    'Veille {{watchId}} : {{count}} nouvelles Offres, premier lancement : importées sans rien déclencher',
   importIntro: 'Glissez ici une Fiche de poste en Markdown trouvée ailleurs : elle devient une de vos Offres.',
   importLabel: 'Importer une Fiche de poste',
   importedPosting: 'Offre importée :',
@@ -92,8 +90,6 @@ export const POSTING_FR: typeof POSTING_EN = {
   showArchived: 'Afficher les Archivées',
   filter: 'Filtrer',
   mapLabel: 'Carte des Offres',
-  unlocatedPostings: (count: number) =>
-    count === 1
-      ? '1 Offre sans coordonnées n’est pas sur la carte.'
-      : `${String(count)} Offres sans coordonnées ne sont pas sur la carte.`,
+  unlocatedPostings_one: '{{count}} Offre sans coordonnées n’est pas sur la carte.',
+  unlocatedPostings_other: '{{count}} Offres sans coordonnées ne sont pas sur la carte.',
 };
