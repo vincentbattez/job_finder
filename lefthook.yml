@@ -36,6 +36,7 @@ post-merge: &setup
     - name: install
       run: test -d node_modules || mise install
     - name: prisma-generate
-      run: npx prisma generate
+      # Through mise, which records the fresh client: web and worker then skip it instead of racing
+      run: mise run db:generate
 post-checkout: *setup
 post-rewrite: *setup

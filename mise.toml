@@ -34,6 +34,10 @@ run = ["mkdir -p dev-data && prisma migrate reset --force", "mise run db:seed"]
 [tasks."db:generate"]
 description = "Generate the Prisma client of prisma/schema.prisma into src/workspace/generated (out of git)"
 run = "prisma generate"
+# Skipped while the client is newer than the schema and the Prisma version: lpm starts web and worker
+# together, and two prisma generate emptying the same folder at once left a half-written client
+sources = ["prisma/schema.prisma", "prisma.config.ts", "package-lock.json"]
+outputs = ["src/workspace/generated/client.ts"]
 
 [tasks.web]
 # Regenerate first: a client older than the schema crashes at the first query
