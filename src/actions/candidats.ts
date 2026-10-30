@@ -6,31 +6,39 @@ import type { ActionContext } from './context.ts';
 
 // The identifier names the Candidat's folder and the commands of jf: a slug, which never leads out of
 // the data folder
-const CANDIDAT_ID_SCHEMA = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
-  error: (issue) =>
-    `« ${String(issue.input)} » n'est pas un identifiant de Candidat : des minuscules sans accent et des chiffres, séparés par des « - », comme « lea » ou « jean-pierre ».`,
-});
+const CANDIDAT_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-const NAME_SCHEMA = z.string().trim().min(1, { error: 'Le nom du Candidat est vide : le renseigner.' });
+const RENAME_INPUT_SCHEMA = z.object({ name: z.string() });
 
-const NEW_CANDIDAT_INPUT_SCHEMA = z.object({ id: CANDIDAT_ID_SCHEMA, name: NAME_SCHEMA });
+const NEW_CANDIDAT_INPUT_SCHEMA = RENAME_INPUT_SCHEMA.extend({ id: z.string() });
 
-const RENAME_INPUT_SCHEMA = z.object({ name: NAME_SCHEMA });
+// A field of the front arrives as text
+const SETTINGS_INPUT_SCHEMA = z.object({ defaultDelayMonths: z.union([z.string(), z.number()]) });
 
-const SETTINGS_INPUT_SCHEMA = z.object({
-  defaultDelayMonths: z.coerce
-    .number()
-    .int()
-    .positive({ error: 'Le Délai par défaut est un nombre entier de mois, au moins 1.' }),
-});
-
-// The first error of an input, in the words of its schema
-function parseInput<T extends z.ZodType>(schema: T, rawInput: unknown): z.infer<T> {
-  const result = schema.safeParse(rawInput);
-  if (!result.success) {
-    throw new Error(result.error.issues[0]?.message ?? z.prettifyError(result.error));
+// The identifier and the name come from the front: checked before anything is saved
+function parseCandidatId(id: string): string {
+  if (!CANDIDAT_ID_PATTERN.test(id)) {
+    throw new Error(
+      `« ${id} » n'est pas un identifiant de Candidat : des minuscules sans accent et des chiffres, séparés par des « - », comme « lea » ou « jean-pierre ».`,
+    );
   }
-  return result.data;
+  return id;
+}
+
+function parseName(name: string): string {
+  const trimmedName = name.trim();
+  if (trimmedName === '') {
+    throw new Error('Le nom du Candidat est vide : le renseigner.');
+  }
+  return trimmedName;
+}
+
+function parseDelayMonths(typedMonths: string | number): number {
+  const months = Number(typedMonths);
+  if (!Number.isSafeInteger(months) || months < 1) {
+    throw new Error('Le Délai par défaut est un nombre entier de mois, au moins 1.');
+  }
+  return months;
 }
 
 // Any visitor of the front creates or renames a Candidat and sets the Délai par défaut; no Candidat is
@@ -38,7 +46,8 @@ function parseInput<T extends z.ZodType>(schema: T, rawInput: unknown): z.infer<
 export function createCandidatActions({ workspace, findCandidat }: ActionContext) {
   return {
     async createCandidat(rawInput: unknown): Promise<void> {
-      const candidat = parseInput(NEW_CANDIDAT_INPUT_SCHEMA, rawInput);
+      const input = NEW_CANDIDAT_INPUT_SCHEMA.parse(rawInput);
+      const candidat = { id: parseCandidatId(input.id), name: parseName(input.name) };
       const candidatList = await workspace.listCandidats();
       if (candidatList.some(({ id }) => id === candidat.id)) {
         throw new Error(`Un Candidat a déjà l'identifiant ${candidat.id} : en choisir un autre.`);
@@ -48,7 +57,7 @@ export function createCandidatActions({ workspace, findCandidat }: ActionContext
 
     async renameCandidat(rawInput: unknown): Promise<void> {
       const candidat = await findCandidat(rawInput);
-      await workspace.renameCandidat(candidat, parseInput(RENAME_INPUT_SCHEMA, rawInput).name);
+      await workspace.renameCandidat(candidat, parseName(RENAME_INPUT_SCHEMA.parse(rawInput).name));
     },
 
     async readSettings(): Promise<Settings> {
@@ -60,7 +69,8 @@ export function createCandidatActions({ workspace, findCandidat }: ActionContext
 
     // Expirée follows at once, here, and at their next launch in the other processes (ADR-0011)
     async saveSettings(rawInput: unknown): Promise<void> {
-      await workspace.saveDefaultDelayMonths(parseInput(SETTINGS_INPUT_SCHEMA, rawInput).defaultDelayMonths);
+      const { defaultDelayMonths } = SETTINGS_INPUT_SCHEMA.parse(rawInput);
+      await workspace.saveDefaultDelayMonths(parseDelayMonths(defaultDelayMonths));
     },
   };
 }
