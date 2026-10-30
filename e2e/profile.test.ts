@@ -61,23 +61,23 @@ test.describe('Profile of a Candidate', () => {
     await creation.getByRole('textbox', { name: 'Nom du fichier' }).fill('../facts.md');
     await creation.getByRole('button', { name: 'Créer le fichier' }).click();
     await expect(creation.getByRole('alert')).toContainText("« ../facts.md » n'est pas un nom de fichier du Profil");
-    await creation.getByRole('textbox', { name: 'Nom du fichier' }).fill('lettre-tj-lille-2025.md');
+    await creation.getByRole('textbox', { name: 'Nom du fichier' }).fill('letter-tj-lille-2025.md');
     await creation.getByRole('textbox', { name: /^Contenu/ }).fill('# Lettre au TJ de Lille\n');
     await creation.getByRole('button', { name: 'Créer le fichier' }).click();
 
-    const letter = page.getByRole('region', { name: 'lettre-tj-lille-2025.md' });
+    const letter = page.getByRole('region', { name: 'letter-tj-lille-2025.md' });
     await expect(letter.getByRole('textbox')).toHaveValue('# Lettre au TJ de Lille\n');
     await expect(creation.getByRole('textbox', { name: 'Nom du fichier' })).toHaveValue('');
     await letter.getByRole('textbox').fill('# Lettre au TJ de Lille\n\nMadame la Présidente,\n');
     await letter.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(letter.getByText('Modifications non enregistrées')).toBeHidden();
     await page.reload();
-    await expect(page.getByRole('region', { name: 'lettre-tj-lille-2025.md' }).getByRole('textbox')).toHaveValue(
+    await expect(page.getByRole('region', { name: 'letter-tj-lille-2025.md' }).getByRole('textbox')).toHaveValue(
       '# Lettre au TJ de Lille\n\nMadame la Présidente,\n',
     );
 
-    await letter.getByText('Supprimer lettre-tj-lille-2025.md…').click();
-    await letter.getByRole('button', { name: 'Supprimer définitivement lettre-tj-lille-2025.md' }).click();
+    await letter.getByText('Supprimer letter-tj-lille-2025.md…').click();
+    await letter.getByRole('button', { name: 'Supprimer définitivement letter-tj-lille-2025.md' }).click();
     await expect(letter).toHaveCount(0);
     await page.reload();
     await expect(page.getByRole('heading', { level: 2 })).toHaveText([

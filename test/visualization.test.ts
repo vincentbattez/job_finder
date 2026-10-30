@@ -13,7 +13,7 @@ import { createFakeAiSession } from './fake-ai-session.ts';
 const { defaultInstructions } = catalogueOf({ locale: 'fr' });
 const VISUALIZATION_DEFAULT_INSTRUCTIONS = defaultInstructions.visualization;
 
-// The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
+// The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 const POSTING_DIRECTORY_NAME =
   '2026-2445600-attache-de-justice-affecte-aupres-des-magistrats-du-siege-tribunal-pour-enfants-tj-bethune';
@@ -107,7 +107,7 @@ describe('visualization', () => {
     ]);
   });
 
-  it('asks for the same content as the Fiche, in one page that loads nothing and runs no script', async () => {
+  it('asks for the same content as the Interview Brief, in one page that loads nothing and runs no script', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, BRIEF_RUN, visualizationRun());
     const { actions } = await produceVisualization(aiSession);
 
@@ -163,7 +163,7 @@ describe('visualization', () => {
 
 // The Visualization is regenerated from the Interview Brief, never corrected by hand (spec « Modules IA »)
 describe('correcting a Visualization', () => {
-  it('refuses jf edit on the Visualization, saying to correct the Fiche, without opening a session', async () => {
+  it('refuses jf edit on the Visualization, saying to correct the Interview Brief, without opening a session', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, BRIEF_RUN, visualizationRun());
     const { actions } = await produceVisualization(aiSession);
 

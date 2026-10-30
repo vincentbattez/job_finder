@@ -13,7 +13,7 @@ import { createFakeAiSession } from './fake-ai-session.ts';
 const { defaultInstructions } = catalogueOf({ locale: 'fr' });
 const RESEARCH_DEFAULT_INSTRUCTIONS = defaultInstructions.research;
 
-// The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
+// The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 const POSTING_DIRECTORY_NAME =
   '2026-2445600-attache-de-justice-affecte-aupres-des-magistrats-du-siege-tribunal-pour-enfants-tj-bethune';
@@ -203,7 +203,7 @@ describe('a Research that fails', () => {
     );
   });
 
-  it('refuses to retain a Version « en échec »', async () => {
+  it('refuses to retain a failed Version', async () => {
     const { actions } = await detectPostings(createFakeAiSession({}));
     await runResearch(actions);
 

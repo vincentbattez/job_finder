@@ -267,7 +267,7 @@ export type State = z.infer<typeof STATE_SCHEMA>;
 
 const ARTIFACT_VERSIONS_SCHEMA = z.object({
   artifact: ARTIFACT_SCHEMA,
-  // En cours from the moment its job is queued, then that of its latest Version; absent before any
+  // In progress from the moment its job is queued, then that of its latest Version; absent before any
   state: STATE_SCHEMA,
   // The module that produces it: why it cannot run now, null when it can
   module: z.object({ refusal: z.string().nullable() }),

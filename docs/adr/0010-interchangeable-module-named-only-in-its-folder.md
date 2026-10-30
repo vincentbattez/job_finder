@@ -8,7 +8,7 @@ This is what ADR-0003 meant by "Notification channels are interchangeable": a mo
 
 ## Considered Options
 
-- **A table, a domain type, actions and a front component for each module** (`ConnexionHomeAssistant`, `saveConnexionHomeAssistant`, `connexion-home-assistant.tsx`). This is what #30 delivered. Rejected: a second Channel would need a migration, a new type, new actions and a new screen. The name Home Assistant ended up in 14 files outside its module.
+- **A table, a domain type, actions and a front component for each module** (`ConnexionHomeAssistant`, `saveConnexionHomeAssistant`, `connexion-home-assistant.tsx`, names of the time) <!-- cspell:ignore Connexion connexion -->. This is what #30 delivered. Rejected: a second Channel would need a migration, a new type, new actions and a new screen. The name Home Assistant ended up in 14 files outside its module.
 - **One column per Parameter in a shared table** (`url`, `token`, `service`, `email`…). Rejected: each module would add its columns, and most would stay empty for the others.
 - **Parameters as Json without a schema.** Rejected: SQLite does not check Json (ADR-0004, ADR-0005). Only the module knows its Parameters, so its schema parses them.
 - **The registry in the family's folder.** Rejected: a module of `src/modules/` imports no other (ADR-0003). The registry lives in the actions, which already compose the modules.
@@ -20,4 +20,4 @@ This is what ADR-0003 meant by "Notification channels are interchangeable": a mo
 - User-facing messages that name the module ("Home Assistant does not respond") come from the module itself.
 - The "least code" principle still holds: a family keeps a single module until a second one is asked for. The contract is what must be generic, not the number of implementations.
 - The `source-import` module is not a Source a Watch picks: it is the manual import of a Job Description. It stays an ordinary module, outside the family.
-- For Sources, the family's table is `Watch`: each Watch keeps the id of its Source and its Parameters as Json. The Zone is one of them: each Source expresses it its own way (court-of-appeal jurisdictions for the PEP, ADR-0001) and alone says whether a Posting is in it. The domain only keeps this verdict, `Offre.isInZone`, which decides on the Research. A Zone shared by all Sources was ruled out: a Source without courts of appeal could not have read it.
+- For Sources, the family's table is `Watch`: each Watch keeps the id of its Source and its Parameters as Json. The Zone is one of them: each Source expresses it its own way (court-of-appeal jurisdictions for the PEP, ADR-0001) and alone says whether a Posting is in it. The domain only keeps this verdict, `Posting.isInZone`, which decides on the Research. A Zone shared by all Sources was ruled out: a Source without courts of appeal could not have read it.

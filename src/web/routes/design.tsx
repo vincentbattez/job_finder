@@ -8,7 +8,9 @@ import { MarkdownEditor } from '#/web/components/markdown-editor.tsx';
 import { PostingDetail, type IPostingDetail } from '#/web/components/posting-detail.tsx';
 import { PostingList, type IPostingRow } from '#/web/components/posting-list.tsx';
 
-// Sample values that read as samples: the real Postings reach the front through the actions (ADR-0003)
+// Sample values that read as samples: the real Postings reach the front through the actions (ADR-0003).
+// They are French Postings, as the Sources publish them.
+// cspell:disable
 const SAMPLE_POSTING = {
   reference: '2026-0000101',
   title: 'Attaché de justice (F/H), pôle civil',
@@ -139,6 +141,8 @@ const SAMPLE_POSTING_LIST: IPostingRow[] = [
   },
 ];
 
+// cspell:enable
+
 // Each look of the badge: Expired shows in place of To Apply
 const STATUS_SAMPLE_LIST: { status: Status; isExpired: boolean }[] = [
   { status: 'to_apply', isExpired: false },
@@ -191,16 +195,16 @@ export default function Design() {
         <h2 id="postings">{design.postingList}</h2>
         <PostingList postingList={SAMPLE_POSTING_LIST} />
       </section>
-      <section aria-labelledby="liste-vide">
-        <h2 id="liste-vide">{design.emptyList}</h2>
+      <section aria-labelledby="empty-list">
+        <h2 id="empty-list">{design.emptyList}</h2>
         <PostingList postingList={[]} />
       </section>
       <section aria-labelledby="posting-detail">
         <h2 id="posting-detail">{design.postingDetail}</h2>
         <PostingDetail detail={SAMPLE_POSTING_DETAIL} />
       </section>
-      <section aria-labelledby="editeur">
-        <h2 id="editeur">{design.editor}</h2>
+      <section aria-labelledby="editor">
+        <h2 id="editor">{design.editor}</h2>
         <MarkdownEditor
           label={common.artifactLabelByArtifact.letter}
           defaultValue={SAMPLE_LETTER}

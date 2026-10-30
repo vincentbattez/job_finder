@@ -67,7 +67,7 @@ describe('profile', () => {
 
     await actions.createProfileFile({
       candidateId: 'lea',
-      fileName: 'lettre-tj-lille-2025.md',
+      fileName: 'letter-tj-lille-2025.md',
       markdown: '# Letter\n',
     });
     await actions.createProfileFile({ candidateId: 'lea', fileName: 'vide.md' });
@@ -75,7 +75,7 @@ describe('profile', () => {
     expect(await actions.listProfileFiles({ candidateId: 'lea' })).toEqual([
       { fileName: 'cv.md', markdown: '# CV de Léa\n' },
       { fileName: 'facts.md', markdown: '# Faits\n\n## Diplômes\n\n- Master 2 droit privé\n' },
-      { fileName: 'lettre-tj-lille-2025.md', markdown: '# Letter\n' },
+      { fileName: 'letter-tj-lille-2025.md', markdown: '# Letter\n' },
       { fileName: 'vide.md', markdown: '' },
     ]);
   });
@@ -85,11 +85,11 @@ describe('profile', () => {
     const dataDirectory = createDataDirectory();
     const actions = await createActions({ dataDirectory, aiSession });
 
-    await actions.createProfileFile({ candidateId: 'lea', fileName: 'lettre-présidente.md', markdown: '# Letter\n' });
+    await actions.createProfileFile({ candidateId: 'lea', fileName: 'letter-présidente.md', markdown: '# Letter\n' });
     await actions.openProfile({ candidateId: 'lea' });
 
     const directory = aiSession.interactiveSessionList[0]?.directory ?? '';
-    expect(readdirSync(directory)).toEqual(['lettre-présidente.md']);
+    expect(readdirSync(directory)).toEqual(['letter-présidente.md']);
   });
 
   it('refuses to create a file the Profile already has, and keeps it', async () => {

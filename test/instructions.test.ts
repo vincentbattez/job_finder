@@ -14,7 +14,7 @@ const LETTER_DEFAULT_INSTRUCTIONS = defaultInstructions.letter;
 const RESEARCH_DEFAULT_INSTRUCTIONS = defaultInstructions.research;
 const VISUALIZATION_DEFAULT_INSTRUCTIONS = defaultInstructions.visualization;
 
-// The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
+// The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
 const RESEARCH_RUN = {

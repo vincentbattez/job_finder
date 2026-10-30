@@ -80,7 +80,7 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
           const versionList = await workspace.listVersions(posting, artifact);
           const chosenVersion = await findChosenVersion(workspace, posting, artifact);
           // A queued job has no Version yet, while the worker runs another one (ADR-0003), and a
-          // claimed job has none until the worker starts it: both are already en cours
+          // claimed job has none until the worker starts it: both are already in progress
           const isPending = jobList.some(
             ({ module, state }) => module === artifact && (state === 'queued' || state === 'running'),
           );

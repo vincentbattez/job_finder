@@ -104,7 +104,7 @@ export default defineConfig(
   },
   {
     // A field typed into shows an example of what goes in it, so the Candidate knows what to write. A
-    // select is left out: its first option is a choice of its own, such as « Toutes », or a hint.
+    // select is left out: its first option is a choice of its own, such as “All”, or a hint.
     files: ['src/web/**/*.tsx'],
     rules: {
       'no-restricted-syntax': [

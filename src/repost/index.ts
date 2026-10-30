@@ -10,7 +10,7 @@ function isSameField(left: string | null, right: string | null): boolean {
 }
 
 // A word without the marks of the feminine and the plural, which recruiters write in many ways:
-// « attaché(e)s », « attachée » and « attaché » are one word (ADR-0001)
+// « attaché(e)s », « attachée » and « attaché » are one word (ADR-0001) cspell:ignore attachée
 function stemOf(word: string): string {
   let stem = word.endsWith('s') ? word.slice(0, -1) : word;
   while (stem.endsWith('e')) {

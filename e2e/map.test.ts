@@ -51,7 +51,7 @@ test.describe('map of the Postings', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(BETHUNE_TITLE);
   });
 
-  test('colours a point by status: green when Applied even past its Deadline, red when Expired', async ({ page }) => {
+  test('colors a point by status: green when Applied even past its Deadline, red when Expired', async ({ page }) => {
     await chooseLea(page);
 
     await filter(page, { city: 'Melun' });

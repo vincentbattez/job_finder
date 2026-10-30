@@ -217,7 +217,7 @@ _Avoid_: research, profile, bio
 _Formerly_: Portrait
 
 **Interview Brief**:
-Artifact that prepares a given Interview by crossing the Posting and its Interviewers: what to tell them, what to review and how to practise.
+Artifact that prepares a given Interview by crossing the Posting and its Interviewers: what to tell them, what to review and how to practice.
 _Avoid_: review sheet, cheat sheet, study notes
 _Formerly_: Fiche d'entretien
 

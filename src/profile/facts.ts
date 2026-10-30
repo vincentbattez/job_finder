@@ -62,6 +62,7 @@ const LIST_FORMAT: IFormat = {
 // The sections of facts.md, in their order. jf profile's prompt and the form of the Facts share them:
 // what Claude writes, the form reads. Each has an example of what it holds, which its empty field
 // shows: a whole section for a text one, a single item for a list one.
+// cspell:disable
 export const SECTION_LIST = [
   { title: 'Identité', format: TEXT_FORMAT, example: 'Léa Durand, née le 4 mars 1999, de nationalité française' },
   {
@@ -83,6 +84,7 @@ export const SECTION_LIST = [
   },
   { title: 'Mobilité', format: TEXT_FORMAT, example: '- Lille et alentours\n- Béthune, Arras, Boulogne-sur-Mer' },
 ] as const;
+// cspell:enable
 
 interface ISection {
   title: string;

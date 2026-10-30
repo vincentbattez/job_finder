@@ -58,7 +58,7 @@ export default defineConfig({
     {
       // Started first: the seed already notifies it
       command: `node test/fake-home-assistant-server.ts ${HOME_ASSISTANT_PORT}`,
-      wait: { stdout: /Faux Home Assistant prêt/ },
+      wait: { stdout: /Fake Home Assistant ready/ },
     },
     {
       // The e2e mode serves the actions with the fakes of the external boundaries (vite.config.ts)
@@ -73,7 +73,7 @@ export default defineConfig({
       // with the fake Claude. Started once the folder is seeded and the front is up.
       command: 'node test/e2e-worker.ts',
       env: ENV,
-      wait: { stdout: /Worker prêt/ },
+      wait: { stdout: /Worker ready/ },
     },
   ],
 });

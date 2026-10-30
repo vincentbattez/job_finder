@@ -34,6 +34,7 @@ const DETECTED_AT = new Date('2026-10-30T10:44:22.500Z');
 const KNOWN_REFERENCE = '2026-2445600';
 const FRENCH_CONFIG = JSON.stringify({
   defaultDelayMonths: 6,
+  // cspell:disable-next-line
   candidatList: [{ id: 'lea', name: 'Léa', watchList: [{ id: 'lea-1', source: 'pep', parameters: WATCH_PARAMETERS }] }],
 });
 
@@ -332,6 +333,7 @@ describe('the French data folder', () => {
     const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
     writeFile(
       path.join(dataDirectory, 'config.json'),
+      // cspell:disable-next-line
       JSON.stringify({ defaultDelayMonths: 6, candidatList: [], candidateList: [] }),
     );
 

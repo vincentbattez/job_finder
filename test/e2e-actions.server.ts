@@ -22,7 +22,7 @@ if (!dataDirectory.startsWith(tmpdir())) {
 // Interview Brief and its Visualization in their format, and a Letter whose recipients come from no
 // field of the Posting, so they hold for any of them
 const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
-  // The fields of test/fixtures/import/greffier-grenoble.md, the Job Description e2e/import.test.ts drops
+  // The fields of the Grenoble Job Description of test/fixtures/import/, the one e2e/import.test.ts drops
   extraction: {
     'extraction.json': JSON.stringify({
       title: 'Greffier placé – Tribunal judiciaire de Grenoble',
@@ -68,7 +68,7 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
   },
 };
 
-// Long enough for the front to show the Artifact en cours before it is ready
+// Long enough for the front to show the Artifact in progress before it is ready
 const SESSION_DURATION_MS = 1000;
 
 // A session's module is the Artifact its Version folder belongs to: <posting>/<artifact>/v<n>. The

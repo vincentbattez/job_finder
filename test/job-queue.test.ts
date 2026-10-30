@@ -84,7 +84,7 @@ describe('the job queue', () => {
     ]);
   });
 
-  it('puts « en échec » the job a stopped worker left running, at its restart, and it can be launched again', async () => {
+  it('fails the job a stopped worker left running, at its restart, and it can be launched again', async () => {
     const aiSession = createFakeAiSession({ isInterrupted: true }, RESEARCH);
     const { actions, dataDirectory, notificationChannel } = await detectPostings(aiSession);
     const interruptedJob = await actions.runModule({ module: 'research', reference: REFERENCE });

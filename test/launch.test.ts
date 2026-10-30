@@ -5,7 +5,7 @@ import { type Actions } from '#/actions/index.ts';
 import { detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
-// The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
+// The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
 const RESEARCH_RUN = {
@@ -17,8 +17,8 @@ async function readStateByArtifact(actions: Actions) {
   return Object.fromEntries(artifactList.map(({ artifact, state }) => [artifact, state]));
 }
 
-describe('the état of each Artifact on the Posting page', () => {
-  it('is absent, then en cours from the moment its job is queued, then prêt', async () => {
+describe('the state of each Artifact on the Posting page', () => {
+  it('is absent, then in progress from the moment its job is queued, then ready', async () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
     const before = await readStateByArtifact(actions);
 
@@ -36,7 +36,7 @@ describe('the état of each Artifact on the Posting page', () => {
     expect(await readStateByArtifact(actions)).toMatchObject({ research: 'ready', letter: 'absent' });
   });
 
-  it('is en échec after a failed run, and en cours again once relaunched', async () => {
+  it('is failed after a failed run, and in progress again once relaunched', async () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, { isSuccess: false }));
     await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runModule({ module: 'research', reference: REFERENCE });

@@ -1,3 +1,4 @@
+// The salutation of the example is in the French of the Job Descriptions: cspell:ignore Présidente
 import { describeArtifactLanguage, type IPromptInput } from '#/ai-module/index.ts';
 import { JOB_DESCRIPTION_FILE_NAME } from '#/domain/index.ts';
 

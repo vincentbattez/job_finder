@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
-// The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
+// The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 const POSTING_DIRECTORY_NAME =
   '2026-2445600-attache-de-justice-affecte-aupres-des-magistrats-du-siege-tribunal-pour-enfants-tj-bethune';

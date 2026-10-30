@@ -84,7 +84,7 @@ function ChoiceField({
       <label className="channel__field">
         {label}
         <select name={`${PARAMETER_FIELD_PREFIX}${name}`} defaultValue={savedValue}>
-          {/* A hint, never a choice: a Paramètre left out keeps the one saved */}
+          {/* A hint, never a choice: a Parameter left out keeps the one saved */}
           <option value="" disabled>
             {valueList.length === 0 ? copy.reloadChoicesFirst : copy.choose}
           </option>
@@ -129,7 +129,7 @@ export function NotificationChannelForm({
   // The saved Parameters belong to the saved module: another one starts blank
   const isSavedModule = channel.module === moduleId;
 
-  // Once saved, the secrets leave the page: their fields empty, « configuré ✓ » takes over (ADR-0006)
+  // Once saved, the secrets leave the page: their fields empty, a “configured ✓” takes over (ADR-0006)
   const isSaved = saveFetcher.state === 'idle' && saveFetcher.data?.error === null;
   useEffect(() => {
     if (isSaved) {

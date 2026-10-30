@@ -11,6 +11,8 @@ import { openWorkspace } from '#/workspace/index.ts';
 const DEVELOPMENT_DATA_DIRECTORY = path.join(import.meta.dirname, '..', 'dev-data');
 const POSTING_COUNT_PER_CANDIDATE = 30;
 const COURT_OF_APPEAL_LIST = ['Douai', 'Amiens', 'Paris', 'Rennes', 'Lyon', 'Bordeaux'];
+// The Postings are French, as the Sources publish them
+// cspell:disable
 const SERVICE_LIST = ['pôle civil', 'pôle pénal', 'parquet', "service de l'application des peines", 'pôle mineurs'];
 
 function fakePosting(candidateId: string): Prisma.PostingUncheckedCreateInput {
@@ -27,6 +29,7 @@ function fakePosting(candidateId: string): Prisma.PostingUncheckedCreateInput {
     deadline: faker.date.soon({ days: 45 }),
     employer: `Cour d'appel de ${faker.helpers.arrayElement(COURT_OF_APPEAL_LIST)}`,
     workplace: `Tribunal judiciaire de ${city}`,
+    // cspell:enable
     city,
     region: faker.location.state(),
     latitude: faker.location.latitude({ min: 42.5, max: 51 }),
@@ -71,4 +74,4 @@ for (const posting of postingList) {
   mkdirSync(postingDirectory, { recursive: true });
   writeFileSync(path.join(postingDirectory, 'job-description.md'), `## Missions\n\n${faker.lorem.paragraphs(3)}\n`);
 }
-process.stdout.write(`${String(candidateList.length * POSTING_COUNT_PER_CANDIDATE)} Offres factices dans dev-data/\n`);
+process.stdout.write(`${String(candidateList.length * POSTING_COUNT_PER_CANDIDATE)} fake Postings in dev-data/\n`);

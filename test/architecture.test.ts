@@ -97,7 +97,7 @@ function findJobsRunOutsideWorker(projectDirectory: string): string[] {
   );
 }
 
-// The families of interchangeable modules, each module in src/modules/<famille>-<nom>/ (ADR-0010).
+// The families of interchangeable modules, each module in src/modules/<family>-<name>/ (ADR-0010).
 // source-import is no Source a Watch chooses but the import of a Job Description by hand: an
 // ordinary module, out of the family.
 const FAMILY_LIST = ['notification', 'source'];

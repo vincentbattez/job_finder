@@ -75,7 +75,7 @@ export const SETTINGS_FR: typeof SETTINGS_EN = {
     deleteForGood: (fileName: string) => `Supprimer définitivement ${fileName}`,
     creationHeading: 'Nouveau fichier',
     fileName: 'Nom du fichier',
-    fileNamePlaceholder: 'lettre-mairie-bethune-2025.md',
+    fileNamePlaceholder: 'letter-mairie-bethune-2025.md',
     creationContent: 'Contenu, à remplir plus tard si besoin',
     creationContentPlaceholder:
       '# Lettre de motivation, Mairie de Béthune, 2025\n\nMadame, Monsieur,\n\nTitulaire d’un master de droit public, je vous propose ma candidature…',

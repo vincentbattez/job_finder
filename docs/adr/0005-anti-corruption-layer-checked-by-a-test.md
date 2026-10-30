@@ -21,6 +21,6 @@ Three checks guarantee it in CI:
 - The whole application lives in `src/`, since the test only looks there. The front will have to live there too: it will not go in React Router's default `app/`.
 - Tests, the seed and tool configs handle raw data on purpose. The seed writes its fake Postings with its own Prisma client.
 - Data that does not leave through an action is not checked, for example what a module writes to the database. An `acl/` folder can still pass it on without parsing it, but it reaches neither the front nor the CLI.
-- The test recognises an access by its text. It targets oversight, not cheating: an alias such as `globalThis['fe' + 'tch']` would get through. A new raw access, for example an HTTP client other than `fetch`, is added to its list.
+- The test recognizes an access by its text. It targets oversight, not cheating: an alias such as `globalThis['fe' + 'tch']` would get through. A new raw access, for example an HTTP client other than `fetch`, is added to its list.
 - An action that returns a composite object, such as a Posting with its Versions, describes it with its own domain schema.
 - The front, like the CLI, reaches features only through the actions. The ticket that creates the front adds the archunit rule that checks it.

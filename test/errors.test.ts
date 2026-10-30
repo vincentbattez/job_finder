@@ -8,14 +8,14 @@ import { createActions } from '#/actions/index.ts';
 import { createMigratedDataDirectory, detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
-// The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
+// The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
 const RESEARCH_RUN = {
   fileByName: { 'research.md': '# Recherche\n\nLe TJ de Béthune.\n\n## Sources\n\n- https://www.justice.fr/\n' },
 };
 
-// An error stops the command and says, in French, what to do (CODING_STANDARDS « Échec visible »)
+// An error stops the command and says, in French, what to do (CODING_STANDARDS “Visible failure”)
 describe('an error', () => {
   it.each([
     { command: 'jf versions', call: 'listVersions' },

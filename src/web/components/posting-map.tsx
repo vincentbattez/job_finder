@@ -24,7 +24,7 @@ interface ILocatedPosting extends IMappedPosting {
 
 const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-const METROPOLE_CORNER_LIST: LatLngTuple[] = [
+const MAINLAND_CORNER_LIST: LatLngTuple[] = [
   [41.3, -5.2],
   [51.1, 9.6],
 ];
@@ -51,7 +51,7 @@ function groupByLocation(postingList: ILocatedPosting[]): ILocatedPosting[][] {
   return locationList;
 }
 
-// A point per Posting, coloured by status like its badge; a click opens its page. The map shows
+// A point per Posting, colored by status like its badge; a click opens its page. The map shows
 // metropolitan France, or only the overseas points when the filters leave nothing else.
 export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosting[] }>) {
   const { common, posting: copy } = useCatalogue();
@@ -71,11 +71,11 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
       map = leaflet.map(containerReference.current, { zoomSnap: 0.5 });
       const locatedPostingList = postingList.filter((posting) => isLocated(posting));
       // The view comes first: until the map has one, Leaflet holds back the points it is given
-      const metropoleBounds = leaflet.latLngBounds(METROPOLE_CORNER_LIST);
+      const mainlandBounds = leaflet.latLngBounds(MAINLAND_CORNER_LIST);
       const pointList = locatedPostingList.map(({ latitude, longitude }) => leaflet.latLng(latitude, longitude));
-      const metropolePointList = pointList.filter((point) => metropoleBounds.contains(point));
-      const shownPointList = metropolePointList.length > 0 ? metropolePointList : pointList;
-      map.fitBounds(shownPointList.length > 0 ? leaflet.latLngBounds(shownPointList) : metropoleBounds, {
+      const mainlandPointList = pointList.filter((point) => mainlandBounds.contains(point));
+      const shownPointList = mainlandPointList.length > 0 ? mainlandPointList : pointList;
+      map.fitBounds(shownPointList.length > 0 ? leaflet.latLngBounds(shownPointList) : mainlandBounds, {
         maxZoom: 11,
         padding: [POINT_STEP * 2, POINT_STEP * 2],
       });

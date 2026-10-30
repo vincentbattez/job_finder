@@ -15,7 +15,7 @@ Write this single file in the folder \`${outputDirectory}\`, never elsewhere: th
 
 ## Non-negotiable rules
 
-- Copy the text of the Upload as it is, in its order and in its language: do not rephrase, summarise, correct, translate or complete anything. Only the layout becomes Markdown (headings, lists, bold).
+- Copy the text of the Upload as it is, in its order and in its language: do not rephrase, summarize, correct, translate or complete anything. Only the layout becomes Markdown (headings, lists, bold).
 - Never invent a fact: an unreadable passage is marked "[illegible]".
 - Modify neither the Upload nor any file of the Profile.
 - Search nothing on the web: everything is in the Upload.

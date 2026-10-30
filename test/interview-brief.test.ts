@@ -13,7 +13,7 @@ import { createFakeAiSession } from './fake-ai-session.ts';
 const { defaultInstructions } = catalogueOf({ locale: 'fr' });
 const INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS = defaultInstructions.interview_brief;
 
-// The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
+// The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 const POSTING_DIRECTORY_NAME =
   '2026-2445600-attache-de-justice-affecte-aupres-des-magistrats-du-siege-tribunal-pour-enfants-tj-bethune';
@@ -153,7 +153,7 @@ describe('interview brief', () => {
 });
 
 describe('the prompt of the Interview Brief', () => {
-  it('asks for a Fiche organised to revise and train, without inventing a fact on the Candidate', async () => {
+  it('asks for an Interview Brief organized to revise and train, without inventing a fact on the Candidate', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, briefRun());
     const { actions } = await detectPostings(aiSession);
     await runModule(actions, 'research');
@@ -161,7 +161,7 @@ describe('the prompt of the Interview Brief', () => {
     const { version } = await runModule(actions, 'brief');
 
     const { fixedPrompt, instructions } = aiSession.headlessSessionList[1] ?? {};
-    // The plan is the default Instructions': the Candidate's own may organise the Interview Brief otherwise
+    // The plan is the default Instructions': the Candidate's own may organize the Interview Brief otherwise
     for (const section of ['À réviser', 'Moyens mnémotechniques', 'Présentez-vous', 'Questions probables']) {
       expect(instructions).toContain(`## ${section}`);
       expect(fixedPrompt).not.toContain(`## ${section}`);
@@ -188,7 +188,7 @@ describe('the prompt of the Interview Brief', () => {
     expect(version?.instructions).toBe(instructions);
   });
 
-  it('accepts a Fiche organised otherwise, as Instructions of the Candidate may ask', async () => {
+  it('accepts an Interview Brief organized otherwise, as Instructions of the Candidate may ask', async () => {
     const tenQuestions = '# Fiche d’entretien\n\n## Dix questions\n\n- Pourquoi ce poste ?\n';
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, briefRun(tenQuestions)));
     await runModule(actions, 'research');
@@ -199,7 +199,7 @@ describe('the prompt of the Interview Brief', () => {
     expect(version?.state).toBe('ready');
   });
 
-  it('fails the Version of a Fiche without a title', async () => {
+  it('fails the Version of an Interview Brief without a title', async () => {
     const withoutTitle = INTERVIEW_BRIEF.replace(/^# .*\n/, '');
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, briefRun(withoutTitle)));
     await runModule(actions, 'research');

@@ -13,8 +13,8 @@ import { createFakeAiSession } from './fake-ai-session.ts';
 const { defaultInstructions } = catalogueOf({ locale: 'fr' });
 const LETTER_DEFAULT_INSTRUCTIONS = defaultInstructions.letter;
 
-// Béthune, tribunal pour enfants: mail p.tj-bethune@justice.fr, contact 1 the présidente, contact 2
-// « secrétariat en copie : sec.p.tj-bethune@justice.fr » (responses recorded on 2026-10-29)
+// Béthune, juvenile court: mail p.tj-bethune@justice.fr, contact 1 the president, contact 2 the
+// secretariat in copy, sec.p.tj-bethune@justice.fr (responses recorded on 2026-10-29)
 const REFERENCE = '2026-2445600';
 const POSTING_DIRECTORY_NAME =
   '2026-2445600-attache-de-justice-affecte-aupres-des-magistrats-du-siege-tribunal-pour-enfants-tj-bethune';
@@ -52,7 +52,7 @@ const AVESNES_RECIPIENTS = {
   justification: "Le mail de candidature nomme le procureur et donne l'adresse de son parquet.",
 };
 
-// Two other Postings of Léa: the second Béthune siège Posting and the Béthune parquet one
+// Two other Postings of Léa: the second Béthune bench Posting and the Béthune prosecution one
 const SENT_REFERENCE = '2026-2445609';
 const SENT_DIRECTORY_NAME =
   '2026-2445609-attache-de-justice-affecte-aupres-des-magistrats-du-siege-service-de-l-instruction-tj-bethune';
@@ -255,7 +255,7 @@ describe('a Letter that fails', () => {
     expect(existsSync(path.join(postingDirectory, 'letter/v1/letter.md'))).toBe(false);
   });
 
-  it('puts the Version « en échec » when its recipients are not JSON', async () => {
+  it('fails the Version when its recipients are not JSON', async () => {
     const plannedRun = {
       fileByName: { 'draft.md': DRAFT, 'recipients.json': 'à : p.tj-bethune@justice.fr' },
     };

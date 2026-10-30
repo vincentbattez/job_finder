@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-// These parcours change data, each on its own Posting that test/seed-front.ts prepared: Bastia has a
+// These journeys change data, each on its own Posting that test/seed-front.ts prepared: Bastia has a
 // Research and a Letter, Versailles two Research. The read tests keep Béthune 2026-2445600.
 const BASTIA_REFERENCE = '2026-2426147';
 const VERSAILLES_REFERENCE = '2026-2409178';

@@ -5,7 +5,7 @@ import { type Actions } from '#/actions/index.ts';
 import { detectPostings as detectRecordedPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
-// The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
+// The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
 function researchRun(title: string) {
