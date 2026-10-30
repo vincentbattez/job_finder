@@ -1,9 +1,10 @@
-import { redirect, useLoaderData, type ActionFunctionArgs, type LoaderFunctionArgs } from 'react-router';
+import { redirect, useActionData, useLoaderData, type ActionFunctionArgs, type LoaderFunctionArgs } from 'react-router';
 
+import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidat } from '#/web/candidat.server.ts';
 import { CopyCommand } from '#/web/components/copy-command.tsx';
-import { ProfilFile } from '#/web/components/profil-file.tsx';
+import { ProfilFile, ProfilFileCreation } from '#/web/components/profil-file.tsx';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { candidat } = await readCandidat(request);
@@ -13,18 +14,35 @@ export async function loader({ request }: LoaderFunctionArgs) {
   };
 }
 
-// The Candidat is the one of the menu, never one the form names
+// The Candidat is the one of the menu, never one the form names; a refusal goes back to the file
+// it concerns, in the words of the action
 export async function action({ request }: ActionFunctionArgs) {
   const { candidat } = await readCandidat(request);
   if (candidat === null) {
     return redirect('/profil');
   }
   const formData = await request.formData();
-  await ACTIONS.saveProfilFile({
-    candidatId: candidat.id,
-    fileName: formData.get('fileName'),
-    markdown: formData.get('markdown'),
-  });
+  const intent = formData.get('intent');
+  const fileName = formData.get('fileName');
+  const formInput = { candidatId: candidat.id, fileName, markdown: formData.get('markdown') };
+  try {
+    switch (intent) {
+      case 'create': {
+        await ACTIONS.createProfilFile(formInput);
+        break;
+      }
+      case 'delete': {
+        await ACTIONS.deleteProfilFile(formInput);
+        break;
+      }
+      case 'save': {
+        await ACTIONS.saveProfilFile(formInput);
+        break;
+      }
+    }
+  } catch (error) {
+    return { refusal: { isCreation: intent === 'create', fileName, message: messageOf(error) } };
+  }
   return redirect('/profil');
 }
 
@@ -34,6 +52,7 @@ export function meta() {
 
 export default function Profil() {
   const { candidat, profilFileList } = useLoaderData<typeof loader>();
+  const refusal = useActionData<typeof action>()?.refusal ?? null;
   return (
     <main className="container page">
       {candidat === null ? (
@@ -56,12 +75,25 @@ export default function Profil() {
                 Votre Profil est vide pour l’instant. Cette commande le remplit avec Claude Code, qui vous interroge :
               </p>
               <CopyCommand command={`jf profil ${candidat.id}`} />
+              <p>Vous pouvez aussi créer vos fichiers vous-même, plus bas.</p>
             </div>
           ) : (
             profilFileList.map(({ fileName, markdown }) => (
-              <ProfilFile key={fileName} fileName={fileName} markdown={markdown} />
+              <ProfilFile
+                key={fileName}
+                fileName={fileName}
+                markdown={markdown}
+                error={
+                  refusal !== null && !refusal.isCreation && refusal.fileName === fileName ? refusal.message : null
+                }
+              />
             ))
           )}
+          {/* Remounted once the files change, so a created file leaves an empty form behind */}
+          <ProfilFileCreation
+            key={profilFileList.map(({ fileName }) => fileName).join('/')}
+            error={refusal?.isCreation === true ? refusal.message : null}
+          />
         </>
       )}
     </main>

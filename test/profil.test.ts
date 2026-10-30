@@ -62,22 +62,98 @@ describe('profil', () => {
     ]);
   });
 
-  // The file name comes from the front: nothing outside the files of the Profil may be written
-  it.each(['../../config.json', '../faits.md', 'sous-dossier/faits.md', 'nouveau.md'])(
-    'refuses to write « %s », not a file of the Profil, and writes nothing',
-    async (fileName) => {
-      const { actions, dataDirectory } = await openProfil();
-      const config = readFileSync(path.join(dataDirectory, 'config.json'), 'utf8');
+  it('creates a file in the Profil, then lists it', async () => {
+    const { actions } = await openProfil();
 
-      await expect(actions.saveProfilFile({ candidatId: 'lea', fileName, markdown: 'Remplacé\n' })).rejects.toThrow(
-        `Le Profil de Léa n'a pas de fichier « ${fileName} »`,
-      );
-      expect(readFileSync(path.join(dataDirectory, 'config.json'), 'utf8')).toBe(config);
-      expect(
-        readdirSync(path.join(dataDirectory, 'candidats/lea'), { recursive: true, encoding: 'utf8' }).toSorted(
-          (first, second) => first.localeCompare(second),
-        ),
-      ).toEqual(['profil', 'profil/cv.md', 'profil/faits.md']);
-    },
-  );
+    await actions.createProfilFile({ candidatId: 'lea', fileName: 'lettre-tj-lille-2025.md', markdown: '# Lettre\n' });
+    await actions.createProfilFile({ candidatId: 'lea', fileName: 'vide.md' });
+
+    expect(await actions.listProfilFiles({ candidatId: 'lea' })).toEqual([
+      { fileName: 'cv.md', markdown: '# CV de Léa\n' },
+      { fileName: 'faits.md', markdown: '# Faits\n\n## Diplômes\n\n- Master 2 droit privé\n' },
+      { fileName: 'lettre-tj-lille-2025.md', markdown: '# Lettre\n' },
+      { fileName: 'vide.md', markdown: '' },
+    ]);
+  });
+
+  it('opens jf profil on the files created from the front', async () => {
+    const aiSession = createFakeAiSession();
+    const dataDirectory = createDataDirectory();
+    const actions = await createActions({ dataDirectory, aiSession });
+
+    await actions.createProfilFile({ candidatId: 'lea', fileName: 'lettre-présidente.md', markdown: '# Lettre\n' });
+    await actions.openProfil({ candidatId: 'lea' });
+
+    const directory = aiSession.interactiveSessionList[0]?.directory ?? '';
+    expect(readdirSync(directory)).toEqual(['lettre-présidente.md']);
+  });
+
+  it('refuses to create a file the Profil already has, and keeps it', async () => {
+    const { actions } = await openProfil();
+
+    await expect(
+      actions.createProfilFile({ candidatId: 'lea', fileName: 'cv.md', markdown: 'Remplacé\n' }),
+    ).rejects.toThrow('Le Profil de Léa a déjà un fichier « cv.md »');
+    expect(await actions.listProfilFiles({ candidatId: 'lea' })).toContainEqual({
+      fileName: 'cv.md',
+      markdown: '# CV de Léa\n',
+    });
+  });
+
+  it('deletes a file of the Profil', async () => {
+    const { actions } = await openProfil();
+
+    await actions.deleteProfilFile({ candidatId: 'lea', fileName: 'cv.md' });
+
+    expect(await actions.listProfilFiles({ candidatId: 'lea' })).toEqual([
+      { fileName: 'faits.md', markdown: '# Faits\n\n## Diplômes\n\n- Master 2 droit privé\n' },
+    ]);
+  });
+
+  it('refuses to delete a file the Profil does not have', async () => {
+    const { actions } = await openProfil();
+
+    await expect(actions.deleteProfilFile({ candidatId: 'lea', fileName: 'lettre.md' })).rejects.toThrow(
+      "Le Profil de Léa n'a pas de fichier « lettre.md »",
+    );
+  });
+
+  it('refuses to write « nouveau.md » until it is created', async () => {
+    const { actions } = await openProfil();
+
+    await expect(
+      actions.saveProfilFile({ candidatId: 'lea', fileName: 'nouveau.md', markdown: 'Texte\n' }),
+    ).rejects.toThrow("Le Profil de Léa n'a pas de fichier « nouveau.md »");
+    await actions.createProfilFile({ candidatId: 'lea', fileName: 'nouveau.md' });
+    await actions.saveProfilFile({ candidatId: 'lea', fileName: 'nouveau.md', markdown: 'Texte\n' });
+
+    expect(await actions.listProfilFiles({ candidatId: 'lea' })).toContainEqual({
+      fileName: 'nouveau.md',
+      markdown: 'Texte\n',
+    });
+  });
+
+  // The file name comes from the front: nothing outside the files of the Profil may be touched
+  describe.each(['createProfilFile', 'saveProfilFile', 'deleteProfilFile'] as const)('%s', (actionName) => {
+    it.each(['../../config.json', '../faits.md', 'sous-dossier/faits.md', 'faits', '.md', 'faits.md/'])(
+      'refuses « %s », not a name of a Profil file, and touches nothing',
+      async (fileName) => {
+        const { actions, dataDirectory } = await openProfil();
+        const config = readFileSync(path.join(dataDirectory, 'config.json'), 'utf8');
+
+        await expect(actions[actionName]({ candidatId: 'lea', fileName, markdown: 'Remplacé\n' })).rejects.toThrow(
+          `« ${fileName} » n'est pas un nom de fichier du Profil`,
+        );
+        expect(readFileSync(path.join(dataDirectory, 'config.json'), 'utf8')).toBe(config);
+        expect(
+          readdirSync(path.join(dataDirectory, 'candidats/lea'), { recursive: true, encoding: 'utf8' }).toSorted(
+            (first, second) => first.localeCompare(second),
+          ),
+        ).toEqual(['profil', 'profil/cv.md', 'profil/faits.md']);
+        expect(readFileSync(path.join(dataDirectory, 'candidats/lea/profil/faits.md'), 'utf8')).toBe(
+          '# Faits\n\n## Diplômes\n\n- Master 2 droit privé\n',
+        );
+      },
+    );
+  });
 });

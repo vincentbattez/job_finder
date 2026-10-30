@@ -850,6 +850,56 @@ a:active {
   font: var(--text-md) / 1.4 var(--font-outlier);
   letter-spacing: 0;
 }
+.profil-file__name {
+  display: grid;
+  gap: var(--space-xs);
+  max-width: 32rem;
+}
+.profil-file__name label {
+  color: var(--color-ink-2);
+  font: 500 var(--text-sm) / 1.4 var(--font-body);
+}
+.profil-file__name input {
+  min-height: 40px;
+  padding: 0 var(--space-sm);
+  border: var(--rule-hair) solid var(--color-muted);
+  border-radius: var(--radius-input);
+  outline: 2px solid transparent;
+  outline-offset: -3px;
+  background: var(--light);
+  color: var(--color-ink);
+  font-family: var(--font-outlier);
+}
+.profil-file__name input:focus-visible {
+  outline-color: var(--color-focus);
+}
+.edition .profil-file__error {
+  color: var(--color-error);
+}
+/* Deleting a file takes unfolding, then a button in the colour of what cannot be undone */
+.profil-file__delete summary {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.profil-file__delete[open] summary {
+  margin-bottom: var(--space-sm);
+}
+.profil-file .profil-file__delete form {
+  display: flex;
+}
+/* Not a file yet: named in the voice of the page, not as on disk */
+.profil-file--new h2 {
+  font: 600 var(--text-md) / 1.4 var(--font-body);
+}
+.edition .button--danger {
+  border-color: transparent;
+  background: var(--color-error);
+  color: var(--color-accent-ink);
+}
+.edition .button--danger:hover {
+  background: color-mix(in oklch, var(--color-error), var(--color-ink) 20%);
+}
 
 /* The Consignes of a module sit in its compartment, under its tint, like its Versions */
 .consignes__head {

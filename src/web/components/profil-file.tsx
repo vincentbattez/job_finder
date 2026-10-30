@@ -4,7 +4,11 @@ import { Form } from 'react-router';
 import { MarkdownEditor } from './markdown-editor.tsx';
 
 // One Markdown file of the Profil, such as faits.md, edited in place
-export function ProfilFile({ fileName, markdown }: Readonly<{ fileName: string; markdown: string }>) {
+export function ProfilFile({
+  fileName,
+  markdown,
+  error,
+}: Readonly<{ fileName: string; markdown: string; error: string | null }>) {
   const headingId = useId();
   const [editedMarkdown, setEditedMarkdown] = useState(markdown);
   return (
@@ -21,10 +25,62 @@ export function ProfilFile({ fileName, markdown }: Readonly<{ fileName: string; 
           onChange={setEditedMarkdown}
         />
         <div className="edition">
-          <button type="submit" className="button--primary">
+          <button type="submit" name="intent" value="save" className="button--primary">
             Enregistrer
           </button>
           {editedMarkdown !== markdown && <p role="status">Modifications non enregistrées</p>}
+          {error !== null && (
+            <p role="alert" className="profil-file__error">
+              {error}
+            </p>
+          )}
+        </div>
+      </Form>
+      {/* Folded, so a deletion always takes a second, deliberate click, with or without JavaScript */}
+      <details className="profil-file__delete">
+        <summary>Supprimer {fileName}…</summary>
+        <Form method="post" preventScrollReset className="edition">
+          <input type="hidden" name="fileName" value={fileName} />
+          <p>L’outil ne s’en servira plus pour écrire à votre place. Ce fichier ne pourra pas être récupéré.</p>
+          <button type="submit" name="intent" value="delete" className="button--danger">
+            Supprimer définitivement {fileName}
+          </button>
+        </Form>
+      </details>
+    </section>
+  );
+}
+
+// A new Markdown file of the Profil, empty or not; the action says why a name is refused
+export function ProfilFileCreation({ error }: Readonly<{ error: string | null }>) {
+  const headingId = useId();
+  const fileNameId = useId();
+  return (
+    <section className="profil-file profil-file--new" aria-labelledby={headingId}>
+      <h2 id={headingId}>Nouveau fichier</h2>
+      <Form method="post" preventScrollReset>
+        <div className="profil-file__name">
+          <label htmlFor={fileNameId}>Nom du fichier</label>
+          <input
+            id={fileNameId}
+            type="text"
+            name="fileName"
+            required
+            placeholder="lettre-tj-lille-2025.md"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
+        <MarkdownEditor name="markdown" label="Contenu, à remplir plus tard si besoin" defaultValue="" />
+        <div className="edition">
+          <button type="submit" name="intent" value="create" className="button--primary">
+            Créer le fichier
+          </button>
+          {error !== null && (
+            <p role="alert" className="profil-file__error">
+              {error}
+            </p>
+          )}
         </div>
       </Form>
     </section>

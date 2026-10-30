@@ -201,6 +201,15 @@ export const MARKDOWN_FILE_SCHEMA = z.object(MARKDOWN_FILE_SHAPE).brand<'Domain'
 
 export type MarkdownFile = z.infer<typeof MARKDOWN_FILE_SCHEMA>;
 
+// The name of a file of the Profil, which the front chooses: a single segment of safe characters
+// ending in .md, so no name leads out of the Profil folder
+export const PROFIL_FILE_NAME_SCHEMA = z
+  .string()
+  .regex(/^[\p{L}\p{N}][\p{L}\p{N}_.-]*\.md$/u)
+  .brand<'Domain'>();
+
+export type ProfilFileName = z.infer<typeof PROFIL_FILE_NAME_SCHEMA>;
+
 // A Markdown file of a Version, and whether the Candidat may correct it by hand
 const DOCUMENT_SCHEMA = z.object({ ...MARKDOWN_FILE_SHAPE, isModifiable: z.boolean() });
 

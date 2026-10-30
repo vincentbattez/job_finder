@@ -7,6 +7,7 @@ import {
   type FicheDePoste,
   type Lieu,
   type Offre,
+  type ProfilFileName,
   type Version,
 } from '#/domain/index.ts';
 import { wordListOf } from '#/text/index.ts';
@@ -54,8 +55,12 @@ export async function openWorkspace(dataDirectory: string) {
       return readMarkdownFiles(profilDirectoryOf(candidatId));
     },
 
-    saveProfilFile(candidatId: string, fileName: string, markdown: string): void {
+    saveProfilFile(candidatId: string, fileName: ProfilFileName, markdown: string): void {
       writeFileSync(path.join(profilDirectoryOf(candidatId), fileName), markdown);
+    },
+
+    deleteProfilFile(candidatId: string, fileName: ProfilFileName): void {
+      rmSync(path.join(profilDirectoryOf(candidatId), fileName));
     },
 
     // The Markdown files of a Version, such as the Brouillon and the Lettre of a Lettre Version
