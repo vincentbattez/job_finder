@@ -5,10 +5,10 @@ import { z } from 'zod/v4';
 
 import {
   MARKDOWN_FILE_SCHEMA,
-  PIECE_SCHEMA,
+  UPLOAD_SCHEMA,
   type MarkdownFile,
-  type Piece,
-  type PieceFileName,
+  type Upload,
+  type UploadFileName,
 } from '#/domain/index.ts';
 
 // A text file of the data folder, or null when it does not exist
@@ -27,10 +27,10 @@ export function readMarkdownFiles(directory: string): MarkdownFile[] {
   );
 }
 
-// The Pièces of a folder by name, dated by their last write; none when the folder does not exist
-export function readPieces(directory: string): Piece[] {
+// The Uploads of a folder by name, dated by their last write; none when the folder does not exist
+export function readUploads(directory: string): Upload[] {
   const fileNameList = existsSync(directory) ? readdirSync(directory) : [];
-  return z.array(PIECE_SCHEMA).parse(
+  return z.array(UPLOAD_SCHEMA).parse(
     fileNameList
       .filter((fileName) => fileName.toLowerCase().endsWith('.pdf'))
       .toSorted((first, second) => first.localeCompare(second))
@@ -38,8 +38,8 @@ export function readPieces(directory: string): Piece[] {
   );
 }
 
-// The bytes of a Pièce, written as received (ADR-0005)
-export function writePiece(directory: string, fileName: PieceFileName, content: Uint8Array): void {
+// The bytes of an Upload, written as received (ADR-0005)
+export function writeUpload(directory: string, fileName: UploadFileName, content: Uint8Array): void {
   mkdirSync(directory, { recursive: true });
   writeFileSync(path.join(directory, fileName), content);
 }

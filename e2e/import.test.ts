@@ -3,9 +3,8 @@ import path from 'node:path';
 
 import { expect, test } from '@playwright/test';
 
-// The fake Claude of test/e2e-actions.server.ts extracts this Fiche de poste: a ville outside
-// Hauts-de-France, whose Offres the région filter of the map counts
-const FICHE_DE_POSTE = readFileSync(
+// The fake Claude of test/e2e-actions.server.ts extracts this Job Description, in Grenoble
+const JOB_DESCRIPTION = readFileSync(
   path.join(import.meta.dirname, '..', 'test', 'fixtures', 'import', 'greffier-grenoble.md'),
   'utf8',
 );
@@ -13,17 +12,21 @@ const TITLE = 'Greffier placé – Tribunal judiciaire de Grenoble';
 
 const FILE_NAME = 'greffier-grenoble.md';
 
-// The worker takes the extraction, then the Recherche, each session lasting a second, and the fiche
-// reads the état again every two seconds
+// The worker takes the extraction, then the Research, each session lasting a second, and the Posting page
+// reads the state again every two seconds
 const READY_TIMEOUT_MS = 15_000;
 
-test('imports a Fiche de poste dropped on the Offres: it shows at once, then the worker reads its fields and runs its Recherche', async ({
+// Hugo's Postings, which this test alone adds (test/seed-front.ts): until the worker reads its city,
+// an imported Posting has no point on the map, which another test would see on Léa's
+const CANDIDATE_NAME = 'Hugo';
+
+test('imports a Job Description dropped on the Postings: it shows at once, then the worker reads its fields and runs its Research', async ({
   page,
 }) => {
   // The tiles of the map come from OpenStreetMap over the internet: its points show without them
   await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
   await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Léa');
+  await page.getByRole('combobox', { name: 'Candidat' }).selectOption(CANDIDATE_NAME);
   await page.getByRole('button', { name: 'Choisir' }).click();
   // The drop needs React, which enables the field once it runs
   await expect(page.getByLabel('Importer une Fiche de poste')).toBeEnabled();
@@ -34,7 +37,7 @@ test('imports a Fiche de poste dropped on the Offres: it shows at once, then the
       transfer.items.add(new File([markdown], fileName, { type: 'text/markdown' }));
       return transfer;
     },
-    { fileName: FILE_NAME, markdown: FICHE_DE_POSTE },
+    { fileName: FILE_NAME, markdown: JOB_DESCRIPTION },
   );
   await page.getByText('Glissez ici une Fiche de poste en Markdown').dispatchEvent('drop', { dataTransfer });
 
@@ -58,5 +61,5 @@ test('imports a Fiche de poste dropped on the Offres: it shows at once, then the
   const point = page
     .getByRole('region', { name: 'Carte des Offres' })
     .getByRole('button', { name: new RegExp(`^${TITLE} · import-`) });
-  await expect(point).toHaveAttribute('data-statut', 'a_traiter');
+  await expect(point).toHaveAttribute('data-status', 'to_apply');
 });

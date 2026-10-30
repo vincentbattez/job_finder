@@ -2,46 +2,47 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createActions } from '#/actions/index.ts';
 
-import { createDataDirectory, detectOffres } from './data-directory.ts';
+import { createDataDirectory, createMigratedDataDirectory, detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeCanalNotification, LEA_TARGET } from './fake-canal-notification.ts';
+import { createFakeNotificationChannel, LEA_TARGET } from './fake-notification-channel.ts';
+import { LEA_WATCH } from './lea.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
-// The two Béthune Offres, both in the Zone, and an attaché de justice Offre outside it, from the
+// The two Béthune Postings, both in the Zone, and an attaché de justice Posting outside it, from the
 // responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 const OTHER_REFERENCE = '2026-2445609';
 const OUT_OF_ZONE_REFERENCE = '2026-2215099';
 
-const RECHERCHE = { fileByName: { 'recherche.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
+const RESEARCH = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// A first Détection on the feed as it was before the given Offres were published, then the actions
+// A first Detection on the feed as it was before the given Postings were published, then the actions
 // for the next one, on the feed as recorded
 async function detectBefore(referenceList: string[]) {
   const dataDirectory = createDataDirectory();
-  const notificationChannel = createFakeCanalNotification();
+  const notificationChannel = createFakeNotificationChannel();
   const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout(referenceList) } }).fetch;
   const earlierActions = await createActions({
     dataDirectory,
     fetch: earlierFetch,
-    canalNotificationList: notificationChannel.canalNotificationList,
+    notificationChannelList: notificationChannel.notificationChannelList,
   });
   await notificationChannel.saveFor(earlierActions);
   await earlierActions.detect();
   const actions = await createActions({
     dataDirectory,
     fetch: createRecordedFetch().fetch,
-    canalNotificationList: notificationChannel.canalNotificationList,
+    notificationChannelList: notificationChannel.notificationChannelList,
   });
   return { actions, notificationChannel };
 }
 
-describe('the notification of a new Offre in the Zone', () => {
-  it('tells the Candidat its title, its juridiction and its Date limite, for each new Offre in the Zone only', async () => {
+describe('the notification of a new Posting in the Zone', () => {
+  it('tells the Candidate its title, its jurisdiction and its Deadline, for each new Posting in the Zone only', async () => {
     const { actions, notificationChannel } = await detectBefore([REFERENCE, OTHER_REFERENCE, OUT_OF_ZONE_REFERENCE]);
 
     await actions.detect();
@@ -62,12 +63,12 @@ describe('the notification of a new Offre in the Zone', () => {
     ]);
   });
 
-  it('sends nothing on the first launch, which imports the Offres already online', async () => {
-    const notificationChannel = createFakeCanalNotification();
+  it('sends nothing on the first launch, which imports the Postings already online', async () => {
+    const notificationChannel = createFakeNotificationChannel();
     const actions = await createActions({
       dataDirectory: createDataDirectory(),
       fetch: createRecordedFetch().fetch,
-      canalNotificationList: notificationChannel.canalNotificationList,
+      notificationChannelList: notificationChannel.notificationChannelList,
     });
 
     await actions.detect();
@@ -75,7 +76,7 @@ describe('the notification of a new Offre in the Zone', () => {
     expect(notificationChannel.sentList).toEqual([]);
   });
 
-  it('sends nothing when the Détection finds nothing new', async () => {
+  it('sends nothing when the Detection finds nothing new', async () => {
     const { actions, notificationChannel } = await detectBefore([]);
 
     await actions.detect();
@@ -84,10 +85,10 @@ describe('the notification of a new Offre in the Zone', () => {
   });
 });
 
-describe('the notification of a Recherche ready', () => {
-  it('tells the Candidat which Offre has its Recherche ready, once the worker has produced it', async () => {
-    const { actions, notificationChannel } = await detectOffres(createFakeAiSession(RECHERCHE));
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
+describe('the notification of a Research ready', () => {
+  it('tells the Candidate which Posting has its Research ready, once the worker has produced it', async () => {
+    const { actions, notificationChannel } = await detectPostings(createFakeAiSession(RESEARCH));
+    await actions.runModule({ module: 'research', reference: REFERENCE });
 
     await actions.runQueuedJobs();
 
@@ -101,10 +102,10 @@ describe('the notification of a Recherche ready', () => {
     ]);
   });
 
-  it('sends nothing for a Recherche that failed', async () => {
-    const { actions, notificationChannel } = await detectOffres(createFakeAiSession({ isSuccess: false }, {}));
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
-    await actions.runModule({ module: 'recherche', reference: OTHER_REFERENCE });
+  it('sends nothing for a Research that failed', async () => {
+    const { actions, notificationChannel } = await detectPostings(createFakeAiSession({ isSuccess: false }, {}));
+    await actions.runModule({ module: 'research', reference: REFERENCE });
+    await actions.runModule({ module: 'research', reference: OTHER_REFERENCE });
 
     await actions.runQueuedJobs();
 
@@ -115,78 +116,132 @@ describe('the notification of a Recherche ready', () => {
 describe('a notification that cannot be sent', () => {
   const ERROR_MESSAGE = 'Home Assistant injoignable.';
 
-  it('reports each notification not sent with what the Détection found, once every new Offre is saved and its Recherche queued', async () => {
+  it('reports each notification not sent with what the Detection found, once every new Posting is saved and its Research queued', async () => {
     const dataDirectory = createDataDirectory();
-    const aiSession = createFakeAiSession(RECHERCHE, RECHERCHE);
+    const aiSession = createFakeAiSession(RESEARCH, RESEARCH);
     const earlierFetch = createRecordedFetch({
       [DSJ_FEED_URL]: { body: feedWithout([REFERENCE, OTHER_REFERENCE]) },
     }).fetch;
     const earlierActions = await createActions({ dataDirectory, fetch: earlierFetch });
     await earlierActions.detect();
-    const notificationChannel = createFakeCanalNotification({ errorMessage: ERROR_MESSAGE });
+    const notificationChannel = createFakeNotificationChannel({ errorMessage: ERROR_MESSAGE });
     const actions = await createActions({
       dataDirectory,
       aiSession,
       fetch: createRecordedFetch().fetch,
-      canalNotificationList: notificationChannel.canalNotificationList,
+      notificationChannelList: notificationChannel.notificationChannelList,
     });
     await notificationChannel.saveFor(actions);
 
     const detectionList = await actions.detect();
 
-    // jf detect prints the new Offres, then each failure, and exits in error
-    expect(detectionList[0]?.newOffreList.map(({ reference }) => reference)).toEqual([REFERENCE, OTHER_REFERENCE]);
+    // jf detect prints the new Postings, then each failure, and exits in error
+    expect(detectionList[0]?.newPostingList.map(({ reference }) => reference)).toEqual([REFERENCE, OTHER_REFERENCE]);
     // Both notifications were tried
     expect(detectionList[0]?.notificationFailureList).toEqual([
       `Notification « Nouvelle Offre dans la Zone » de l'Offre ${REFERENCE} non envoyée : ${ERROR_MESSAGE}`,
       `Notification « Nouvelle Offre dans la Zone » de l'Offre ${OTHER_REFERENCE} non envoyée : ${ERROR_MESSAGE}`,
     ]);
-    const offreList = await actions.listOffres({ candidatId: 'lea' });
-    expect(offreList.map(({ reference }) => reference)).toEqual(expect.arrayContaining([REFERENCE, OTHER_REFERENCE]));
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(postingList.map(({ reference }) => reference)).toEqual(expect.arrayContaining([REFERENCE, OTHER_REFERENCE]));
     // The worker, a process of its own, whose notifications go through
     const worker = await createActions({
       dataDirectory,
       aiSession,
-      canalNotificationList: createFakeCanalNotification().canalNotificationList,
+      notificationChannelList: createFakeNotificationChannel().notificationChannelList,
     });
     const jobList = await worker.runQueuedJobs();
     expect(jobList).toMatchObject([
-      { module: 'recherche', offre: { reference: REFERENCE }, state: 'done' },
-      { module: 'recherche', offre: { reference: OTHER_REFERENCE }, state: 'done' },
+      { module: 'research', posting: { reference: REFERENCE }, state: 'done' },
+      { module: 'research', posting: { reference: OTHER_REFERENCE }, state: 'done' },
     ]);
     expect(jobList).toHaveLength(2);
   });
 
   // lpm never restarts a stopped worker: the failure goes to its log, lpm logs worker
-  it('never stops the worker, which logs it and goes on with the queue, each Recherche staying ready', async () => {
+  it('never stops the worker, which logs it and goes on with the queue, each Research staying ready', async () => {
     const stderrList: string[] = [];
     vi.spyOn(process.stderr, 'write').mockImplementation((text) => {
       stderrList.push(String(text));
       return true;
     });
-    const aiSession = createFakeAiSession(RECHERCHE, RECHERCHE);
+    const aiSession = createFakeAiSession(RESEARCH, RESEARCH);
     const dataDirectory = createDataDirectory();
     const earlierActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
     await earlierActions.detect();
-    const notificationChannel = createFakeCanalNotification({ errorMessage: ERROR_MESSAGE });
+    const notificationChannel = createFakeNotificationChannel({ errorMessage: ERROR_MESSAGE });
     const actions = await createActions({
       dataDirectory,
       aiSession,
-      canalNotificationList: notificationChannel.canalNotificationList,
+      notificationChannelList: notificationChannel.notificationChannelList,
     });
     await notificationChannel.saveFor(actions);
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
-    await actions.runModule({ module: 'recherche', reference: OTHER_REFERENCE });
+    await actions.runModule({ module: 'research', reference: REFERENCE });
+    await actions.runModule({ module: 'research', reference: OTHER_REFERENCE });
 
     const jobList = await actions.runQueuedJobs();
 
     expect(jobList).toMatchObject([
-      { offre: { reference: REFERENCE }, state: 'done', version: { state: 'ready' } },
-      { offre: { reference: OTHER_REFERENCE }, state: 'done', version: { state: 'ready' } },
+      { posting: { reference: REFERENCE }, state: 'done', version: { state: 'ready' } },
+      { posting: { reference: OTHER_REFERENCE }, state: 'done', version: { state: 'ready' } },
     ]);
     expect(stderrList).toEqual([
       `Notification « Recherche prête » de l'Offre ${REFERENCE} non envoyée : ${ERROR_MESSAGE}\n`,
       `Notification « Recherche prête » de l'Offre ${OTHER_REFERENCE} non envoyée : ${ERROR_MESSAGE}\n`,
+    ]);
+  });
+});
+
+// Emma reads English: her Watch is Léa's, in a data folder of her own
+async function detectBeforeForEmma(referenceList: string[]) {
+  const dataDirectory = createMigratedDataDirectory();
+  const notificationChannel = createFakeNotificationChannel();
+  const earlierActions = await createActions({
+    dataDirectory,
+    fetch: createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout(referenceList) } }).fetch,
+    notificationChannelList: notificationChannel.notificationChannelList,
+  });
+  await earlierActions.createCandidate({ id: 'emma', name: 'Emma', locale: 'en' });
+  await earlierActions.saveWatch({ candidateId: 'emma', ...LEA_WATCH });
+  await notificationChannel.saveFor(earlierActions, 'emma', EMMA_TARGET);
+  await earlierActions.detect();
+  const actions = await createActions({
+    dataDirectory,
+    fetch: createRecordedFetch().fetch,
+    notificationChannelList: notificationChannel.notificationChannelList,
+  });
+  return { actions, notificationChannel };
+}
+
+const EMMA_TARGET = 'notify.mobile_app_emma';
+
+describe('a notification in the Candidate’s locale', () => {
+  it('tells an English-speaking Candidate of a new Posting in English', async () => {
+    const { actions, notificationChannel } = await detectBeforeForEmma([REFERENCE]);
+
+    await actions.detect();
+
+    expect(notificationChannel.sentList).toEqual([
+      {
+        target: EMMA_TARGET,
+        title: 'New Posting in the Zone',
+        message:
+          'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE\nTribunal Judiciaire de Béthune\nDeadline: Nov 20, 2026',
+      },
+    ]);
+  });
+
+  it('tries the Notification Channel of an English-speaking Candidate in English, and Léa’s in French', async () => {
+    const { actions, notificationChannel } = await detectBeforeForEmma([]);
+    await actions.createCandidate({ id: 'lea', name: 'Léa' });
+    await notificationChannel.saveFor(actions);
+
+    await actions.sendTestNotification({ candidateId: 'emma' });
+    await actions.sendTestNotification({ candidateId: 'lea' });
+
+    expect(notificationChannel.sentList).toEqual([
+      { target: EMMA_TARGET, title: 'Test notification', message: 'Emma’s Notification Channel works.' },
+      { target: LEA_TARGET, title: 'Notification de test', message: 'Le Canal de notification de Léa fonctionne.' },
     ]);
   });
 });

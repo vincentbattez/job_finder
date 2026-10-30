@@ -9,116 +9,124 @@ datasource db {
   provider = "sqlite"
 }
 
-// Candidats, their Veilles and the Délai par défaut are written from the front: the database is
-// their source of truth (ADR-0011). A Candidat is never deleted, so the rows tied to them stay.
-model Candidat {
-  id                String             @id
-  name              String
-  veilleList        Veille[]
-  offreList         Offre[]
-  canalNotification CanalNotification?
-  jobList           Job[]
+// Candidates, their Watches and the Default Deadline Period are written from the front: the database
+// is their source of truth (ADR-0011). A Candidate is never deleted, so the rows tied to them stay.
+model Candidate {
+  id                  String               @id
+  name                String
+  // The language of the interface, French unless the config of the first launch names another
+  locale              Locale               @default(fr)
+  watchList           Watch[]
+  postingList         Posting[]
+  notificationChannel NotificationChannel?
+  jobList             Job[]
 }
 
-// The Délai par défaut every Candidat shares, in a single row. Created at the first launch, from the
-// data/config.json an older jf read when one is left, imported once and never read again (ADR-0011).
-model DelaiParDefaut {
+enum Locale {
+  fr
+  en
+}
+
+// The Default Deadline Period every Candidate shares, in a single row. Created at the first launch,
+// from the data/config.json an older jf read when one is left, imported once and never read again
+// (ADR-0011).
+model DefaultDeadlinePeriod {
   id     Int @id
   // In months
   months Int
 }
 
-// The Canal de notification a Candidat chose, saved from the front. Its Paramètres are those of its
+// The Notification Channel a Candidate chose, saved from the front. Its Parameters are those of its
 // module, parsed by the module's schema (ADR-0010); a secret one is write-only, no action returns it
 // (ADR-0006).
-model CanalNotification {
-  candidat   Candidat @relation(fields: [candidatId], references: [id], onDelete: Cascade)
-  candidatId String   @id
-  module     String
-  parametres Json
+model NotificationChannel {
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId String    @id
+  module      String
+  parameters  Json
 }
 
-model Veille {
-  id         String    @id
-  candidat   Candidat  @relation(fields: [candidatId], references: [id])
-  candidatId String
-  // The Source the Veille follows, and its Paramètres, its Zone among them: they are those of the
+model Watch {
+  id          String    @id
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  candidateId String
+  // The Source the Watch follows, and its Parameters, its Zone among them: they are those of the
   // Source, parsed by the Source's schema (ADR-0010)
-  source     String
-  parametres Json
-  // When a Détection of this Veille last went through; null during its first launch, which may take
-  // several Détections when one is cut off
-  detectedAt DateTime?
+  source      String
+  parameters  Json
+  // When a Detection of this Watch last went through; null during its first launch, which may take
+  // several Detections when one is cut off
+  detectedAt  DateTime?
 }
 
-model Offre {
-  id                Int         @id @default(autoincrement())
-  candidat          Candidat    @relation(fields: [candidatId], references: [id])
-  candidatId        String
-  source            String
-  reference         String
-  title             String
-  url               String?
-  publishedAt       DateTime?
-  dateLimite        DateTime?
-  employer          String?
-  workplace         String?
-  city              String?
-  region            String?
-  latitude          Float?
-  longitude         Float?
-  applicationEmail  String?
-  contact1          String?
-  contact2          String?
-  statut            OffreStatut @default(a_traiter) @map("status")
-  // When the Offre was first marked Postulée: its Lettre retenue, the one sent, stays frozen even
-  // once it is Archivée
-  postuleeAt        DateTime?
-  republicationOf   Offre?      @relation("Republication", fields: [republicationOfId], references: [id])
-  republicationOfId Int?
-  republicationList Offre[]     @relation("Republication")
-  detectedAt        DateTime    @default(now())
-  isInZone          Boolean
-  versionList       Version[]
-  jobList           Job[]
+model Posting {
+  id               Int           @id @default(autoincrement())
+  candidate        Candidate     @relation(fields: [candidateId], references: [id])
+  candidateId      String
+  source           String
+  reference        String
+  title            String
+  url              String?
+  publishedAt      DateTime?
+  deadline         DateTime?
+  employer         String?
+  workplace        String?
+  city             String?
+  region           String?
+  latitude         Float?
+  longitude        Float?
+  applicationEmail String?
+  contact1         String?
+  contact2         String?
+  status           PostingStatus @default(to_apply)
+  // When the Posting was first marked Applied: its Chosen Letter, the one sent, stays frozen even
+  // once it is Archived
+  appliedAt        DateTime?
+  repostOf         Posting?      @relation("Repost", fields: [repostOfId], references: [id])
+  repostOfId       Int?
+  repostList       Posting[]     @relation("Repost")
+  detectedAt       DateTime      @default(now())
+  isInZone         Boolean
+  versionList      Version[]
+  jobList          Job[]
 
-  @@unique([candidatId, source, reference])
+  @@unique([candidateId, source, reference])
 }
 
-enum OffreStatut {
-  a_traiter
-  postulee
-  archivee
+enum PostingStatus {
+  to_apply
+  applied
+  archived
 }
 
-// A Version of the lettre Artefact holds a pair: the Brouillon, never changed, and the Lettre.
+// A Version of the letter Artifact holds a pair: the Draft, never changed, and the Letter.
 model Version {
-  id                   Int          @id @default(autoincrement())
-  offre                Offre        @relation(fields: [offreId], references: [id])
-  offreId              Int
-  artefact             Artefact
-  number               Int
-  isRetenue            Boolean      @default(false)
-  state                VersionState
-  consignes            String
-  // Whether those Consignes are the Candidat's own rather than the module's default ones
-  hasCandidatConsignes Boolean      @default(false)
+  id                       Int          @id @default(autoincrement())
+  posting                  Posting      @relation(fields: [postingId], references: [id])
+  postingId                Int
+  artifact                 Artifact
+  number                   Int
+  isChosen                 Boolean      @default(false)
+  state                    VersionState
+  instructions             String
+  // Whether those Instructions are the Candidate's own rather than the module's default ones
+  hasCandidateInstructions Boolean      @default(false)
   // The Versions this one read as input
-  inputList            Version[]    @relation("Input")
-  readByList           Version[]    @relation("Input")
-  createdAt            DateTime     @default(now())
+  inputList                Version[]    @relation("Input")
+  readByList               Version[]    @relation("Input")
+  createdAt                DateTime     @default(now())
   // The job that produced this Version, so a job can be followed to its Version
-  job                  Job?         @relation(fields: [jobId], references: [id])
-  jobId                Int?         @unique
+  job                      Job?         @relation(fields: [jobId], references: [id])
+  jobId                    Int?         @unique
 
-  @@unique([offreId, artefact, number])
+  @@unique([postingId, artifact, number])
 }
 
-enum Artefact {
-  recherche
-  lettre
-  fiche_entretien
-  visualisation
+enum Artifact {
+  research
+  letter
+  interview_brief
+  visualization
 }
 
 enum VersionState {
@@ -127,19 +135,19 @@ enum VersionState {
   failed
 }
 
-// A job works on an Offre, or on the Profil of a Candidat: the conversion of one of its Pièces
+// A job works on a Posting, or on the Profile of a Candidate: the conversion of one of its Uploads
 model Job {
-  id         Int       @id @default(autoincrement())
-  module     String
-  offre      Offre?    @relation(fields: [offreId], references: [id], onDelete: Restrict)
-  offreId    Int?
-  candidat   Candidat? @relation(fields: [candidatId], references: [id], onDelete: Cascade)
-  candidatId String?
-  piece      String?
-  state      JobState  @default(queued)
-  log        String    @default("")
-  sessionId  String?
-  version    Version?
+  id          Int        @id @default(autoincrement())
+  module      String
+  posting     Posting?   @relation(fields: [postingId], references: [id], onDelete: Restrict)
+  postingId   Int?
+  candidate   Candidate? @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId String?
+  upload      String?
+  state       JobState   @default(queued)
+  log         String     @default("")
+  sessionId   String?
+  version     Version?
 }
 
 enum JobState {

@@ -1,43 +1,35 @@
-import { STATUT_LABEL_BY_STATUT } from '#/actions/labels.ts';
+import { useTranslation } from 'react-i18next';
 
-// The statuts as the actions name them
-export type Statut = keyof typeof STATUT_LABEL_BY_STATUT;
+import type { Actions } from '#/actions/index.ts';
 
-const SHOWN_STATUT_LABEL_BY_STATUT: Record<Statut | 'expiree', string> = {
-  ...STATUT_LABEL_BY_STATUT,
-  expiree: 'Expirée',
-};
+// The statuses as the actions give them
+export type Status = Awaited<ReturnType<Actions['listPostings']>>[number]['status'];
 
-// Expirée comes from the Date limite, whatever the statut (GLOSSARY.md). The badge and the map
-// show it only in place of À traiter: a Postulée Offre stays green past its Date limite.
-export function showStatut(statut: Statut, isExpiree: boolean): Statut | 'expiree' {
-  return statut === 'a_traiter' && isExpiree ? 'expiree' : statut;
+// Expired comes from the Deadline, whatever the status (GLOSSARY.md). The badge and the map
+// show it only in place of To Apply: an Applied Posting stays green past its Deadline.
+export function showStatus(status: Status, isExpired: boolean): Status | 'expired' {
+  return status === 'to_apply' && isExpired ? 'expired' : status;
 }
 
-export function StatutBadge({ statut, isExpiree }: Readonly<{ statut: Statut; isExpiree: boolean }>) {
-  const shownStatut = showStatut(statut, isExpiree);
+export function StatusBadge({ status, isExpired }: Readonly<{ status: Status; isExpired: boolean }>) {
+  const { t } = useTranslation();
+  const shownStatus = showStatus(status, isExpired);
   return (
-    <span className="badge" data-statut={shownStatut}>
-      {SHOWN_STATUT_LABEL_BY_STATUT[shownStatut]}
+    <span className="badge" data-status={shownStatus}>
+      {shownStatus === 'expired' ? t('expired') : t(`statusLabelByStatus.${shownStatus}`)}
     </span>
   );
 }
 
-export const ETAT_LIST = ['absent', 'en_cours', 'pret', 'en_echec'] as const;
+export const STATE_LIST = ['absent', 'in_progress', 'ready', 'failed'] as const;
 
-export type Etat = (typeof ETAT_LIST)[number];
+export type State = (typeof STATE_LIST)[number];
 
-const ETAT_LABEL_BY_ETAT: Record<Etat, string> = {
-  absent: 'Absent',
-  en_cours: 'En cours',
-  pret: 'Prêt',
-  en_echec: 'En échec',
-};
-
-export function EtatBadge({ etat }: Readonly<{ etat: Etat }>) {
+export function StateBadge({ state }: Readonly<{ state: State }>) {
+  const { t } = useTranslation('posting');
   return (
-    <span className="badge" data-etat={etat}>
-      {ETAT_LABEL_BY_ETAT[etat]}
+    <span className="badge" data-state={state}>
+      {t(`stateLabelByState.${state}`)}
     </span>
   );
 }

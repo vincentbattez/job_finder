@@ -4,6 +4,7 @@ Issues and specs for this repo live as GitHub issues in `vincentbattez/job_finde
 
 ## Conventions
 
+- **Language**: titles and bodies in English, using the vocabulary of `GLOSSARY.md`.
 - **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
 - **Read an issue**: `gh issue view <number> --comments`, filtering comments with `jq`.
 - **List issues**: `gh issue list --state open --json number,title,body,comments --jq '[.[] | {number, title, body, comments: [.comments[].body]}]'` with the appropriate `--state` filter.
@@ -19,7 +20,7 @@ GitHub shares one number space across issues and PRs, so a bare `#42` may be eit
 
 ## Skills
 
-Use /to-spec to write the specs and /to-tickets to split ce spec in individual issue
+Use /to-spec to write the specs and /to-tickets to split a spec into individual issues.
 
 ## When a skill says "publish to the issue tracker"
 

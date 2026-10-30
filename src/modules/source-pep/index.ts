@@ -1,19 +1,25 @@
 import { z } from 'zod/v4';
 
-import { parametre } from '#/parametre/index.ts';
+import { textKeyOf } from '#/domain/catalogue/i18n.ts';
+import { parameter } from '#/parameter/index.ts';
 import { defineSource } from '#/source/index.ts';
 import { wordListOf } from '#/text/index.ts';
 
-import { readFeed, readFicheDePoste } from './acl/talent-soft.ts';
+import { readFeed, readJobDescription } from './acl/talent-soft.ts';
+import { COPY_NAMESPACE } from './copy.ts';
 import { createTitleMatcher } from './title.ts';
 
-const TITLE_PARAMETRE = parametre(z.string().min(1), { label: 'Titre recherché', placeholder: 'attaché de justice' });
+// The title is searched as the Source publishes it, in French, whatever the Candidate's locale
+const TITLE_PARAMETER = parameter(z.string().min(1), {
+  label: textKeyOf(COPY_NAMESPACE, 'titleLabel'),
+  placeholder: textKeyOf(COPY_NAMESPACE, 'titlePlaceholder'),
+});
 
 // The Zone is told in courts of appeal: the Hauts-de-France are exactly those of Douai and Amiens
 // (ADR-0001)
-const COURT_OF_APPEAL_LIST_PARAMETRE = parametre(z.array(z.string().min(1)).min(1), {
-  label: 'Cours d’appel de la Zone',
-  placeholder: 'Douai',
+const COURT_OF_APPEAL_LIST_PARAMETER = parameter(z.array(z.string().min(1)).min(1), {
+  label: textKeyOf(COPY_NAMESPACE, 'courtOfAppealListLabel'),
+  placeholder: textKeyOf(COPY_NAMESPACE, 'courtOfAppealListPlaceholder'),
   type: 'list',
 });
 
@@ -25,25 +31,25 @@ function normalizeCourtOfAppeal(name: string): string {
 export const PEP = defineSource({
   id: 'pep',
   name: 'Place de l’Emploi Public',
-  parametreSchema: z.object({ title: TITLE_PARAMETRE, courtOfAppealList: COURT_OF_APPEAL_LIST_PARAMETRE }),
+  parameterSchema: z.object({ title: TITLE_PARAMETER, courtOfAppealList: COURT_OF_APPEAL_LIST_PARAMETER }),
 
-  // The Offres of the feed whose title matches that of the Veille, and those that came close
-  async search({ title }, httpFetch) {
+  // The Postings of the feed whose title matches that of the Watch, and those that came close
+  async search({ title }, httpFetch, locale) {
     const matchTitle = createTitleMatcher(title);
-    const listedOffreList = await readFeed(httpFetch);
+    const listedPostingList = await readFeed(locale, httpFetch);
     return {
-      matchingList: listedOffreList.filter((listedOffre) => matchTitle(listedOffre.title) === 'retained'),
-      nearMissList: listedOffreList.filter((listedOffre) => matchTitle(listedOffre.title) === 'near-miss'),
+      matchingList: listedPostingList.filter((listedPosting) => matchTitle(listedPosting.title) === 'retained'),
+      nearMissList: listedPostingList.filter((listedPosting) => matchTitle(listedPosting.title) === 'near-miss'),
     };
   },
 
-  // Downloads the detail page of an Offre. The Zone is read in the employing court of appeal,
+  // Downloads the detail page of a Posting. The Zone is read in the employing court of appeal,
   // never in the department the offer shows, which is sometimes wrong (ADR-0001).
-  async readFicheDePoste(reference, { courtOfAppealList }, httpFetch) {
-    const { ficheDePoste, courtOfAppeal } = await readFicheDePoste(reference, httpFetch);
+  async readJobDescription(reference, { courtOfAppealList }, httpFetch, locale) {
+    const { jobDescription, courtOfAppeal } = await readJobDescription(reference, locale, httpFetch);
     const isInZone =
       courtOfAppeal !== null &&
       courtOfAppealList.some((name) => normalizeCourtOfAppeal(name) === normalizeCourtOfAppeal(courtOfAppeal));
-    return { ficheDePoste, isInZone };
+    return { jobDescription, isInZone };
   },
 });

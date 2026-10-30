@@ -74,8 +74,13 @@ export default defineConfig(
         },
         { selector: 'typeLike', format: ['PascalCase'] },
         { selector: 'interface', format: ['PascalCase'], prefix: ['I'] },
-        // Augmenting a library's interface keeps its name: Vitest's, which types inject()
-        { selector: 'interface', filter: { regex: '^ProvidedContext$', match: true }, format: ['PascalCase'] },
+        // Augmenting a library's interface keeps its name: Vitest's, which types inject(), and
+        // i18next's, which type the keys of t, a module's namespace included (ADR-0012)
+        {
+          selector: 'interface',
+          filter: { regex: '^(?:ProvidedContext|CustomTypeOptions|ResourceNamespaceMap)$', match: true },
+          format: ['PascalCase'],
+        },
         { selector: 'objectLiteralProperty', format: null },
       ],
     },
@@ -99,12 +104,12 @@ export default defineConfig(
   {
     // The example address of a Home Assistant is one on the LAN, which serves plain http by default
     // (ADR-0002); no request goes to it
-    files: ['src/modules/notification-home-assistant/index.ts'],
+    files: ['src/modules/notification-home-assistant/copy.ts'],
     rules: { 'sonarjs/no-clear-text-protocols': 'off' },
   },
   {
-    // A field typed into shows an example of what goes in it, so the Candidat knows what to write. A
-    // select is left out: its first option is a choice of its own, such as « Toutes », or a hint.
+    // A field typed into shows an example of what goes in it, so the Candidate knows what to write. A
+    // select is left out: its first option is a choice of its own, such as “All”, or a hint.
     files: ['src/web/**/*.tsx'],
     rules: {
       'no-restricted-syntax': [

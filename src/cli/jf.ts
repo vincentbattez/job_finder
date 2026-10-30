@@ -2,56 +2,65 @@ import path from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 
+import { DEFAULT_LOCALE, localeOf, tFor } from '#/actions/i18n.ts';
 import { createActions, messageOf, type Actions } from '#/actions/index.ts';
-import { ARTEFACT_LABEL_BY_ARTEFACT, STATUT_LABEL_BY_STATUT } from '#/actions/labels.ts';
 
 import { readTextFile } from './acl/files.ts';
 
 const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
 
+// What jf writes, in a locale (ADR-0012); the words several areas share are read with { ns: 'common' }
+type Cli = ReturnType<typeof tFor<'cli'>>;
+
+// What jf says before it knows the Candidate a command acts for, as jf help: the default locale
+const DEFAULT_CLI = tFor(DEFAULT_LOCALE, 'cli');
+
 // Through the actions only: the CLI never reaches the domain directly (ADR-0003)
-type Offre = Awaited<ReturnType<Actions['listOffres']>>[number];
-type Version = Awaited<ReturnType<Actions['listVersions']>>[number];
+type Posting = Awaited<ReturnType<Actions['listPostings']>>[number];
 type Recipients = Awaited<ReturnType<Actions['readRecipients']>>;
-type ModuleConsignes = Awaited<ReturnType<Actions['listConsignes']>>[number];
+type ModuleInstructions = Awaited<ReturnType<Actions['listInstructions']>>[number];
 
 interface ICommand {
-  description: string;
+  describe: (t: Cli) => string;
   run: (actions: Actions, argumentList: string[], option: { isWaiting: boolean }) => Promise<void>;
 }
 
-const VERSION_STATE_LABEL_BY_STATE: Record<Version['state'], string> = {
-  running: 'en cours',
-  ready: 'prête',
-  failed: 'en échec',
-};
-
-const FIELD_LABEL_BY_SOURCE: Record<Recipients['ccList'][number]['source'], string> = {
-  applicationEmail: 'mail de candidature',
-  contact1: 'contact 1',
-  contact2: 'contact 2',
-};
-
-function formatAddress({ email, source }: Recipients['ccList'][number]): string {
-  return `${email} (${FIELD_LABEL_BY_SOURCE[source]})`;
+function cliOf(candidate: Parameters<typeof localeOf>[0]): Cli {
+  return tFor(localeOf(candidate), 'cli');
 }
 
-function formatOffre(offre: Offre): string {
-  const { republicationOf, republicationList } = offre;
+// Each command speaks the locale of the Candidate it acts for (spec #65)
+async function cliOfCandidate(actions: Actions, candidateId: string): Promise<Cli> {
+  const candidateList = await actions.listCandidates();
+  return cliOf(candidateList.find(({ id }) => id === candidateId));
+}
+
+async function cliOfPosting(actions: Actions, reference: string): Promise<Cli> {
+  return cliOf(await actions.readPostingCandidate({ reference }));
+}
+
+function formatAddress({ email, source }: Recipients['ccList'][number], t: Cli): string {
+  const fieldLabel = t(`fieldLabelBySource.${source}`);
+  return `${email} (${fieldLabel})`;
+}
+
+function formatPosting(posting: Posting, t: Cli): string {
+  const { repostOf, repostList, deadline } = posting;
+  const statusLabel = t(`statusLabelByStatus.${posting.status}`, { ns: 'common' });
   return [
-    offre.reference,
-    offre.title,
-    offre.workplace ?? '—',
-    offre.dateLimite?.toLocaleDateString('fr-FR', { timeZone: 'UTC' }) ?? '—',
-    offre.isExpiree ? `${STATUT_LABEL_BY_STATUT[offre.statut]}, Expirée` : STATUT_LABEL_BY_STATUT[offre.statut],
-    offre.isInZone ? 'Zone' : 'hors Zone',
-    // The link of a Republication, both ways, only on the Offres that have one
-    ...(republicationOf === null ? [] : [`Republication de ${republicationOf.reference}`]),
-    ...republicationList.map(({ reference }) => `Republiée en ${reference}`),
+    posting.reference,
+    posting.title,
+    posting.workplace ?? '—',
+    deadline === null ? '—' : t('deadline', { deadline }),
+    posting.isExpired ? `${statusLabel}, ${t('expired', { ns: 'common' })}` : statusLabel,
+    posting.isInZone ? t('inZone') : t('outOfZone'),
+    // The link of a Repost, both ways, only on the Postings that have one
+    ...(repostOf === null ? [] : [t('repostOf', { reference: repostOf.reference })]),
+    ...repostList.map(({ reference }) => t('repostedAs', { reference })),
   ].join('\t');
 }
 
-// The terminal where the Candidat answers, one line per question. Ctrl-C or Ctrl-D closes it,
+// The terminal where the Candidate answers, one line per question. Ctrl-C or Ctrl-D closes it,
 // which ends the answers instead of leaving a question pending forever.
 function openTerminal() {
   const readline = createInterface({ input: process.stdin, output: process.stdout });
@@ -80,74 +89,82 @@ interface IChoice<T> {
 }
 
 // A numbered list to pick from on the terminal; a single item needs no question
-async function choose<T>(terminal: Terminal, { question, itemList, label, emptyMessage }: IChoice<T>): Promise<T> {
+async function choose<T>(
+  terminal: Terminal,
+  t: Cli,
+  { question, itemList, label, emptyMessage }: IChoice<T>,
+): Promise<T> {
   const [firstItem, ...otherItemList] = itemList;
   if (firstItem === undefined) {
     throw new Error(emptyMessage);
   }
   if (otherItemList.length === 0) {
-    process.stdout.write(`${question} : ${label(firstItem)}\n`);
+    process.stdout.write(t('answered', { question, label: label(firstItem) }));
     return firstItem;
   }
   for (const [index, item] of itemList.entries()) {
     process.stdout.write(`${String(index + 1).padStart(3)}  ${label(item)}\n`);
   }
-  const answer = await terminal.ask(`${question} (1 à ${String(itemList.length)}) : `);
+  const answer = await terminal.ask(t('ask', { question, itemCount: itemList.length }));
   if (answer === undefined) {
-    throw new Error('Abandonné : aucun choix.');
+    throw new Error(t('noChoice'));
   }
   const item = itemList[Number(answer) - 1];
   if (item === undefined) {
-    throw new Error(`Choix invalide : ${answer}. Relancer la commande.`);
+    throw new Error(t('invalidChoice', { answer }));
   }
   return item;
 }
 
-async function chooseCandidat(actions: Actions, terminal: Terminal) {
-  return choose(terminal, {
-    question: 'Candidat',
-    itemList: await actions.listCandidats(),
+// Before a Candidate is chosen, no locale but the default one
+async function chooseCandidate(actions: Actions, terminal: Terminal) {
+  return choose(terminal, DEFAULT_CLI, {
+    question: DEFAULT_CLI('candidateQuestion'),
+    itemList: await actions.listCandidates(),
     label: ({ name }) => name,
-    emptyMessage: 'Aucun Candidat : en créer un dans la page Candidats du front.',
+    emptyMessage: DEFAULT_CLI('noCandidate'),
   });
 }
 
 async function chooseReference(actions: Actions, terminal: Terminal): Promise<string> {
-  const candidat = await chooseCandidat(actions, terminal);
-  const offre = await choose(terminal, {
-    question: 'Offre à modifier',
-    itemList: await actions.listOffres({ candidatId: candidat.id }),
-    label: formatOffre,
-    emptyMessage: `Aucune Offre pour ${candidat.name} : « jf detect » cherche les nouvelles Offres.`,
+  const candidate = await chooseCandidate(actions, terminal);
+  const t = cliOf(candidate);
+  const posting = await choose(terminal, t, {
+    question: t('postingQuestion'),
+    itemList: await actions.listPostings({ candidateId: candidate.id }),
+    label: (item) => formatPosting(item, t),
+    emptyMessage: t('noPosting', { candidateName: candidate.name }),
   });
-  return offre.reference;
+  return posting.reference;
 }
 
-// From a list, unless given: the Candidat has no reference to remember
-async function chooseArtefact(actions: Actions, [givenReference, givenArtefact]: string[]) {
-  if (givenReference !== undefined && givenArtefact !== undefined) {
-    return { reference: givenReference, artefact: givenArtefact };
+// From a list, unless given: the Candidate has no reference to remember
+async function chooseArtifact(actions: Actions, [givenReference, givenArtifact]: string[]) {
+  if (givenReference !== undefined && givenArtifact !== undefined) {
+    return { reference: givenReference, artifact: givenArtifact };
   }
   const terminal = openTerminal();
   try {
     const reference = givenReference ?? (await chooseReference(actions, terminal));
-    const version = await choose(terminal, {
-      question: 'Artefact à modifier',
-      itemList: await actions.listVersionsRetenues({ reference }),
-      label: ({ artefact, number }) => `${ARTEFACT_LABEL_BY_ARTEFACT[artefact]} (v${String(number)}, retenue)`,
-      emptyMessage: `L'Offre ${reference} n'a aucun Artefact à modifier : « jf run recherche ${reference} » produit sa Recherche.`,
+    const t = await cliOfPosting(actions, reference);
+    const version = await choose(terminal, t, {
+      question: t('artifactQuestion'),
+      itemList: await actions.listChosenVersions({ reference }),
+      label: ({ artifact, number }) =>
+        t('chosenVersionLabel', { artifactLabel: t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' }), number }),
+      emptyMessage: t('noArtifact', { reference }),
     });
-    return { reference, artefact: version.artefact };
+    return { reference, artifact: version.artifact };
   } finally {
     // Claude Code takes the terminal next
     terminal.close();
   }
 }
 
-// Typed or redirected from a file: the Consignes end with the input (Ctrl-D in a terminal)
-async function readStandardInput(): Promise<string> {
+// Typed or redirected from a file: the Instructions end with the input (Ctrl-D in a terminal)
+async function readStandardInput(t: Cli): Promise<string> {
   if (process.stdin.isTTY) {
-    process.stderr.write('Tapez ou collez les Consignes, puis Ctrl-D :\n');
+    process.stderr.write(t('typeInstructions'));
   }
   let text = '';
   for await (const chunk of process.stdin) {
@@ -156,88 +173,91 @@ async function readStandardInput(): Promise<string> {
   return text;
 }
 
-const CONSIGNES_USAGE =
-  'Usage : jf consignes <candidat> [<module> [defaut|remplacer|supprimer]], par exemple jf consignes lea lettre.';
-
-// The Consignes in effect for a module, or those the operation names; « remplacer » reads the new
+// The Instructions in effect for a module, or those the operation names; « replace » reads the new
 // ones on the standard input
-async function runConsignesOperation(
+async function runInstructionsOperation(
   actions: Actions,
-  { candidatId, module, defaultConsignes, candidatConsignes }: ModuleConsignes & { candidatId: string },
+  t: Cli,
+  { candidateId, module, defaultInstructions, candidateInstructions }: ModuleInstructions & { candidateId: string },
   operation: string | undefined,
 ): Promise<void> {
   switch (operation) {
     case undefined: {
-      const origin = candidatConsignes === null ? 'par défaut' : 'du Candidat';
-      process.stderr.write(`Consignes ${origin} de ${module} :\n`);
-      process.stdout.write(candidatConsignes ?? defaultConsignes);
+      const headingKey = candidateInstructions === null ? 'defaultInstructionsHeading' : 'candidateInstructionsHeading';
+      process.stderr.write(t(headingKey, { module }));
+      process.stdout.write(candidateInstructions ?? defaultInstructions);
       return;
     }
-    case 'defaut': {
-      process.stdout.write(defaultConsignes);
+    case 'default': {
+      process.stdout.write(defaultInstructions);
       return;
     }
-    case 'remplacer': {
-      await actions.saveConsignes({ candidatId, module, consignes: await readStandardInput() });
-      process.stdout.write(`${module} suivra ces Consignes du Candidat dans ses prochaines Versions.\n`);
+    case 'replace': {
+      await actions.saveInstructions({ candidateId, module, instructions: await readStandardInput(t) });
+      process.stdout.write(t('instructionsReplaced', { module }));
       return;
     }
-    case 'supprimer': {
-      await actions.deleteConsignes({ candidatId, module });
-      process.stdout.write(`${module} revient à ses Consignes par défaut.\n`);
+    case 'delete': {
+      await actions.deleteInstructions({ candidateId, module });
+      process.stdout.write(t('instructionsDeleted', { module }));
       return;
     }
     default: {
-      throw new Error(`Opération inconnue : ${operation}. ${CONSIGNES_USAGE}`);
+      throw new Error(t('unknownOperation', { operation }));
     }
   }
 }
 
-function changeStatutCommand(statut: Offre['statut'], name: string, description: string): ICommand {
+function changeStatusCommand(status: Posting['status'], name: string, describe: (t: Cli) => string): ICommand {
   return {
-    description: `${description} : jf ${name} <offre>`,
+    describe: (t) => t('statusCommandDescription', { description: describe(t), name }),
     run: async (actions, [reference]) => {
       if (reference === undefined) {
-        throw new Error(`Usage : jf ${name} <offre>. « jf list <candidat> » liste les Offres.`);
+        throw new Error(DEFAULT_CLI('statusUsage', { name }));
       }
-      await actions.changeStatut({ reference, statut });
-      process.stdout.write(`${reference} : ${STATUT_LABEL_BY_STATUT[statut]}\n`);
+      await actions.changeStatus({ reference, status });
+      const t = await cliOfPosting(actions, reference);
+      const statusLabel = t(`statusLabelByStatus.${status}`, { ns: 'common' });
+      process.stdout.write(t('statusChanged', { reference, statusLabel }));
     },
   };
 }
 
-// The CLI only relays to the actions: no business rule here (ADR-0003)
+// The CLI only relays to the actions: no business rule here (ADR-0003). A usage error comes before
+// any Candidate is known: in the default locale.
 const COMMAND_BY_NAME: Record<string, ICommand> = {
-  candidats: {
-    description: 'Liste les Candidats, que la page Candidats du front crée et renomme',
+  candidates: {
+    describe: (t) => t('candidatesDescription'),
     run: async (actions) => {
-      const candidatList = await actions.listCandidats();
-      for (const candidat of candidatList) {
-        process.stdout.write(`${candidat.id}\t${candidat.name}\n`);
+      const candidateList = await actions.listCandidates();
+      for (const candidate of candidateList) {
+        process.stdout.write(`${candidate.id}\t${candidate.name}\n`);
       }
     },
   },
   detect: {
-    description: 'Cherche les nouvelles Offres de chaque Veille',
+    describe: (t) => t('detectDescription'),
     run: async (actions) => {
       const detectionList = await actions.detect();
+      const candidateList = await actions.listCandidates();
       for (const detection of detectionList) {
-        const { veilleId, candidatId, isFirstLaunch, newOffreList, nearMissList } = detection;
-        const summary =
-          newOffreList.length === 0 ? 'aucune nouvelle Offre' : `${String(newOffreList.length)} nouvelles Offres`;
-        const firstLaunch = isFirstLaunch ? ', premier lancement : importées sans rien déclencher' : '';
-        process.stdout.write(`Veille ${veilleId} (${candidatId}) : ${summary}${firstLaunch}\n`);
-        for (const offre of newOffreList) {
-          process.stdout.write(`  ${formatOffre(offre)}\n`);
+        const { watchId, candidateId, isFirstLaunch, newPostingList, nearMissList } = detection;
+        const t = cliOf(candidateList.find(({ id }) => id === candidateId));
+        const newCount = newPostingList.length;
+        const newPostings = newCount === 0 ? t('noNewPosting') : t('newPostings', { newCount });
+        const firstLaunch = isFirstLaunch ? t('firstLaunch') : '';
+        process.stdout.write(t('detectionSummary', { watchId, candidateId, newPostings, firstLaunch }));
+        for (const posting of newPostingList) {
+          process.stdout.write(`  ${formatPosting(posting, t)}\n`);
         }
         if (nearMissList.length > 0) {
-          process.stdout.write('Titres écartés de justesse :\n');
+          process.stdout.write(t('nearMissHeading'));
         }
         for (const { reference, title } of nearMissList) {
           process.stdout.write(`  ${reference}\t${title}\n`);
         }
       }
-      // What the Détection found is printed first; a notification not sent then fails the run in lpm
+      // What the Detection found is printed first; a notification not sent then fails the run in lpm
       const failureList = detectionList.flatMap(({ notificationFailureList }) => notificationFailureList);
       if (failureList.length > 0) {
         throw new Error(failureList.join('\n'));
@@ -245,191 +265,184 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     },
   },
   import: {
-    description:
-      "Importe une Fiche de poste en Markdown trouvée ailleurs : le worker en relève les champs avec Claude Code, puis met sa Recherche en file ; Candidat proposé si absent, --wait attend l'extraction : jf import <fichier> [<candidat>] [--wait]",
-    run: async (actions, [filePath, givenCandidatId], { isWaiting }) => {
+    describe: (t) => t('importDescription'),
+    run: async (actions, [filePath, givenCandidateId], { isWaiting }) => {
       if (filePath === undefined) {
-        throw new Error(
-          'Usage : jf import <fichier> [<candidat>] [--wait], par exemple jf import offre-greffier.md lea.',
-        );
+        throw new Error(DEFAULT_CLI('importUsage'));
       }
-      const markdown = readTextFile(filePath);
-      let candidatId = givenCandidatId;
-      if (candidatId === undefined) {
+      // Read before any question, in the locale of the Candidate named, if any
+      const givenT = givenCandidateId === undefined ? DEFAULT_CLI : await cliOfCandidate(actions, givenCandidateId);
+      const markdown = readTextFile(filePath, (unreadablePath, reason) =>
+        givenT('unreadableFile', { filePath: unreadablePath, reason }),
+      );
+      let candidateId = givenCandidateId;
+      if (candidateId === undefined) {
         const terminal = openTerminal();
         try {
-          ({ id: candidatId } = await chooseCandidat(actions, terminal));
+          ({ id: candidateId } = await chooseCandidate(actions, terminal));
         } finally {
           terminal.close();
         }
       }
-      const job = await actions.importFicheDePoste({ candidatId, fileName: path.basename(filePath), markdown });
-      const { reference } = job.offre;
-      process.stdout.write(`Offre ${reference} importée, extraction de ses champs en file (job ${String(job.id)}).\n`);
+      const t = await cliOfCandidate(actions, candidateId);
+      const job = await actions.importJobDescription({ candidateId, fileName: path.basename(filePath), markdown });
+      const { reference } = job.posting;
+      process.stdout.write(t('imported', { reference, jobId: job.id }));
       if (!isWaiting) {
-        process.stdout.write(
-          `Le worker la lance, puis met sa Recherche en file. « jf list ${candidatId} » la montre.\n`,
-        );
+        process.stdout.write(t('importQueued', { candidateId }));
         return;
       }
-      process.stdout.write('Attente du worker (service lpm worker) : Claude Code relève les champs…\n');
-      const { state, offre, log } = await actions.followJob({ jobId: job.id });
+      process.stdout.write(t('extractionWaiting'));
+      const { state, posting, log } = await actions.followJob({ jobId: job.id });
       if (state === 'failed') {
-        throw new Error(
-          `Extraction des champs de l'Offre ${reference} en échec :\n${log}\nRelancer : jf run extraction ${reference}`,
-        );
+        throw new Error(t('extractionFailed', { reference, log }));
       }
-      process.stdout.write(
-        `${formatOffre(offre)}\nSa Recherche est en file : « jf versions ${reference} recherche » la suit.\n`,
-      );
+      process.stdout.write(t('extracted', { postingLine: formatPosting(posting, t), reference }));
     },
   },
   list: {
-    description: "Liste les Offres d'un Candidat : jf list <candidat>",
-    run: async (actions, [candidatId]) => {
-      if (candidatId === undefined) {
-        throw new Error('Usage : jf list <candidat>. « jf candidats » liste les Candidats.');
+    describe: (t) => t('listDescription'),
+    run: async (actions, [candidateId]) => {
+      if (candidateId === undefined) {
+        throw new Error(DEFAULT_CLI('listUsage'));
       }
-      const offreList = await actions.listOffres({ candidatId });
-      for (const offre of offreList) {
-        process.stdout.write(`${formatOffre(offre)}\n`);
+      const postingList = await actions.listPostings({ candidateId });
+      const t = await cliOfCandidate(actions, candidateId);
+      for (const posting of postingList) {
+        process.stdout.write(`${formatPosting(posting, t)}\n`);
       }
     },
   },
   run: {
-    description:
-      "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run recherche|lettre|fiche|visualisation <offre> [--wait]",
+    describe: (t) => t('runDescription'),
     run: async (actions, [module, reference], { isWaiting }) => {
       if (module === undefined || reference === undefined) {
-        throw new Error('Usage : jf run <module> <offre> [--wait], par exemple jf run recherche 2026-2445600.');
+        throw new Error(DEFAULT_CLI('runUsage'));
       }
       const queuedJob = await actions.runModule({ module, reference });
-      // jf versions takes the Artefact, which the module of jf run fiche is not named after
+      const t = await cliOfPosting(actions, reference);
+      // jf versions takes the Artifact, which the module of jf run brief is not named after
       const versionsCommand = `jf versions ${reference} ${queuedJob.module}`;
-      process.stdout.write(`${module} de l'Offre ${reference} en file (job ${String(queuedJob.id)}).\n`);
+      process.stdout.write(t('queued', { module, reference, jobId: queuedJob.id }));
       if (!isWaiting) {
-        process.stdout.write(`Le worker la produira. « ${versionsCommand} » suit ses Versions.\n`);
+        process.stdout.write(t('runQueued', { versionsCommand }));
         return;
       }
-      process.stdout.write('Attente du worker (service lpm worker) : Claude Code peut prendre plusieurs minutes…\n');
+      process.stdout.write(t('runWaiting'));
       const { state, version, log } = await actions.followJob({ jobId: queuedJob.id });
       const name = version === null ? module : `${module} v${String(version.number)}`;
       if (state === 'failed') {
-        throw new Error(`${name} en échec :\n${log}\nRelancer : jf run ${module} ${reference}`);
+        throw new Error(t('runFailed', { name, log, module, reference }));
       }
-      process.stdout.write(`${name} prête et retenue. « ${versionsCommand} » liste ses Versions.\n`);
+      process.stdout.write(t('runReady', { name, versionsCommand }));
     },
   },
-  destinataires: {
-    description: 'Affiche à qui adresser la candidature, selon la Lettre retenue : jf destinataires <offre>',
+  recipients: {
+    describe: (t) => t('recipientsDescription'),
     run: async (actions, [reference]) => {
       if (reference === undefined) {
-        throw new Error('Usage : jf destinataires <offre>, par exemple jf destinataires 2026-2445600.');
+        throw new Error(DEFAULT_CLI('recipientsUsage'));
       }
       const { to, ccList, salutation, justification } = await actions.readRecipients({ reference });
-      const salutationSource = salutation.source === null ? '' : ` (${FIELD_LABEL_BY_SOURCE[salutation.source]})`;
+      const t = await cliOfPosting(actions, reference);
+      const salutationFieldLabel = salutation.source === null ? null : t(`fieldLabelBySource.${salutation.source}`);
+      const salutationSource = salutationFieldLabel === null ? '' : ` (${salutationFieldLabel})`;
+      const addresses = ccList.length === 0 ? t('noCc') : ccList.map((address) => formatAddress(address, t)).join(', ');
       const lineList = [
-        `Destinataire : ${to === null ? "aucune adresse dans l'Offre" : formatAddress(to)}`,
-        `Copie : ${ccList.length === 0 ? 'aucune' : ccList.map((address) => formatAddress(address)).join(', ')}`,
-        `Formule d'appel : ${salutation.text}${salutationSource}`,
-        `Justification : ${justification}`,
+        t('recipient', { address: to === null ? t('noRecipientAddress') : formatAddress(to, t) }),
+        t('ccList', { addresses }),
+        t('salutation', { text: `${salutation.text}${salutationSource}` }),
+        t('justification', { text: justification }),
       ];
       process.stdout.write(`${lineList.join('\n')}\n`);
     },
   },
   versions: {
-    description: "Liste les Versions d'un Artefact : jf versions <offre> recherche",
-    run: async (actions, [reference, artefact]) => {
-      if (reference === undefined || artefact === undefined) {
-        throw new Error('Usage : jf versions <offre> <artefact>, par exemple jf versions 2026-2445600 recherche.');
+    describe: (t) => t('versionsDescription'),
+    run: async (actions, [reference, artifact]) => {
+      if (reference === undefined || artifact === undefined) {
+        throw new Error(DEFAULT_CLI('versionsUsage'));
       }
-      const versionList = await actions.listVersions({ reference, artefact });
-      for (const { number, state, isRetenue, hasCandidatConsignes, createdAt } of versionList) {
+      const versionList = await actions.listVersions({ reference, artifact });
+      const t = await cliOfPosting(actions, reference);
+      for (const { number, state, isChosen, hasCandidateInstructions, createdAt } of versionList) {
         const columnList = [
           `v${String(number)}`,
-          VERSION_STATE_LABEL_BY_STATE[state],
-          isRetenue ? 'retenue' : '—',
-          hasCandidatConsignes ? 'Consignes du Candidat' : 'Consignes par défaut',
+          t(`versionStateLabelByState.${state}`),
+          isChosen ? t('chosenVersion') : '—',
+          hasCandidateInstructions ? t('candidateInstructions') : t('defaultInstructions'),
+          t('createdAt', { createdAt }),
         ];
-        process.stdout.write(`${[...columnList, createdAt.toLocaleString('fr-FR')].join('\t')}\n`);
+        process.stdout.write(`${columnList.join('\t')}\n`);
       }
     },
   },
-  retenir: {
-    description: "Change la Version retenue d'un Artefact : jf retenir <offre> recherche <version>",
-    run: async (actions, [reference, artefact, version]) => {
-      if (reference === undefined || artefact === undefined || version === undefined) {
-        throw new Error(
-          'Usage : jf retenir <offre> <artefact> <version>, par exemple jf retenir 2026-2445600 recherche 2.',
-        );
+  choose: {
+    describe: (t) => t('chooseDescription'),
+    run: async (actions, [reference, artifact, version]) => {
+      if (reference === undefined || artifact === undefined || version === undefined) {
+        throw new Error(DEFAULT_CLI('chooseUsage'));
       }
-      await actions.retenirVersion({ reference, artefact, number: version.replace(/^v/, '') });
-      process.stdout.write(`${artefact} ${version} retenue pour l'Offre ${reference}.\n`);
+      await actions.chooseVersion({ reference, artifact, number: version.replace(/^v/, '') });
+      const t = await cliOfPosting(actions, reference);
+      process.stdout.write(t('versionChosen', { artifact, version, reference }));
     },
   },
-  postuler: changeStatutCommand(
-    'postulee',
-    'postuler',
-    'Passe une Offre en Postulée, avec ou sans Lettre, ce qui fige sa Lettre pour de bon ; remet en Postulée une Offre Postulée puis Archivée',
-  ),
-  archiver: changeStatutCommand('archivee', 'archiver', 'Passe une Offre en Archivée, Postulée ou non'),
-  traiter: changeStatutCommand(
-    'a_traiter',
-    'traiter',
-    "Remet À traiter une Offre Archivée qui n'a jamais été Postulée",
-  ),
-  profil: {
-    description: "Complète le Profil d'un Candidat avec Claude Code : jf profil <candidat>",
-    run: async (actions, [candidatId]) => {
-      if (candidatId === undefined) {
-        throw new Error('Usage : jf profil <candidat>. « jf candidats » liste les Candidats.');
+  apply: changeStatusCommand('applied', 'apply', (t) => t('applyDescription')),
+  archive: changeStatusCommand('archived', 'archive', (t) => t('archiveDescription')),
+  'to-apply': changeStatusCommand('to_apply', 'to-apply', (t) => t('toApplyDescription')),
+  profile: {
+    describe: (t) => t('profileDescription'),
+    run: async (actions, [candidateId]) => {
+      if (candidateId === undefined) {
+        throw new Error(DEFAULT_CLI('profileUsage'));
       }
-      await actions.openProfil({ candidatId });
+      await actions.openProfile({ candidateId });
     },
   },
-  consignes: {
-    description:
-      "Montre, remplace (lues sur l'entrée standard) ou supprime les Consignes d'un module : jf consignes <candidat> [<module> [defaut|remplacer|supprimer]]",
-    run: async (actions, [candidatId, module, operation]) => {
-      if (candidatId === undefined) {
-        throw new Error(`${CONSIGNES_USAGE} « jf candidats » liste les Candidats.`);
+  instructions: {
+    describe: (t) => t('instructionsDescription'),
+    run: async (actions, [candidateId, module, operation]) => {
+      if (candidateId === undefined) {
+        throw new Error(DEFAULT_CLI('instructionsUsage'));
       }
+      const t = await cliOfCandidate(actions, candidateId);
       if (module === undefined) {
-        const consignesList = await actions.listConsignes({ candidatId });
-        for (const { module: name, candidatConsignes } of consignesList) {
-          process.stdout.write(
-            `${name}\t${candidatConsignes === null ? 'Consignes par défaut' : 'Consignes du Candidat'}\n`,
-          );
+        const instructionsList = await actions.listInstructions({ candidateId });
+        for (const { module: name, candidateInstructions } of instructionsList) {
+          const origin = candidateInstructions === null ? t('defaultInstructions') : t('candidateInstructions');
+          process.stdout.write(`${name}\t${origin}\n`);
         }
         return;
       }
-      const consignes = await actions.readConsignes({ candidatId, module });
-      await runConsignesOperation(actions, { ...consignes, candidatId }, operation);
+      const instructions = await actions.readInstructions({ candidateId, module });
+      await runInstructionsOperation(actions, t, { ...instructions, candidateId }, operation);
     },
   },
   edit: {
-    description:
-      'Modifie un Artefact avec Claude Code, Offre et Artefact proposés si absents : jf edit [<offre> [<artefact>]]',
+    describe: (t) => t('editDescription'),
     run: async (actions, argumentList) => {
-      await actions.openArtefact(await chooseArtefact(actions, argumentList));
+      await actions.openArtifact(await chooseArtifact(actions, argumentList));
     },
   },
 };
 
-const COMMAND_LINE_LIST = [
-  ...Object.entries(COMMAND_BY_NAME).map(([name, command]) => [name, command.description]),
-  ['help', 'Affiche cette aide'],
-];
-
-const HELP = [
-  "jf : veille d'offres et préparation des candidatures",
-  '',
-  'Usage : jf <commande>',
-  '',
-  'Commandes :',
-  ...COMMAND_LINE_LIST.map(([name = '', description = '']) => `  ${name.padEnd(12)}${description}`),
-  '',
-].join('\n');
+// jf help opens no workspace, so knows no Candidate: in the default locale
+function composeHelp(t: Cli): string {
+  const commandLineList = [
+    ...Object.entries(COMMAND_BY_NAME).map(([name, command]) => [name, command.describe(t)]),
+    ['help', t('help.help')],
+  ];
+  return [
+    t('help.title'),
+    '',
+    t('help.usage'),
+    '',
+    t('help.commandsHeading'),
+    ...commandLineList.map(([name = '', description = '']) => `  ${name.padEnd(12)}${description}`),
+    '',
+  ].join('\n');
+}
 
 async function run(): Promise<void> {
   const { values, positionals: positionalList } = parseArgs({
@@ -438,20 +451,18 @@ async function run(): Promise<void> {
   });
   const [commandName, ...argumentList] = positionalList;
   if (commandName === undefined || commandName === 'help' || values.help === true) {
-    process.stdout.write(HELP);
+    process.stdout.write(composeHelp(DEFAULT_CLI));
     return;
   }
   const command = COMMAND_BY_NAME[commandName];
   if (command === undefined) {
-    throw new Error(`Commande inconnue : ${commandName}. « jf help » liste les commandes.`);
+    throw new Error(DEFAULT_CLI('unknownCommand', { commandName }));
   }
   const actions = await createActions({ dataDirectory: DATA_DIRECTORY });
   // Imported once by the first launch that found it, then never read again (ADR-0011)
   const obsoleteConfig = await actions.findObsoleteConfig();
   if (obsoleteConfig.path !== null) {
-    process.stderr.write(
-      `${obsoleteConfig.path} n'est plus lu : son contenu est en base, et les Candidats, leurs Veilles et le Délai par défaut se règlent désormais dans le front. Le supprimer.\n`,
-    );
+    process.stderr.write(`${DEFAULT_CLI('obsoleteConfig', { configPath: obsoleteConfig.path })}\n`);
   }
   await command.run(actions, argumentList, { isWaiting: values.wait === true });
 }

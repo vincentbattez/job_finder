@@ -1,45 +1,43 @@
+import { useTranslation } from 'react-i18next';
 import { Link, useFetcher } from 'react-router';
 
 import { useIsHydrated } from './use-is-hydrated.ts';
 
-// The shape of the detect action, per Veille
+// The shape of the detect action, per Watch
 interface IDetection {
-  veilleId: string;
+  watchId: string;
   isFirstLaunch: boolean;
-  newOffreList: { reference: string; title: string }[];
+  newPostingList: { reference: string; title: string }[];
   notificationFailureList: string[];
 }
 
-function summarize({ isFirstLaunch, newOffreList }: IDetection): string {
-  const count = newOffreList.length;
-  const offres = count > 1 ? 'nouvelles Offres' : 'nouvelle Offre';
-  const summary = count === 0 ? 'aucune nouvelle Offre' : `${String(count)} ${offres}`;
-  return isFirstLaunch ? `${summary}, premier lancement : importées sans rien déclencher` : summary;
-}
-
-// Runs a Détection without waiting for the daily one, then says what it found for each Veille; the
-// list of Offres below reloads with the new ones
+// Runs a Detection without waiting for the daily one, then says what it found for each Watch; the
+// list of Postings below reloads with the new ones
 export function Detection() {
   const fetcher = useFetcher<{ detectionList: IDetection[]; error: string | null }>();
   const isHydrated = useIsHydrated();
   const isRunning = fetcher.state !== 'idle';
+  const { t } = useTranslation('posting');
   return (
     <fetcher.Form method="post" action="/detect" className="detection">
       <button type="submit" disabled={!isHydrated || isRunning}>
-        {isRunning ? 'Détection en cours…' : 'Lancer une Détection'}
+        {isRunning ? t('detectionRunning') : t('runDetection')}
       </button>
       <div role="status">
         {fetcher.data?.error != null && <p className="detection__error">{fetcher.data.error}</p>}
         {fetcher.data?.detectionList.map((detection) => (
-          <div key={detection.veilleId}>
+          <div key={detection.watchId}>
             <p>
-              Veille {detection.veilleId} : {summarize(detection)}
+              {t(detection.isFirstLaunch ? 'firstLaunchDetectionSummary' : 'detectionSummary', {
+                watchId: detection.watchId,
+                count: detection.newPostingList.length,
+              })}
             </p>
-            {detection.newOffreList.length > 0 && (
+            {detection.newPostingList.length > 0 && (
               <ul>
-                {detection.newOffreList.map(({ reference, title }) => (
+                {detection.newPostingList.map(({ reference, title }) => (
                   <li key={reference}>
-                    <Link to={`/offres/${reference}`}>{title}</Link>
+                    <Link to={`/postings/${reference}`}>{title}</Link>
                   </li>
                 ))}
               </ul>

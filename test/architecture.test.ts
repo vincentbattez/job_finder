@@ -56,7 +56,7 @@ function findCrossModuleImports(tsconfigPath: string) {
 // (ADR-0003)
 const RELAY_LIST = [
   { folder: 'cli', filePath: 'src/cli/jf.ts' },
-  { folder: 'web', filePath: 'src/web/routes/offres.tsx' },
+  { folder: 'web', filePath: 'src/web/routes/postings.tsx' },
   { folder: 'worker', filePath: 'src/worker/worker.ts' },
 ];
 
@@ -97,8 +97,8 @@ function findJobsRunOutsideWorker(projectDirectory: string): string[] {
   );
 }
 
-// The families of interchangeable modules, each module in src/modules/<famille>-<nom>/ (ADR-0010).
-// source-import is no Source a Veille chooses but the import of a Fiche de poste by hand: an
+// The families of interchangeable modules, each module in src/modules/<family>-<name>/ (ADR-0010).
+// source-import is no Source a Watch chooses but the import of a Job Description by hand: an
 // ordinary module, out of the family.
 const FAMILY_LIST = ['notification', 'source'];
 const ORDINARY_MODULE_SET = new Set(['source-import']);
@@ -152,7 +152,7 @@ function findModuleNamesOutsideTheirFolder(projectDirectory: string): string[] {
   });
 }
 
-// The database holds the Candidats, their Veilles and the Délai par défaut, which the front writes:
+// The database holds the Candidates, their Watches and the Default Deadline Period, which the front writes:
 // data/config.json is read only by the anti-corruption layer that imports it once (ADR-0011). Any
 // mention counts, a message or a comment included, since each points someone back to the file.
 const LEGACY_CONFIG_READER_PATH = 'src/workspace/acl/config.ts';
@@ -181,9 +181,9 @@ function createProject(fileContentByPath: Record<string, string>): string {
 describe('architecture', () => {
   it('catches a module importing another module', async () => {
     const tsconfigPath = createProject({
-      'src/modules/lettre/index.ts':
-        "import { recherche } from '#/modules/recherche/index.ts';\nexport const lettre = recherche;\n",
-      'src/modules/recherche/index.ts': 'export const recherche = 1;\n',
+      'src/modules/letter/index.ts':
+        "import { research } from '#/modules/research/index.ts';\nexport const letter = research;\n",
+      'src/modules/research/index.ts': 'export const research = 1;\n',
     });
 
     expect(await findCrossModuleImports(tsconfigPath)).toHaveLength(1);
@@ -212,14 +212,14 @@ describe('architecture', () => {
     );
     const fileContentByPath = Object.fromEntries(
       exampleList.flatMap(({ example }, index) => [
-        [`src/offres/raw-${String(index)}.ts`, example],
-        [`src/offres/acl/raw-${String(index)}.ts`, example],
+        [`src/postings/raw-${String(index)}.ts`, example],
+        [`src/postings/acl/raw-${String(index)}.ts`, example],
       ]),
     );
     const projectDirectory = path.dirname(createProject(fileContentByPath));
 
     expect(new Set(findRawDataOutsideAcl(projectDirectory))).toEqual(
-      new Set(exampleList.map(({ name }, index) => `src/offres/raw-${String(index)}.ts uses ${name}`)),
+      new Set(exampleList.map(({ name }, index) => `src/postings/raw-${String(index)}.ts uses ${name}`)),
     );
   });
 
@@ -229,10 +229,10 @@ describe('architecture', () => {
 
   it('catches the front running the queued jobs', () => {
     const projectDirectory = path.dirname(
-      createProject({ 'src/web/routes/offres.tsx': 'export const run = (actions) => actions.runQueuedJobs();\n' }),
+      createProject({ 'src/web/routes/postings.tsx': 'export const run = (actions) => actions.runQueuedJobs();\n' }),
     );
 
-    expect(findJobsRunOutsideWorker(projectDirectory)).toEqual(['src/web/routes/offres.tsx']);
+    expect(findJobsRunOutsideWorker(projectDirectory)).toEqual(['src/web/routes/postings.tsx']);
   });
 
   it('runs the queued jobs only in the worker', () => {
@@ -250,12 +250,12 @@ describe('architecture', () => {
       createProject({
         'src/modules/notification-home-assistant/index.ts': 'export const homeAssistant = 1;\n',
         'src/actions/modules.ts': "import { homeAssistant } from '#/modules/notification-home-assistant/index.ts';\n",
-        'src/web/routes/profil.tsx': content,
+        'src/web/routes/profile.tsx': content,
       }),
     );
 
     expect(findModuleNamesOutsideTheirFolder(projectDirectory)).toEqual([
-      'src/web/routes/profil.tsx names home-assistant',
+      'src/web/routes/profile.tsx names home-assistant',
     ]);
   });
 
@@ -263,7 +263,7 @@ describe('architecture', () => {
     const projectDirectory = path.dirname(
       createProject({
         'src/modules/notification-telegram/index.ts': 'export const telegram = 1;\n',
-        'prisma/schema.prisma': 'model ConnexionTelegram {\n  candidatId String @id\n  botToken String\n}\n',
+        'prisma/schema.prisma': 'model ConnexionTelegram {\n  candidateId String @id\n  botToken String\n}\n',
       }),
     );
 
@@ -274,7 +274,7 @@ describe('architecture', () => {
     const projectDirectory = path.dirname(
       createProject({
         'src/modules/source-pep/index.ts': 'export const pep = 1;\n',
-        'src/modules/source-import/index.ts': 'export const fiche = 1;\n',
+        'src/modules/source-import/index.ts': 'export const jobDescription = 1;\n',
         'src/web/components/markdown.tsx': "import { a } from './a.ts';\nexport const rehypePlugins = [a];\n",
       }),
     );

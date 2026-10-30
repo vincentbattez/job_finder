@@ -9,24 +9,27 @@ import { openWorkspace } from '#/workspace/index.ts';
 
 // Same folder as the default database of prisma.config.ts
 const DEVELOPMENT_DATA_DIRECTORY = path.join(import.meta.dirname, '..', 'dev-data');
-const OFFRE_COUNT_PER_CANDIDAT = 30;
+const POSTING_COUNT_PER_CANDIDATE = 30;
 const COURT_OF_APPEAL_LIST = ['Douai', 'Amiens', 'Paris', 'Rennes', 'Lyon', 'Bordeaux'];
+// The Postings are French, as the Sources publish them
+// cspell:disable
 const SERVICE_LIST = ['pôle civil', 'pôle pénal', 'parquet', "service de l'application des peines", 'pôle mineurs'];
 
-function fakeOffre(candidatId: string): Prisma.OffreUncheckedCreateInput {
+function fakePosting(candidateId: string): Prisma.PostingUncheckedCreateInput {
   const reference = `2026-${faker.string.numeric(7)}`;
   const city = faker.location.city();
-  const hasRecherche = faker.datatype.boolean();
+  const hasResearch = faker.datatype.boolean();
   return {
-    candidatId,
+    candidateId,
     source: 'pep',
     reference,
     title: `Attaché de justice (F/H) – ${faker.helpers.arrayElement(SERVICE_LIST)}`,
-    url: `https://example.org/offres/${reference}`,
+    url: `https://example.org/postings/${reference}`,
     publishedAt: faker.date.recent({ days: 60 }),
-    dateLimite: faker.date.soon({ days: 45 }),
+    deadline: faker.date.soon({ days: 45 }),
     employer: `Cour d'appel de ${faker.helpers.arrayElement(COURT_OF_APPEAL_LIST)}`,
     workplace: `Tribunal judiciaire de ${city}`,
+    // cspell:enable
     city,
     region: faker.location.state(),
     latitude: faker.location.latitude({ min: 42.5, max: 51 }),
@@ -34,41 +37,41 @@ function fakeOffre(candidatId: string): Prisma.OffreUncheckedCreateInput {
     applicationEmail: faker.internet.email({ provider: 'example.org' }),
     contact1: `${faker.person.fullName()}, ${faker.phone.number()}`,
     contact2: faker.helpers.maybe(() => faker.person.fullName()) ?? null,
-    statut: faker.helpers.arrayElement(['a_traiter', 'postulee', 'archivee'] as const),
+    status: faker.helpers.arrayElement(['to_apply', 'applied', 'archived'] as const),
     isInZone: faker.datatype.boolean(),
     versionList: {
-      create: hasRecherche
-        ? [{ artefact: 'recherche', number: 1, isRetenue: true, state: 'ready', consignes: '' }]
+      create: hasResearch
+        ? [{ artifact: 'research', number: 1, isChosen: true, state: 'ready', instructions: '' }]
         : [],
     },
   };
 }
 
-// Development data only: replaces the Offres of dev-data/ with fake ones, the same on every run,
-// for its Candidats, Léa when it has none yet. data/ is never touched.
+// Development data only: replaces the Postings of dev-data/ with fake ones, the same on every run,
+// for its Candidates, Léa when it has none yet. data/ is never touched.
 mkdirSync(DEVELOPMENT_DATA_DIRECTORY, { recursive: true });
 const workspace = await openWorkspace(DEVELOPMENT_DATA_DIRECTORY);
-const existingCandidatList = await workspace.listCandidats();
-if (existingCandidatList.length === 0) {
-  await workspace.createCandidat({ id: 'lea', name: 'Léa' });
+const existingCandidateList = await workspace.listCandidates();
+if (existingCandidateList.length === 0) {
+  await workspace.createCandidate({ id: 'lea', name: 'Léa', locale: 'fr' });
 }
-const candidatList = await workspace.listCandidats();
+const candidateList = await workspace.listCandidates();
 // The seed is tooling, not the application: it writes raw rows without the anti-corruption
 // layer (ADR-0005)
 const database = new PrismaClient({
   adapter: new PrismaBetterSqlite3({ url: `file:${path.join(DEVELOPMENT_DATA_DIRECTORY, 'job_finder.sqlite')}` }),
 });
 faker.seed(1);
-await database.$transaction([database.job.deleteMany(), database.version.deleteMany(), database.offre.deleteMany()]);
-const offreList = await database.$transaction(
-  candidatList.flatMap(({ id }) =>
-    Array.from({ length: OFFRE_COUNT_PER_CANDIDAT }, () => database.offre.create({ data: fakeOffre(id) })),
+await database.$transaction([database.job.deleteMany(), database.version.deleteMany(), database.posting.deleteMany()]);
+const postingList = await database.$transaction(
+  candidateList.flatMap(({ id }) =>
+    Array.from({ length: POSTING_COUNT_PER_CANDIDATE }, () => database.posting.create({ data: fakePosting(id) })),
   ),
 );
-// Every Offre has its Fiche de poste in its folder, as the Détection saves it
-for (const offre of offreList) {
-  const offreDirectory = workspace.offreDirectoryOf(offre);
-  mkdirSync(offreDirectory, { recursive: true });
-  writeFileSync(path.join(offreDirectory, 'fiche-de-poste.md'), `## Missions\n\n${faker.lorem.paragraphs(3)}\n`);
+// Every Posting has its Job Description in its folder, as the Detection saves it
+for (const posting of postingList) {
+  const postingDirectory = workspace.postingDirectoryOf(posting);
+  mkdirSync(postingDirectory, { recursive: true });
+  writeFileSync(path.join(postingDirectory, 'job-description.md'), `## Missions\n\n${faker.lorem.paragraphs(3)}\n`);
 }
-process.stdout.write(`${String(candidatList.length * OFFRE_COUNT_PER_CANDIDAT)} Offres factices dans dev-data/\n`);
+process.stdout.write(`${String(candidateList.length * POSTING_COUNT_PER_CANDIDATE)} fake Postings in dev-data/\n`);

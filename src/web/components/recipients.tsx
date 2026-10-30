@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 type ContactField = 'applicationEmail' | 'contact1' | 'contact2';
 
 export interface IRecipients {
@@ -7,35 +9,31 @@ export interface IRecipients {
   justification: string;
 }
 
-// Named as on the raw contacts, so each recommendation points at the line it comes from
-const CONTACT_LABEL_BY_FIELD: Record<ContactField, string> = {
-  applicationEmail: 'Mail de candidature',
-  contact1: 'Contact 1',
-  contact2: 'Contact 2',
-};
-
 function Source({ field }: Readonly<{ field: ContactField | null }>) {
-  return field === null ? null : <span className="recipients__source">{CONTACT_LABEL_BY_FIELD[field]}</span>;
+  const { t } = useTranslation('posting');
+  // Named as on the raw contacts, so each recommendation points at the line it comes from
+  return field === null ? null : <span className="recipients__source">{t(`contactLabelByField.${field}`)}</span>;
 }
 
-// What the Lettre retenue recommends: who receives the application, who gets a copy, and how to
+// What the Chosen Letter recommends: who receives the application, who gets a copy, and how to
 // address them
 export function Recipients({ recipients }: Readonly<{ recipients: IRecipients }>) {
   const { to, ccList, salutation, justification } = recipients;
+  const { t } = useTranslation('posting');
   return (
     <>
       <dl className="recipients">
         <div>
-          <dt>Destinataire</dt>
+          <dt>{t('recipientTerm')}</dt>
           <dd>
-            {to === null ? <span className="missing">Aucune adresse dans l’Offre</span> : to.email}
+            {to === null ? <span className="missing">{t('noRecipientAddress')}</span> : to.email}
             <Source field={to?.source ?? null} />
           </dd>
         </div>
         <div>
-          <dt>Copie</dt>
+          <dt>{t('ccTerm')}</dt>
           {ccList.length === 0 ? (
-            <dd className="missing">Aucune</dd>
+            <dd className="missing">{t('noCc')}</dd>
           ) : (
             ccList.map(({ email, source }) => (
               <dd key={email}>
@@ -46,7 +44,7 @@ export function Recipients({ recipients }: Readonly<{ recipients: IRecipients }>
           )}
         </div>
         <div>
-          <dt>Formule d’appel</dt>
+          <dt>{t('salutationTerm')}</dt>
           <dd>
             {salutation.text}
             <Source field={salutation.source} />

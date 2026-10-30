@@ -4,14 +4,15 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { CLAUDE_CODE } from '#/ai-session/acl/claude-code.ts';
+import { CLAUDE_CODE, type IHeadlessSession } from '#/ai-session/acl/claude-code.ts';
 
 const FAKE_CLAUDE_DIRECTORY = path.join(import.meta.dirname, 'fixtures', 'claude');
 
-const SESSION = {
+const SESSION: Omit<IHeadlessSession, 'directory' | 'outputDirectory'> = {
   fixedPrompt: "Tu produis la Recherche d'une Offre.\nN'invente jamais un fait.",
-  consignes: 'Va droit au but.\n',
+  instructions: 'Va droit au but.\n',
   readDirectoryList: [],
+  locale: 'fr',
 };
 
 function createDirectory(): string {
@@ -48,22 +49,22 @@ describe('the headless launch of Claude Code', () => {
     });
     const directory = createDirectory();
 
-    const result = await CLAUDE_CODE.runHeadless({ ...SESSION, directory, outputDirectory: '/donnees/recherche/v1' });
+    const result = await CLAUDE_CODE.runHeadless({ ...SESSION, directory, outputDirectory: '/donnees/research/v1' });
 
     expect(result).toEqual({ isSuccess: true, sessionId: 'session-1', log: 'Fait.' });
     const argumentList = readRecord(recordDirectory, 'arguments').split('\0');
-    expect(argumentList).toEqual(expect.arrayContaining(['-p', 'dontAsk', 'Edit(//donnees/recherche/v1/**)']));
+    expect(argumentList).toEqual(expect.arrayContaining(['-p', 'dontAsk', 'Edit(//donnees/research/v1/**)']));
     expect(argumentList).not.toContain('--add-dir');
     expect(argumentList[argumentList.indexOf('--append-system-prompt') + 1]).toBe(SESSION.fixedPrompt);
-    expect(readRecord(recordDirectory, 'message')).toBe(SESSION.consignes);
+    expect(readRecord(recordDirectory, 'message')).toBe(SESSION.instructions);
     expect(readRecord(recordDirectory, 'directory').trim()).toBe(realpathSync(directory));
     expect(readRecord(recordDirectory, 'environment')).not.toMatch(/^(?:ANTHROPIC_API_KEY|CLAUDECODE)=/m);
   });
 
-  // The Lettre reads the Profil and the Lettres already sent, outside the folder of its Offre
+  // The Letter reads the Profile and the Letters already sent, outside the folder of its Posting
   it('lets the session read the folders it is given besides its own', async () => {
     const recordDirectory = stubClaude({ subtype: 'success', is_error: false, session_id: 'session-3' });
-    const readDirectoryList = ['/donnees/profil', '/donnees/offres/2026-2445609/lettre/v1'];
+    const readDirectoryList = ['/donnees/profile', '/donnees/postings/2026-2445609/letter/v1'];
 
     await CLAUDE_CODE.runHeadless({
       ...SESSION,
@@ -100,7 +101,7 @@ describe('the interactive launch of Claude Code', () => {
     stubClaude({}, 3);
 
     expect(() => {
-      CLAUDE_CODE.openInteractive({ prompt: 'Bonjour', directory: createDirectory() });
+      CLAUDE_CODE.openInteractive({ prompt: 'Bonjour', directory: createDirectory(), locale: 'fr' });
     }).toThrow(
       "La session Claude Code s'est arrêtée en erreur (code 3). Relancer la commande ; si l'erreur revient, lancer « claude » seul pour lire son message.",
     );
@@ -114,12 +115,13 @@ describe('the interactive launch of Claude Code', () => {
     CLAUDE_CODE.openInteractive({
       prompt: SESSION.fixedPrompt,
       directory,
-      readOnlyPathList: ['/donnees/offre/**/brouillon.md'],
+      readOnlyPathList: ['/donnees/posting/**/draft.md'],
+      locale: 'fr',
     });
 
     const argumentList = readRecord(recordDirectory, 'arguments').split('\0');
     expect(argumentList).toEqual(expect.arrayContaining(['--restricted', '--safe-mode', 'manual']));
-    expect(argumentList[argumentList.indexOf('--disallowedTools') + 1]).toBe('Edit(//donnees/offre/**/brouillon.md)');
+    expect(argumentList[argumentList.indexOf('--disallowedTools') + 1]).toBe('Edit(//donnees/posting/**/draft.md)');
     expect(argumentList[argumentList.indexOf('--append-system-prompt') + 1]).toBe(SESSION.fixedPrompt);
     expect(readRecord(recordDirectory, 'directory').trim()).toBe(realpathSync(directory));
     expect(readRecord(recordDirectory, 'environment')).not.toMatch(/^ANTHROPIC_API_KEY=/m);

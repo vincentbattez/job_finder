@@ -1,49 +1,49 @@
 import path from 'node:path';
 
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
-import type { Candidat, PieceFileName, SessionResult } from '#/domain/index.ts';
+import { tFor } from '#/domain/catalogue/i18n.ts';
+import type { Candidate, SessionResult, UploadFileName } from '#/domain/index.ts';
 
 import { composeConversionPrompt, CONVERSION_REQUEST } from './prompt.ts';
 
-// The CV, or a past lettre named after its employeur and its year: a name of the Profil, so it never
+// The CV, or a past letter named after its employer and its year: a name of the Profile, so it never
 // leads out of its folder
-const CONVERSION_FILE_NAME_PATTERN = /^(?:cv|lettre-[\p{L}\p{N}_.-]+-\d{4})\.md$/u;
+const CONVERSION_FILE_NAME_PATTERN = /^(?:cv|letter-[\p{L}\p{N}_.-]+-\d{4})\.md$/u;
 
-// The job moves only these into the Profil: any other file the session wrote is refused
-export function findConversionFileNameError(fileName: string): string | undefined {
-  return CONVERSION_FILE_NAME_PATTERN.test(fileName)
-    ? undefined
-    : `« ${fileName} » n'est ni « cv.md » ni une lettre « lettre-<employeur>-<année>.md »`;
+// The job moves only these into the Profile: any other file the session wrote is refused
+export function isConversionFileName(fileName: string): boolean {
+  return CONVERSION_FILE_NAME_PATTERN.test(fileName);
 }
 
-// The conversion of a Pièce into Markdown: a headless Claude session, with a fixed prompt, reads the
-// Pièce in the Profil and writes its conversion in a folder of its own (ADR-0003)
-export function createPieceConversion(aiSession: IAiSession) {
+// The conversion of an Upload into Markdown: a headless Claude session, with a fixed prompt, reads the
+// Upload in the Profile and writes its conversion in a folder of its own (ADR-0003)
+export function createUploadConversion(aiSession: IAiSession) {
   return {
     async convert(
-      candidat: Candidat,
+      candidate: Candidate,
       {
-        piece,
-        profilDirectory,
-        piecePath,
+        upload,
+        profileDirectory,
+        uploadPath,
         outputDirectory,
       }: {
-        piece: PieceFileName;
-        profilDirectory: string;
-        piecePath: string;
+        upload: UploadFileName;
+        profileDirectory: string;
+        uploadPath: string;
         outputDirectory: string;
       },
     ): Promise<SessionResult> {
       const session = await aiSession.runHeadless({
-        fixedPrompt: composeConversionPrompt(candidat, piecePath, path.relative(profilDirectory, outputDirectory)),
-        consignes: CONVERSION_REQUEST,
-        directory: profilDirectory,
-        // Inside the Profil, where the session runs: nothing to add
+        fixedPrompt: composeConversionPrompt(candidate, uploadPath, path.relative(profileDirectory, outputDirectory)),
+        instructions: CONVERSION_REQUEST,
+        directory: profileDirectory,
+        // Inside the Profile, where the session runs: nothing to add
         readDirectoryList: [],
         outputDirectory,
+        locale: candidate.locale,
       });
       if (!session.isSuccess) {
-        throw new Error(`Claude Code n'a pas converti la Pièce « ${piece} » : ${session.log}`);
+        throw new Error(tFor(candidate.locale, 'error')('conversionSessionFailed', { upload, log: session.log }));
       }
       return session;
     },

@@ -2,23 +2,22 @@ import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
 
-import { detectOffres as detectRecordedOffres } from './data-directory.ts';
+import { detectPostings as detectRecordedPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
-// The Béthune Offre of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
+// The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
-function rechercheRun(title: string) {
-  return { fileByName: { 'recherche.md': `# ${title}\n\n## Sources\n\n- https://www.justice.fr/\n` } };
+function researchRun(title: string) {
+  return { fileByName: { 'research.md': `# ${title}\n\n## Sources\n\n- https://www.justice.fr/\n` } };
 }
 
-const BROUILLON =
-  "Madame la Présidente,\n\nTitulaire d'un [à compléter : diplôme], je souhaite rejoindre le tribunal.\n";
+const DRAFT = "Madame la Présidente,\n\nTitulaire d'un [à compléter : diplôme], je souhaite rejoindre le tribunal.\n";
 
-const LETTRE_RUN = {
+const LETTER_RUN = {
   fileByName: {
-    'brouillon.md': BROUILLON,
-    'destinataires.json': JSON.stringify({
+    'draft.md': DRAFT,
+    'recipients.json': JSON.stringify({
       to: { email: 'p.tj-bethune@justice.fr', source: 'applicationEmail' },
       ccList: [],
       salutation: { text: 'Madame la Présidente,', source: 'contact1' },
@@ -27,12 +26,12 @@ const LETTRE_RUN = {
   },
 };
 
-const CORRECTED_LETTRE =
+const CORRECTED_LETTER =
   "Madame la Présidente,\n\nTitulaire d'un master 2 de droit privé, je souhaite rejoindre le tribunal.\n";
 
 // Launching a module only queues its job: the worker's turn is taken here
-async function detectOffres(...plannedRunList: Parameters<typeof createFakeAiSession>) {
-  const { actions } = await detectRecordedOffres(createFakeAiSession(...plannedRunList));
+async function detectPostings(...plannedRunList: Parameters<typeof createFakeAiSession>) {
+  const { actions } = await detectRecordedPostings(createFakeAiSession(...plannedRunList));
   return actions;
 }
 
@@ -41,198 +40,198 @@ async function runModule(actions: Actions, module: string) {
   await actions.runQueuedJobs();
 }
 
-async function readDocuments(actions: Actions, artefact: string) {
-  const { artefactList } = await actions.readOffre({ reference: REFERENCE });
-  return artefactList
-    .find((artefactVersions) => artefactVersions.artefact === artefact)
+async function readDocuments(actions: Actions, artifact: string) {
+  const { artifactList } = await actions.readPosting({ reference: REFERENCE });
+  return artifactList
+    .find((artifactVersions) => artifactVersions.artifact === artifact)
     ?.versionList.map(({ version, documentList }) => ({
       number: version.number,
       documentList: documentList.map(({ fileName, markdown }) => ({ fileName, markdown })),
     }));
 }
 
-// For each Artefact with Versions, the files of each Version the fiche offers to correct
+// For each Artifact with Versions, the files of each Version the Posting page offers to correct
 async function readModifiableFiles(actions: Actions) {
-  const { artefactList } = await actions.readOffre({ reference: REFERENCE });
-  return artefactList
+  const { artifactList } = await actions.readPosting({ reference: REFERENCE });
+  return artifactList
     .filter(({ versionList }) => versionList.length > 0)
-    .map(({ artefact, versionList }) => ({
-      artefact,
+    .map(({ artifact, versionList }) => ({
+      artifact,
       fileNameList: versionList.map(({ documentList }) =>
         documentList.filter(({ isModifiable }) => isModifiable).map(({ fileName }) => fileName),
       ),
     }));
 }
 
-// For each Artefact with Versions, the numbers of those the fiche offers to retain
-async function readRetenableVersions(actions: Actions) {
-  const { artefactList } = await actions.readOffre({ reference: REFERENCE });
-  return artefactList
+// For each Artifact with Versions, the numbers of those the Posting page offers to retain
+async function readChoosableVersions(actions: Actions) {
+  const { artifactList } = await actions.readPosting({ reference: REFERENCE });
+  return artifactList
     .filter(({ versionList }) => versionList.length > 0)
-    .map(({ artefact, versionList }) => ({
-      artefact,
-      numberList: versionList.filter(({ isRetenable }) => isRetenable).map(({ version }) => version.number),
+    .map(({ artifact, versionList }) => ({
+      artifact,
+      numberList: versionList.filter(({ isChoosable }) => isChoosable).map(({ version }) => version.number),
     }));
 }
 
 describe('saving a correction', () => {
-  it('corrects the Version retenue of a Recherche in place, without creating a Version', async () => {
-    const actions = await detectOffres(rechercheRun('Recherche v1'), rechercheRun('Recherche v2'));
-    await runModule(actions, 'recherche');
-    await runModule(actions, 'recherche');
+  it('corrects the Chosen Version of a Research in place, without creating a Version', async () => {
+    const actions = await detectPostings(researchRun('Research v1'), researchRun('Research v2'));
+    await runModule(actions, 'research');
+    await runModule(actions, 'research');
 
     await actions.saveDocument({
       reference: REFERENCE,
-      artefact: 'recherche',
-      fileName: 'recherche.md',
+      artifact: 'research',
+      fileName: 'research.md',
       markdown: '# Recherche v2, corrigée\n',
     });
 
-    expect(await readDocuments(actions, 'recherche')).toEqual([
+    expect(await readDocuments(actions, 'research')).toEqual([
       {
         number: 1,
-        documentList: [{ fileName: 'recherche.md', markdown: rechercheRun('Recherche v1').fileByName['recherche.md'] }],
+        documentList: [{ fileName: 'research.md', markdown: researchRun('Research v1').fileByName['research.md'] }],
       },
-      { number: 2, documentList: [{ fileName: 'recherche.md', markdown: '# Recherche v2, corrigée\n' }] },
+      { number: 2, documentList: [{ fileName: 'research.md', markdown: '# Recherche v2, corrigée\n' }] },
     ]);
   });
 
-  // The Brouillon stays as the AI wrote it, so that the tool learns from the corrections (spec « Lettre »)
-  it('corrects the Lettre and refuses to touch its Brouillon', async () => {
-    const actions = await detectOffres(rechercheRun('Recherche'), LETTRE_RUN);
-    await runModule(actions, 'recherche');
-    await runModule(actions, 'lettre');
+  // The Draft stays as the AI wrote it, so that the tool learns from the corrections (spec « Letter »)
+  it('corrects the Letter and refuses to touch its Draft', async () => {
+    const actions = await detectPostings(researchRun('Recherche'), LETTER_RUN);
+    await runModule(actions, 'research');
+    await runModule(actions, 'letter');
 
     await actions.saveDocument({
       reference: REFERENCE,
-      artefact: 'lettre',
-      fileName: 'lettre.md',
-      markdown: CORRECTED_LETTRE,
+      artifact: 'letter',
+      fileName: 'letter.md',
+      markdown: CORRECTED_LETTER,
     });
     await expect(
       actions.saveDocument({
         reference: REFERENCE,
-        artefact: 'lettre',
-        fileName: 'brouillon.md',
-        markdown: CORRECTED_LETTRE,
+        artifact: 'letter',
+        fileName: 'draft.md',
+        markdown: CORRECTED_LETTER,
       }),
     ).rejects.toThrow(/Le Brouillon ne se modifie jamais/);
 
-    expect(await readDocuments(actions, 'lettre')).toEqual([
+    expect(await readDocuments(actions, 'letter')).toEqual([
       {
         number: 1,
         documentList: [
-          { fileName: 'brouillon.md', markdown: BROUILLON },
-          { fileName: 'lettre.md', markdown: CORRECTED_LETTRE },
+          { fileName: 'draft.md', markdown: DRAFT },
+          { fileName: 'letter.md', markdown: CORRECTED_LETTER },
         ],
       },
     ]);
   });
 
-  // The Lettre retenue of a Postulée Offre is the one sent (spec « Versions »)
-  it('refuses to correct the Lettre of a Postulée Offre', async () => {
-    const actions = await detectOffres(rechercheRun('Recherche'), LETTRE_RUN);
-    await runModule(actions, 'recherche');
-    await runModule(actions, 'lettre');
-    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
+  // The Chosen Letter of an Applied Posting is the one sent (spec « Versions »)
+  it('refuses to correct the Letter of an Applied Posting', async () => {
+    const actions = await detectPostings(researchRun('Recherche'), LETTER_RUN);
+    await runModule(actions, 'research');
+    await runModule(actions, 'letter');
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
 
     await expect(
       actions.saveDocument({
         reference: REFERENCE,
-        artefact: 'lettre',
-        fileName: 'lettre.md',
-        markdown: CORRECTED_LETTRE,
+        artifact: 'letter',
+        fileName: 'letter.md',
+        markdown: CORRECTED_LETTER,
       }),
     ).rejects.toThrow(/L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/);
 
-    expect(await readDocuments(actions, 'lettre')).toMatchObject([
-      { documentList: [{ fileName: 'brouillon.md' }, { fileName: 'lettre.md', markdown: BROUILLON }] },
+    expect(await readDocuments(actions, 'letter')).toMatchObject([
+      { documentList: [{ fileName: 'draft.md' }, { fileName: 'letter.md', markdown: DRAFT }] },
     ]);
   });
 
-  it('writes only over a Markdown file of the Version retenue', async () => {
-    const actions = await detectOffres(rechercheRun('Recherche'));
-    await runModule(actions, 'recherche');
-    const { ficheDePoste } = await actions.readOffre({ reference: REFERENCE });
+  it('writes only over a Markdown file of the Chosen Version', async () => {
+    const actions = await detectPostings(researchRun('Recherche'));
+    await runModule(actions, 'research');
+    const { jobDescription } = await actions.readPosting({ reference: REFERENCE });
 
     await expect(
       actions.saveDocument({
         reference: REFERENCE,
-        artefact: 'recherche',
-        fileName: '../../fiche-de-poste.md',
+        artifact: 'research',
+        fileName: '../../job-description.md',
         markdown: '# Remplacée\n',
       }),
-    ).rejects.toThrow(/« \.\.\/\.\.\/fiche-de-poste\.md » n'est pas un fichier de la Version retenue/);
+    ).rejects.toThrow(/« \.\.\/\.\.\/job-description\.md » n'est pas un fichier de la Version retenue/);
 
-    const after = await actions.readOffre({ reference: REFERENCE });
-    expect(after.ficheDePoste).toBe(ficheDePoste);
+    const after = await actions.readPosting({ reference: REFERENCE });
+    expect(after.jobDescription).toBe(jobDescription);
   });
 
-  it('refuses an Artefact without a Version retenue', async () => {
-    const actions = await detectOffres();
+  it('refuses an Artifact without a Chosen Version', async () => {
+    const actions = await detectPostings();
 
     await expect(
-      actions.saveDocument({ reference: REFERENCE, artefact: 'recherche', fileName: 'recherche.md', markdown: '' }),
-    ).rejects.toThrow(/L'Offre 2026-2445600 n'a pas de Version retenue de recherche à modifier/);
+      actions.saveDocument({ reference: REFERENCE, artifact: 'research', fileName: 'research.md', markdown: '' }),
+    ).rejects.toThrow(/L'Offre 2026-2445600 n'a pas de Version retenue de research à modifier/);
   });
 
   // The front opens an editor only where saveDocument accepts the file
-  it('tells the fiche which files can be corrected: those of the Versions retenues, until the Lettre is sent', async () => {
-    const actions = await detectOffres(rechercheRun('Recherche v1'), rechercheRun('Recherche v2'), LETTRE_RUN);
-    await runModule(actions, 'recherche');
-    await runModule(actions, 'recherche');
-    await runModule(actions, 'lettre');
-    const beforePostuleeList = await readModifiableFiles(actions);
+  it('tells the Posting page which files can be corrected: those of the Chosen Versions, until the Letter is sent', async () => {
+    const actions = await detectPostings(researchRun('Research v1'), researchRun('Research v2'), LETTER_RUN);
+    await runModule(actions, 'research');
+    await runModule(actions, 'research');
+    await runModule(actions, 'letter');
+    const beforeAppliedList = await readModifiableFiles(actions);
 
-    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
 
-    expect(beforePostuleeList).toEqual([
-      { artefact: 'recherche', fileNameList: [[], ['recherche.md']] },
-      { artefact: 'lettre', fileNameList: [['lettre.md']] },
+    expect(beforeAppliedList).toEqual([
+      { artifact: 'research', fileNameList: [[], ['research.md']] },
+      { artifact: 'letter', fileNameList: [['letter.md']] },
     ]);
     expect(await readModifiableFiles(actions)).toEqual([
-      { artefact: 'recherche', fileNameList: [[], ['recherche.md']] },
-      { artefact: 'lettre', fileNameList: [[]] },
+      { artifact: 'research', fileNameList: [[], ['research.md']] },
+      { artifact: 'letter', fileNameList: [[]] },
     ]);
   });
 
-  // The front offers « Retenir » only where retenirVersion accepts the Version
-  it('tells the fiche which Versions can become the Version retenue, the Lettre ones until it is sent', async () => {
-    const actions = await detectOffres(
-      rechercheRun('Recherche v1'),
-      rechercheRun('Recherche v2'),
+  // The front offers « Choose » only where chooseVersion accepts the Version
+  it('tells the Posting page which Versions can become the Chosen Version, the Letter ones until it is sent', async () => {
+    const actions = await detectPostings(
+      researchRun('Research v1'),
+      researchRun('Research v2'),
       { isSuccess: false },
-      LETTRE_RUN,
-      LETTRE_RUN,
+      LETTER_RUN,
+      LETTER_RUN,
     );
-    await runModule(actions, 'recherche');
-    await runModule(actions, 'recherche');
-    await runModule(actions, 'recherche');
-    await runModule(actions, 'lettre');
-    await runModule(actions, 'lettre');
-    const beforePostuleeList = await readRetenableVersions(actions);
+    await runModule(actions, 'research');
+    await runModule(actions, 'research');
+    await runModule(actions, 'research');
+    await runModule(actions, 'letter');
+    await runModule(actions, 'letter');
+    const beforeAppliedList = await readChoosableVersions(actions);
 
-    await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
 
-    expect(beforePostuleeList).toEqual([
-      { artefact: 'recherche', numberList: [1] },
-      { artefact: 'lettre', numberList: [1] },
+    expect(beforeAppliedList).toEqual([
+      { artifact: 'research', numberList: [1] },
+      { artifact: 'letter', numberList: [1] },
     ]);
-    expect(await readRetenableVersions(actions)).toEqual([
-      { artefact: 'recherche', numberList: [1] },
-      { artefact: 'lettre', numberList: [] },
+    expect(await readChoosableVersions(actions)).toEqual([
+      { artifact: 'research', numberList: [1] },
+      { artifact: 'letter', numberList: [] },
     ]);
   });
 
-  // The Visualisation is regenerated from the Fiche d'entretien, never corrected (spec « Modules IA »)
-  it('refuses to correct a Visualisation by hand', async () => {
-    const actions = await detectOffres();
+  // The Visualization is regenerated from the Interview Brief, never corrected (spec « Modules IA »)
+  it('refuses to correct a Visualization by hand', async () => {
+    const actions = await detectPostings();
 
     await expect(
       actions.saveDocument({
         reference: REFERENCE,
-        artefact: 'visualisation',
-        fileName: 'visualisation.md',
+        artifact: 'visualization',
+        fileName: 'visualization.md',
         markdown: '',
       }),
     ).rejects.toThrow(/La Visualisation ne se modifie pas à la main/);

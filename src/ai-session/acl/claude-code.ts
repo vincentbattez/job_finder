@@ -2,7 +2,8 @@ import { spawn, spawnSync } from 'node:child_process';
 
 import { z } from 'zod/v4';
 
-import { SESSION_RESULT_SCHEMA, type SessionResult } from '#/domain/index.ts';
+import { tFor } from '#/domain/catalogue/i18n.ts';
+import { SESSION_RESULT_SCHEMA, type Locale, type SessionResult } from '#/domain/index.ts';
 import { messageOf } from '#/text/index.ts';
 
 export interface IInteractiveSession {
@@ -10,16 +11,20 @@ export interface IInteractiveSession {
   directory: string;
   // Given, the session is confined to its directory, and may never change these paths or globs
   readOnlyPathList?: string[];
+  // That of the Candidate, for what the session tells them
+  locale: Locale;
 }
 
-// The fixed part of a module's prompt, then its Consignes (ADR-0003); the session writes only in
+// The fixed part of a module's prompt, then its Instructions (ADR-0003); the session writes only in
 // its output folder
 export interface IHeadlessSession {
   fixedPrompt: string;
-  consignes: string;
+  instructions: string;
   directory: string;
   readDirectoryList: string[];
   outputDirectory: string;
+  // That of the Candidate, for the log of a session that failed
+  locale: Locale;
 }
 
 export interface IAiSession {
@@ -53,7 +58,7 @@ const CLAUDE_RESULT_SCHEMA = z.object({
   result: z.string().default(''),
 });
 
-function readResult(output: string, exitCode: number | null): SessionResult {
+function readResult(output: string, exitCode: number | null, locale: Locale): SessionResult {
   try {
     const result = CLAUDE_RESULT_SCHEMA.parse(JSON.parse(output));
     return SESSION_RESULT_SCHEMA.parse({
@@ -65,7 +70,7 @@ function readResult(output: string, exitCode: number | null): SessionResult {
     return SESSION_RESULT_SCHEMA.parse({
       isSuccess: false,
       sessionId: null,
-      log: `Claude Code s'est arrêté (code ${String(exitCode)}) : ${output}`,
+      log: tFor(locale, 'error')('sessionStopped', { exitCode: String(exitCode), output }),
     });
   }
 }
@@ -73,9 +78,9 @@ function readResult(output: string, exitCode: number | null): SessionResult {
 // The only file that knows the AI runs on Claude Code, through the subscription and never an API
 // key (ADR-0003): the rest of the app sees an IAiSession, which the tests replace with a fake.
 export const CLAUDE_CODE: IAiSession = {
-  // The prompt goes into the system prompt, not the Candidat's messages; the manual mode asks their
+  // The prompt goes into the system prompt, not the Candidate's messages; the manual mode asks their
   // consent to each edit, and a confined session has no shell that could get round its read-only paths
-  openInteractive({ prompt, directory, readOnlyPathList }) {
+  openInteractive({ prompt, directory, readOnlyPathList, locale }) {
     const confinementList =
       readOnlyPathList === undefined
         ? []
@@ -91,26 +96,26 @@ export const CLAUDE_CODE: IAiSession = {
       'manual',
       '--append-system-prompt',
       prompt,
-      'Bonjour !',
+      tFor(locale, 'cli')('sessionGreeting'),
     ];
     const { status, error } = spawnSync('claude', argumentList, {
       cwd: directory,
       env: subscriptionEnvironment(),
       stdio: 'inherit',
     });
+    const t = tFor(locale, 'error');
     if (error !== undefined) {
-      throw new Error(`Impossible de lancer Claude Code (${error.message}). Installer « claude » et s'y connecter.`);
+      throw new Error(t('sessionNotLaunched', { reason: error.message }));
     }
     if (status !== 0) {
-      throw new Error(
-        `La session Claude Code s'est arrêtée en erreur (code ${String(status)}). Relancer la commande ; si l'erreur revient, lancer « claude » seul pour lire son message.`,
-      );
+      throw new Error(t('interactiveSessionFailed', { status: String(status) }));
     }
   },
 
-  // The fixed part goes into the system prompt so that no Consignes can lift its rules (ADR-0003);
+  // The fixed part goes into the system prompt so that no Instructions can lift its rules (ADR-0003);
+  // cspell:words dontAsk
   // dontAsk refuses any tool not listed. A session that cannot run is a failed one, never a throw.
-  async runHeadless({ fixedPrompt, consignes, directory, readDirectoryList, outputDirectory }) {
+  async runHeadless({ fixedPrompt, instructions, directory, readDirectoryList, outputDirectory, locale }) {
     const argumentList = [
       '-p',
       '--output-format',
@@ -137,7 +142,7 @@ export const CLAUDE_CODE: IAiSession = {
       env: subscriptionEnvironment(),
       stdio: ['pipe', 'pipe', 'inherit'],
     });
-    child.stdin.end(consignes);
+    child.stdin.end(instructions);
     let output = '';
     child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
       output += chunk;
@@ -146,10 +151,9 @@ export const CLAUDE_CODE: IAiSession = {
       const exitCode = await new Promise<number | null>((resolve, reject) => {
         child.on('close', resolve).on('error', reject);
       });
-      return readResult(output, exitCode);
+      return readResult(output, exitCode, locale);
     } catch (error) {
-      const message = messageOf(error);
-      const log = `Impossible de lancer Claude Code (${message}). Installer « claude » et s'y connecter.`;
+      const log = tFor(locale, 'error')('sessionNotLaunched', { reason: messageOf(error) });
       return SESSION_RESULT_SCHEMA.parse({ isSuccess: false, sessionId: null, log });
     }
   },

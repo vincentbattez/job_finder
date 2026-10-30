@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Markdown } from './markdown.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
@@ -22,6 +23,7 @@ export function MarkdownEditor({
   const [markdown, setMarkdown] = useState(defaultValue);
   const textareaId = useId();
   const previewId = useId();
+  const { t } = useTranslation('posting');
   const isHydrated = useIsHydrated();
   return (
     <div className="editor">
@@ -42,7 +44,7 @@ export function MarkdownEditor({
       </div>
       <section className="editor__pane" aria-labelledby={previewId}>
         <h4 id={previewId} className="editor__label">
-          Aperçu
+          {t('preview')}
         </h4>
         <Markdown markdown={markdown} />
       </section>

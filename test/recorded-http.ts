@@ -5,7 +5,7 @@ import { z } from 'zod/v4';
 
 const FIXTURE_DIRECTORY = path.join(import.meta.dirname, 'fixtures', 'pep');
 
-// API Géo's answer to each ville the recorded Offres name, by URL
+// API Géo's answer to each city the recorded Postings name, by URL
 const API_GEO_FILE = readFileSync(path.join(import.meta.dirname, 'fixtures', 'api-geo', 'communes.json'), 'utf8');
 const apiGeoBodyByUrl = z.record(z.string(), z.unknown()).parse(JSON.parse(API_GEO_FILE));
 const API_GEO_BODY_BY_URL = new Map(Object.entries(apiGeoBodyByUrl));
@@ -25,7 +25,7 @@ export function readRecordedFile(fileName: string): Uint8Array<ArrayBuffer> {
   return new Uint8Array(readFileSync(path.join(FIXTURE_DIRECTORY, fileName)));
 }
 
-// The recorded feed without some of its Offres, as it was before they were published
+// The recorded feed without some of its Postings, as it was before they were published
 export function feedWithout(referenceList: string[]): string {
   return new TextDecoder()
     .decode(readRecordedFile('flux-dsj.xml'))
@@ -48,8 +48,8 @@ function findRecordedResponse(url: string): IRecordedResponse | undefined {
 }
 
 // The HTTP of the PEP Source, answered with the responses recorded on the real site on 2026-10-29:
-// the DSJ feed, the detail page of each attaché de justice Offre, and the failures in
-// test/fixtures/pep; and API Géo's answer for the ville of each of these Offres. A test swaps one
+// the DSJ feed, the detail page of each attaché de justice Posting, and the failures in
+// test/fixtures/pep; and API Géo's answer for the city of each of these Postings. A test swaps one
 // response through responseByUrl; any other URL fails.
 export function createRecordedFetch(responseByUrl: Record<string, IRecordedResponse> = {}) {
   const requestedUrlList: string[] = [];

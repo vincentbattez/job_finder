@@ -2,214 +2,243 @@ import path from 'node:path';
 
 import type { IAiModule } from '#/ai-module/index.ts';
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { ARTEFACT_SCHEMA, type Artefact, type Job, type Offre, type Version } from '#/domain/index.ts';
-import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/domain/labels.ts';
-import { FICHE_ENTRETIEN_MODULE } from '#/modules/fiche-entretien/index.ts';
-import { LETTRE_MODULE } from '#/modules/lettre/index.ts';
-import { RECHERCHE_MODULE } from '#/modules/recherche/index.ts';
-import { VISUALISATION_MODULE } from '#/modules/visualisation/index.ts';
-import { assertLettreModifiable, findLettreFreeze, hasBeenPostulee } from '#/statut/index.ts';
+import { tFor } from '#/domain/catalogue/i18n.ts';
+import {
+  ARTIFACT_SCHEMA,
+  type Artifact,
+  type Candidate,
+  type Job,
+  type Locale,
+  type Posting,
+  type Version,
+} from '#/domain/index.ts';
+import { INTERVIEW_BRIEF_MODULE } from '#/modules/interview-brief/index.ts';
+import { LETTER_MODULE } from '#/modules/letter/index.ts';
+import { RESEARCH_MODULE } from '#/modules/research/index.ts';
+import { VISUALIZATION_MODULE } from '#/modules/visualization/index.ts';
+import { assertLetterModifiable, findLetterFreeze, hasBeenApplied } from '#/status/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
-// A Version a job reads, of its own Offre or of another one
+// A Version a job reads, of its own Posting or of another one
 interface IReadVersion {
-  offre: Offre;
+  posting: Posting;
   version: Version;
 }
 
-export async function findVersionRetenue(workspace: Workspace, offre: Offre, artefact: Artefact) {
-  const versionList = await workspace.listVersions(offre, artefact);
-  return versionList.find(({ isRetenue }) => isRetenue);
+export async function findChosenVersion(workspace: Workspace, posting: Posting, artifact: Artifact) {
+  const versionList = await workspace.listVersions(posting, artifact);
+  return versionList.find(({ isChosen }) => isChosen);
 }
 
-const AI_MODULE_BY_ARTEFACT: Record<Artefact, IAiModule> = {
-  recherche: RECHERCHE_MODULE,
-  lettre: LETTRE_MODULE,
-  fiche_entretien: FICHE_ENTRETIEN_MODULE,
-  visualisation: VISUALISATION_MODULE,
+const AI_MODULE_BY_ARTIFACT: Record<Artifact, IAiModule> = {
+  research: RESEARCH_MODULE,
+  letter: LETTER_MODULE,
+  interview_brief: INTERVIEW_BRIEF_MODULE,
+  visualization: VISUALIZATION_MODULE,
 };
 
-// An Artefact, or the module that produces it, named after it or by the module's alias
-function parseArtefactName(name: string, noun: 'Artefact' | 'Module'): Artefact {
-  const artefact = ARTEFACT_SCHEMA.options.find(
-    (candidate) => name === candidate || name === AI_MODULE_BY_ARTEFACT[candidate].alias,
+// An Artifact, or the module that produces it, named after it or by the module's alias
+function parseArtifactName(name: string, locale: Locale, errorKey: 'unknownModule' | 'unknownArtifact'): Artifact {
+  const artifact = ARTIFACT_SCHEMA.options.find(
+    (option) => name === option || name === AI_MODULE_BY_ARTIFACT[option].alias,
   );
-  if (artefact === undefined) {
-    const nameList = Object.entries(AI_MODULE_BY_ARTEFACT).map(([candidate, aiModule]) => aiModule.alias ?? candidate);
-    throw new Error(`${noun} inconnu : ${name}. ${noun}s : ${nameList.join(', ')}.`);
+  if (artifact === undefined) {
+    const nameList = Object.entries(AI_MODULE_BY_ARTIFACT).map(([option, aiModule]) => aiModule.alias ?? option);
+    throw new Error(tFor(locale, 'error')(errorKey, { name, names: nameList.join(', ') }));
   }
-  return artefact;
+  return artifact;
 }
 
-export function parseModule(name: string): Artefact {
-  return parseArtefactName(name, 'Module');
+export function parseModule(name: string, locale: Locale): Artifact {
+  return parseArtifactName(name, locale, 'unknownModule');
 }
 
-export function parseArtefact(name: string): Artefact {
-  return parseArtefactName(name, 'Artefact');
+export function parseArtifact(name: string, locale: Locale): Artifact {
+  return parseArtifactName(name, locale, 'unknownArtifact');
 }
 
-export function findDefaultConsignes(module: Artefact): string {
-  return AI_MODULE_BY_ARTEFACT[module].defaultConsignes;
+// Those of the Candidate's locale, the ones they read and edit; the Artifact's language is set by the
+// fixed part of the prompt
+export function findDefaultInstructions(module: Artifact, candidate: Candidate): string {
+  return tFor(candidate.locale, 'defaultInstructions')(module);
 }
 
-// A Republication starts from the work done for the Offre it publishes again
-async function findRepublishedVersions(workspace: Workspace, { republicationOf, candidatId }: Offre) {
-  const offreList = republicationOf === null ? [] : await workspace.findOffres(republicationOf.reference);
-  const republishedOffre = offreList.find((candidate) => candidate.candidatId === candidatId);
-  return republishedOffre === undefined
-    ? []
-    : findVersionsRetenues(workspace, republishedOffre, ARTEFACT_SCHEMA.options);
+// A Repost starts from the work done for the Posting it publishes again
+async function findRepostedVersions(workspace: Workspace, { repostOf, candidateId }: Posting) {
+  const postingList = repostOf === null ? [] : await workspace.findPostings(repostOf.reference);
+  const repostedPosting = postingList.find((posting) => posting.candidateId === candidateId);
+  return repostedPosting === undefined ? [] : findChosenVersions(workspace, repostedPosting, ARTIFACT_SCHEMA.options);
 }
 
-async function findVersionsRetenues(
+async function findChosenVersions(
   workspace: Workspace,
-  offre: Offre,
-  artefactList: readonly Artefact[],
+  posting: Posting,
+  artifactList: readonly Artifact[],
 ): Promise<IReadVersion[]> {
-  const versionList = await Promise.all(artefactList.map((artefact) => findVersionRetenue(workspace, offre, artefact)));
-  return versionList.filter((version) => version !== undefined).map((version) => ({ offre, version }));
+  const versionList = await Promise.all(
+    artifactList.map((artifact) => findChosenVersion(workspace, posting, artifact)),
+  );
+  return versionList.filter((version) => version !== undefined).map((version) => ({ posting, version }));
 }
 
-// Those of the Offres once Postulée: what the Candidat sent
-async function findSentVersions(workspace: Workspace, { candidatId }: Offre, artefact: Artefact) {
-  const offreList = await workspace.listOffres(candidatId);
+// Those of the Postings once Applied: what the Candidate sent
+async function findSentVersions(workspace: Workspace, { candidateId }: Posting, artifact: Artifact) {
+  const postingList = await workspace.listPostings(candidateId);
   const sentList = await Promise.all(
-    offreList
-      .filter((offre) => hasBeenPostulee(offre))
-      .map((offre) => findVersionsRetenues(workspace, offre, [artefact])),
+    postingList
+      .filter((posting) => hasBeenApplied(posting))
+      .map((posting) => findChosenVersions(workspace, posting, [artifact])),
   );
   return sentList.flat();
 }
 
-type Refusal = { freeze: string } | { missingArtefact: Artefact };
+type Refusal = { freeze: string } | { missingArtifact: Artifact };
 
-// Why the module cannot run on the Offre now, undefined when it can: its Artefact frozen since the
-// Offre was Postulée, or an Artefact it requires without a Version retenue
-async function findRefusal(workspace: Workspace, offre: Offre, module: Artefact): Promise<Refusal | undefined> {
-  const aiModule = AI_MODULE_BY_ARTEFACT[module];
-  const freeze = aiModule.isFrozenOncePostulee === true ? findLettreFreeze(offre) : undefined;
+// Why the module cannot run on the Posting now, undefined when it can: its Artifact frozen since the
+// Posting was Applied, or an Artifact it requires without a Chosen Version
+async function findRefusal(
+  workspace: Workspace,
+  posting: Posting,
+  module: Artifact,
+  locale: Locale,
+): Promise<Refusal | undefined> {
+  const aiModule = AI_MODULE_BY_ARTIFACT[module];
+  const freeze = aiModule.isFrozenOnceApplied === true ? findLetterFreeze(posting, locale) : undefined;
   if (freeze !== undefined) {
     return { freeze };
   }
-  const requiredArtefactList = aiModule.requiredArtefactList ?? [];
-  for (const artefact of requiredArtefactList) {
-    if ((await findVersionRetenue(workspace, offre, artefact)) === undefined) {
-      return { missingArtefact: artefact };
+  const requiredArtifactList = aiModule.requiredArtifactList ?? [];
+  for (const artifact of requiredArtifactList) {
+    if ((await findChosenVersion(workspace, posting, artifact)) === undefined) {
+      return { missingArtifact: artifact };
     }
   }
   return undefined;
 }
 
 // The refusal in the words of the CLI, with the command that lifts it, or of the front, beside the
-// button of the missing Artefact
-function wordRefusal(refusal: Refusal, offre: Offre, module: Artefact, isForFront = false): string {
+// button of the missing Artifact
+function wordRefusal(refusal: Refusal, posting: Posting, module: Artifact, locale: Locale, isForFront = false): string {
   if ('freeze' in refusal) {
     return refusal.freeze;
   }
-  const { missingArtefact } = refusal;
-  const missingLabel = ARTEFACT_LABEL_BY_ARTEFACT[missingArtefact];
-  const reason = `L'Offre ${offre.reference} n'a pas de ${missingLabel} retenue, sur laquelle s'appuie la ${ARTEFACT_LABEL_BY_ARTEFACT[module]}`;
+  const { missingArtifact } = refusal;
+  const t = tFor(locale, 'error');
+  const tCommon = tFor(locale, 'common');
+  const missingLabel = tCommon(`artifactLabelByArtifact.${missingArtifact}`);
+  const moduleLabel = tCommon(`artifactLabelByArtifact.${module}`);
+  const { reference } = posting;
   return isForFront
-    ? `${reason} : lancez d'abord la ${missingLabel}.`
-    : `${reason}. La produire d'abord : jf run ${missingArtefact} ${offre.reference}.`;
+    ? t('missingArtifactForFront', { reference, missingLabel, moduleLabel })
+    : t('missingArtifactForCli', { reference, missingLabel, moduleLabel, missingArtifact });
 }
 
-// What the Candidat sends, the Lettre, is frozen once the Offre was Postulée
-export function assertNotFrozen(offre: Offre, artefact: Artefact): void {
-  if (AI_MODULE_BY_ARTEFACT[artefact].isFrozenOncePostulee === true) {
-    assertLettreModifiable(offre);
+// What the Candidate sends, the Letter, is frozen once the Posting was Applied
+export function assertNotFrozen(posting: Posting, artifact: Artifact, locale: Locale): void {
+  if (AI_MODULE_BY_ARTIFACT[artifact].isFrozenOnceApplied === true) {
+    assertLetterModifiable(posting, locale);
   }
 }
 
 // Throws before anything is written: the actions refuse a job up front, the runner a job queued
-// before the Offre changed
-export async function findInputs(workspace: Workspace, offre: Offre, module: Artefact) {
-  const refusal = await findRefusal(workspace, offre, module);
+// before the Posting changed
+export async function findInputs(workspace: Workspace, posting: Posting, module: Artifact, locale: Locale) {
+  const refusal = await findRefusal(workspace, posting, module, locale);
   if (refusal !== undefined) {
-    throw new Error(wordRefusal(refusal, offre, module));
+    throw new Error(wordRefusal(refusal, posting, module, locale));
   }
-  const aiModule = AI_MODULE_BY_ARTEFACT[module];
-  const artefactList = [...(aiModule.requiredArtefactList ?? []), ...(aiModule.optionalArtefactList ?? [])];
+  const aiModule = AI_MODULE_BY_ARTIFACT[module];
+  const artifactList = [...(aiModule.requiredArtifactList ?? []), ...(aiModule.optionalArtifactList ?? [])];
   const versionList = [
-    ...(await findVersionsRetenues(workspace, offre, artefactList)),
-    ...(aiModule.isReadingRepublishedOffre === true ? await findRepublishedVersions(workspace, offre) : []),
-    ...(aiModule.isReadingSentVersions === true ? await findSentVersions(workspace, offre, module) : []),
+    ...(await findChosenVersions(workspace, posting, artifactList)),
+    ...(aiModule.isReadingRepostedPosting === true ? await findRepostedVersions(workspace, posting) : []),
+    ...(aiModule.isReadingSentVersions === true ? await findSentVersions(workspace, posting, module) : []),
   ];
-  const directoryList = aiModule.isReadingProfil === true ? [workspace.profilDirectoryOf(offre.candidatId)] : [];
+  const directoryList = aiModule.isReadingProfile === true ? [workspace.profileDirectoryOf(posting.candidateId)] : [];
   return { versionList, directoryList };
 }
 
-// The fiche offers a module with the very checks of a launch
-export async function describeModule(workspace: Workspace, offre: Offre, artefact: Artefact) {
-  const refusal = await findRefusal(workspace, offre, artefact);
-  return { refusal: refusal === undefined ? null : wordRefusal(refusal, offre, artefact, true) };
+// The Posting page offers a module with the very checks of a launch
+export async function describeModule(workspace: Workspace, posting: Posting, artifact: Artifact, locale: Locale) {
+  const refusal = await findRefusal(workspace, posting, artifact, locale);
+  return { refusal: refusal === undefined ? null : wordRefusal(refusal, posting, artifact, locale, true) };
 }
 
-// The worker runs each queued job with it (ADR-0003); the Version keeps the Consignes it was made
+// The worker runs each queued job with it (ADR-0003); the Version keeps the Instructions it was made
 // with, so that two Versions compare
-export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
+export function createJobRunner(
+  workspace: Workspace,
+  aiSession: IAiSession,
+  findCandidate: (rawInput: unknown) => Promise<Candidate>,
+) {
   // A Version is ready only once each of its files exists, is not empty and has the module's format
   function findOutputProblem(
     { name, findFormatError }: IAiModule['outputFileList'][number],
-    offre: Offre,
+    posting: Posting,
     outputDirectory: string,
+    locale: Locale,
   ) {
+    const t = tFor(locale, 'error');
     const filePath = path.join(outputDirectory, name);
-    const outputPath = path.relative(workspace.offreDirectoryOf(offre), filePath);
+    const outputPath = path.relative(workspace.postingDirectoryOf(posting), filePath);
     const content = workspace.readTextFile(filePath);
     if (content === null) {
-      return `Le fichier attendu ${outputPath} est absent.`;
+      return t('missingOutput', { outputPath });
     }
     if (content.trim() === '') {
-      return `Le fichier attendu ${outputPath} est vide.`;
+      return t('emptyOutput', { outputPath });
     }
-    const formatError = findFormatError?.(content, offre);
-    return formatError === undefined ? undefined : `Le fichier ${outputPath} est mal formé : ${formatError}.`;
+    const formatError = findFormatError?.(content, locale, posting);
+    return formatError === undefined ? undefined : t('malformedOutput', { outputPath, formatError });
   }
 
-  return async function runJob(job: Job & { module: Artefact }): Promise<{ job: Job; version: Version }> {
-    const { offre, module } = job;
-    const aiModule = AI_MODULE_BY_ARTEFACT[module];
-    const { versionList: inputList, directoryList } = await findInputs(workspace, offre, module);
-    const candidatConsignes = workspace.readConsignes(offre.candidatId, module);
-    const consignes = candidatConsignes ?? aiModule.defaultConsignes;
-    const hasCandidatConsignes = candidatConsignes !== null;
-    const version = await workspace.startJob(job, { consignes, hasCandidatConsignes, inputList });
-    const offreDirectory = workspace.offreDirectoryOf(offre);
-    const outputDirectory = workspace.createVersionDirectory(offre, version);
+  return async function runJob(
+    job: Job & { module: Artifact },
+    locale: Locale,
+  ): Promise<{ job: Job; version: Version }> {
+    const { posting, module } = job;
+    const aiModule = AI_MODULE_BY_ARTIFACT[module];
+    const { versionList: inputList, directoryList } = await findInputs(workspace, posting, module, locale);
+    const candidateInstructions = workspace.readInstructions(posting.candidateId, module);
+    const candidate = await findCandidate({ candidateId: posting.candidateId });
+    const instructions = candidateInstructions ?? findDefaultInstructions(module, candidate);
+    const hasCandidateInstructions = candidateInstructions !== null;
+    const version = await workspace.startJob(job, { instructions, hasCandidateInstructions, inputList });
+    const postingDirectory = workspace.postingDirectoryOf(posting);
+    const outputDirectory = workspace.createVersionDirectory(posting, version);
     const readVersionList = inputList.map((input) => {
-      const directory = workspace.versionDirectoryOf(input.offre, input.version);
-      const { fileName } = AI_MODULE_BY_ARTEFACT[input.version.artefact];
+      const directory = workspace.versionDirectoryOf(input.posting, input.version);
+      const { fileName } = AI_MODULE_BY_ARTIFACT[input.version.artifact];
       return {
-        reference: input.offre.reference,
-        artefact: input.version.artefact,
+        reference: input.posting.reference,
+        artifact: input.version.artifact,
         directory,
         filePath: path.join(directory, fileName),
       };
     });
     const fixedPrompt = aiModule.composePrompt({
-      offre,
-      outputDirectory: path.relative(offreDirectory, outputDirectory),
+      posting,
+      outputDirectory: path.relative(postingDirectory, outputDirectory),
       readVersionList,
-      profilDirectory: workspace.profilDirectoryOf(offre.candidatId),
+      profileDirectory: workspace.profileDirectoryOf(posting.candidateId),
     });
     const session = await aiSession.runHeadless({
       fixedPrompt,
-      consignes,
-      directory: offreDirectory,
-      // The session runs in the folder of the Offre: only the folders outside it are added
+      instructions,
+      directory: postingDirectory,
+      // The session runs in the folder of the Posting: only the folders outside it are added
       readDirectoryList: [
         ...directoryList,
         ...readVersionList
           .map(({ directory }) => directory)
-          .filter((directory) => path.relative(offreDirectory, directory).startsWith('..')),
+          .filter((directory) => path.relative(postingDirectory, directory).startsWith('..')),
       ],
       outputDirectory,
+      locale,
     });
     const problem = session.isSuccess
       ? aiModule.outputFileList
-          .map((outputFile) => findOutputProblem(outputFile, offre, outputDirectory))
+          .map((outputFile) => findOutputProblem(outputFile, posting, outputDirectory, locale))
           .find((fileProblem) => fileProblem !== undefined)
       : undefined;
     const isReady = session.isSuccess && problem === undefined;

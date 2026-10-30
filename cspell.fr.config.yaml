@@ -1,0 +1,29 @@
+# The second pass of the spellcheck (scripts/spellcheck.sh): the French copy that cspell.config.yaml
+# leaves out of its English pass, checked here with the French dictionary, and nothing else
+version: '0.2'
+language: fr
+import:
+  - '@cspell/dict-fr-fr/cspell-ext.json'
+dictionaryDefinitions:
+  - name: project-words
+    path: ./cspell-words.txt
+dictionaries:
+  - project-words
+useGitignore: true
+ignorePaths:
+  - .git
+  - package-lock.json
+  - cspell.config.yaml
+  - cspell.fr.config.yaml
+  - test/fixtures/**
+  - prisma/migrations/**
+# Nothing is checked outside the French copy below
+includeRegExpList:
+  - '/(?!)/'
+overrides:
+  # A module's copy file holds its copy in both locales, its Parameter labels included, in its string
+  # literals (ADR-0010)
+  - filename: src/modules/*/copy.ts
+    language: en,fr
+    includeRegExpList:
+      - "/(?<![\\p{L}\\p{N}’)\\].])(?:'(?:\\\\.|[^'\\\\\\n])*'|\"(?:\\\\.|[^\"\\\\\\n])*\"|`(?:\\\\.|[^`\\\\])*`)/gu"

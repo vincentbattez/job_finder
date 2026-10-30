@@ -1,33 +1,36 @@
 import path from 'node:path';
 
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import {
-  FICHE_DE_POSTE_FILE_NAME,
-  type Artefact,
-  type FicheDePoste,
-  type Lieu,
-  type Offre,
-  type PieceFileName,
-  type ProfilFileName,
+  JOB_DESCRIPTION_FILE_NAME,
+  type Artifact,
+  type JobDescription,
+  type Locale,
+  type Location,
+  type Posting,
+  type ProfileFileName,
+  type UploadFileName,
   type Version,
 } from '#/domain/index.ts';
 import { wordListOf } from '#/text/index.ts';
 
 import { findObsoleteConfig, readObsoleteConfig } from './acl/config.ts';
-import { openDatabase, type INewOffre } from './acl/database.ts';
+import { openDatabase, type INewCandidate, type INewPosting } from './acl/database.ts';
 import {
   createDirectory,
   deleteFile,
   emptyDirectory,
   moveDirectory,
   readMarkdownFiles,
-  readPieces,
   readTextFile,
-  writePiece,
+  readUploads,
   writeTextFile,
+  writeUpload,
 } from './acl/files.ts';
+import { migrateLayout } from './layout.ts';
 
-const PIECES_FOLDER = 'pieces';
-// Among the Pièces, but not one: neither a PDF nor a Markdown file of the Profil
+const UPLOADS_FOLDER = 'uploads';
+// Among the Uploads, but not one: neither a PDF nor a Markdown file of the Profile
 const CONVERSION_FOLDER = '.conversion';
 
 function slugify(text: string): string {
@@ -35,92 +38,96 @@ function slugify(text: string): string {
 }
 
 // Safe to call on every launch; the database and the files are only read in acl/ (ADR-0005). The
-// database holds the Candidats, their Veilles and the Délai par défaut: the config an older jf left
-// is imported at the first launch of a database without a Délai par défaut, then never read again
-// (ADR-0011).
+// database holds the Candidates, their Watches and the Default Deadline Period: the config an older jf left
+// is imported at the first launch of a database without a Default Deadline Period, then never read again
+// (ADR-0011). The French layout an older jf left moves to the English one first, before anything reads
+// the data folder.
 export async function openWorkspace(dataDirectory: string) {
+  migrateLayout(dataDirectory);
   const database = openDatabase(path.join(dataDirectory, 'job_finder.sqlite'));
-  if (!(await database.hasDelaiParDefaut())) {
-    await database.createDelaiParDefaut(readObsoleteConfig(dataDirectory));
+  if (!(await database.hasDefaultDeadlinePeriod())) {
+    await database.createDefaultDeadlinePeriod(readObsoleteConfig(dataDirectory));
   }
-  await database.readDelaiParDefaut();
-  const candidatDirectoryOf = (candidatId: string): string => path.join(dataDirectory, 'candidats', candidatId);
-  const profilDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'profil');
-  // Its own subfolder, which the Markdown files of the Profil leave out
-  const piecesDirectoryOf = (candidatId: string): string => path.join(profilDirectoryOf(candidatId), PIECES_FOLDER);
-  const consignesDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'consignes');
-  const candidatList = await database.listCandidats();
-  for (const candidat of candidatList) {
-    createDirectory(profilDirectoryOf(candidat.id));
-  }
-
-  // Each Offre has a folder named by its reference and title, for its Fiche de poste and its
-  // Artefacts
-  function offreDirectoryOf({ candidatId, reference, title }: Pick<Offre, 'candidatId' | 'reference' | 'title'>) {
-    return path.join(candidatDirectoryOf(candidatId), 'offres', `${reference}-${slugify(title)}`);
+  await database.readDefaultDeadlinePeriod();
+  const candidateDirectoryOf = (candidateId: string): string => path.join(dataDirectory, 'candidates', candidateId);
+  const profileDirectoryOf = (candidateId: string): string => path.join(candidateDirectoryOf(candidateId), 'profile');
+  // Its own subfolder, which the Markdown files of the Profile leave out
+  const uploadsDirectoryOf = (candidateId: string): string =>
+    path.join(profileDirectoryOf(candidateId), UPLOADS_FOLDER);
+  const instructionsDirectoryOf = (candidateId: string): string =>
+    path.join(candidateDirectoryOf(candidateId), 'instructions');
+  const candidateList = await database.listCandidates();
+  for (const candidate of candidateList) {
+    createDirectory(profileDirectoryOf(candidate.id));
   }
 
-  // Each Version of an Artefact has its own folder, so a new launch never overwrites the others
-  function versionDirectoryOf(offre: Offre, { artefact, number }: Version): string {
-    return path.join(offreDirectoryOf(offre), artefact, `v${String(number)}`);
+  // Each Posting has a folder named by its reference and title, for its Job Description and its
+  // Artifacts
+  function postingDirectoryOf({ candidateId, reference, title }: Pick<Posting, 'candidateId' | 'reference' | 'title'>) {
+    return path.join(candidateDirectoryOf(candidateId), 'postings', `${reference}-${slugify(title)}`);
+  }
+
+  // Each Version of an Artifact has its own folder, so a new launch never overwrites the others
+  function versionDirectoryOf(posting: Posting, { artifact, number }: Version): string {
+    return path.join(postingDirectoryOf(posting), artifact, `v${String(number)}`);
   }
 
   return {
     ...database,
-    profilDirectoryOf,
+    profileDirectoryOf,
 
-    // A Candidat gets their Profil folder as soon as they exist, as at launch
-    async createCandidat(candidat: { id: string; name: string }): Promise<void> {
-      await database.createCandidat(candidat);
-      createDirectory(profilDirectoryOf(candidat.id));
+    // A Candidate gets their Profile folder as soon as they exist, as at launch
+    async createCandidate(candidate: INewCandidate): Promise<void> {
+      await database.createCandidate(candidate);
+      createDirectory(profileDirectoryOf(candidate.id));
     },
 
     // The config left behind once imported, which jf says is no longer read until it is deleted
     findObsoleteConfig: () => findObsoleteConfig(dataDirectory),
-    offreDirectoryOf,
+    postingDirectoryOf,
     versionDirectoryOf,
     readTextFile,
 
     // The folder where a job's session writes its Version
-    createVersionDirectory(offre: Offre, version: Version): string {
-      const directory = versionDirectoryOf(offre, version);
+    createVersionDirectory(posting: Posting, version: Version): string {
+      const directory = versionDirectoryOf(posting, version);
       createDirectory(directory);
       return directory;
     },
 
-    // The Profil is a flat folder of Markdown files
-    readProfilFiles(candidatId: string) {
-      return readMarkdownFiles(profilDirectoryOf(candidatId));
+    // The Profile is a flat folder of Markdown files
+    readProfileFiles(candidateId: string) {
+      return readMarkdownFiles(profileDirectoryOf(candidateId));
     },
 
-    saveProfilFile(candidatId: string, fileName: ProfilFileName, markdown: string): void {
-      writeTextFile(path.join(profilDirectoryOf(candidatId), fileName), markdown);
+    saveProfileFile(candidateId: string, fileName: ProfileFileName, markdown: string): void {
+      writeTextFile(path.join(profileDirectoryOf(candidateId), fileName), markdown);
     },
 
-    deleteProfilFile(candidatId: string, fileName: ProfilFileName): void {
-      deleteFile(path.join(profilDirectoryOf(candidatId), fileName));
+    deleteProfileFile(candidateId: string, fileName: ProfileFileName): void {
+      deleteFile(path.join(profileDirectoryOf(candidateId), fileName));
     },
 
-    readPieces(candidatId: string) {
-      return readPieces(piecesDirectoryOf(candidatId));
+    readUploads(candidateId: string) {
+      return readUploads(uploadsDirectoryOf(candidateId));
     },
 
-    savePiece(candidatId: string, fileName: PieceFileName, content: Uint8Array): void {
-      writePiece(piecesDirectoryOf(candidatId), fileName, content);
+    saveUpload(candidateId: string, fileName: UploadFileName, content: Uint8Array): void {
+      writeUpload(uploadsDirectoryOf(candidateId), fileName, content);
     },
 
-    deletePiece(candidatId: string, fileName: PieceFileName): void {
-      deleteFile(path.join(piecesDirectoryOf(candidatId), fileName));
+    deleteUpload(candidateId: string, fileName: UploadFileName): void {
+      deleteFile(path.join(uploadsDirectoryOf(candidateId), fileName));
     },
 
-    // The session converting a Pièce runs in the Profil, where it reads the Pièce, and writes in a
-    // folder of its own, emptied first: the job moves its files into the Profil, never overwriting one
-    startConversion(candidatId: string, piece: PieceFileName) {
-      const outputDirectory = path.join(piecesDirectoryOf(candidatId), CONVERSION_FOLDER, piece);
+    // The session converting an Upload runs in the Profile, where it reads the Upload, and writes in a
+    // folder of its own, emptied first: the job moves its files into the Profile, never overwriting one
+    startConversion(candidateId: string, upload: UploadFileName) {
+      const outputDirectory = path.join(uploadsDirectoryOf(candidateId), CONVERSION_FOLDER, upload);
       emptyDirectory(outputDirectory);
       return {
-        profilDirectory: profilDirectoryOf(candidatId),
-        piecePath: path.join(PIECES_FOLDER, piece),
+        profileDirectory: profileDirectoryOf(candidateId),
+        uploadPath: path.join(UPLOADS_FOLDER, upload),
         outputDirectory,
       };
     },
@@ -129,52 +136,54 @@ export async function openWorkspace(dataDirectory: string) {
       return readMarkdownFiles(outputDirectory);
     },
 
-    // The Markdown files of a Version, such as the Brouillon and the Lettre of a Lettre Version
-    readVersionDocuments(offre: Offre, version: Version) {
-      return readMarkdownFiles(versionDirectoryOf(offre, version));
+    // The Markdown files of a Version, such as the Draft and the Letter of a Letter Version
+    readVersionDocuments(posting: Posting, version: Version) {
+      return readMarkdownFiles(versionDirectoryOf(posting, version));
     },
 
-    // A correction by the Candidat changes the Version in place, without creating another one
-    writeVersionDocument(offre: Offre, version: Version, fileName: string, markdown: string): void {
-      writeTextFile(path.join(versionDirectoryOf(offre, version), fileName), markdown);
+    // A correction by the Candidate changes the Version in place, without creating another one
+    writeVersionDocument(posting: Posting, version: Version, fileName: string, markdown: string): void {
+      writeTextFile(path.join(versionDirectoryOf(posting, version), fileName), markdown);
     },
 
-    // The Consignes with which a Candidat replaced the default ones of an Artefact, if any
-    readConsignes(candidatId: string, artefact: Artefact): string | null {
-      return readTextFile(path.join(consignesDirectoryOf(candidatId), `${artefact}.md`));
+    // The Instructions with which a Candidate replaced the default ones of an Artifact, if any
+    readInstructions(candidateId: string, artifact: Artifact): string | null {
+      return readTextFile(path.join(instructionsDirectoryOf(candidateId), `${artifact}.md`));
     },
 
-    saveConsignes(candidatId: string, artefact: Artefact, consignes: string): void {
-      writeTextFile(path.join(consignesDirectoryOf(candidatId), `${artefact}.md`), consignes);
+    saveInstructions(candidateId: string, artifact: Artifact, instructions: string): void {
+      writeTextFile(path.join(instructionsDirectoryOf(candidateId), `${artifact}.md`), instructions);
     },
 
-    deleteConsignes(candidatId: string, artefact: Artefact): void {
-      deleteFile(path.join(consignesDirectoryOf(candidatId), `${artefact}.md`), { isMissingAllowed: true });
+    deleteInstructions(candidateId: string, artifact: Artifact): void {
+      deleteFile(path.join(instructionsDirectoryOf(candidateId), `${artifact}.md`), { isMissingAllowed: true });
     },
 
-    // The Fiche de poste is written first, so an Offre in the database always has it
-    async saveOffre(newOffre: INewOffre): Promise<Offre> {
-      const offreDirectory = offreDirectoryOf({ candidatId: newOffre.candidatId, ...newOffre.listedOffre });
-      writeTextFile(path.join(offreDirectory, FICHE_DE_POSTE_FILE_NAME), newOffre.ficheDePoste.markdown);
-      return database.createOffre(newOffre);
+    // The Job Description is written first, so a Posting in the database always has it
+    async savePosting(newPosting: INewPosting): Promise<Posting> {
+      const postingDirectory = postingDirectoryOf({ candidateId: newPosting.candidateId, ...newPosting.listedPosting });
+      writeTextFile(path.join(postingDirectory, JOB_DESCRIPTION_FILE_NAME), newPosting.jobDescription.markdown);
+      return database.createPosting(newPosting);
     },
 
-    // The folder of an Offre is named after its title: it follows a new title
-    async fillOffre(offre: Offre, fields: { title: string; ficheDePoste: FicheDePoste; lieu: Lieu }): Promise<Offre> {
-      const filledOffre = await database.fillOffre(offre, fields);
-      moveDirectory(offreDirectoryOf(offre), offreDirectoryOf(filledOffre));
-      return filledOffre;
+    // The folder of a Posting is named after its title: it follows a new title
+    async fillPosting(
+      posting: Posting,
+      fields: { title: string; jobDescription: JobDescription; location: Location },
+    ): Promise<Posting> {
+      const filledPosting = await database.fillPosting(posting, fields);
+      moveDirectory(postingDirectoryOf(posting), postingDirectoryOf(filledPosting));
+      return filledPosting;
     },
 
-    readFicheDePoste(offre: Offre): string {
-      const filePath = path.join(offreDirectoryOf(offre), FICHE_DE_POSTE_FILE_NAME);
-      const ficheDePoste = readTextFile(filePath);
-      if (ficheDePoste === null) {
-        throw new Error(
-          `Fiche de poste introuvable pour l'Offre ${offre.reference} : ${filePath}. La remettre à cet emplacement, d'où l'outil la lit.`,
-        );
+    // The locale of the Candidate of the Posting, in which a missing file is told
+    readJobDescription(posting: Posting, locale: Locale): string {
+      const filePath = path.join(postingDirectoryOf(posting), JOB_DESCRIPTION_FILE_NAME);
+      const jobDescription = readTextFile(filePath);
+      if (jobDescription === null) {
+        throw new Error(tFor(locale, 'error')('missingJobDescription', { reference: posting.reference, filePath }));
       }
-      return ficheDePoste;
+      return jobDescription;
     },
   };
 }

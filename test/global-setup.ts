@@ -15,7 +15,7 @@ declare module 'vitest' {
 }
 
 // Migrated once per run: a data folder copied from it opens without the Prisma CLI (ADR-0004). A
-// copy also gets Léa and her Veille, through the actions, in a process of its own: the actions
+// copy also gets Léa and her Watch, through the actions, in a process of its own: the actions
 // do not open where Vitest runs its global setup.
 export function setup({ provide }: TestProject): void {
   const directory = mkdtempSync(path.join(tmpdir(), 'job-finder-migrated-'));

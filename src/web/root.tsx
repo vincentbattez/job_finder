@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   isRouteErrorResponse,
   Link,
@@ -6,6 +7,7 @@ import {
   Meta,
   NavLink,
   Outlet,
+  redirect,
   Scripts,
   ScrollRestoration,
   useRouteLoaderData,
@@ -13,13 +15,19 @@ import {
   type LoaderFunctionArgs,
 } from 'react-router';
 
-import { readCandidat } from './candidat.server.ts';
-import { CandidatMenu } from './components/candidat-menu.tsx';
+import { readCandidate } from './candidate.server.ts';
+import { CandidateMenu } from './components/candidate-menu.tsx';
+import { LocaleSwitcher } from './components/locale-switcher.tsx';
+import { LocaleProvider, useLocale } from './i18n.tsx';
+import { englishUrlOf } from './redirects.ts';
 
 import './app.css';
 
+// An English route reached with the French query of an older link moves for good to the English one.
+// Otherwise the menu's Candidates and the locale the whole page renders in (ADR-0012).
 export function loader({ request }: LoaderFunctionArgs) {
-  return readCandidat(request);
+  const englishUrl = englishUrlOf(new URL(request.url));
+  return englishUrl === null ? readCandidate(request) : redirect(englishUrl, 301);
 }
 
 export const links: LinksFunction = () => [
@@ -31,11 +39,22 @@ export const links: LinksFunction = () => [
   },
 ];
 
+// Every page, the error page included, renders in the request's locale
 export function Layout({ children }: Readonly<{ children: ReactNode }>) {
-  // Undefined when the root loader itself failed: the error page then shows without the menu
-  const candidatData = useRouteLoaderData<typeof loader>('root');
   return (
-    <html lang="fr">
+    <LocaleProvider>
+      <Page>{children}</Page>
+    </LocaleProvider>
+  );
+}
+
+function Page({ children }: Readonly<{ children: ReactNode }>) {
+  // Undefined when the root loader itself failed: the error page then shows without the menu
+  const candidateData = useRouteLoaderData<typeof loader>('root');
+  const locale = useLocale();
+  const { t } = useTranslation('settings');
+  return (
+    <html lang={locale}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -48,15 +67,18 @@ export function Layout({ children }: Readonly<{ children: ReactNode }>) {
             <Link to="/" className="wordmark">
               Job Finder
             </Link>
-            <nav className="topbar__nav" aria-label="Pages">
+            <nav className="topbar__nav" aria-label={t('layout.navigationLabel')}>
               <NavLink to="/" end>
-                Offres
+                {t('layout.postingsLink')}
               </NavLink>
-              <NavLink to="/profil">Profil</NavLink>
-              <NavLink to="/consignes">Consignes</NavLink>
-              <NavLink to="/candidats">Candidats</NavLink>
+              <NavLink to="/profile">{t('layout.profileLink')}</NavLink>
+              <NavLink to="/instructions">{t('layout.instructionsLink')}</NavLink>
+              <NavLink to="/candidates">{t('layout.candidatesLink')}</NavLink>
             </nav>
-            {candidatData !== undefined && <CandidatMenu {...candidatData} />}
+            <div className="topbar__end">
+              {candidateData !== undefined && <CandidateMenu {...candidateData} />}
+              <LocaleSwitcher />
+            </div>
           </div>
         </header>
         {children}
@@ -73,15 +95,12 @@ export default function App() {
 
 export function ErrorBoundary({ error }: Readonly<{ error: unknown }>) {
   const isNotFound = isRouteErrorResponse(error) && error.status === 404;
+  const { t } = useTranslation('settings');
   return (
     <main className="container page">
       <div className="page__head">
-        <h1>{isNotFound ? 'Page introuvable' : 'Cette page n’a pas pu s’afficher'}</h1>
-        <p>
-          {isNotFound
-            ? 'Cette adresse ne mène à aucune page du front.'
-            : 'Rechargez la page. Si l’erreur revient, les journaux du front disent ce qui a échoué.'}
-        </p>
+        <h1>{isNotFound ? t('layout.notFoundHeading') : t('layout.errorHeading')}</h1>
+        <p>{isNotFound ? t('layout.notFoundHint') : t('layout.errorHint')}</p>
       </div>
     </main>
   );

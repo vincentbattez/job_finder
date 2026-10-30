@@ -1,43 +1,48 @@
-import type { Artefact, Offre } from '#/domain/index.ts';
+import { JOB_DESCRIPTION_FILE_NAME, type Artifact, type Locale, type Posting } from '#/domain/index.ts';
 
-// The output folder is relative to the Offre's folder, where the session runs; what it reads is
+// An Artifact is written for the employer: in the language of the Job Description, whatever the
+// Candidate's locale and the language of their Instructions (spec #65). Each fixed part states it.
+export function describeArtifactLanguage(artifactName: string): string {
+  return `Write the ${artifactName} in the language of the Job Description, \`${JOB_DESCRIPTION_FILE_NAME}\`, whatever the language of this prompt and of the Candidate's Instructions.`;
+}
+
+// The output folder is relative to the Posting's folder, where the session runs; what it reads is
 // named by absolute paths
 export interface IPromptInput {
-  offre: Offre;
+  posting: Posting;
   outputDirectory: string;
-  readVersionList: { reference: string; artefact: Artefact; directory: string; filePath: string }[];
-  profilDirectory: string;
+  readVersionList: { reference: string; artifact: Artifact; directory: string; filePath: string }[];
+  profileDirectory: string;
 }
 
 interface IOutputFile {
   name: string;
-  // What makes the file malformed, if anything
-  findFormatError?: (content: string, offre: Offre) => string | undefined;
+  // What makes the file malformed, if anything, told in the Candidate's locale
+  findFormatError?: (content: string, locale: Locale, posting: Posting) => string | undefined;
 }
 
 // What an AI module gives the job runner, from the single entry point of its folder; the runner
 // reads its inputs and its refusals from these declarations (ADR-0003)
 export interface IAiModule {
-  // A shorter name than its Artefact, for jf run
+  // A shorter name than its Artifact, for jf run
   alias?: string;
-  // The file of the Version the Candidat reads
+  // The file of the Version the Candidate reads
   fileName: string;
   // The files the session writes in the folder of the Version
   outputFileList: IOutputFile[];
-  defaultConsignes: string;
   composePrompt(input: IPromptInput): string;
   // Runs once the files are valid, before the Version is ready
   completeVersion?(versionDirectory: string): void;
-  // The Artefacts of the Offre the module reads: it refuses to run until each has a Version retenue
-  requiredArtefactList?: readonly Artefact[];
-  // The Artefacts of the Offre the module also reads, when they have a Version retenue
-  optionalArtefactList?: readonly Artefact[];
-  // Whether the module reads the Profil of the Candidat
-  isReadingProfil?: boolean;
-  // Whether it reads the Artefacts retenus of the Offre that a Republication publishes again
-  isReadingRepublishedOffre?: boolean;
-  // Whether it reads its own Artefact retenu of each Offre once Postulée: what the Candidat sent
+  // The Artifacts of the Posting the module reads: it refuses to run until each has a Chosen Version
+  requiredArtifactList?: readonly Artifact[];
+  // The Artifacts of the Posting the module also reads, when they have a Chosen Version
+  optionalArtifactList?: readonly Artifact[];
+  // Whether the module reads the Profile of the Candidate
+  isReadingProfile?: boolean;
+  // Whether it reads the Chosen Artifacts of the Posting that a Repost publishes again
+  isReadingRepostedPosting?: boolean;
+  // Whether it reads its own Chosen Artifact of each Posting once Applied: what the Candidate sent
   isReadingSentVersions?: boolean;
-  // Whether its Version retenue is what the Candidat sends: frozen once the Offre is Postulée
-  isFrozenOncePostulee?: boolean;
+  // Whether its Chosen Version is what the Candidate sends: frozen once the Posting is Applied
+  isFrozenOnceApplied?: boolean;
 }

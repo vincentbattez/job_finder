@@ -2,15 +2,15 @@ import type { ActionFunctionArgs } from 'react-router';
 
 import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
-import { readCandidat } from '#/web/candidat.server.ts';
+import { readCandidate } from '#/web/candidate.server.ts';
 
-// For the Candidat of the menu; a refusal goes back to the drop zone in the words of the action
+// For the Candidate of the menu; a refusal goes back to the drop zone in the words of the action
 export async function action({ request }: ActionFunctionArgs) {
-  const { candidat } = await readCandidat(request);
+  const { candidate } = await readCandidate(request);
   try {
-    const job = await ACTIONS.importFicheDePoste({
+    const job = await ACTIONS.importJobDescription({
       ...Object.fromEntries(await request.formData()),
-      candidatId: candidat?.id,
+      candidateId: candidate?.id,
     });
     return { job, error: null };
   } catch (error) {

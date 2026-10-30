@@ -79,24 +79,24 @@
   --tracking-display: -0.03em;
   --display-weight: 700;
 
-  /* Statuts of an Offre, each a colour for text or a map point and a soft one behind it: grey,
-     green and red as the map of issue #20 asks, so Expirée is red against Dose's grey */
-  --color-statut-a-traiter: oklch(40% 0.012 165);
-  --color-statut-a-traiter-soft: oklch(92.5% 0.008 165);
-  --color-statut-postulee: var(--color-accent-deep);
-  --color-statut-postulee-soft: var(--color-accent-soft);
-  --color-statut-expiree: oklch(46% 0.17 27);
-  --color-statut-expiree-soft: oklch(93.5% 0.035 27);
-  --color-statut-archivee: var(--color-muted);
-  --color-statut-archivee-soft: var(--color-paper);
+  /* Statuses of a Posting, each a color for text or a map point and a soft one behind it: grey,
+     green and red as the map of issue #20 asks, so Expired is red against Dose's grey */
+  --color-status-to-apply: oklch(40% 0.012 165);
+  --color-status-to-apply-soft: oklch(92.5% 0.008 165);
+  --color-status-applied: var(--color-accent-deep);
+  --color-status-applied-soft: var(--color-accent-soft);
+  --color-status-expired: oklch(46% 0.17 27);
+  --color-status-expired-soft: oklch(93.5% 0.035 27);
+  --color-status-archived: var(--color-muted);
+  --color-status-archived-soft: var(--color-paper);
 
-  /* États of an Artefact, on the same signals: ready reads like Postulée, failed like Expirée */
-  --color-etat-absent: var(--color-muted);
-  --color-etat-absent-soft: var(--color-paper);
-  --color-etat-en-cours: var(--color-statut-a-traiter);
-  --color-etat-en-cours-soft: var(--color-statut-a-traiter-soft);
-  --color-etat-pret: var(--color-statut-postulee);
-  --color-etat-pret-soft: var(--color-statut-postulee-soft);
-  --color-etat-en-echec: var(--color-statut-expiree);
-  --color-etat-en-echec-soft: var(--color-statut-expiree-soft);
+  /* States of an Artifact, on the same signals: ready reads like Applied, failed like Expired */
+  --color-state-absent: var(--color-muted);
+  --color-state-absent-soft: var(--color-paper);
+  --color-state-in-progress: var(--color-status-to-apply);
+  --color-state-in-progress-soft: var(--color-status-to-apply-soft);
+  --color-state-ready: var(--color-status-applied);
+  --color-state-ready-soft: var(--color-status-applied-soft);
+  --color-state-failed: var(--color-status-expired);
+  --color-state-failed-soft: var(--color-status-expired-soft);
 }

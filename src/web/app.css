@@ -1,8 +1,8 @@
 /* Hallmark · shape: app screen · genre: modern-minimal · theme: Dose (deal 3/3, seed soft-friendly-app-track-8518·cf75787d·2026-10-29·r0)
- * nav: a top bar, the wordmark, the Candidat's pages (Offres, Profil, Consignes: #14) and the Candidat menu (#11) · signature: the Offre label, reference and Date limite in DM Mono over a dashed stub, above four plastic Artefact compartments · states: full and empty list, the four états · dose: white
+ * nav: a top bar, the wordmark, the Candidate's pages (Postings, Profile, Instructions: #14) and the Candidate menu (#11) · signature: the Posting label, reference and Deadline in DM Mono over a dashed stub, above four plastic Artifact compartments · states: full and empty list, the four states · dose: white
  * axes: light/grotesk-sans/chromatic-green · posture: committed · contrast: pass · v2.0.0 */
-/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a list and a fiche fit any tracker; the Offre became a pharmacy label with its Artefacts as an organiser's compartments */
-/* Hallmark · deviation: Expirée and En échec are red, against Dose's grey for a missed state, because the map of issue #20 asks red for Expirée · no fibre grain: an app screen takes the theme's surfaces, not its ornament */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a list and a Posting page fit any tracker; the Posting became a pharmacy label with its Artifacts as an organizer's compartments */
+/* Hallmark · deviation: Expired and Failed are red, against Dose's grey for a missed state, because the map of issue #20 asks red for Expired · no fibre grain: an app screen takes the theme's surfaces, not its ornament */
 /* Hallmark · finish-review: subagent · 8 findings · 5 resolved 3 partial · gap: the list's loading and error states and the empty list's action (#12) */
 @import url('./tokens.css');
 @import url('./base.css');
@@ -26,28 +26,64 @@
 }
 
 /* Who is reading: the one choice the front asks for, without any password */
-.candidat-menu {
+.candidate-menu {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
 }
-.candidat-menu label {
+.candidate-menu label {
   color: var(--color-muted);
   font: 500 var(--text-sm) var(--font-body);
 }
-/* The front creates Candidats (ADR-0011): a long name stays inside a phone screen */
-.candidat-menu select {
+.topbar__end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-md);
+}
+/* The Locale Switcher: two codes side by side, the current one filled like the menu's button */
+.locale-switcher {
+  display: flex;
+}
+.locale-switcher button {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0 var(--space-xs);
+  border: var(--rule-hair) solid var(--color-muted);
+  background: var(--light);
+  color: var(--color-ink-2);
+  font: 500 var(--text-sm) var(--font-outlier);
+  cursor: pointer;
+  transition: background-color var(--dur-short) var(--ease-out);
+}
+.locale-switcher button:first-child {
+  border-radius: var(--radius-input) 0 0 var(--radius-input);
+}
+.locale-switcher button:last-child {
+  border-inline-start: 0;
+  border-radius: 0 var(--radius-input) var(--radius-input) 0;
+}
+.locale-switcher button:hover {
+  background: var(--color-paper-2);
+}
+.locale-switcher button[aria-pressed='true'] {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+/* The front creates Candidates (ADR-0011): a long name stays inside a phone screen */
+.candidate-menu select {
   min-width: 0;
   max-width: 12rem;
   text-overflow: ellipsis;
 }
-.candidat-menu select,
-.candidat-menu button,
+.candidate-menu select,
+.candidate-menu button,
 .command button,
 .module-launch button,
 .detection button,
 .edition button,
-.canal button,
+.channel button,
 .settings button {
   min-height: 40px;
   padding: 0 var(--space-sm);
@@ -60,41 +96,41 @@
   cursor: pointer;
   transition: background-color var(--dur-short) var(--ease-out);
 }
-.candidat-menu select:hover,
+.candidate-menu select:hover,
 .command button:hover,
 .edition button:hover,
-.canal button:hover:enabled,
+.channel button:hover:enabled,
 .settings button:hover:enabled {
   background: var(--color-paper-2);
 }
-.candidat-menu button,
+.candidate-menu button,
 .module-launch button,
 .detection button,
 .edition .button--primary,
-.canal .button--primary,
+.channel .button--primary,
 .settings .button--primary {
   border-color: transparent;
   background: var(--color-accent);
   color: var(--color-accent-ink);
 }
-.candidat-menu button:hover,
+.candidate-menu button:hover,
 .module-launch button:hover:enabled,
 .detection button:hover:enabled,
 .edition .button--primary:hover,
-.canal .button--primary:hover:enabled,
+.channel .button--primary:hover:enabled,
 .settings .button--primary:hover:enabled {
   background: var(--color-accent-deep);
 }
-/* A module missing an input, an Artefact en cours, a Détection running: the button waits */
+/* A module missing an input, an Artifact in progress, a Detection running: the button waits */
 .module-launch button:disabled,
 .detection button:disabled,
-.canal button:disabled,
+.channel button:disabled,
 .settings button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-/* The Détection beside the name of the list: what it found shows below the button */
+/* The Detection beside the name of the list: what it found shows below the button */
 .detection {
   display: grid;
   justify-items: start;
@@ -114,7 +150,7 @@
   color: var(--color-error);
 }
 
-/* The drop zone of a file, such as a Fiche de poste or a Pièce: a dashed tray that lights up under a file */
+/* The drop zone of a file, such as a Job Description or an Upload: a dashed tray that lights up under a file */
 .drop-zone {
   display: grid;
   justify-items: start;
@@ -151,7 +187,7 @@
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
-/* Waiting for React, or for Claude to read the Fiche de poste */
+/* Waiting for React, or for Claude to read the Job Description */
 .drop-zone__choose[data-disabled='true'] {
   opacity: 0.55;
   cursor: not-allowed;
@@ -159,7 +195,7 @@
 .drop-zone__error {
   color: var(--color-error);
 }
-/* The pages of the Candidat chosen in the menu: their Offres, their Profil, their Consignes */
+/* The pages of the Candidate chosen in the menu: their Postings, their Profile, their Instructions */
 .topbar__nav {
   display: flex;
   flex-wrap: wrap;
@@ -214,7 +250,7 @@ a:active {
   color: var(--color-muted);
   font-family: var(--font-body);
 }
-/* A sunken tray where the Offres will land */
+/* A sunken tray where the Postings will land */
 .empty {
   padding: var(--space-lg);
   border-radius: var(--radius-card);
@@ -242,8 +278,8 @@ a:active {
   list-style: none;
 }
 .badge {
-  --badge-ink: var(--color-statut-a-traiter);
-  --badge-soft: var(--color-statut-a-traiter-soft);
+  --badge-ink: var(--color-status-to-apply);
+  --badge-soft: var(--color-status-to-apply-soft);
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
@@ -256,41 +292,41 @@ a:active {
   font: 500 var(--text-sm) / 1 var(--font-body);
   white-space: nowrap;
 }
-.badge[data-statut='postulee'] {
-  --badge-ink: var(--color-statut-postulee);
-  --badge-soft: var(--color-statut-postulee-soft);
+.badge[data-status='applied'] {
+  --badge-ink: var(--color-status-applied);
+  --badge-soft: var(--color-status-applied-soft);
 }
-.badge[data-statut='expiree'] {
-  --badge-ink: var(--color-statut-expiree);
-  --badge-soft: var(--color-statut-expiree-soft);
+.badge[data-status='expired'] {
+  --badge-ink: var(--color-status-expired);
+  --badge-soft: var(--color-status-expired-soft);
 }
-.badge[data-statut='archivee'] {
-  --badge-ink: var(--color-statut-archivee);
-  --badge-soft: var(--color-statut-archivee-soft);
+.badge[data-status='archived'] {
+  --badge-ink: var(--color-status-archived);
+  --badge-soft: var(--color-status-archived-soft);
 }
-.badge[data-etat='absent'] {
-  --badge-ink: var(--color-etat-absent);
-  --badge-soft: var(--color-etat-absent-soft);
+.badge[data-state='absent'] {
+  --badge-ink: var(--color-state-absent);
+  --badge-soft: var(--color-state-absent-soft);
 }
-.badge[data-etat='en_cours'] {
-  --badge-ink: var(--color-etat-en-cours);
-  --badge-soft: var(--color-etat-en-cours-soft);
+.badge[data-state='in_progress'] {
+  --badge-ink: var(--color-state-in-progress);
+  --badge-soft: var(--color-state-in-progress-soft);
 }
-.badge[data-etat='pret'] {
-  --badge-ink: var(--color-etat-pret);
-  --badge-soft: var(--color-etat-pret-soft);
+.badge[data-state='ready'] {
+  --badge-ink: var(--color-state-ready);
+  --badge-soft: var(--color-state-ready-soft);
 }
-.badge[data-etat='en_echec'] {
-  --badge-ink: var(--color-etat-en-echec);
-  --badge-soft: var(--color-etat-en-echec-soft);
+.badge[data-state='failed'] {
+  --badge-ink: var(--color-state-failed);
+  --badge-soft: var(--color-state-failed-soft);
 }
 /* What steps back keeps its place: a dashed rim instead of a fill */
-.badge:is([data-statut='archivee'], [data-etat='absent']) {
+.badge:is([data-status='archived'], [data-state='absent']) {
   border-style: dashed;
   border-color: var(--color-muted);
 }
-/* The one motion of the screen: a loader while a module writes the Artefact */
-.badge[data-etat='en_cours']::before {
+/* The one motion of the screen: a loader while a module writes the Artifact */
+.badge[data-state='in_progress']::before {
   content: '';
   width: 10px;
   height: 10px;
@@ -304,18 +340,18 @@ a:active {
     transform: rotate(1turn);
   }
 }
-/* A still arc reads as a letter: the label alone carries the état */
+/* A still arc reads as a letter: the label alone carries the state */
 @media (prefers-reduced-motion: reduce) {
-  .badge[data-etat='en_cours']::before {
+  .badge[data-state='in_progress']::before {
     content: none;
   }
 }
 
-.offre-list {
+.posting-list {
   width: 100%;
   border-collapse: collapse;
 }
-.offre-list th {
+.posting-list th {
   padding: 0 var(--space-md) var(--space-xs) 0;
   border-bottom: var(--rule-hair) solid var(--color-rule);
   color: var(--color-muted);
@@ -323,29 +359,29 @@ a:active {
   text-align: start;
   white-space: nowrap;
 }
-.offre-list td {
+.posting-list td {
   padding: var(--space-md) var(--space-md) var(--space-md) 0;
   border-bottom: var(--rule-hair) solid var(--color-rule);
   vertical-align: top;
 }
-.offre-list :is(th, td):last-child {
+.posting-list :is(th, td):last-child {
   padding-inline-end: 0;
 }
-.offre-list__offre {
+.posting-list__posting {
   display: grid;
   justify-items: start;
   gap: var(--space-3xs);
 }
-.offre-list__title {
+.posting-list__title {
   font-weight: 500;
 }
-.offre-list__workplace,
-.offre-list .reference {
+.posting-list__workplace,
+.posting-list .reference {
   color: var(--color-muted);
   font-size: var(--text-sm);
 }
 
-/* The filters under the title, in the plain controls of the Candidat menu */
+/* The filters under the title, in the plain controls of the Candidate menu */
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -394,46 +430,46 @@ a:active {
   background: var(--color-accent-deep);
 }
 
-/* A point per Offre in its statut's colour, ringed in white to stand out of the tiles; an
-   Archivée keeps the dashed rim of its badge */
-.offre-map {
+/* A point per Posting in its status's color, ringed in white to stand out of the tiles; an
+   Archived keeps the dashed rim of its badge */
+.posting-map {
   display: grid;
   gap: var(--space-sm);
 }
-.offre-map__canvas.leaflet-container,
-.offre-map__canvas {
+.posting-map__canvas.leaflet-container,
+.posting-map__canvas {
   height: clamp(320px, 60vh, 560px);
   border: var(--rule-hair) solid var(--color-rule);
   border-radius: var(--radius-card);
   background: var(--color-paper-2);
   font: var(--text-xs) var(--font-body);
 }
-.offre-point,
-.offre-map__legend li {
-  --point: var(--color-statut-a-traiter);
+.posting-point,
+.posting-map__legend li {
+  --point: var(--color-status-to-apply);
 }
-.offre-point,
-.offre-map__legend li::before {
+.posting-point,
+.posting-map__legend li::before {
   border: 2px solid var(--light);
   border-radius: var(--radius-pill);
   background: var(--point);
   box-shadow: 0 1px 3px oklch(21% 0.025 170 / 0.45);
 }
-.offre-point {
+.posting-point {
   cursor: pointer;
 }
-[data-statut='postulee']:is(.offre-point, li) {
-  --point: var(--color-statut-postulee);
+[data-status='applied']:is(.posting-point, li) {
+  --point: var(--color-status-applied);
 }
-[data-statut='expiree']:is(.offre-point, li) {
-  --point: var(--color-statut-expiree);
+[data-status='expired']:is(.posting-point, li) {
+  --point: var(--color-status-expired);
 }
-.offre-point[data-statut='archivee'],
-.offre-map__legend li[data-statut='archivee']::before {
+.posting-point[data-status='archived'],
+.posting-map__legend li[data-status='archived']::before {
   border: 2px dashed var(--color-muted);
-  background: var(--color-statut-archivee-soft);
+  background: var(--color-status-archived-soft);
 }
-.offre-map__legend {
+.posting-map__legend {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-xs) var(--space-md);
@@ -443,43 +479,43 @@ a:active {
   color: var(--color-ink-2);
   font-size: var(--text-sm);
 }
-.offre-map__legend li {
+.posting-map__legend li {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
 }
-.offre-map__legend li::before {
+.posting-map__legend li::before {
   content: '';
   width: 14px;
   height: 14px;
 }
-.offre-map__note {
+.posting-map__note {
   color: var(--color-muted);
   font-size: var(--text-sm);
 }
 
-/* The label above its Artefacts, beside the contacts, the recipients and the Fiche de poste */
-.fiche {
+/* The label above its Artifacts, beside the contacts, the recipients and the Job Description */
+.posting-detail {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   align-items: start;
   gap: var(--space-xl);
 }
-.fiche__column {
+.posting-detail__column {
   display: grid;
   gap: var(--space-xl);
   min-width: 0;
 }
-.fiche__part {
+.posting-detail__part {
   display: grid;
   gap: var(--space-sm);
 }
-.fiche :is(h2, h4) {
+.posting-detail :is(h2, h4) {
   margin: 0;
   font: var(--display-weight) var(--text-md) / 1.2 var(--font-display);
   letter-spacing: var(--tracking-display);
 }
-.fiche__label {
+.posting-detail__label {
   display: grid;
   gap: var(--space-sm);
   padding: var(--space-lg);
@@ -487,21 +523,21 @@ a:active {
   background: var(--light);
   box-shadow: var(--shadow-lift);
 }
-.fiche__title {
+.posting-detail__title {
   display: flex;
   flex-wrap: wrap;
   align-items: start;
   justify-content: space-between;
   gap: var(--space-sm);
 }
-.fiche__title :is(h1, h3) {
+.posting-detail__title :is(h1, h3) {
   font-size: var(--text-xl);
 }
-.fiche__label > p {
+.posting-detail__label > p {
   color: var(--color-ink-2);
 }
-/* The tear-off stub of a pharmacy label: what identifies the Offre and when it closes */
-.fiche__facts {
+/* The tear-off stub of a pharmacy label: what identifies the Posting and when it closes */
+.posting-detail__facts {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm) var(--space-xl);
@@ -509,19 +545,19 @@ a:active {
   padding-top: var(--space-md);
   border-top: var(--rule-hair) dashed var(--color-muted);
 }
-.fiche__facts dd {
+.posting-detail__facts dd {
   margin: 0;
   font-size: var(--text-lg);
 }
-.fiche dt {
+.posting-detail dt {
   color: var(--color-muted);
   font-size: var(--text-sm);
   font-weight: 500;
 }
 
-/* Plastic compartments, one tint per Artefact like the days of a pill organiser: a tint names the
-   Artefact, never its état, which the badge carries */
-.artefact-list {
+/* Plastic compartments, one tint per Artifact like the days of a pill organizer: a tint names the
+   Artifact, never its state, which the badge carries */
+.artifact-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-xs);
@@ -529,7 +565,7 @@ a:active {
   padding: 0;
   list-style: none;
 }
-.artefact-list li {
+.artifact-list li {
   display: grid;
   align-content: space-between;
   justify-items: start;
@@ -547,38 +583,38 @@ a:active {
     0 18px 26px -16px color-mix(in oklab, var(--tint) 85%, transparent);
   font-weight: 500;
 }
-.artefact-list a {
+.artifact-list a {
   white-space: nowrap;
 }
 /* Below 22rem two compartments would wrap their names: they stack */
 @media (max-width: 22rem) {
-  .artefact-list {
+  .artifact-list {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-[data-artefact] {
+[data-artifact] {
   --tint: var(--p-mon);
 }
-[data-artefact='lettre'] {
+[data-artifact='letter'] {
   --tint: var(--p-tue);
 }
-[data-artefact='fiche_entretien'] {
+[data-artifact='interview_brief'] {
   --tint: var(--p-wed);
 }
-[data-artefact='visualisation'] {
+[data-artifact='visualization'] {
   --tint: var(--p-fri);
 }
 
-.fiche__contacts {
+.posting-detail__contacts {
   display: grid;
   gap: var(--space-sm);
   margin: 0;
 }
-.fiche__contacts div {
+.posting-detail__contacts div {
   display: grid;
   gap: var(--space-3xs);
 }
-.fiche__contacts dd {
+.posting-detail__contacts dd {
   margin: 0;
   overflow-wrap: break-word;
   min-width: 0;
@@ -615,12 +651,12 @@ a:active {
   color: var(--color-ink-2);
   font-size: var(--text-sm);
 }
-.fiche__poste summary {
+.posting-detail__job-description summary {
   color: var(--color-accent-deep);
   font-weight: 500;
   cursor: pointer;
 }
-.fiche__poste[open] summary {
+.posting-detail__job-description[open] summary {
   margin-bottom: var(--space-sm);
 }
 
@@ -681,12 +717,12 @@ a:active {
 .editor textarea:focus-visible {
   outline-color: var(--color-focus);
 }
-/* A Lettre is frozen once its Offre is Postulée */
+/* A Letter is frozen once its Posting is Applied */
 .editor textarea:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
-.fiche .prose,
+.posting-detail .prose,
 .editor .prose,
 .document .prose {
   max-width: none;
@@ -695,8 +731,8 @@ a:active {
   background: var(--color-paper-2);
 }
 
-/* Below the label, each Artefact opens like its compartment: its tint along the top edge */
-.artefact {
+/* Below the label, each Artifact opens like its compartment: its tint along the top edge */
+.artifact {
   display: grid;
   align-content: start;
   gap: var(--space-md);
@@ -704,7 +740,7 @@ a:active {
   padding-top: var(--space-md);
   border-top: 4px solid var(--tint);
 }
-/* The état of the Artefact, then the button of its module and why it waits, if it does */
+/* The state of the Artifact, then the button of its module and why it waits, if it does */
 .module-launch {
   display: flex;
   flex-wrap: wrap;
@@ -763,8 +799,8 @@ a:active {
 .version-list details > :not(summary) {
   margin: 0 var(--space-md) var(--space-md);
 }
-/* The Version retenue, the one the next Artefacts read and the one sent: the full accent */
-.badge[data-retenue] {
+/* The Chosen Version, the one the next Artifacts read and the one sent: the full accent */
+.badge[data-chosen] {
   --badge-ink: var(--color-accent-ink);
   --badge-soft: var(--color-accent);
 }
@@ -775,7 +811,7 @@ a:active {
 .document figcaption {
   color: var(--color-muted);
 }
-/* A missing fact the Lettre marks « [à compléter : …] »: a highlighter stroke, so that none is sent */
+/* A missing fact the Letter marks « [à compléter : …] »: a highlighter stroke, so that none is sent */
 .prose mark {
   padding-inline: var(--space-3xs);
   border-radius: var(--space-2xs);
@@ -797,8 +833,8 @@ a:active {
   display: grid;
   gap: var(--space-sm);
 }
-/* The Visualisation, a page of its own, read in a tall frame on the paper of the fiche */
-.visualisation iframe {
+/* The Visualization, a page of its own, read in a tall frame on the paper of the Posting page */
+.visualization iframe {
   display: block;
   width: 100%;
   height: min(80vh, 48rem);
@@ -809,21 +845,21 @@ a:active {
 
 @media (max-width: 60rem) {
   .editor,
-  .fiche {
+  .posting-detail {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-/* On a phone each Offre restacks as a block whose dates name themselves */
+/* On a phone each Posting restacks as a block whose dates name themselves */
 @media (max-width: 40rem) {
-  .offre-list thead {
+  .posting-list thead {
     position: absolute;
     width: 1px;
     height: 1px;
     overflow: hidden;
     clip-path: inset(50%);
   }
-  .offre-list tr {
+  .posting-list tr {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -831,51 +867,51 @@ a:active {
     padding-block: var(--space-md);
     border-bottom: var(--rule-hair) solid var(--color-rule);
   }
-  .offre-list td {
+  .posting-list td {
     padding: 0;
     border: 0;
   }
-  .offre-list td:first-child {
+  .posting-list td:first-child {
     flex-basis: 100%;
   }
-  .offre-list td[data-label='Publiée le'] {
+  .posting-list td[data-column='publishedAt'] {
     order: 1;
   }
-  .offre-list td[data-label]::before {
+  .posting-list td[data-label]::before {
     content: attr(data-label) ' ';
     color: var(--color-muted);
     font: 500 var(--text-sm) var(--font-body);
   }
-  .fiche__label {
+  .posting-detail__label {
     padding: var(--space-md);
   }
 }
 
-/* Each file of the Profil, named as on disk */
-.profil-file {
+/* Each file of the Profile, named as on disk */
+.profile-file {
   display: grid;
   gap: var(--space-sm);
   min-width: 0;
 }
-.profil-file form,
-.consignes form {
+.profile-file form,
+.instructions form {
   display: grid;
   gap: var(--space-sm);
 }
-.profil-file h2 {
+.profile-file h2 {
   font: var(--text-md) / 1.4 var(--font-outlier);
   letter-spacing: 0;
 }
-.profil-file__name {
+.profile-file__name {
   display: grid;
   gap: var(--space-xs);
   max-width: 32rem;
 }
-.profil-file__name label {
+.profile-file__name label {
   color: var(--color-ink-2);
   font: 500 var(--text-sm) / 1.4 var(--font-body);
 }
-.profil-file__name input {
+.profile-file__name input {
   min-height: 40px;
   padding: 0 var(--space-sm);
   border: var(--rule-hair) solid var(--color-muted);
@@ -886,26 +922,26 @@ a:active {
   color: var(--color-ink);
   font-family: var(--font-outlier);
 }
-.profil-file__name input:focus-visible {
+.profile-file__name input:focus-visible {
   outline-color: var(--color-focus);
 }
-.edition .profil-file__error {
+.edition .profile-file__error {
   color: var(--color-error);
 }
-/* Deleting a file takes unfolding, then a button in the colour of what cannot be undone */
-.profil-file__delete summary {
+/* Deleting a file takes unfolding, then a button in the color of what cannot be undone */
+.profile-file__delete summary {
   color: var(--color-muted);
   font-size: var(--text-sm);
   cursor: pointer;
 }
-.profil-file__delete[open] summary {
+.profile-file__delete[open] summary {
   margin-bottom: var(--space-sm);
 }
-.profil-file .profil-file__delete form {
+.profile-file .profile-file__delete form {
   display: flex;
 }
 /* Not a file yet: named in the voice of the page, not as on disk */
-.profil-file--new h2 {
+.profile-file--new h2 {
   font: 600 var(--text-md) / 1.4 var(--font-body);
 }
 .edition .button--danger {
@@ -917,38 +953,38 @@ a:active {
   background: color-mix(in oklch, var(--color-error), var(--color-ink) 20%);
 }
 
-/* The Consignes of a module sit in its compartment, under its tint, like its Versions */
-.consignes__head {
+/* The Instructions of a module sit in its compartment, under its tint, like its Versions */
+.instructions__head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-xs) var(--space-sm);
 }
-.badge[data-consignes='candidat'] {
+.badge[data-instructions='candidate'] {
   --badge-ink: var(--color-accent-ink);
   --badge-soft: var(--color-accent);
 }
-/* Consignes folded under what they produced: the default ones under the Candidat's, and those of
+/* Instructions folded under what they produced: the default ones under the Candidate's, and those of
    each Version under it */
-.consignes__default summary,
-.version-consignes summary {
+.instructions__default summary,
+.version-instructions summary {
   color: var(--color-accent-deep);
   font-weight: 500;
   cursor: pointer;
 }
-.consignes__default[open] summary,
-.version-consignes[open] summary {
+.instructions__default[open] summary,
+.version-instructions[open] summary {
   margin-bottom: var(--space-sm);
 }
-.consignes__default .prose,
-.version-consignes .prose {
+.instructions__default .prose,
+.version-instructions .prose {
   max-width: none;
   padding: var(--space-md);
   border-radius: var(--radius-input);
   background: var(--color-paper-2);
 }
-/* Which Consignes produced a Version: a small tag, like the source of a recipient */
-.consignes-origin {
+/* Which Instructions produced a Version: a small tag, like the source of a recipient */
+.instructions-origin {
   padding: 0 var(--space-xs);
   border-radius: var(--radius-pill);
   background: var(--color-paper-2);
@@ -957,17 +993,17 @@ a:active {
   font-weight: 500;
 }
 
-/* The form of the Faits: one field per rubrique, and one per entry of a list rubrique */
-.faits,
-.faits form {
+/* The form of the Facts: one field per section, and one per entry of a list section */
+.facts,
+.facts form {
   display: grid;
   gap: var(--space-md);
   min-width: 0;
 }
-.faits > p {
+.facts > p {
   color: var(--color-ink-2);
 }
-.faits__rubrique {
+.facts__section {
   display: grid;
   gap: var(--space-xs);
   min-width: 0;
@@ -977,17 +1013,17 @@ a:active {
   color: var(--color-ink);
   font: 600 var(--text-sm) / 1.4 var(--font-body);
 }
-.faits__rubrique legend {
+.facts__section legend {
   padding: 0;
   margin-bottom: var(--space-xs);
 }
-.faits__entry {
+.facts__entry {
   display: flex;
   align-items: end;
   gap: var(--space-sm);
 }
-/* An entry is named under its rubrique, a step quieter */
-.faits__entry label {
+/* An entry is named under its section, a step quieter */
+.facts__entry label {
   display: grid;
   flex: 1;
   gap: var(--space-2xs);
@@ -995,7 +1031,7 @@ a:active {
   color: var(--color-ink-2);
   font-weight: 500;
 }
-.faits textarea {
+.facts textarea {
   padding: var(--space-sm);
   border: var(--rule-hair) solid var(--color-muted);
   border-radius: var(--radius-input);
@@ -1005,11 +1041,11 @@ a:active {
   resize: vertical;
   field-sizing: content;
 }
-.faits textarea:focus-visible {
+.facts textarea:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: -3px;
 }
-.faits__rubrique button {
+.facts__section button {
   justify-self: start;
   min-height: 40px;
   padding: 0 var(--space-sm);
@@ -1022,29 +1058,29 @@ a:active {
   cursor: pointer;
   transition: background-color var(--dur-short) var(--ease-out);
 }
-.faits__rubrique button:hover:enabled {
+.facts__section button:hover:enabled {
   background: var(--color-paper-2);
 }
 /* Adding or removing an entry waits for React to run the page */
-.faits__rubrique button:disabled {
+.facts__section button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-/* The PDFs of the Profil, kept as dropped: one row each, name and date, deletion folded */
-.pieces h2 {
+/* The PDFs of the Profile, kept as dropped: one row each, name and date, deletion folded */
+.uploads h2 {
   font: 600 var(--text-md) / 1.4 var(--font-body);
 }
-.pieces__empty {
+.uploads__empty {
   color: var(--color-ink-2);
 }
-.pieces__list {
+.uploads__list {
   display: grid;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.pieces__item {
+.uploads__item {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -1053,47 +1089,47 @@ a:active {
   border-bottom: var(--rule-hair) solid var(--color-paper-2);
   min-width: 0;
 }
-.pieces__item .reference {
+.uploads__item .reference {
   overflow-wrap: anywhere;
 }
-.pieces__date {
+.uploads__date {
   color: var(--color-ink-2);
   font-size: var(--text-sm);
 }
-.pieces__item .profil-file__delete {
+.uploads__item .profile-file__delete {
   margin-inline-start: auto;
 }
-.pieces__conversion {
+.uploads__conversion {
   flex-basis: 100%;
 }
-.pieces__item .profil-file__delete form {
+.uploads__item .profile-file__delete form {
   display: flex;
   margin-top: var(--space-xs);
 }
 
-/* The Canal de notification: each field, then the button that tries it and what it answered */
-.canal,
-.canal form,
+/* The Notification Channel: each field, then the button that tries it and what it answered */
+.channel,
+.channel form,
 .settings,
 .settings form {
   display: grid;
   gap: var(--space-md);
   min-width: 0;
 }
-.canal h2,
+.channel h2,
 .settings h2,
 .settings h3 {
   font: 600 var(--text-md) / 1.4 var(--font-body);
 }
-.canal > p,
+.channel > p,
 .settings > p {
   color: var(--color-ink-2);
 }
-.canal form,
+.channel form,
 .settings form {
   max-width: 32rem;
 }
-.canal__field,
+.channel__field,
 .settings__field {
   display: grid;
   gap: var(--space-xs);
@@ -1101,8 +1137,8 @@ a:active {
   color: var(--color-ink-2);
   font: 500 var(--text-sm) / 1.4 var(--font-body);
 }
-.canal__field input,
-.canal__field select,
+.channel__field input,
+.channel__field select,
 .settings__field input,
 .settings__field textarea {
   min-width: 0;
@@ -1116,18 +1152,18 @@ a:active {
   color: var(--color-ink);
   font: 400 var(--text-sm) / 1.4 var(--font-outlier);
 }
-.canal__field input:focus-visible,
-.canal__field select:focus-visible,
+.channel__field input:focus-visible,
+.channel__field select:focus-visible,
 .settings__field input:focus-visible,
 .settings__field textarea:focus-visible {
   outline-color: var(--color-focus);
 }
 /* Write-only, the token never shows again: only whether one is saved (ADR-0006) */
-.parametre-field__configured {
+.parameter-field__configured {
   color: var(--color-success);
   font-weight: 600;
 }
-.canal__step,
+.channel__step,
 .settings__step {
   display: flex;
   flex-wrap: wrap;
@@ -1135,11 +1171,11 @@ a:active {
   gap: var(--space-xs) var(--space-sm);
   font-size: var(--text-sm);
 }
-.canal__step [role='status'],
+.channel__step [role='status'],
 .settings__step [role='status'] {
   color: var(--color-success);
 }
-.canal__step [role='alert'] {
+.channel__step [role='alert'] {
   flex-basis: 100%;
   color: var(--color-error);
 }
@@ -1147,12 +1183,12 @@ a:active {
   flex-basis: 100%;
   color: var(--color-error);
 }
-/* A list Paramètre, one value per line, such as the courts of appeal of a Zone */
+/* A list Parameter, one value per line, such as the courts of appeal of a Zone */
 .settings__field textarea {
   padding: var(--space-xs) var(--space-sm);
   resize: vertical;
 }
-/* Each Veille in its own frame, the new one last */
+/* Each Watch in its own frame, the new one last */
 .settings fieldset {
   display: grid;
   gap: var(--space-md);

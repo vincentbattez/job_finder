@@ -1,17 +1,17 @@
 import type { Actions } from '#/actions/index.ts';
 
-// Léa, the first Candidat: her Veille follows the attaché de justice Offres of the PEP, her Zone the
+// Léa, the first Candidate: her Watch follows the attaché de justice Postings of the PEP, her Zone the
 // courts of appeal of Douai and Amiens
-export const LEA_VEILLE = {
+export const LEA_WATCH = {
   source: 'pep',
-  parametres: { title: 'attaché de justice', courtOfAppealList: ['Douai', 'Amiens'] },
+  parameters: { title: 'attaché de justice', courtOfAppealList: ['Douai', 'Amiens'] },
 };
 
-// The identifier the front gives her first Veille
-export const LEA_VEILLE_ID = 'lea-1';
+// The identifier the front gives her first Watch
+export const LEA_WATCH_ID = 'lea-1';
 
-// As from the front: the Candidat, then her Veille
-export async function createLea(actions: Actions, veille = LEA_VEILLE): Promise<void> {
-  await actions.createCandidat({ id: 'lea', name: 'Léa' });
-  await actions.saveVeille({ candidatId: 'lea', ...veille });
+// As from the front: the Candidate, then her Watch
+export async function createLea(actions: Actions, watch = LEA_WATCH): Promise<void> {
+  await actions.createCandidate({ id: 'lea', name: 'Léa' });
+  await actions.saveWatch({ candidateId: 'lea', ...watch });
 }

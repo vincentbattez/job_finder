@@ -13,17 +13,19 @@ import { createRecordedFetch } from './recorded-http.ts';
 // Fills the data folder of the front's e2e tests, which playwright.config.ts names in
 // JF_DATA_DIRECTORY, through the actions and with the fakes of the external boundaries: the HTTP of
 // the PEP Source recorded on 2026-10-29, the fake launch of Claude and the fake Home Assistant that
-// playwright.config.ts starts first. Léa follows the attaché de justice Offres, and the Béthune
-// Offre 2026-2445600 has two Recherches, the first one retenue, and a Lettre; the Melun Offres, past their Date limite, are
-// Postulée, Archivée and À traiter; Camille has no Veille, hence no Offre. The tests
-// that change data work on Offres of their own: Bastia 2026-2426147 (a Recherche and a Lettre to
-// correct), Versailles 2026-2409178 (two Recherches), Rennes 2026-2420931 (a Recherche, ready for
-// its Lettre) and Narbonne 2026-2412591 (a Recherche en échec). Sacha, Noé, Inès, Malo and Rose, without
-// Veille either, each have their Profil changed by one e2e test only, which writes it first; Sacha
-// also has the Consignes the e2e tests change. Léa, Camille and Sacha have their Canal de notification
-// through the fake Home Assistant; Yanis and Zoé each have theirs changed by one e2e test only. Léa's Offre
-// 2026-2409247 has a Recherche made with the default Consignes, then one made with hers. Jade, without
-// Veille, has hers created, changed and deleted by one e2e test only.
+// playwright.config.ts starts first. Léa follows the attaché de justice Postings, and the Béthune
+// Posting 2026-2445600 has two Research, the first one chosen, and a Letter; the Melun Postings, past their Deadline, are
+// Applied, Archived and To Apply; Camille has no Watch, hence no Posting. The tests
+// that change data work on Postings of their own: Bastia 2026-2426147 (a Research and a Letter to
+// correct), Versailles 2026-2409178 (two Research), Rennes 2026-2420931 (a Research, ready for
+// its Letter) and Narbonne 2026-2412591 (a failed Research). Sacha, Noé, Inès, Malo and Rose, without
+// Watch either, each have their Profile changed by one e2e test only, which writes it first; Sacha
+// also has the Instructions the e2e tests change. Léa, Camille and Sacha have their Notification Channel
+// through the fake Home Assistant; Yanis and Zoé each have theirs changed by one e2e test only. Léa's Posting
+// 2026-2409247 has a Research made with the default Instructions, then one made with hers. Jade, without
+// Watch, has hers created, changed and deleted by one e2e test only. Hugo, without Watch, gets the
+// Postings that e2e/import.test.ts imports, so that Léa's list and map stay as seeded. Nina, without
+// Watch, has her locale switched by e2e/locale-switcher.test.ts only.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 // The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
 if (!dataDirectory.startsWith(tmpdir())) {
@@ -34,11 +36,11 @@ const BASTIA_REFERENCE = '2026-2426147';
 const VERSAILLES_REFERENCE = '2026-2409178';
 const RENNES_REFERENCE = '2026-2420931';
 const NARBONNE_REFERENCE = '2026-2412591';
-const CONSIGNES_REFERENCE = '2026-2409247';
+const INSTRUCTIONS_REFERENCE = '2026-2409247';
 // Where playwright.config.ts started the fake Home Assistant
 const FAKE_HOME_ASSISTANT_URL = process.env.FAKE_HOME_ASSISTANT_URL ?? '';
-// Without a Veille, beside Léa (test/lea.ts)
-const OTHER_CANDIDAT_LIST = [
+// Without a Watch, beside Léa (test/lea.ts)
+const OTHER_CANDIDATE_LIST = [
   { id: 'camille', name: 'Camille' },
   { id: 'sacha', name: 'Sacha' },
   { id: 'noe', name: 'Noé' },
@@ -48,9 +50,11 @@ const OTHER_CANDIDAT_LIST = [
   { id: 'zoe', name: 'Zoé' },
   { id: 'rose', name: 'Rose' },
   { id: 'jade', name: 'Jade' },
+  { id: 'hugo', name: 'Hugo' },
+  { id: 'nina', name: 'Nina' },
 ];
 
-// What the Lettre recommends for the Béthune Offre, from its mail de candidature and contacts
+// What the Letter recommends for the Béthune Posting, from its mail de candidature and contacts
 const RECIPIENTS = {
   to: { email: 'p.tj-bethune@justice.fr', source: 'applicationEmail' },
   ccList: [{ email: 'sec.p.tj-bethune@justice.fr', source: 'contact2' }],
@@ -58,15 +62,15 @@ const RECIPIENTS = {
   justification: 'Le mail de candidature est celui de la présidence ; le contact 2 demande le secrétariat en copie.',
 };
 
-function recherche(title: string): string {
+function research(title: string): string {
   return `# ${title} : le tribunal pour enfants de Béthune\n\n## Sources\n\n- https://www.justice.fr/\n`;
 }
 
-// Bastia publishes no address the Lettre could recommend as is: it falls back on a generic salutation
-const BASTIA_LETTRE = {
+// Bastia publishes no address the Letter could recommend as is: it falls back on a generic salutation
+const BASTIA_LETTER = {
   fileByName: {
-    'brouillon.md': 'Madame la Première présidente,\n\nTitulaire d’un [à compléter : diplôme et année d’obtention].\n',
-    'destinataires.json': JSON.stringify({
+    'draft.md': 'Madame la Première présidente,\n\nTitulaire d’un [à compléter : diplôme et année d’obtention].\n',
+    'recipients.json': JSON.stringify({
       to: null,
       ccList: [],
       salutation: { text: 'Madame, Monsieur,', source: null },
@@ -75,33 +79,33 @@ const BASTIA_LETTRE = {
   },
 };
 
-function rechercheRun(title: string) {
-  return { fileByName: { 'recherche.md': `# ${title}\n\n## Sources\n\n- https://www.justice.fr/\n` } };
+function researchRun(title: string) {
+  return { fileByName: { 'research.md': `# ${title}\n\n## Sources\n\n- https://www.justice.fr/\n` } };
 }
 
-// What the fake Claude writes for each Version, by its Offre, Artefact and number, whatever the
+// What the fake Claude writes for each Version, by its Posting, Artifact and number, whatever the
 // order the jobs run in
 const RUN_BY_VERSION: Record<string, Parameters<typeof createFakeAiSession>[number]> = {
-  [`${BETHUNE_REFERENCE} recherche v1`]: { fileByName: { 'recherche.md': recherche('Recherche retenue') } },
-  [`${BETHUNE_REFERENCE} recherche v2`]: { fileByName: { 'recherche.md': recherche('Recherche relancée') } },
-  [`${BETHUNE_REFERENCE} lettre v1`]: {
-    fileByName: { 'brouillon.md': 'Madame la Présidente,\n', 'destinataires.json': JSON.stringify(RECIPIENTS) },
+  [`${BETHUNE_REFERENCE} research v1`]: { fileByName: { 'research.md': research('Recherche retenue') } },
+  [`${BETHUNE_REFERENCE} research v2`]: { fileByName: { 'research.md': research('Recherche relancée') } },
+  [`${BETHUNE_REFERENCE} letter v1`]: {
+    fileByName: { 'draft.md': 'Madame la Présidente,\n', 'recipients.json': JSON.stringify(RECIPIENTS) },
   },
-  [`${BASTIA_REFERENCE} recherche v1`]: rechercheRun('Recherche : la cour d’appel de Bastia'),
-  [`${BASTIA_REFERENCE} lettre v1`]: BASTIA_LETTRE,
-  [`${VERSAILLES_REFERENCE} recherche v1`]: rechercheRun('Recherche première : le pôle civil du TJ de Versailles'),
-  [`${VERSAILLES_REFERENCE} recherche v2`]: rechercheRun('Recherche relancée : le pôle civil du TJ de Versailles'),
-  [`${RENNES_REFERENCE} recherche v1`]: rechercheRun('Recherche : la JIRS du TJ de Rennes'),
-  [`${NARBONNE_REFERENCE} recherche v1`]: { isSuccess: false },
-  [`${CONSIGNES_REFERENCE} recherche v1`]: rechercheRun('Recherche par défaut : le TJ de Pontoise'),
-  [`${CONSIGNES_REFERENCE} recherche v2`]: rechercheRun('Recherche selon Léa : le TJ de Pontoise'),
+  [`${BASTIA_REFERENCE} research v1`]: researchRun('Recherche : la cour d’appel de Bastia'),
+  [`${BASTIA_REFERENCE} letter v1`]: BASTIA_LETTER,
+  [`${VERSAILLES_REFERENCE} research v1`]: researchRun('Recherche première : le pôle civil du TJ de Versailles'),
+  [`${VERSAILLES_REFERENCE} research v2`]: researchRun('Recherche relancée : le pôle civil du TJ de Versailles'),
+  [`${RENNES_REFERENCE} research v1`]: researchRun('Recherche : la JIRS du TJ de Rennes'),
+  [`${NARBONNE_REFERENCE} research v1`]: { isSuccess: false },
+  [`${INSTRUCTIONS_REFERENCE} research v1`]: researchRun('Recherche par défaut : le TJ de Pontoise'),
+  [`${INSTRUCTIONS_REFERENCE} research v2`]: researchRun('Recherche selon Léa : le TJ de Pontoise'),
 };
 
-// A session writes in <offre>/<artefact>/v<n>, the folder of its Offre starting with its reference
+// A session writes in <posting>/<artifact>/v<n>, the folder of its Posting starting with its reference
 function versionOf({ outputDirectory }: IHeadlessSession): string {
-  const artefactDirectory = path.dirname(outputDirectory);
-  const reference = path.basename(path.dirname(artefactDirectory)).slice(0, BETHUNE_REFERENCE.length);
-  return `${reference} ${path.basename(artefactDirectory)} ${path.basename(outputDirectory)}`;
+  const artifactDirectory = path.dirname(outputDirectory);
+  const reference = path.basename(path.dirname(artifactDirectory)).slice(0, BETHUNE_REFERENCE.length);
+  return `${reference} ${path.basename(artifactDirectory)} ${path.basename(outputDirectory)}`;
 }
 
 rmSync(dataDirectory, { recursive: true, force: true });
@@ -117,46 +121,72 @@ const actions = await createActions({
 });
 // Created as from the front, which the database alone now knows (ADR-0011)
 await createLea(actions);
-for (const candidat of OTHER_CANDIDAT_LIST) {
-  await actions.createCandidat(candidat);
+for (const candidate of OTHER_CANDIDATE_LIST) {
+  await actions.createCandidate(candidate);
 }
 // A notify service of the fake Home Assistant (test/fake-home-assistant.ts) for each phone
-for (const [candidatId, service] of [
+for (const [candidateId, service] of [
   ['lea', 'notify.mobile_app_iphone_de_lea'],
   ['camille', 'notify.mobile_app_pixel_de_camille'],
   ['sacha', 'notify.mobile_app_iphone_de_sacha'],
 ]) {
-  await actions.saveCanalNotification({
-    candidatId,
-    canal: 'home-assistant',
-    parametres: { url: FAKE_HOME_ASSISTANT_URL, token: FAKE_HOME_ASSISTANT_TOKEN, service },
+  await actions.saveNotificationChannel({
+    candidateId,
+    channel: 'home-assistant',
+    parameters: { url: FAKE_HOME_ASSISTANT_URL, token: FAKE_HOME_ASSISTANT_TOKEN, service },
   });
 }
 await actions.detect();
-await actions.runModule({ module: 'recherche', reference: BETHUNE_REFERENCE });
-await actions.runModule({ module: 'recherche', reference: BETHUNE_REFERENCE });
+await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
+await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
 // The worker's turn, which the e2e tests take here rather than in a worker process
 await actions.runQueuedJobs();
-await actions.retenirVersion({ reference: BETHUNE_REFERENCE, artefact: 'recherche', number: 1 });
-await actions.runModule({ module: 'lettre', reference: BETHUNE_REFERENCE });
+await actions.chooseVersion({ reference: BETHUNE_REFERENCE, artifact: 'research', number: 1 });
+await actions.runModule({ module: 'letter', reference: BETHUNE_REFERENCE });
 await actions.runQueuedJobs();
-await actions.runModule({ module: 'recherche', reference: BASTIA_REFERENCE });
-await actions.runModule({ module: 'recherche', reference: VERSAILLES_REFERENCE });
-await actions.runModule({ module: 'recherche', reference: VERSAILLES_REFERENCE });
+await actions.runModule({ module: 'research', reference: BASTIA_REFERENCE });
+await actions.runModule({ module: 'research', reference: VERSAILLES_REFERENCE });
+await actions.runModule({ module: 'research', reference: VERSAILLES_REFERENCE });
 await actions.runQueuedJobs();
-await actions.runModule({ module: 'lettre', reference: BASTIA_REFERENCE });
+await actions.runModule({ module: 'letter', reference: BASTIA_REFERENCE });
 await actions.runQueuedJobs();
-await actions.runModule({ module: 'recherche', reference: RENNES_REFERENCE });
-await actions.runModule({ module: 'recherche', reference: NARBONNE_REFERENCE });
+await actions.runModule({ module: 'research', reference: RENNES_REFERENCE });
+await actions.runModule({ module: 'research', reference: NARBONNE_REFERENCE });
 await actions.runQueuedJobs();
 
-// One Recherche with the default Consignes, one with Léa's, which she then deletes
-await actions.runModule({ module: 'recherche', reference: CONSIGNES_REFERENCE });
+// One Research with the default Instructions, one with Léa's, which she then deletes
+await actions.runModule({ module: 'research', reference: INSTRUCTIONS_REFERENCE });
 await actions.runQueuedJobs();
-await actions.saveConsignes({ candidatId: 'lea', module: 'recherche', consignes: 'Creuse la ville.\n' });
-await actions.runModule({ module: 'recherche', reference: CONSIGNES_REFERENCE });
+await actions.saveInstructions({ candidateId: 'lea', module: 'research', instructions: 'Creuse la ville.\n' });
+await actions.runModule({ module: 'research', reference: INSTRUCTIONS_REFERENCE });
 await actions.runQueuedJobs();
-await actions.deleteConsignes({ candidatId: 'lea', module: 'recherche' });
+await actions.deleteInstructions({ candidateId: 'lea', module: 'research' });
 
-await actions.changeStatut({ reference: '2026-2285305', statut: 'postulee' });
-await actions.changeStatut({ reference: '2026-2290529', statut: 'archivee' });
+await actions.changeStatus({ reference: '2026-2285305', status: 'applied' });
+await actions.changeStatus({ reference: '2026-2290529', status: 'archived' });
+
+// Emma reads the interface in English (e2e/locale.test.ts). Her one Posting, imported, keeps the name
+// of its file: the fake Claude of the seed reads none of its fields, so it has no Deadline.
+await actions.createCandidate({ id: 'emma', name: 'Emma', locale: 'en' });
+await actions.importJobDescription({
+  candidateId: 'emma',
+  fileName: 'court-clerk-lille.md',
+  markdown: '# Court clerk – Lille judicial court\n\nApply by 30 November 2026.\n',
+});
+await actions.runQueuedJobs();
+
+// Oliver reads it in English too, and has his Posting's Status changed by e2e/locale.test.ts only:
+// imported the same way, then given a Research
+await actions.createCandidate({ id: 'oliver', name: 'Oliver', locale: 'en' });
+const { posting: oliverPosting } = await actions.importJobDescription({
+  candidateId: 'oliver',
+  fileName: 'registry-officer-douai.md',
+  markdown: '# Registry officer – Douai court of appeal\n\nApply by 15 December 2026.\n',
+});
+await actions.runQueuedJobs();
+// Its reference comes from its content: versionOf names its Version from its first characters
+RUN_BY_VERSION[`${oliverPosting.reference.slice(0, BETHUNE_REFERENCE.length)} research v1`] = researchRun(
+  'Research: the Douai court of appeal',
+);
+await actions.runModule({ module: 'research', reference: oliverPosting.reference });
+await actions.runQueuedJobs();

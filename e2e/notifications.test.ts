@@ -19,7 +19,7 @@ async function readZoeNotifications(page: Page) {
   );
 }
 
-// Each test changes the Canal de notification of a Candidat of its own (test/seed-front.ts), and
+// Each test changes the Notification Channel of a Candidate of its own (test/seed-front.ts), and
 // passes whatever an earlier run left there
 async function openNotificationsOf(page: Page, name: string) {
   await page.goto('/');
@@ -35,7 +35,7 @@ async function openNotificationsOf(page: Page, name: string) {
 }
 
 // The generic form of the family, built from the descriptor of the module home-assistant (ADR-0010)
-test.describe('Canal de notification of a Candidat', () => {
+test.describe('Notification Channel of a Candidate', () => {
   test('tests, lists, saves and notifies through Home Assistant, and never sends the token back', async ({ page }) => {
     const { homeAssistantUrl, homeAssistantToken } = readFakeHomeAssistant();
     // Everything the server answers the page: its loaders and its fetchers
@@ -82,7 +82,7 @@ test.describe('Canal de notification of a Candidat', () => {
     await page.reload();
     await expect(page.locator('html')).not.toContainText(homeAssistantToken);
     expect(await page.content()).not.toContain(homeAssistantToken);
-    const loaderData = await page.request.get('/profil.data');
+    const loaderData = await page.request.get('/profile.data');
     const loaderText = await loaderData.text();
     expect(loaderText).toContain('configuredSecretList');
     expect(loaderText).not.toContain(homeAssistantToken);
@@ -102,7 +102,7 @@ test.describe('Canal de notification of a Candidat', () => {
   test('says Home Assistant refused a wrong token, and saves nothing', async ({ page }) => {
     const { homeAssistantUrl } = readFakeHomeAssistant();
     const notifications = await openNotificationsOf(page, 'Yanis');
-    // No test saves Yanis's Canal; compared to what it was, so a run cut short leaves nothing to undo
+    // No test saves Yanis's Channel; compared to what it was, so a run cut short leaves nothing to undo
     const address = notifications.getByRole('textbox', { name: 'Adresse de Home Assistant' });
     const savedAddress = await address.inputValue();
     const configuredCount = await notifications.getByText('configuré ✓').count();

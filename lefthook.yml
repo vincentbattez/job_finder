@@ -14,6 +14,9 @@ pre-commit:
             glob: '*.prisma'
             run: npx prisma format
       stage_fixed: true
+    # Everything in English; French only in the fr catalogue and the copy of the modules
+    - name: spelling
+      run: scripts/spellcheck.sh {staged_files}
     - name: typecheck
       run: npx tsc
     - name: dead-code

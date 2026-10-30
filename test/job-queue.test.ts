@@ -4,44 +4,44 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createActions } from '#/actions/index.ts';
 
-import { createDataDirectory, detectOffres } from './data-directory.ts';
+import { createDataDirectory, detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeCanalNotification } from './fake-canal-notification.ts';
+import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
-// The two Béthune Offres, both in the Zone, detected from the responses recorded on 2026-10-29
+// The two Béthune Postings, both in the Zone, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 const OTHER_REFERENCE = '2026-2445609';
-// An attaché de justice Offre outside the Zone
+// An attaché de justice Posting outside the Zone
 const OUT_OF_ZONE_REFERENCE = '2026-2215099';
 
-const RECHERCHE = { fileByName: { 'recherche.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
+const RESEARCH = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
 
 describe('the job queue', () => {
   it('queues the job of a module without launching Claude, and the worker runs it', async () => {
-    const aiSession = createFakeAiSession(RECHERCHE);
-    const { actions } = await detectOffres(aiSession);
+    const aiSession = createFakeAiSession(RESEARCH);
+    const { actions } = await detectPostings(aiSession);
 
-    const queuedJob = await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    const queuedJob = await actions.runModule({ module: 'research', reference: REFERENCE });
 
-    expect(queuedJob).toMatchObject({ module: 'recherche', state: 'queued', version: null });
+    expect(queuedJob).toMatchObject({ module: 'research', state: 'queued', version: null });
     expect(aiSession.headlessSessionList).toEqual([]);
     expect(await actions.runQueuedJobs()).toMatchObject([
       {
         id: queuedJob.id,
         state: 'done',
-        version: { artefact: 'recherche', number: 1, state: 'ready', isRetenue: true },
+        version: { artifact: 'research', number: 1, state: 'ready', isChosen: true },
       },
     ]);
     expect(aiSession.headlessSessionList).toHaveLength(1);
   });
 
   it('runs one job at a time, oldest first, even when the worker is asked twice at once', async () => {
-    const aiSession = createFakeAiSession(RECHERCHE, RECHERCHE, RECHERCHE);
-    const { actions } = await detectOffres(aiSession);
+    const aiSession = createFakeAiSession(RESEARCH, RESEARCH, RESEARCH);
+    const { actions } = await detectPostings(aiSession);
     const jobIdList: number[] = [];
     for (const reference of [REFERENCE, OTHER_REFERENCE, REFERENCE]) {
-      const job = await actions.runModule({ module: 'recherche', reference });
+      const job = await actions.runModule({ module: 'research', reference });
       jobIdList.push(job.id);
     }
 
@@ -62,8 +62,8 @@ describe('the job queue', () => {
   });
 
   it('follows a queued job until the worker has run it', async () => {
-    const { actions } = await detectOffres(createFakeAiSession(RECHERCHE));
-    const queuedJob = await actions.runModule({ module: 'recherche', reference: REFERENCE });
+    const { actions } = await detectPostings(createFakeAiSession(RESEARCH));
+    const queuedJob = await actions.runModule({ module: 'research', reference: REFERENCE });
 
     const [followedJob] = await Promise.all([actions.followJob({ jobId: queuedJob.id }), actions.runQueuedJobs()]);
 
@@ -71,23 +71,23 @@ describe('the job queue', () => {
   });
 
   it('fails a job whose run throws, and goes on with the next one', async () => {
-    const aiSession = createFakeAiSession({ errorMessage: 'Disque plein.' }, RECHERCHE);
-    const { actions } = await detectOffres(aiSession);
-    await actions.runModule({ module: 'recherche', reference: REFERENCE });
-    await actions.runModule({ module: 'recherche', reference: OTHER_REFERENCE });
+    const aiSession = createFakeAiSession({ errorMessage: 'Disque plein.' }, RESEARCH);
+    const { actions } = await detectPostings(aiSession);
+    await actions.runModule({ module: 'research', reference: REFERENCE });
+    await actions.runModule({ module: 'research', reference: OTHER_REFERENCE });
 
     const jobList = await actions.runQueuedJobs();
 
     expect(jobList).toMatchObject([
-      { offre: { reference: REFERENCE }, state: 'failed', log: 'Disque plein.', version: { state: 'failed' } },
-      { offre: { reference: OTHER_REFERENCE }, state: 'done', version: { state: 'ready' } },
+      { posting: { reference: REFERENCE }, state: 'failed', log: 'Disque plein.', version: { state: 'failed' } },
+      { posting: { reference: OTHER_REFERENCE }, state: 'done', version: { state: 'ready' } },
     ]);
   });
 
-  it('puts « en échec » the job a stopped worker left running, at its restart, and it can be launched again', async () => {
-    const aiSession = createFakeAiSession({ isInterrupted: true }, RECHERCHE);
-    const { actions, dataDirectory, notificationChannel } = await detectOffres(aiSession);
-    const interruptedJob = await actions.runModule({ module: 'recherche', reference: REFERENCE });
+  it('fails the job a stopped worker left running, at its restart, and it can be launched again', async () => {
+    const aiSession = createFakeAiSession({ isInterrupted: true }, RESEARCH);
+    const { actions, dataDirectory, notificationChannel } = await detectPostings(aiSession);
+    const interruptedJob = await actions.runModule({ module: 'research', reference: REFERENCE });
     void actions.runQueuedJobs();
     await vi.waitFor(() => {
       expect(aiSession.headlessSessionList).toHaveLength(1);
@@ -96,34 +96,34 @@ describe('the job queue', () => {
     const restartedWorker = await createActions({
       dataDirectory,
       aiSession,
-      canalNotificationList: notificationChannel.canalNotificationList,
+      notificationChannelList: notificationChannel.notificationChannelList,
     });
     const failedJobList = await restartedWorker.failInterruptedJobs();
-    await restartedWorker.runModule({ module: 'recherche', reference: REFERENCE });
+    await restartedWorker.runModule({ module: 'research', reference: REFERENCE });
     await restartedWorker.runQueuedJobs();
 
     expect(failedJobList).toMatchObject([{ id: interruptedJob.id, state: 'failed', version: { number: 1 } }]);
     expect(failedJobList[0]?.log).toMatch(/worker s'est arrêté/);
-    const versionList = await restartedWorker.listVersions({ reference: REFERENCE, artefact: 'recherche' });
-    expect(versionList.map(({ number, state, isRetenue }) => ({ number, state, isRetenue }))).toEqual([
-      { number: 1, state: 'failed', isRetenue: false },
-      { number: 2, state: 'ready', isRetenue: true },
+    const versionList = await restartedWorker.listVersions({ reference: REFERENCE, artifact: 'research' });
+    expect(versionList.map(({ number, state, isChosen }) => ({ number, state, isChosen }))).toEqual([
+      { number: 1, state: 'failed', isChosen: false },
+      { number: 2, state: 'ready', isChosen: true },
     ]);
   });
 });
 
-describe('the Recherche of a new Offre in the Zone', () => {
-  it('is queued by the Détection, and only for the new Offres in the Zone', async () => {
+describe('the Research of a new Posting in the Zone', () => {
+  it('is queued by the Detection, and only for the new Postings in the Zone', async () => {
     const dataDirectory = createDataDirectory();
-    const aiSession = createFakeAiSession(RECHERCHE, RECHERCHE);
+    const aiSession = createFakeAiSession(RESEARCH, RESEARCH);
     const feed = feedWithout([REFERENCE, OTHER_REFERENCE, OUT_OF_ZONE_REFERENCE]);
     const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feed } }).fetch;
-    const notificationChannel = createFakeCanalNotification();
+    const notificationChannel = createFakeNotificationChannel();
     const earlierActions = await createActions({
       dataDirectory,
       aiSession,
       fetch: earlierFetch,
-      canalNotificationList: notificationChannel.canalNotificationList,
+      notificationChannelList: notificationChannel.notificationChannelList,
     });
     await notificationChannel.saveFor(earlierActions);
     await earlierActions.detect();
@@ -131,22 +131,22 @@ describe('the Recherche of a new Offre in the Zone', () => {
       dataDirectory,
       aiSession,
       fetch: createRecordedFetch().fetch,
-      canalNotificationList: notificationChannel.canalNotificationList,
+      notificationChannelList: notificationChannel.notificationChannelList,
     });
 
     await actions.detect();
 
     const jobList = await actions.runQueuedJobs();
-    const queuedList = jobList.map((job) => `${job.module} ${'offre' in job ? job.offre.reference : job.piece}`);
+    const queuedList = jobList.map((job) => `${job.module} ${'posting' in job ? job.posting.reference : job.upload}`);
     expect(queuedList.toSorted((left, right) => left.localeCompare(right))).toEqual([
-      `recherche ${REFERENCE}`,
-      `recherche ${OTHER_REFERENCE}`,
+      `research ${REFERENCE}`,
+      `research ${OTHER_REFERENCE}`,
     ]);
   });
 
-  it('is not queued on the first launch, which imports the Offres already online', async () => {
+  it('is not queued on the first launch, which imports the Postings already online', async () => {
     const aiSession = createFakeAiSession();
-    const { actions } = await detectOffres(aiSession);
+    const { actions } = await detectPostings(aiSession);
 
     expect(await actions.runQueuedJobs()).toEqual([]);
     expect(aiSession.headlessSessionList).toEqual([]);

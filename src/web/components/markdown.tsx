@@ -8,7 +8,7 @@ const DEMOTED_HEADING_BY_HEADING: Components = { h1: 'h3', h2: 'h4', h3: 'h5', h
 
 const REHYPE_PLUGIN_LIST = [highlightMarkers];
 
-// react-markdown builds React elements and skips raw HTML, so an Artefact cannot inject markup
+// react-markdown builds React elements and skips raw HTML, so an Artifact cannot inject markup
 export function Markdown({ markdown }: Readonly<{ markdown: string }>) {
   return (
     <div className="prose">

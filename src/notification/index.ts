@@ -1,140 +1,173 @@
 import type { z } from 'zod/v4';
 
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import {
-  CANAL_NOTIFICATION_MODULE_SCHEMA,
-  type CanalNotificationModule,
-  type Offre,
-  type ParametreChoice,
-  type Parametres,
+  NOTIFICATION_CHANNEL_MODULE_SCHEMA,
+  type Locale,
+  type NotificationChannelModule,
+  type ParameterChoice,
+  type Parameters,
+  type Posting,
 } from '#/domain/index.ts';
-import { declareParametres, labelOf, type ParametreShape, type ParametresOf } from '#/parametre/index.ts';
+import { declareParameters, labelOf, type ParameterShape, type ParametersOf } from '#/parameter/index.ts';
 
-// The contract of the family of the Canaux de notification: what each module of
+// The contract of the family of the Notification Channels: what each module of
 // src/modules/notification-<nom>/ declares, and what the rest of the application knows of them (ADR-0010)
 
-// What the Candidat reads on their phone
+// What the Candidate reads on their phone
 export interface INotification {
   title: string;
   message: string;
 }
 
-// What the Candidat typed, each Paramètre perhaps missing
-type TrialOf<TShape extends ParametreShape> = z.output<
+// A notification written once the locale of the Candidate it goes to is known
+export type NotificationComposer = (locale: Locale) => INotification;
+
+// What the Candidate typed, each Parameter perhaps missing
+type TrialOf<TShape extends ParameterShape> = z.output<
   z.ZodObject<{ -readonly [TName in keyof TShape]: z.ZodOptional<TShape[TName]> }>
 >;
 
-type ChoiceLister<TShape extends ParametreShape> = (parametres: TrialOf<TShape>) => Promise<ParametreChoice[]>;
+type ChoiceLister<TShape extends ParameterShape> = (
+  parameters: TrialOf<TShape>,
+  locale: Locale,
+) => Promise<ParameterChoice[]>;
 
-// What a module of the family exports, through defineCanalNotification. Testing the Canal and
-// listing the choices of a Paramètre try what the Candidat typed, so each Paramètre may be missing.
-interface ICanalNotificationDefinition<TShape extends ParametreShape> {
+// What a module of the family exports, through defineNotificationChannel. Testing the Channel and
+// listing the choices of a Parameter try what the Candidate typed, so each Parameter may be missing.
+// Each operation gets the locale of the Candidate, in which its failures speak.
+interface INotificationChannelDefinition<TShape extends ParameterShape> {
   id: string;
   name: string;
-  parametreSchema: z.ZodObject<TShape>;
-  send: (parametres: ParametresOf<TShape>, notification: INotification) => Promise<void>;
-  check?: (parametres: TrialOf<TShape>) => Promise<void>;
-  listChoicesByParametre?: Partial<Record<keyof TShape, ChoiceLister<TShape>>>;
+  parameterSchema: z.ZodObject<TShape>;
+  send: (parameters: ParametersOf<TShape>, notification: INotification, locale: Locale) => Promise<void>;
+  check?: (parameters: TrialOf<TShape>, locale: Locale) => Promise<void>;
+  listChoicesByParameter?: Partial<Record<keyof TShape, ChoiceLister<TShape>>>;
 }
 
-// A module as the actions use it, whatever its Paramètres: each operation parses them with the
+// A module as the actions use it, whatever its Parameters: each operation parses them with the
 // module's own schema, since the database keeps them as JSON (ADR-0010)
-export interface ICanalNotification {
-  description: CanalNotificationModule;
-  parseParametres(rawParametres: unknown): Parametres;
-  send(rawParametres: unknown, notification: INotification): Promise<void>;
-  check(rawParametres: unknown): Promise<void>;
-  listChoices(parametreName: string, rawParametres: unknown): Promise<ParametreChoice[]>;
+export interface INotificationChannel {
+  description: NotificationChannelModule;
+  parseParameters(rawParameters: unknown, locale: Locale): Parameters;
+  send(rawParameters: unknown, notification: INotification, locale: Locale): Promise<void>;
+  check(rawParameters: unknown, locale: Locale): Promise<void>;
+  listChoices(parameterName: string, rawParameters: unknown, locale: Locale): Promise<ParameterChoice[]>;
 }
 
-export function defineCanalNotification<TShape extends ParametreShape>(
-  definition: ICanalNotificationDefinition<TShape>,
-): ICanalNotification {
-  const { id, name, parametreSchema, send, check, listChoicesByParametre = {} } = definition;
-  const parametres = declareParametres(name, parametreSchema, Object.keys(listChoicesByParametre));
-  const description = CANAL_NOTIFICATION_MODULE_SCHEMA.parse({
+function tOf(locale: Locale) {
+  return tFor(locale, 'notification');
+}
+
+export function defineNotificationChannel<TShape extends ParameterShape>(
+  definition: INotificationChannelDefinition<TShape>,
+): INotificationChannel {
+  const { id, name, parameterSchema, send, check, listChoicesByParameter = {} } = definition;
+  const parameters = declareParameters(name, parameterSchema, Object.keys(listChoicesByParameter));
+  const description = NOTIFICATION_CHANNEL_MODULE_SCHEMA.parse({
     id,
     name,
-    parametreList: parametres.parametreList,
+    parameterList: parameters.parameterList,
     isTestable: check !== undefined,
   });
-  const composeMessage = (labelList: string) =>
-    `Le Canal de notification ${name} est incomplet : renseigner ${labelList} dans la section Notifications du Profil.`;
+  const composeMessage = (locale: Locale) => (labelList: string[]) => {
+    const t = tOf(locale);
+    const labels = labelList.map((text) => t('quote', { text })).join(', ');
+    return t('incompleteChannel', { channelName: name, labels });
+  };
 
   return {
     description,
-    parseParametres: (rawParametres) => parametres.parseToSave(rawParametres, composeMessage),
-    send: (rawParametres, notification) => send(parametres.parse(rawParametres, composeMessage), notification),
-    async check(rawParametres) {
+    parseParameters: (rawParameters, locale) => parameters.parseToSave(rawParameters, locale, composeMessage(locale)),
+    send: (rawParameters, notification, locale) =>
+      send(parameters.parse(rawParameters, locale, composeMessage(locale)), notification, locale),
+    async check(rawParameters, locale) {
       if (check === undefined) {
-        throw new Error(`Le Canal de notification ${name} ne se teste pas : envoyer une notification de test.`);
+        throw new Error(tOf(locale)('untestableChannel', { channelName: name }));
       }
-      await check(parametres.parseTrial(rawParametres, composeMessage));
+      await check(parameters.parseTrial(rawParameters, locale, composeMessage(locale)), locale);
     },
-    async listChoices(parametreName, rawParametres) {
-      const listChoices = Object.entries<ChoiceLister<TShape> | undefined>(listChoicesByParametre).find(
-        ([candidate]) => candidate === parametreName,
+    async listChoices(parameterName, rawParameters, locale) {
+      const listChoices = Object.entries<ChoiceLister<TShape> | undefined>(listChoicesByParameter).find(
+        ([key]) => key === parameterName,
       )?.[1];
       if (listChoices === undefined) {
         throw new Error(
-          `Le Paramètre ${labelOf(description.parametreList, parametreName)} du Canal ${name} n'a pas de choix à lister.`,
+          tOf(locale)('noChoices', {
+            parameterLabel: labelOf(description.parameterList, parameterName, locale),
+            channelName: name,
+          }),
         );
       }
-      return listChoices(parametres.parseTrial(rawParametres, composeMessage));
+      return listChoices(parameters.parseTrial(rawParameters, locale, composeMessage(locale)), locale);
     },
   };
 }
 
-// The Source gives the Date limite as a day, at midnight UTC
-const DATE_LIMITE_FORMAT = new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC' });
-
-// The juridiction of an Offre is its workplace, such as « Tribunal Judiciaire de Béthune »
-function juridictionOf({ workplace }: Offre): string {
-  return workplace ?? 'Juridiction non précisée';
+// The jurisdiction of a Posting is its workplace, such as « Tribunal Judiciaire de Béthune »
+function jurisdictionOf({ workplace }: Posting, locale: Locale): string {
+  return workplace ?? tOf(locale)('missingJurisdiction');
 }
 
-function dateLimiteOf({ dateLimite }: Offre): string {
-  return `Date limite : ${dateLimite === null ? 'non précisée' : DATE_LIMITE_FORMAT.format(dateLimite)}`;
+// The Deadline line, the Source giving none for some Postings
+function deadlineOf({ deadline }: Posting, locale: Locale): string {
+  const t = tOf(locale);
+  return deadline === null ? t('noDeadline') : t('deadline', { deadline });
 }
 
-// One composer per notified event, whatever the Canal
-export function composeNouvelleOffreNotification(offre: Offre): INotification {
-  return {
-    title: 'Nouvelle Offre dans la Zone',
-    message: [offre.title, juridictionOf(offre), dateLimiteOf(offre)].join('\n'),
+// One composer per notified event, whatever the Channel
+export function composeNewPostingNotification(posting: Posting): NotificationComposer {
+  return (locale) => {
+    return {
+      title: tOf(locale)('newPostingTitle'),
+      message: [posting.title, jurisdictionOf(posting, locale), deadlineOf(posting, locale)].join('\n'),
+    };
   };
 }
 
-// A Republication in the Zone, whose Recherche starts from that of the Offre it publishes again
-export function composeRepublicationNotification(offre: Offre, republishedOffre: Offre): INotification {
-  return {
-    title: 'Republication dans la Zone',
-    message: [
-      offre.title,
-      juridictionOf(offre),
-      `Republication de l'Offre ${republishedOffre.reference} : sa Recherche part de celle de cette Offre`,
-      dateLimiteOf(offre),
-    ].join('\n'),
+// A Repost in the Zone, whose Research starts from that of the Posting it publishes again
+export function composeRepostNotification(posting: Posting, repostedPosting: Posting): NotificationComposer {
+  return (locale) => {
+    const t = tOf(locale);
+    return {
+      title: t('repostTitle'),
+      message: [
+        posting.title,
+        jurisdictionOf(posting, locale),
+        t('repostLine', { repostedReference: repostedPosting.reference }),
+        deadlineOf(posting, locale),
+      ].join('\n'),
+    };
   };
 }
 
-// The Candidat already applied to the Offre published again: they decide whether to apply again
-export function composeRepublicationPostuleeNotification(offre: Offre, republishedOffre: Offre): INotification {
-  return {
-    title: "Republication d'une Offre Postulée",
-    message: [
-      offre.title,
-      juridictionOf(offre),
-      `Republication de l'Offre ${republishedOffre.reference}, Postulée : aucune Recherche lancée`,
-      dateLimiteOf(offre),
-    ].join('\n'),
+// The Candidate already applied to the Posting published again: they decide whether to apply again
+export function composeRepostAppliedNotification(posting: Posting, repostedPosting: Posting): NotificationComposer {
+  return (locale) => {
+    const t = tOf(locale);
+    return {
+      title: t('repostAppliedTitle'),
+      message: [
+        posting.title,
+        jurisdictionOf(posting, locale),
+        t('repostAppliedLine', { repostedReference: repostedPosting.reference }),
+        deadlineOf(posting, locale),
+      ].join('\n'),
+    };
   };
 }
 
-// What the Candidat receives when they try their Canal de notification
-export function composeTestNotification(candidatName: string): INotification {
-  return { title: 'Notification de test', message: `Le Canal de notification de ${candidatName} fonctionne.` };
+// What the Candidate receives when they try their Notification Channel
+export function composeTestNotification(candidateName: string): NotificationComposer {
+  return (locale) => {
+    const t = tOf(locale);
+    return { title: t('testTitle'), message: t('testMessage', { candidateName }) };
+  };
 }
 
-export function composeRecherchePreteNotification(offre: Offre): INotification {
-  return { title: 'Recherche prête', message: [offre.title, juridictionOf(offre)].join('\n') };
+export function composeResearchReadyNotification(posting: Posting): NotificationComposer {
+  return (locale) => ({
+    title: tOf(locale)('researchReadyTitle'),
+    message: [posting.title, jurisdictionOf(posting, locale)].join('\n'),
+  });
 }

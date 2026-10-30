@@ -1,11 +1,13 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { PARAMETRES_SCHEMA } from '#/domain/index.ts';
+import { DEFAULT_LOCALE } from '#/domain/catalogue/i18n.ts';
+import { ERROR } from '#/domain/error.ts';
+import { LOCALE_SCHEMA, PARAMETERS_SCHEMA } from '#/domain/index.ts';
 
-// The file where an older jf read the Candidats, their Veilles and the Délai par défaut. The database
+// The file where an older jf read the Candidates, their Watches and the Default Deadline Period. The database
 // holds them now, written by the front: the file is imported once, at the first launch of a database
 // that has no settings yet, then never read again (ADR-0011). The only file of src/ that names it
 // (test/architecture.test.ts).
@@ -13,27 +15,28 @@ const CONFIG_FILE_NAME = 'config.json';
 
 const SLUG_SCHEMA = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
-// Only the Source a Veille follows knows its Paramètres: the Détection parses them (ADR-0010). A
+// Only the Source a Watch follows knows its Parameters: the Detection parses them (ADR-0010). A
 // config written before the Sources became a family split them into criteria and zone.
-const VEILLE_SCHEMA = z.union([
-  z.strictObject({ id: SLUG_SCHEMA, source: z.string().min(1), parametres: PARAMETRES_SCHEMA }),
+const WATCH_SCHEMA = z.union([
+  z.strictObject({ id: SLUG_SCHEMA, source: z.string().min(1), parameters: PARAMETERS_SCHEMA }),
   z
-    .strictObject({ id: SLUG_SCHEMA, source: z.string().min(1), criteria: PARAMETRES_SCHEMA, zone: PARAMETRES_SCHEMA })
-    .transform(({ criteria, zone, ...veille }) => ({
-      ...veille,
-      parametres: PARAMETRES_SCHEMA.parse({ ...criteria, ...zone }),
+    .strictObject({ id: SLUG_SCHEMA, source: z.string().min(1), criteria: PARAMETERS_SCHEMA, zone: PARAMETERS_SCHEMA })
+    .transform(({ criteria, zone, ...watch }) => ({
+      ...watch,
+      parameters: PARAMETERS_SCHEMA.parse({ ...criteria, ...zone }),
     })),
 ]);
 
-const CANDIDAT_SCHEMA = z.strictObject({
+const CANDIDATE_SCHEMA = z.strictObject({
   id: SLUG_SCHEMA,
   name: z.string().min(1),
-  veilleList: z.array(VEILLE_SCHEMA),
+  locale: LOCALE_SCHEMA.default(DEFAULT_LOCALE),
+  watchList: z.array(WATCH_SCHEMA),
 });
 
 const CONFIG_SCHEMA = z.strictObject({
   defaultDelayMonths: z.int().positive(),
-  candidatList: z.array(CANDIDAT_SCHEMA),
+  candidateList: z.array(CANDIDATE_SCHEMA),
 });
 
 export type Config = z.infer<typeof CONFIG_SCHEMA>;
@@ -53,9 +56,54 @@ export function readObsoleteConfig(dataDirectory: string): Config | null {
   }
   const result = CONFIG_SCHEMA.safeParse(JSON.parse(readFileSync(configPath, 'utf8')));
   if (!result.success) {
-    throw new Error(
-      `Config invalide : ${configPath}\n${z.prettifyError(result.error)}\nLa corriger pour qu'elle soit importée en base, ou la supprimer : les Candidats et leurs Veilles se règlent désormais dans le front.`,
-    );
+    throw ERROR.configInvalid(configPath, z.prettifyError(result.error));
   }
   return result.data;
+}
+
+// Each French key of the config and its English name, wherever it sits in the file (#65)
+const CONFIG_KEY_RENAME_LIST = [
+  { from: 'candidatList', to: 'candidateList' },
+  { from: 'veilleList', to: 'watchList' },
+  { from: 'parametres', to: 'parameters' },
+];
+
+function renameKeys(value: unknown, configPath: string): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item: unknown) => renameKeys(item, configPath));
+  }
+  if (typeof value !== 'object' || value === null) {
+    return value;
+  }
+  const entryList = Object.entries(value);
+  for (const { from, to } of CONFIG_KEY_RENAME_LIST) {
+    if (entryList.some(([key]) => key === from) && entryList.some(([key]) => key === to)) {
+      throw ERROR.configKeysMixed(configPath, from, to);
+    }
+  }
+  return Object.fromEntries(
+    entryList.map(([key, item]) => [
+      CONFIG_KEY_RENAME_LIST.find(({ from }) => from === key)?.to ?? key,
+      renameKeys(item, configPath),
+    ]),
+  );
+}
+
+// The config an older jf left keeps its French keys until the first launch of this one, which
+// rewrites them in place, once: the file stays untouched when they are already English
+export function migrateObsoleteConfig(dataDirectory: string): void {
+  const configPath = findObsoleteConfig(dataDirectory);
+  if (configPath === null) {
+    return;
+  }
+  const config: unknown = JSON.parse(readFileSync(configPath, 'utf8'));
+  const migratedConfig = renameKeys(config, configPath);
+  if (JSON.stringify(migratedConfig) === JSON.stringify(config)) {
+    return;
+  }
+  // Written beside it then renamed over it: another process opening the workspace at the same time
+  // reads the old file or the new one, never half of it
+  const temporaryPath = `${configPath}.${String(process.pid)}.tmp`;
+  writeFileSync(temporaryPath, `${JSON.stringify(migratedConfig, null, 2)}\n`);
+  renameSync(temporaryPath, configPath);
 }

@@ -1,41 +1,42 @@
 import type { DomainValue } from '#/domain/index.ts';
 
-import { createCanalNotificationActions } from './canal-notification.ts';
-import { createCandidatActions } from './candidats.ts';
-import { createConsignesActions } from './consignes.ts';
+import { createCandidateActions } from './candidates.ts';
 import { openContext, type IActionsOption } from './context.ts';
 import { createDetectActions } from './detect.ts';
 import { createEditionActions } from './edition.ts';
-import { createFaitsActions } from './faits.ts';
-import { createImportActions } from './import-fiche-de-poste.ts';
+import { createFactsActions } from './facts.ts';
+import { createImportActions } from './import-job-description.ts';
+import { createInstructionsActions } from './instructions.ts';
 import { createJobActions } from './jobs.ts';
-import { createOffreActions } from './offres.ts';
-import { createPieceActions } from './pieces.ts';
-import { createProfilActions } from './profil.ts';
-import { createStatutActions } from './statut.ts';
-import { createVeilleActions } from './veilles.ts';
+import { createNotificationChannelActions } from './notification-channel.ts';
+import { createPostingActions } from './postings.ts';
+import { createProfileActions } from './profile.ts';
+import { createStatusActions } from './status.ts';
+import { createUploadActions } from './uploads.ts';
+import { createWatchActions } from './watches.ts';
 
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
 // The CLI, the front and the worker reach nothing but the actions (ADR-0003)
 export { messageOf } from '#/text/index.ts';
+export { ARTIFACT_RENAME_LIST } from '#/domain/artifact-rename.ts';
 
 // The single entry point of every feature, so no business rule lives in the CLI or the front
 // (ADR-0003); `satisfies` holds each action to unknown input and domain output (ADR-0005)
 export async function createActions(option: IActionsOption) {
   const context = await openContext(option);
   return {
-    ...createOffreActions(context),
-    ...createCandidatActions(context),
+    ...createPostingActions(context),
+    ...createCandidateActions(context),
     ...createDetectActions(context),
-    ...createVeilleActions(context),
+    ...createWatchActions(context),
     ...createImportActions(context),
-    ...createStatutActions(context),
-    ...createProfilActions(context),
-    ...createPieceActions(context),
-    ...createCanalNotificationActions(context),
-    ...createFaitsActions(context),
-    ...createConsignesActions(context),
+    ...createStatusActions(context),
+    ...createProfileActions(context),
+    ...createUploadActions(context),
+    ...createNotificationChannelActions(context),
+    ...createFactsActions(context),
+    ...createInstructionsActions(context),
     ...createEditionActions(context),
     ...createJobActions(context),
   } satisfies Record<string, (rawInput: unknown) => Promise<void> | Promise<DomainValue | DomainValue[]>>;
