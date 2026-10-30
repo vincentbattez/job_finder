@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
 import type { Actions } from '#/actions/index.ts';
-import { useCatalogue } from '#/web/catalogue.ts';
 
 // The statuses as the actions give them
 export type Status = Awaited<ReturnType<Actions['listPostings']>>[number]['status'];
@@ -27,10 +26,10 @@ export const STATE_LIST = ['absent', 'in_progress', 'ready', 'failed'] as const;
 export type State = (typeof STATE_LIST)[number];
 
 export function StateBadge({ state }: Readonly<{ state: State }>) {
-  const { posting } = useCatalogue();
+  const { t } = useTranslation('posting');
   return (
     <span className="badge" data-state={state}>
-      {posting.stateLabelByState[state]}
+      {t(`stateLabelByState.${state}`)}
     </span>
   );
 }

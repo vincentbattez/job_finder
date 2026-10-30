@@ -5,8 +5,6 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
-import { useCatalogue } from '#/web/catalogue.ts';
-
 import { showStatus, type Status } from './badge.tsx';
 
 interface IMappedPosting {
@@ -55,8 +53,7 @@ function groupByLocation(postingList: ILocatedPosting[]): ILocatedPosting[][] {
 // A point per Posting, colored by status like its badge; a click opens its page. The map shows
 // metropolitan France, or only the overseas points when the filters leave nothing else.
 export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosting[] }>) {
-  const { t } = useTranslation();
-  const { posting: copy } = useCatalogue();
+  const { t } = useTranslation('posting');
   const containerReference = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const unlocatedCount = postingList.filter((posting) => !isLocated(posting)).length;
@@ -111,15 +108,15 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
   }, [postingList, navigate]);
 
   return (
-    <section aria-label={copy.mapLabel} className="posting-map">
+    <section aria-label={t('mapLabel')} className="posting-map">
       <div ref={containerReference} className="posting-map__canvas" />
       <ul className="posting-map__legend">
-        <li data-status="to_apply">{t('statusLabelByStatus.to_apply')}</li>
-        <li data-status="applied">{t('statusLabelByStatus.applied')}</li>
-        <li data-status="expired">{t('expired')}</li>
-        <li data-status="archived">{t('statusLabelByStatus.archived')}</li>
+        <li data-status="to_apply">{t('statusLabelByStatus.to_apply', { ns: 'common' })}</li>
+        <li data-status="applied">{t('statusLabelByStatus.applied', { ns: 'common' })}</li>
+        <li data-status="expired">{t('expired', { ns: 'common' })}</li>
+        <li data-status="archived">{t('statusLabelByStatus.archived', { ns: 'common' })}</li>
       </ul>
-      {unlocatedCount > 0 && <p className="posting-map__note">{copy.unlocatedPostings(unlocatedCount)}</p>}
+      {unlocatedCount > 0 && <p className="posting-map__note">{t('unlocatedPostings', { count: unlocatedCount })}</p>}
     </section>
   );
 }

@@ -1,6 +1,5 @@
 import { useState } from 'react';
-
-import { useCatalogue } from '#/web/catalogue.ts';
+import { useTranslation } from 'react-i18next';
 
 // Over plain http on the LAN (ADR-0002), browsers withhold the Clipboard API: a hidden field is
 // copied the way every browser still allows
@@ -36,17 +35,17 @@ function CopyButton({ text, label, copiedLabel }: Readonly<{ text: string; label
 }
 
 export function CopyCommand({ command }: Readonly<{ command: string }>) {
-  const { posting: copy } = useCatalogue();
+  const { t } = useTranslation('posting');
   return (
     <div className="command">
       <code>{command}</code>
-      <CopyButton text={command} label={copy.copy} copiedLabel={copy.copiedCommand} />
+      <CopyButton text={command} label={t('copy')} copiedLabel={t('copiedCommand')} />
     </div>
   );
 }
 
 // A document as Markdown, as it goes into a mail
 export function CopyMarkdown({ markdown }: Readonly<{ markdown: string }>) {
-  const { posting: copy } = useCatalogue();
-  return <CopyButton text={markdown} label={copy.copyMarkdown} copiedLabel={copy.copiedMarkdown} />;
+  const { t } = useTranslation('posting');
+  return <CopyButton text={markdown} label={t('copyMarkdown')} copiedLabel={t('copiedMarkdown')} />;
 }

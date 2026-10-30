@@ -4,14 +4,17 @@ import type { Locale } from '#/domain/index.ts';
 
 import { COMMON_EN } from './en/common.ts';
 import { POSTING_LIST_EN } from './en/posting-list.ts';
+import { POSTING_EN } from './en/posting.ts';
 import { COMMON_FR } from './fr/common.ts';
 import { POSTING_LIST_FR } from './fr/posting-list.ts';
+import { POSTING_FR } from './fr/posting.ts';
 
 // Every word a Candidate reads, one i18next namespace per area (ADR-0012). The areas of en/ give their
 // shape to those of fr/: a key missing on either side fails the typecheck.
 const EN = {
   common: COMMON_EN,
   postingList: POSTING_LIST_EN,
+  posting: POSTING_EN,
 };
 
 type Resources = typeof EN;
@@ -21,6 +24,7 @@ const RESOURCES_BY_LOCALE: Record<Locale, Resources> = {
   fr: {
     common: COMMON_FR,
     postingList: POSTING_LIST_FR,
+    posting: POSTING_FR,
   },
 };
 

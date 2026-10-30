@@ -1,4 +1,4 @@
-import { useCatalogue } from '#/web/catalogue.ts';
+import { useTranslation } from 'react-i18next';
 
 type ContactField = 'applicationEmail' | 'contact1' | 'contact2';
 
@@ -10,30 +10,30 @@ export interface IRecipients {
 }
 
 function Source({ field }: Readonly<{ field: ContactField | null }>) {
-  const { posting: copy } = useCatalogue();
+  const { t } = useTranslation('posting');
   // Named as on the raw contacts, so each recommendation points at the line it comes from
-  return field === null ? null : <span className="recipients__source">{copy.contactLabelByField[field]}</span>;
+  return field === null ? null : <span className="recipients__source">{t(`contactLabelByField.${field}`)}</span>;
 }
 
 // What the Chosen Letter recommends: who receives the application, who gets a copy, and how to
 // address them
 export function Recipients({ recipients }: Readonly<{ recipients: IRecipients }>) {
   const { to, ccList, salutation, justification } = recipients;
-  const { posting: copy } = useCatalogue();
+  const { t } = useTranslation('posting');
   return (
     <>
       <dl className="recipients">
         <div>
-          <dt>{copy.recipientTerm}</dt>
+          <dt>{t('recipientTerm')}</dt>
           <dd>
-            {to === null ? <span className="missing">{copy.noRecipientAddress}</span> : to.email}
+            {to === null ? <span className="missing">{t('noRecipientAddress')}</span> : to.email}
             <Source field={to?.source ?? null} />
           </dd>
         </div>
         <div>
-          <dt>{copy.ccTerm}</dt>
+          <dt>{t('ccTerm')}</dt>
           {ccList.length === 0 ? (
-            <dd className="missing">{copy.noCc}</dd>
+            <dd className="missing">{t('noCc')}</dd>
           ) : (
             ccList.map(({ email, source }) => (
               <dd key={email}>
@@ -44,7 +44,7 @@ export function Recipients({ recipients }: Readonly<{ recipients: IRecipients }>
           )}
         </div>
         <div>
-          <dt>{copy.salutationTerm}</dt>
+          <dt>{t('salutationTerm')}</dt>
           <dd>
             {salutation.text}
             <Source field={salutation.source} />

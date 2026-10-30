@@ -1,6 +1,6 @@
 import { useLoaderData, type LoaderFunctionArgs, type MetaArgs } from 'react-router';
 
-import { catalogueOf } from '#/actions/catalogue.ts';
+import { localeOf, tFor } from '#/actions/i18n.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { ArtifactVersions } from '#/web/components/artifact-versions.tsx';
@@ -17,8 +17,8 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 }
 
 export function meta({ loaderData }: MetaArgs<typeof loader>) {
-  const { posting: copy } = catalogueOf(loaderData);
-  return [{ title: copy.pageTitle(loaderData?.detail.posting.title ?? copy.unreadPosting) }];
+  const t = tFor(localeOf(loaderData), 'posting');
+  return [{ title: t('pageTitle', { postingTitle: loaderData?.detail.posting.title ?? t('unreadPosting') }) }];
 }
 
 export default function Posting() {
