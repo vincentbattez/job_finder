@@ -9,6 +9,7 @@ import { z } from 'zod/v4';
 
 import {
   CANDIDAT_SCHEMA,
+  DELAI_PAR_DEFAUT_SCHEMA,
   JOB_SCHEMA,
   OFFRE_SCHEMA,
   PROFIL_JOB_SCHEMA,
@@ -18,6 +19,7 @@ import {
   VERSION_SCHEMA,
   type Artefact,
   type Candidat,
+  type DelaiParDefaut,
   type FicheDePoste,
   type Job,
   type Lieu,
@@ -51,8 +53,8 @@ const OFFRE_INCLUDE = {
   republicationOf: LINKED_OFFRE_SELECT,
   republicationList: { ...LINKED_OFFRE_SELECT, orderBy: { reference: 'asc' } },
 } as const;
-// The single row of the settings every Candidat shares
-const SETTINGS_ID = 1;
+// The single row of the Délai par défaut every Candidat shares
+const DELAI_PAR_DEFAUT_ID = 1;
 // The Délai par défaut of a new database, that of the example config of older versions
 const DEFAULT_DELAY_MONTHS = 6;
 
@@ -103,7 +105,7 @@ export function openDatabase(databasePath: string) {
       stdio: 'pipe',
     });
   }
-  // Read at launch once the settings exist, then changed by the process that saves them (ADR-0011)
+  // Read at launch once the Délai par défaut exists, then changed by the process that saves them (ADR-0011)
   let defaultDelayMonths = DEFAULT_DELAY_MONTHS;
   // Expirée depends on the day, so every Offre read computes it rather than storing it
   const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url }) }).$extends({
@@ -171,20 +173,20 @@ export function openDatabase(databasePath: string) {
       await prisma.candidat.update({ where: { id }, data: { name } });
     },
 
-    // Whether the settings exist: from then on, the config an older jf left is never read again
-    // (ADR-0011)
-    async hasSettings(): Promise<boolean> {
-      return (await prisma.settings.count()) > 0;
+    // Whether the Délai par défaut exists: from then on, the config an older jf left is never read
+    // again (ADR-0011)
+    async hasDelaiParDefaut(): Promise<boolean> {
+      return (await prisma.delaiParDefaut.count()) > 0;
     },
 
-    // Creates the settings, from the config an older jf left when there is one: its Candidats and
-    // Veilles are added or updated, never deleted, and each Veille keeps when its Détection last went
-    // through. The row is claimed first, so a process launched at the same time imports nothing.
-    async createSettings(config: Config | null): Promise<void> {
+    // Creates the Délai par défaut, from the config an older jf left when there is one: its Candidats
+    // and Veilles are added or updated, never deleted, and each Veille keeps when its Détection last
+    // went through. The row is claimed first, so a process launched at the same time imports nothing.
+    async createDelaiParDefaut(config: Config | null): Promise<void> {
       const delayMonths = config?.defaultDelayMonths ?? DEFAULT_DELAY_MONTHS;
       await prisma.$transaction(async (transaction) => {
         const claimedCount = await transaction.$executeRaw`
-          INSERT INTO "Settings" ("id", "defaultDelayMonths") VALUES (${SETTINGS_ID}, ${delayMonths})
+          INSERT INTO "DelaiParDefaut" ("id", "months") VALUES (${DELAI_PAR_DEFAUT_ID}, ${delayMonths})
           ON CONFLICT DO NOTHING`;
         if (claimedCount === 0 || config === null) {
           return;
@@ -204,15 +206,17 @@ export function openDatabase(databasePath: string) {
     },
 
     // Also what Expirée computes with from then on, in this process
-    async readDefaultDelayMonths(): Promise<number> {
-      const settings = await prisma.settings.findUniqueOrThrow({ where: { id: SETTINGS_ID } });
-      defaultDelayMonths = z.int().positive().parse(settings.defaultDelayMonths);
-      return defaultDelayMonths;
+    async readDelaiParDefaut(): Promise<DelaiParDefaut> {
+      const delaiParDefaut = DELAI_PAR_DEFAUT_SCHEMA.parse(
+        await prisma.delaiParDefaut.findUniqueOrThrow({ where: { id: DELAI_PAR_DEFAUT_ID }, select: { months: true } }),
+      );
+      defaultDelayMonths = delaiParDefaut.months;
+      return delaiParDefaut;
     },
 
-    async saveDefaultDelayMonths(delayMonths: number): Promise<void> {
-      await prisma.settings.update({ where: { id: SETTINGS_ID }, data: { defaultDelayMonths: delayMonths } });
-      defaultDelayMonths = delayMonths;
+    async saveDelaiParDefaut({ months }: DelaiParDefaut): Promise<void> {
+      await prisma.delaiParDefaut.update({ where: { id: DELAI_PAR_DEFAUT_ID }, data: { months } });
+      defaultDelayMonths = months;
     },
 
     // Every Veille, for the Détection, or those of a Candidat

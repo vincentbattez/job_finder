@@ -7,9 +7,9 @@ import { LEA_VEILLE } from './lea.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 // The Délai par défaut set as from the front, before the Détection
-async function detectWithDefaultDelay(defaultDelayMonths: number): Promise<Actions> {
+async function detectWithDefaultDelay(months: number): Promise<Actions> {
   const actions = await createActions({ dataDirectory: createDataDirectory(), fetch: createRecordedFetch().fetch });
-  await actions.saveSettings({ defaultDelayMonths });
+  await actions.saveDelaiParDefaut({ months });
   await actions.detect();
   return actions;
 }
@@ -186,9 +186,9 @@ describe('Expirée', () => {
     const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
     await actions.detect();
 
-    await actions.saveSettings({ defaultDelayMonths: '1' });
+    await actions.saveDelaiParDefaut({ months: '1' });
 
-    expect(await actions.readSettings()).toEqual({ defaultDelayMonths: 1, obsoleteConfigPath: null });
+    expect(await actions.readDelaiParDefaut()).toEqual({ months: 1 });
     expect(await findOffre(actions, '2026-2412620')).toMatchObject({ isExpiree: true });
     expect(await findOffre(await createActions({ dataDirectory }), '2026-2412620')).toMatchObject({ isExpiree: true });
   });
@@ -196,9 +196,9 @@ describe('Expirée', () => {
   it('refuses a Délai par défaut that is not a whole number of months', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
-    await expect(actions.saveSettings({ defaultDelayMonths: '0' })).rejects.toThrow(
+    await expect(actions.saveDelaiParDefaut({ months: '0' })).rejects.toThrow(
       'Le Délai par défaut est un nombre entier de mois, au moins 1.',
     );
-    expect(await actions.readSettings()).toMatchObject({ defaultDelayMonths: 6 });
+    expect(await actions.readDelaiParDefaut()).toEqual({ months: 6 });
   });
 });

@@ -5,7 +5,11 @@ import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 
 export async function loader() {
-  return { candidatList: await ACTIONS.listCandidats(), settings: await ACTIONS.readSettings() };
+  return {
+    candidatList: await ACTIONS.listCandidats(),
+    delaiParDefaut: await ACTIONS.readDelaiParDefaut(),
+    obsoleteConfig: await ACTIONS.findObsoleteConfig(),
+  };
 }
 
 // Any visitor of the front creates or renames a Candidat and sets the Délai par défaut; no Candidat is
@@ -26,8 +30,8 @@ export async function action({ request }: ActionFunctionArgs) {
         await ACTIONS.renameCandidat({ candidatId, name: formData.get('name') });
         break;
       }
-      case 'settings': {
-        await ACTIONS.saveSettings({ defaultDelayMonths: formData.get('defaultDelayMonths') });
+      case 'delai-par-defaut': {
+        await ACTIONS.saveDelaiParDefaut({ months: formData.get('months') });
         break;
       }
     }
@@ -46,7 +50,7 @@ function Refusal({ message }: Readonly<{ message: string | undefined }>) {
 }
 
 export default function Candidats() {
-  const { candidatList, settings } = useLoaderData<typeof loader>();
+  const { candidatList, delaiParDefaut, obsoleteConfig } = useLoaderData<typeof loader>();
   const refusal = useActionData<typeof action>()?.refusal;
   const refusalOf = (intent: string, candidatId?: string) =>
     refusal?.intent === intent && (candidatId === undefined || refusal.candidatId === candidatId)
@@ -63,9 +67,9 @@ export default function Candidats() {
           Les personnes qui cherchent un emploi avec l’outil. Chacun règle ses Veilles dans son Profil ; un Candidat ne
           se supprime pas.
         </p>
-        {settings.obsoleteConfigPath !== null && (
+        {obsoleteConfig.path !== null && (
           <p role="note">
-            {settings.obsoleteConfigPath} n’est plus lu : son contenu a été importé ici. Le supprimer du Mac mini.
+            {obsoleteConfig.path} n’est plus lu : son contenu a été importé ici. Le supprimer du Mac mini.
           </p>
         )}
       </div>
@@ -113,17 +117,17 @@ export default function Candidats() {
       <section className="settings" aria-labelledby={delayHeadingId}>
         <h2 id={delayHeadingId}>Délai par défaut</h2>
         <p>Une Offre publiée sans Date limite est Expirée ce nombre de mois après sa publication, pour tous.</p>
-        <Form key={settings.defaultDelayMonths} method="post">
-          <input type="hidden" name="intent" value="settings" />
+        <Form key={delaiParDefaut.months} method="post">
+          <input type="hidden" name="intent" value="delai-par-defaut" />
           <label className="settings__field">
             Délai par défaut, en mois
             <input
-              name="defaultDelayMonths"
+              name="months"
               type="number"
               min={1}
               step={1}
               required
-              defaultValue={settings.defaultDelayMonths}
+              defaultValue={delaiParDefaut.months}
               placeholder="6"
             />
           </label>
@@ -131,7 +135,7 @@ export default function Candidats() {
             <button type="submit" className="button--primary">
               Enregistrer le Délai par défaut
             </button>
-            <Refusal message={refusalOf('settings')} />
+            <Refusal message={refusalOf('delai-par-defaut')} />
           </div>
         </Form>
       </section>

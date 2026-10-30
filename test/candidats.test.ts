@@ -40,7 +40,8 @@ describe('Candidats', () => {
     const actions = await createActions({ dataDirectory: createMigratedDataDirectory() });
 
     expect(await actions.listCandidats()).toEqual([]);
-    expect(await actions.readSettings()).toEqual({ defaultDelayMonths: 6, obsoleteConfigPath: null });
+    expect(await actions.readDelaiParDefaut()).toEqual({ months: 6 });
+    expect(await actions.findObsoleteConfig()).toEqual({ path: null });
   });
 
   it('creates a Candidat from the front, with their Profil folder', async () => {
@@ -117,7 +118,8 @@ describe('the config an older jf left', () => {
       },
     ]);
     // Left in place, but no longer read: jf says so until it is deleted
-    expect(await actions.readSettings()).toEqual({ defaultDelayMonths: 4, obsoleteConfigPath: configPath });
+    expect(await actions.readDelaiParDefaut()).toEqual({ months: 4 });
+    expect(await actions.findObsoleteConfig()).toEqual({ path: configPath });
   });
 
   it('is never read again, so what the front set stays', async () => {
@@ -125,7 +127,7 @@ describe('the config an older jf left', () => {
     writeConfig(dataDirectory, OLDER_CONFIG);
     const frontActions = await createActions({ dataDirectory });
     await frontActions.renameCandidat({ candidatId: 'lea', name: 'Léa Martin' });
-    await frontActions.saveSettings({ defaultDelayMonths: 8 });
+    await frontActions.saveDelaiParDefaut({ months: 8 });
     await frontActions.deleteVeille({ candidatId: 'lea', veilleId: 'attache-de-justice-hauts-de-france' });
     writeConfig(dataDirectory, {
       ...OLDER_CONFIG,
@@ -140,10 +142,10 @@ describe('the config an older jf left', () => {
       { id: 'lea', name: 'Léa Martin' },
     ]);
     expect(await actions.listVeilles({ candidatId: 'lea' })).toEqual([]);
-    expect(await actions.readSettings()).toMatchObject({ defaultDelayMonths: 8 });
+    expect(await actions.readDelaiParDefaut()).toEqual({ months: 8 });
   });
 
-  it('is never read again once invalid either, once its settings exist', async () => {
+  it('is never read again once invalid either, once the Délai par défaut exists', async () => {
     const dataDirectory = createDataDirectory();
     writeConfig(dataDirectory, { candidatList: 'invalide' });
 
@@ -169,7 +171,7 @@ describe('the config an older jf left', () => {
     const offreList = await firstActions.listOffres({ candidatId: 'lea' });
     // As if the database had been there before the import, the Veille past its first launch
     const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'));
-    database.exec('DELETE FROM Settings');
+    database.exec('DELETE FROM DelaiParDefaut');
     database.close();
 
     const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });

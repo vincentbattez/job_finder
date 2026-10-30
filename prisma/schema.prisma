@@ -20,12 +20,12 @@ model Candidat {
   jobList           Job[]
 }
 
-// What every Candidat shares, in a single row. Created at the first launch, from the data/config.json
-// an older jf read when one is left, imported once and never read again (ADR-0011).
-model Settings {
-  id                 Int @id
-  // The Délai par défaut, in months
-  defaultDelayMonths Int
+// The Délai par défaut every Candidat shares, in a single row. Created at the first launch, from the
+// data/config.json an older jf read when one is left, imported once and never read again (ADR-0011).
+model DelaiParDefaut {
+  id     Int @id
+  // In months
+  months Int
 }
 
 // The Canal de notification a Candidat chose, saved from the front. Its Paramètres are those of its

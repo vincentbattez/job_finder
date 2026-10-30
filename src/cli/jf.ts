@@ -447,10 +447,10 @@ async function run(): Promise<void> {
   }
   const actions = await createActions({ dataDirectory: DATA_DIRECTORY });
   // Imported once by the first launch that found it, then never read again (ADR-0011)
-  const { obsoleteConfigPath } = await actions.readSettings();
-  if (obsoleteConfigPath !== null) {
+  const obsoleteConfig = await actions.findObsoleteConfig();
+  if (obsoleteConfig.path !== null) {
     process.stderr.write(
-      `${obsoleteConfigPath} n'est plus lu : son contenu est en base, et les Candidats, leurs Veilles et le Délai par défaut se règlent désormais dans le front. Le supprimer.\n`,
+      `${obsoleteConfig.path} n'est plus lu : son contenu est en base, et les Candidats, leurs Veilles et le Délai par défaut se règlent désormais dans le front. Le supprimer.\n`,
     );
   }
   await command.run(actions, argumentList, { isWaiting: values.wait === true });

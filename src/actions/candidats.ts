@@ -1,6 +1,11 @@
 import { z } from 'zod/v4';
 
-import { SETTINGS_SCHEMA, type Settings } from '#/domain/index.ts';
+import {
+  DELAI_PAR_DEFAUT_SCHEMA,
+  OBSOLETE_CONFIG_SCHEMA,
+  type DelaiParDefaut,
+  type ObsoleteConfig,
+} from '#/domain/index.ts';
 
 import type { ActionContext } from './context.ts';
 
@@ -13,7 +18,7 @@ const RENAME_INPUT_SCHEMA = z.object({ name: z.string() });
 const NEW_CANDIDAT_INPUT_SCHEMA = RENAME_INPUT_SCHEMA.extend({ id: z.string() });
 
 // A field of the front arrives as text
-const SETTINGS_INPUT_SCHEMA = z.object({ defaultDelayMonths: z.union([z.string(), z.number()]) });
+const DELAI_PAR_DEFAUT_INPUT_SCHEMA = z.object({ months: z.union([z.string(), z.number()]) });
 
 // The identifier and the name come from the front: checked before anything is saved
 function parseCandidatId(id: string): string {
@@ -33,7 +38,7 @@ function parseName(name: string): string {
   return trimmedName;
 }
 
-function parseDelayMonths(typedMonths: string | number): number {
+function parseMonths(typedMonths: string | number): number {
   const months = Number(typedMonths);
   if (!Number.isSafeInteger(months) || months < 1) {
     throw new Error('Le Délai par défaut est un nombre entier de mois, au moins 1.');
@@ -60,17 +65,19 @@ export function createCandidatActions({ workspace, findCandidat }: ActionContext
       await workspace.renameCandidat(candidat, parseName(RENAME_INPUT_SCHEMA.parse(rawInput).name));
     },
 
-    async readSettings(): Promise<Settings> {
-      return SETTINGS_SCHEMA.parse({
-        defaultDelayMonths: await workspace.readDefaultDelayMonths(),
-        obsoleteConfigPath: workspace.findObsoleteConfig(),
-      });
+    readDelaiParDefaut(): Promise<DelaiParDefaut> {
+      return workspace.readDelaiParDefaut();
     },
 
     // Expirée follows at once, here, and at their next launch in the other processes (ADR-0011)
-    async saveSettings(rawInput: unknown): Promise<void> {
-      const { defaultDelayMonths } = SETTINGS_INPUT_SCHEMA.parse(rawInput);
-      await workspace.saveDefaultDelayMonths(parseDelayMonths(defaultDelayMonths));
+    async saveDelaiParDefaut(rawInput: unknown): Promise<void> {
+      const { months } = DELAI_PAR_DEFAUT_INPUT_SCHEMA.parse(rawInput);
+      await workspace.saveDelaiParDefaut(DELAI_PAR_DEFAUT_SCHEMA.parse({ months: parseMonths(months) }));
+    },
+
+    // The config an older jf left, which jf and the Candidats page say to delete once imported
+    findObsoleteConfig(): Promise<ObsoleteConfig> {
+      return Promise.resolve(OBSOLETE_CONFIG_SCHEMA.parse({ path: workspace.findObsoleteConfig() }));
     },
   };
 }

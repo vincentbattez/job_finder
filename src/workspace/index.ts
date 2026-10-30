@@ -36,13 +36,14 @@ function slugify(text: string): string {
 
 // Safe to call on every launch; the database and the files are only read in acl/ (ADR-0005). The
 // database holds the Candidats, their Veilles and the Délai par défaut: the config an older jf left
-// is imported at the first launch of a database without settings, then never read again (ADR-0011).
+// is imported at the first launch of a database without a Délai par défaut, then never read again
+// (ADR-0011).
 export async function openWorkspace(dataDirectory: string) {
   const database = openDatabase(path.join(dataDirectory, 'job_finder.sqlite'));
-  if (!(await database.hasSettings())) {
-    await database.createSettings(readObsoleteConfig(dataDirectory));
+  if (!(await database.hasDelaiParDefaut())) {
+    await database.createDelaiParDefaut(readObsoleteConfig(dataDirectory));
   }
-  await database.readDefaultDelayMonths();
+  await database.readDelaiParDefaut();
   const candidatDirectoryOf = (candidatId: string): string => path.join(dataDirectory, 'candidats', candidatId);
   const profilDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'profil');
   // Its own subfolder, which the Markdown files of the Profil leave out

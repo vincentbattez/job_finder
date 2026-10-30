@@ -47,7 +47,7 @@ const INPUT_BY_ACTION: Record<string, object> = {
   deletePiece: PIECE,
   createCandidat: { id: 'camille', name: 'Camille' },
   renameCandidat: { name: 'Léa' },
-  saveSettings: { defaultDelayMonths: 6 },
+  saveDelaiParDefaut: { months: 6 },
   saveVeille: LEA_VEILLE,
   deleteVeille: { veilleId: LEA_VEILLE_ID },
 };

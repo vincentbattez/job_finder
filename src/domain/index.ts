@@ -6,13 +6,16 @@ export const CANDIDAT_SCHEMA = z.object({ id: z.string(), name: z.string() }).br
 
 export type Candidat = z.infer<typeof CANDIDAT_SCHEMA>;
 
-// What every Candidat shares: the Délai par défaut, in months. obsoleteConfigPath names the config an
-// older jf left, imported once and no longer read (ADR-0011), null once deleted.
-export const SETTINGS_SCHEMA = z
-  .object({ defaultDelayMonths: z.int().positive(), obsoleteConfigPath: z.string().nullable() })
-  .brand<'Domain'>();
+// The Délai par défaut every Candidat shares, in months
+export const DELAI_PAR_DEFAUT_SCHEMA = z.object({ months: z.int().positive() }).brand<'Domain'>();
 
-export type Settings = z.infer<typeof SETTINGS_SCHEMA>;
+export type DelaiParDefaut = z.infer<typeof DELAI_PAR_DEFAUT_SCHEMA>;
+
+// The config an older jf left, imported once and no longer read (ADR-0011): its path, null once
+// deleted
+export const OBSOLETE_CONFIG_SCHEMA = z.object({ path: z.string().nullable() }).brand<'Domain'>();
+
+export type ObsoleteConfig = z.infer<typeof OBSOLETE_CONFIG_SCHEMA>;
 
 // The Paramètres of a module of a family, as JSON: only the module's schema knows their shape (ADR-0010)
 export const PARAMETRES_SCHEMA = z.record(z.string(), z.json()).brand<'Domain'>();

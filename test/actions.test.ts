@@ -28,6 +28,8 @@ const CONNEXION_HOME_ASSISTANT_MIGRATION = '20261030090736_job_profil';
 // The last migration before the Sources became a family, which gathered the criteria and the Zone of
 // each Veille into its Paramètres (ADR-0010)
 const CANAL_NOTIFICATION_MIGRATION = '20261030110155_canal_notification';
+// The last migration before the row of the settings became that of the Délai par défaut
+const SETTINGS_MIGRATION = '20261030114047_settings';
 
 // The database an older jf left, migrated through a config that only knows the migrations up to the
 // given one
@@ -150,6 +152,21 @@ describe('actions', () => {
       },
     ]);
     migrated.close();
+  });
+
+  // The main checkout migrates the real data/: the Délai par défaut stays, and so does the mark that
+  // the config was imported, which is never read again
+  it('keeps the Délai par défaut of the settings, and the import over', async () => {
+    const dataDirectory = createEmptyDataDirectory();
+    const database = new DatabaseSync(writeOlderDatabase(dataDirectory, SETTINGS_MIGRATION));
+    database.exec(`INSERT INTO Settings (id, defaultDelayMonths) VALUES (1, 7);`);
+    database.close();
+    writeConfig(dataDirectory, { defaultDelayMonths: 2, candidatList: [LEA_CONFIG] });
+
+    const actions = await createActions({ dataDirectory });
+
+    expect(await actions.readDelaiParDefaut()).toEqual({ months: 7 });
+    expect(await actions.listCandidats()).toEqual([]);
   });
 
   it('refuses to list the Offres of an unknown Candidat', async () => {
