@@ -93,9 +93,9 @@ const PARAMETERS_BY_MODULE = new Map<string, () => Promise<Record<string, string
 ]);
 
 // A module of two secret Parameters, beside a plain one: the check covers each secret, not one token
-const ADDRESS_PARAMETER = parameter(z.string(), { label: 'Adresse' });
-const LOGIN_PARAMETER = parameter(z.string(), { label: 'Identifiant', isSecret: true });
-const PASSWORD_PARAMETER = parameter(z.string(), { label: 'Mot de passe', isSecret: true });
+const ADDRESS_PARAMETER = parameter(z.string(), { label: { fr: 'Adresse', en: 'Address' } });
+const LOGIN_PARAMETER = parameter(z.string(), { label: { fr: 'Identifiant', en: 'Login' }, isSecret: true });
+const PASSWORD_PARAMETER = parameter(z.string(), { label: { fr: 'Mot de passe', en: 'Password' }, isSecret: true });
 const FAKE_VAULT = defineNotificationChannel({
   id: 'coffre',
   name: 'Coffre',

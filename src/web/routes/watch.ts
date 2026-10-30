@@ -1,5 +1,6 @@
 import type { ActionFunctionArgs } from 'react-router';
 
+import { catalogueOf } from '#/actions/catalogue.ts';
 import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
@@ -9,6 +10,7 @@ import { readParameters } from '#/web/parameters.server.ts';
 // refusal in the words of the action. A list Parameter comes one value per line, as its descriptor says.
 export async function action({ request }: ActionFunctionArgs) {
   const { candidate } = await readCandidate(request);
+  const { settings } = catalogueOf(candidate);
   const formData = await request.formData();
   const sourceId = formData.get('source');
   const sourceList = await ACTIONS.listSources();
@@ -22,7 +24,7 @@ export async function action({ request }: ActionFunctionArgs) {
     switch (formData.get('intent')) {
       case 'save': {
         await ACTIONS.saveWatch(input);
-        return { message: 'Veille enregistrée.', error: null };
+        return { message: settings.watches.saved, error: null };
       }
       case 'delete': {
         await ACTIONS.deleteWatch(input);
@@ -32,5 +34,5 @@ export async function action({ request }: ActionFunctionArgs) {
   } catch (error) {
     return { message: null, error: messageOf(error) };
   }
-  return { message: null, error: 'Ce bouton ne fait rien : recharger la page.' };
+  return { message: null, error: settings.unknownIntent };
 }

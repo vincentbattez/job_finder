@@ -1,3 +1,8 @@
+import type { LoaderFunctionArgs, MetaArgs } from 'react-router';
+
+import { catalogueOf } from '#/actions/catalogue.ts';
+import { readCandidate } from '#/web/candidate.server.ts';
+import { useCatalogue } from '#/web/catalogue.ts';
 import { STATE_LIST, StateBadge, StatusBadge, type Status } from '#/web/components/badge.tsx';
 import { MarkdownEditor } from '#/web/components/markdown-editor.tsx';
 import { PostingDetail, type IPostingDetail } from '#/web/components/posting-detail.tsx';
@@ -142,22 +147,28 @@ const STATUS_SAMPLE_LIST: { status: Status; isExpired: boolean }[] = [
   { status: 'archived', isExpired: false },
 ];
 
-export function meta() {
-  return [
-    { title: 'Système de design de Job Finder' },
-    { name: 'description', content: 'Les composants du front de Job Finder, montrés avec des Offres d’exemple.' },
-  ];
+// The chrome of the page reads in the chosen Candidate's locale; the samples stay French Postings, as
+// the Sources publish them
+export function loader({ request }: LoaderFunctionArgs) {
+  return readCandidate(request);
+}
+
+export function meta({ loaderData }: MetaArgs<typeof loader>) {
+  const { design } = catalogueOf(loaderData?.candidate).settings;
+  return [{ title: design.pageTitle }, { name: 'description', content: design.description }];
 }
 
 export default function Design() {
+  const { common, settings } = useCatalogue();
+  const { design } = settings;
   return (
     <main className="container page">
       <div className="page__head">
-        <h1>Système de design</h1>
-        <p>Les composants du front, montrés avec des Offres d’exemple.</p>
+        <h1>{design.heading}</h1>
+        <p>{design.intro}</p>
       </div>
       <section aria-labelledby="statuses">
-        <h2 id="statuses">Statuts d’une Offre</h2>
+        <h2 id="statuses">{design.statuses}</h2>
         <ul className="badge-list">
           {STATUS_SAMPLE_LIST.map(({ status, isExpired }) => (
             <li key={`${status}-${String(isExpired)}`}>
@@ -167,7 +178,7 @@ export default function Design() {
         </ul>
       </section>
       <section aria-labelledby="states">
-        <h2 id="states">États d’un Artefact</h2>
+        <h2 id="states">{design.states}</h2>
         <ul className="badge-list">
           {STATE_LIST.map((state) => (
             <li key={state}>
@@ -177,20 +188,24 @@ export default function Design() {
         </ul>
       </section>
       <section aria-labelledby="postings">
-        <h2 id="postings">Liste d’Offres</h2>
+        <h2 id="postings">{design.postingList}</h2>
         <PostingList postingList={SAMPLE_POSTING_LIST} />
       </section>
       <section aria-labelledby="liste-vide">
-        <h2 id="liste-vide">Liste vide</h2>
+        <h2 id="liste-vide">{design.emptyList}</h2>
         <PostingList postingList={[]} />
       </section>
       <section aria-labelledby="posting-detail">
-        <h2 id="posting-detail">Fiche d’une Offre</h2>
+        <h2 id="posting-detail">{design.postingDetail}</h2>
         <PostingDetail detail={SAMPLE_POSTING_DETAIL} />
       </section>
       <section aria-labelledby="editeur">
-        <h2 id="editeur">Éditeur Markdown</h2>
-        <MarkdownEditor label="Lettre" defaultValue={SAMPLE_LETTER} placeholder="Madame, Monsieur," />
+        <h2 id="editeur">{design.editor}</h2>
+        <MarkdownEditor
+          label={common.artifactLabelByArtifact.letter}
+          defaultValue={SAMPLE_LETTER}
+          placeholder="Madame, Monsieur,"
+        />
       </section>
     </main>
   );

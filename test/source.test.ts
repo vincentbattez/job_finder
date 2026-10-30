@@ -31,8 +31,8 @@ describe('the Sources a Watch follows', () => {
         parameterList: [
           {
             name: 'title',
-            label: 'Titre recherché',
-            placeholder: 'attaché de justice',
+            label: { fr: 'Titre recherché', en: 'Searched title' },
+            placeholder: { fr: 'attaché de justice', en: 'attaché de justice' },
             type: 'text',
             isRequired: true,
             isSecret: false,
@@ -40,8 +40,8 @@ describe('the Sources a Watch follows', () => {
           },
           {
             name: 'courtOfAppealList',
-            label: 'Cours d’appel de la Zone',
-            placeholder: 'Douai',
+            label: { fr: 'Cours d’appel de la Zone', en: 'Courts of appeal of the Zone' },
+            placeholder: { fr: 'Douai', en: 'Douai' },
             type: 'list',
             isRequired: true,
             isSecret: false,

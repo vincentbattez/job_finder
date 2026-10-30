@@ -54,7 +54,14 @@ describe('the Notification Channel Home Assistant of a Candidate', () => {
         name: 'Home Assistant',
         isTestable: true,
         parameterList: [
-          expect.objectContaining({ name: 'url', type: 'url', isRequired: true, isSecret: false, hasChoices: false }),
+          expect.objectContaining({
+            name: 'url',
+            label: { fr: 'Adresse de Home Assistant', en: 'Home Assistant address' },
+            type: 'url',
+            isRequired: true,
+            isSecret: false,
+            hasChoices: false,
+          }),
           expect.objectContaining({ name: 'token', isRequired: true, isSecret: true, hasChoices: false }),
           expect.objectContaining({ name: 'service', isRequired: true, isSecret: false, hasChoices: true }),
         ],

@@ -7,13 +7,17 @@ import { wordListOf } from '#/text/index.ts';
 import { readFeed, readJobDescription } from './acl/talent-soft.ts';
 import { createTitleMatcher } from './title.ts';
 
-const TITLE_PARAMETER = parameter(z.string().min(1), { label: 'Titre recherché', placeholder: 'attaché de justice' });
+// The title is searched as the Source publishes it, in French, whatever the Candidate's locale
+const TITLE_PARAMETER = parameter(z.string().min(1), {
+  label: { fr: 'Titre recherché', en: 'Searched title' },
+  placeholder: { fr: 'attaché de justice', en: 'attaché de justice' },
+});
 
 // The Zone is told in courts of appeal: the Hauts-de-France are exactly those of Douai and Amiens
 // (ADR-0001)
 const COURT_OF_APPEAL_LIST_PARAMETER = parameter(z.array(z.string().min(1)).min(1), {
-  label: 'Cours d’appel de la Zone',
-  placeholder: 'Douai',
+  label: { fr: 'Cours d’appel de la Zone', en: 'Courts of appeal of the Zone' },
+  placeholder: { fr: 'Douai', en: 'Douai' },
   type: 'list',
 });
 

@@ -260,6 +260,8 @@ const VERSION_DOCUMENTS_SCHEMA = z.object({
 // What the front shows of an Artifact at a glance
 const STATE_SCHEMA = z.enum(['absent', 'in_progress', 'ready', 'failed']);
 
+export type State = z.infer<typeof STATE_SCHEMA>;
+
 const ARTIFACT_VERSIONS_SCHEMA = z.object({
   artifact: ARTIFACT_SCHEMA,
   // En cours from the moment its job is queued, then that of its latest Version; absent before any
@@ -342,13 +344,19 @@ export const VISUALIZATION_SCHEMA = z.object({ html: z.string() }).brand<'Domain
 
 export type Visualization = z.infer<typeof VISUALIZATION_SCHEMA>;
 
+// The words a module gives in each locale, from its own folder rather than from the catalogue, which
+// may not name it (ADR-0010)
+const LOCALIZED_TEXT_SCHEMA = z.object({ fr: z.string(), en: z.string() });
+
+export type LocalizedText = z.infer<typeof LOCALIZED_TEXT_SCHEMA>;
+
 // A Parameter as the front builds its field: typed in, a list of values, secret, or chosen among what
 // the module lists
 export const PARAMETER_SCHEMA = z
   .object({
     name: z.string(),
-    label: z.string(),
-    placeholder: z.string().nullable(),
+    label: LOCALIZED_TEXT_SCHEMA,
+    placeholder: LOCALIZED_TEXT_SCHEMA.nullable(),
     type: z.enum(['text', 'url', 'list']),
     isRequired: z.boolean(),
     isSecret: z.boolean(),

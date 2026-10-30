@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { useFetcher } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
+import { useCatalogue } from '#/web/catalogue.ts';
 
 import { ParameterField } from './parameter-field.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
@@ -20,6 +21,7 @@ interface IOutcome {
 function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; sourceList: SourceModule[] }>) {
   const fetcher = useFetcher<IOutcome>();
   const isHydrated = useIsHydrated();
+  const { watches } = useCatalogue().settings;
   const [sourceId, setSourceId] = useState(watch?.source ?? sourceList[0]?.id ?? '');
   const source = sourceList.find(({ id }) => id === sourceId);
   // The saved Parameters belong to the saved Source: another one starts blank
@@ -28,10 +30,10 @@ function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; source
   return (
     <fetcher.Form method="post" action="/watch">
       <fieldset>
-        <legend>{watch === null ? 'Nouvelle Veille' : `Veille ${watch.id}`}</legend>
+        <legend>{watch === null ? watches.newWatch : watches.watch(watch.id)}</legend>
         {watch !== null && <input type="hidden" name="watchId" value={watch.id} />}
         <label className="settings__field">
-          Source
+          {watches.source}
           <select
             name="source"
             value={sourceId}
@@ -57,11 +59,11 @@ function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; source
         ))}
         <div className="settings__step">
           <button type="submit" name="intent" value="save" className="button--primary" disabled={isDisabled}>
-            {watch === null ? 'Créer la Veille' : 'Enregistrer'}
+            {watch === null ? watches.create : watches.save}
           </button>
           {watch !== null && (
             <button type="submit" name="intent" value="delete" disabled={isDisabled} formNoValidate>
-              Supprimer la Veille
+              {watches.delete}
             </button>
           )}
           {fetcher.state === 'idle' && fetcher.data?.error != null && <p role="alert">{fetcher.data.error}</p>}
@@ -75,14 +77,11 @@ function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; source
 // The Watches of the Candidate, each on its Source; a deleted Watch leaves its Postings behind
 export function Watches({ watchList, sourceList }: Readonly<{ watchList: Watch[]; sourceList: SourceModule[] }>) {
   const headingId = useId();
+  const { watches } = useCatalogue().settings;
   return (
     <section className="settings" aria-labelledby={headingId}>
-      <h2 id={headingId}>Veilles</h2>
-      <p>
-        Chaque Veille cherche en permanence les nouvelles Offres d’une Source. Une Veille créée ou modifiée importe
-        d’abord les Offres déjà en ligne, sans rien lancer ; ensuite, chaque nouvelle Offre de sa Zone lance sa
-        Recherche et vous est notifiée. Supprimer une Veille garde ses Offres.
-      </p>
+      <h2 id={headingId}>{watches.heading}</h2>
+      <p>{watches.intro}</p>
       {watchList.map((watch) => (
         <WatchForm key={watch.id} watch={watch} sourceList={sourceList} />
       ))}
