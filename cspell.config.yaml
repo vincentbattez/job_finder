@@ -1,4 +1,6 @@
-# Everything is in English; French only in the fr catalogue, checked with the French dictionary
+# Everything is in English; French only in the fr catalogue, checked with the French dictionary. The
+# French copy of the modules is left out here and checked by the second pass (cspell.fr.config.yaml),
+# both run by scripts/spellcheck.sh
 version: '0.2'
 language: en-US
 import:
@@ -18,8 +20,9 @@ ignoreRegExpList:
 ignorePaths:
   - .git
   - package-lock.json
-  # Its patterns are not words
+  # Their patterns are not words
   - cspell.config.yaml
+  - cspell.fr.config.yaml
   # Recorded fixtures, kept byte for byte
   - test/fixtures/**
   # The migration history is kept as is
@@ -27,9 +30,11 @@ ignorePaths:
 overrides:
   - filename: src/domain/catalogue/fr/**
     language: en,fr
-  # A module's copy stays in its folder, in both locales (ADR-0010): its copy file, and its fr labels
+  # A module's copy stays in its folder, in both locales (ADR-0010): the string literals of its copy
+  # file and its fr labels are checked by the French pass, its identifiers and comments here
   - filename: src/modules/*/copy.ts
-    language: en,fr
+    ignoreRegExpList:
+      - "/(?<![\\p{L}\\p{N}’)\\].])(?:'(?:\\\\.|[^'\\\\\\n])*'|\"(?:\\\\.|[^\"\\\\\\n])*\"|`(?:\\\\.|[^`\\\\])*`)/gu"
   # The former French names that the data layout migration, the config import and the redirects match
   - filename:
       [src/domain/artifact-rename.ts, src/web/redirects.ts, src/workspace/layout.ts, src/workspace/acl/config.ts]

@@ -3,5 +3,5 @@
   "entry": ["src/cli/jf.ts", "test/create-lea-database.ts"],
   "project": ["src/**/*.{ts,tsx}", "test/**/*.ts", "e2e/**/*.ts", "prisma/**/*.{ts,prisma}"],
   "lefthook": true,
-  "ignoreDependencies": ["@prisma/client"]
+  "ignoreDependencies": ["@prisma/client", "cspell"]
 }

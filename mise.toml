@@ -72,8 +72,8 @@ description = "Find unused files, exports and dependencies with Knip"
 run = "knip"
 
 [tasks."lint:spelling"]
-description = "Spellcheck the repo with cspell: English, French only in the fr catalogue"
-run = "cspell lint --no-progress --no-summary --dot ."
+description = "Spellcheck the repo with cspell: English, French only in the fr catalogue and the module copy"
+run = "scripts/spellcheck.sh"
 
 [tasks."lint:migrations"]
 description = "Check that prisma/migrations matches prisma/schema.prisma"
