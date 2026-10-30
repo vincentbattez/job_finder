@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -5,8 +6,18 @@ import { defineConfig, devices } from '@playwright/test';
 
 import { FAKE_HOME_ASSISTANT_TOKEN } from './test/fake-home-assistant.ts';
 
-// Each git worktree starts its own dev server: E2E_PORT keeps parallel runs apart
-const PORT = process.env.E2E_PORT ?? '5173';
+// Each git worktree starts its own dev server: without E2E_PORT, a port derived from the checkout
+// path keeps parallel worktrees apart, and stays the same in every process that loads this config
+const PORT =
+  process.env.E2E_PORT ??
+  String(
+    20_000 +
+      (createHash('sha256')
+        .update(import.meta.dirname)
+        .digest()
+        .readUInt16BE(0) %
+        10_000),
+  );
 const BASE_URL = `http://localhost:${PORT}`;
 // The front runs on a temporary data folder, never data/: test/seed-front.ts fills it through the
 // actions with the fakes before the dev server starts
