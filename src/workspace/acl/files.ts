@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { z } from 'zod/v4';
@@ -42,4 +42,23 @@ export function readPieces(directory: string): Piece[] {
 export function writePiece(directory: string, fileName: PieceFileName, content: Uint8Array): void {
   mkdirSync(directory, { recursive: true });
   writeFileSync(path.join(directory, fileName), content);
+}
+
+export function createDirectory(directory: string): void {
+  mkdirSync(directory, { recursive: true });
+}
+
+// Its folder is created first, so a file is written wherever the workspace places it
+export function writeTextFile(filePath: string, text: string): void {
+  mkdirSync(path.dirname(filePath), { recursive: true });
+  writeFileSync(filePath, text);
+}
+
+// Throws when the file does not exist, unless it is allowed to be missing
+export function deleteFile(filePath: string, { isMissingAllowed = false } = {}): void {
+  rmSync(filePath, { force: isMissingAllowed });
+}
+
+export function moveDirectory(from: string, to: string): void {
+  renameSync(from, to);
 }

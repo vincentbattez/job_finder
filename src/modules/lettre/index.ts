@@ -1,4 +1,3 @@
-import { chmodSync, copyFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { z } from 'zod/v4';
@@ -6,6 +5,7 @@ import { z } from 'zod/v4';
 import type { IAiModule } from '#/ai-module/index.ts';
 import type { Offre, Recipients } from '#/domain/index.ts';
 
+import { copyAsReadOnlyOriginal } from './acl/files.ts';
 import { parseRecipients, readRecipients, RECIPIENTS_FILE_NAME } from './acl/recipients.ts';
 import { LETTRE_DEFAULT_CONSIGNES } from './consignes.ts';
 import { BROUILLON_FILE_NAME, composeLettrePrompt, LETTRE_FILE_NAME } from './prompt.ts';
@@ -48,9 +48,10 @@ export const LETTRE_MODULE = {
   // The Lettre starts as a copy of the Brouillon, which becomes read-only: no correction, in the
   // front or with jf edit, can reach it
   completeVersion(versionDirectory: string): void {
-    const brouillonPath = path.join(versionDirectory, BROUILLON_FILE_NAME);
-    copyFileSync(brouillonPath, path.join(versionDirectory, LETTRE_FILE_NAME));
-    chmodSync(brouillonPath, 0o444);
+    copyAsReadOnlyOriginal(
+      path.join(versionDirectory, BROUILLON_FILE_NAME),
+      path.join(versionDirectory, LETTRE_FILE_NAME),
+    );
   },
 
   readRecipients,

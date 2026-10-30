@@ -1,4 +1,3 @@
-import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import {
@@ -15,7 +14,16 @@ import { wordListOf } from '#/text/index.ts';
 
 import { loadConfig } from './acl/config.ts';
 import { openDatabase, type INewOffre } from './acl/database.ts';
-import { readMarkdownFiles, readPieces, readTextFile, writePiece } from './acl/files.ts';
+import {
+  createDirectory,
+  deleteFile,
+  moveDirectory,
+  readMarkdownFiles,
+  readPieces,
+  readTextFile,
+  writePiece,
+  writeTextFile,
+} from './acl/files.ts';
 
 function slugify(text: string): string {
   return wordListOf(text).join('-');
@@ -32,7 +40,7 @@ export async function openWorkspace(dataDirectory: string) {
   const piecesDirectoryOf = (candidatId: string): string => path.join(profilDirectoryOf(candidatId), 'pieces');
   const consignesDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'consignes');
   for (const candidat of config.candidatList) {
-    mkdirSync(profilDirectoryOf(candidat.id), { recursive: true });
+    createDirectory(profilDirectoryOf(candidat.id));
   }
 
   // Each Offre has a folder named by its reference and title, for its Fiche de poste and its
@@ -53,17 +61,24 @@ export async function openWorkspace(dataDirectory: string) {
     versionDirectoryOf,
     readTextFile,
 
+    // The folder where a job's session writes its Version
+    createVersionDirectory(offre: Offre, version: Version): string {
+      const directory = versionDirectoryOf(offre, version);
+      createDirectory(directory);
+      return directory;
+    },
+
     // The Profil is a flat folder of Markdown files
     readProfilFiles(candidatId: string) {
       return readMarkdownFiles(profilDirectoryOf(candidatId));
     },
 
     saveProfilFile(candidatId: string, fileName: ProfilFileName, markdown: string): void {
-      writeFileSync(path.join(profilDirectoryOf(candidatId), fileName), markdown);
+      writeTextFile(path.join(profilDirectoryOf(candidatId), fileName), markdown);
     },
 
     deleteProfilFile(candidatId: string, fileName: ProfilFileName): void {
-      rmSync(path.join(profilDirectoryOf(candidatId), fileName));
+      deleteFile(path.join(profilDirectoryOf(candidatId), fileName));
     },
 
     readPieces(candidatId: string) {
@@ -75,7 +90,7 @@ export async function openWorkspace(dataDirectory: string) {
     },
 
     deletePiece(candidatId: string, fileName: PieceFileName): void {
-      rmSync(path.join(piecesDirectoryOf(candidatId), fileName));
+      deleteFile(path.join(piecesDirectoryOf(candidatId), fileName));
     },
 
     // The Markdown files of a Version, such as the Brouillon and the Lettre of a Lettre Version
@@ -85,7 +100,7 @@ export async function openWorkspace(dataDirectory: string) {
 
     // A correction by the Candidat changes the Version in place, without creating another one
     writeVersionDocument(offre: Offre, version: Version, fileName: string, markdown: string): void {
-      writeFileSync(path.join(versionDirectoryOf(offre, version), fileName), markdown);
+      writeTextFile(path.join(versionDirectoryOf(offre, version), fileName), markdown);
     },
 
     // The Consignes with which a Candidat replaced the default ones of an Artefact, if any
@@ -94,26 +109,24 @@ export async function openWorkspace(dataDirectory: string) {
     },
 
     saveConsignes(candidatId: string, artefact: Artefact, consignes: string): void {
-      mkdirSync(consignesDirectoryOf(candidatId), { recursive: true });
-      writeFileSync(path.join(consignesDirectoryOf(candidatId), `${artefact}.md`), consignes);
+      writeTextFile(path.join(consignesDirectoryOf(candidatId), `${artefact}.md`), consignes);
     },
 
     deleteConsignes(candidatId: string, artefact: Artefact): void {
-      rmSync(path.join(consignesDirectoryOf(candidatId), `${artefact}.md`), { force: true });
+      deleteFile(path.join(consignesDirectoryOf(candidatId), `${artefact}.md`), { isMissingAllowed: true });
     },
 
     // The Fiche de poste is written first, so an Offre in the database always has it
     async saveOffre(newOffre: INewOffre): Promise<Offre> {
       const offreDirectory = offreDirectoryOf({ candidatId: newOffre.candidatId, ...newOffre.listedOffre });
-      mkdirSync(offreDirectory, { recursive: true });
-      writeFileSync(path.join(offreDirectory, FICHE_DE_POSTE_FILE_NAME), newOffre.ficheDePoste.markdown);
+      writeTextFile(path.join(offreDirectory, FICHE_DE_POSTE_FILE_NAME), newOffre.ficheDePoste.markdown);
       return database.createOffre(newOffre);
     },
 
     // The folder of an Offre is named after its title: it follows a new title
     async fillOffre(offre: Offre, fields: { title: string; ficheDePoste: FicheDePoste; lieu: Lieu }): Promise<Offre> {
       const filledOffre = await database.fillOffre(offre, fields);
-      renameSync(offreDirectoryOf(offre), offreDirectoryOf(filledOffre));
+      moveDirectory(offreDirectoryOf(offre), offreDirectoryOf(filledOffre));
       return filledOffre;
     },
 

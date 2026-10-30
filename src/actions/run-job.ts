@@ -1,4 +1,3 @@
-import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 
 import type { IAiModule } from '#/ai-module/index.ts';
@@ -178,8 +177,7 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
     const hasCandidatConsignes = candidatConsignes !== null;
     const version = await workspace.startJob(job, { consignes, hasCandidatConsignes, inputList });
     const offreDirectory = workspace.offreDirectoryOf(offre);
-    const outputDirectory = workspace.versionDirectoryOf(offre, version);
-    mkdirSync(outputDirectory, { recursive: true });
+    const outputDirectory = workspace.createVersionDirectory(offre, version);
     const readVersionList = inputList.map((input) => {
       const directory = workspace.versionDirectoryOf(input.offre, input.version);
       const { fileName } = AI_MODULE_BY_ARTEFACT[input.version.artefact];

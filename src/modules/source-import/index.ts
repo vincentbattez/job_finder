@@ -1,11 +1,10 @@
 import { createHash } from 'node:crypto';
-import { mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
 import { FICHE_DE_POSTE_SCHEMA, LISTED_OFFRE_SCHEMA } from '#/domain/index.ts';
 
-import { EXTRACTION_FILE_NAME, readExtraction } from './acl/extraction.ts';
+import { emptyExtractionDirectory, EXTRACTION_FILE_NAME, readExtraction } from './acl/extraction.ts';
 import { composeExtractionPrompt, EXTRACTION_REQUEST } from './prompt.ts';
 
 // The folder of the Offre where the session writes what it read
@@ -38,8 +37,7 @@ export function createImportSource(aiSession: IAiSession) {
     async extract(offreDirectory: string, ficheDePoste: string) {
       const outputDirectory = path.join(offreDirectory, EXTRACTION_DIRECTORY_NAME);
       // The extraction of an earlier run never passes for that of this one
-      rmSync(outputDirectory, { recursive: true, force: true });
-      mkdirSync(outputDirectory);
+      emptyExtractionDirectory(outputDirectory);
       const session = await aiSession.runHeadless({
         fixedPrompt: composeExtractionPrompt(path.join(EXTRACTION_DIRECTORY_NAME, EXTRACTION_FILE_NAME)),
         consignes: EXTRACTION_REQUEST,

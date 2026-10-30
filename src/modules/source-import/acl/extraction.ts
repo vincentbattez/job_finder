@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
 import { z } from 'zod/v4';
@@ -6,6 +6,11 @@ import { z } from 'zod/v4';
 import { EXTRACTION_SCHEMA, FICHE_DE_POSTE_SCHEMA, type Extraction } from '#/domain/index.ts';
 
 export const EXTRACTION_FILE_NAME = 'extraction.json';
+
+export function emptyExtractionDirectory(directory: string): void {
+  rmSync(directory, { recursive: true, force: true });
+  mkdirSync(directory);
+}
 
 // Case, spacing and apostrophes set aside, as a session may copy them otherwise
 function normalize(text: string): string {
