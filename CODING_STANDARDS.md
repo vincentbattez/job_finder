@@ -47,17 +47,20 @@ The generic rules of the code. The why of a decision is in its ADR (`docs/adr/`)
 The front's styles are one stylesheet per component, in BEM, ordered by cascade layers. `stylelint.config.ts` and the CSS part of `test/architecture.test.ts` are the reference.
 
 - **Layers.** `src/web/app.css` keeps the Hallmark stamp at its head, declares the order once, `@layer vendor, tokens, base, layout, components, utilities;`, and imports each global stylesheet into its layer, Leaflet into `vendor`. `root.tsx` imports `app.css` first, so its `@layer` comes before any other. A rule wins by its layer, never by its line or by force.
-- **Global stylesheets** sit beside the root, for what belongs to no component: `tokens.css` (palette, spacing, type and z-index scales), `base.css` (reset, HTML elements, focus, reduced motion), `layout.css` (the frame of every page), `controls.css` (the shared `.button` and form controls), `utilities.css`. A look shared by several components goes in `controls.css` or `layout.css`, never in a component's stylesheet.
-- **Component stylesheets.** A Dumb of `src/web/components/` that has styles gets a `.css` named like it, beside its `.tsx`, which alone imports it; its rules sit in `@layer components`, its `@media` rules with them. Containers and routes carry no stylesheet: a route-specific look becomes a Dumb or goes in `layout.css`.
-- **States** go through `data-*` and ARIA attributes (`[data-status]`, `[aria-current]`, `:disabled`), never a state class.
+- **Global stylesheets** sit beside the root, for what belongs to no component: `tokens.css` (palette, spacing, type and z-index scales), `base.css` (reset, HTML elements, focus, reduced motion), `layout.css` (the frame of every page), `controls.css` (the shared `.button` and the `.field` form controls, one control box for both), `utilities.css`. A look several components share is a Dumb of its own, with its stylesheet, that they render (`ButtonRow`, `WorkerTask`, `SettingsPanel`, `Deletion`, `EmptyState`), never a copy in each stylesheet nor a component layout in `controls.css`.
+- **Component stylesheets.** A Dumb of `src/web/components/` that has styles gets a `.css` named like it, beside its `.tsx`, which alone imports it; its `@media` rules sit with its rules. Containers and routes carry no stylesheet: a route-specific look becomes a Dumb or goes in `layout.css`.
+- **States** go through `data-*` and ARIA attributes (`[data-status]`, `[data-new]`, `[aria-current]`, `:disabled`), never a state class.
+- A stylesheet sits beside the root (a global one) or in `src/web/components/` (a component's), never beside a route or a container. **(CI)**
+- Every rule of a component stylesheet, `@keyframes` included, sits in `@layer components`. **(CI)**
 - A stylesheet has at most 200 lines: past that, it is split. **(CI)**
 - A component stylesheet has a same-named `.tsx` beside it that imports it, and no other file imports it. **(CI)**
 - A component stylesheet only styles its block, named like the file: `.badge`, `.badge__x`, `.badge--y` in `badge.css`. A library's class (Leaflet's) only appears in the same compound as the block, and never another component's block. **(CI)**
 - A global stylesheet never styles a component's block, even a component without a stylesheet. **(CI)**
+- A Dumb renders in its `className`s only the classes of its own block and of `controls.css` and `utilities.css`: never another component's block (render that component instead), nor the layout's classes, which belong to the routes and the root. **(CI)**
 - Only `app.css` has `@import`. **(CI)**
 - Class names are kebab-case BEM: `block`, `block__element`, `block--modifier`. **(hook)** **(CI)**
 - A color comes from a token: no hex, no named color, no color function outside `tokens.css`; `color-mix()` and relative colors over a token pass. **(hook)** **(CI)**
-- Selectors stay flat: no ID, at most three compound selectors, specificity at most 0,3,1. **(hook)** **(CI)**
+- Selectors stay flat: no ID, at most two compound selectors, specificity at most 0,2,1; a guard that must not weigh goes in `:where()`. **(hook)** **(CI)**
 - No `!important`, except in `base.css` and `utilities.css`, which must beat every layer. **(hook)** **(CI)**
 - A selector and a property are written once in a block; a base selector comes before its higher-specificity variants. **(hook)** **(CI)**
 - `stylelint-config-standard` applies too; the hook fixes what Stylelint can, then Prettier formats. **(hook)** **(CI)**

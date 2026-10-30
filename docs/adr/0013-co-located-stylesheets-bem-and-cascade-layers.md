@@ -5,7 +5,7 @@ Spec #77 split `app.css`, a single stylesheet of over 1,100 lines where every Du
 - **Global stylesheets stay beside the root.** Hallmark's sloplint groups files by folder and does not follow JS imports: tokens and base must sit beside `app.css`, which keeps the Hallmark stamp at its head.
 - **Leaflet goes in the `vendor` layer**, imported by `app.css`, not by the map component: CSS outside a layer beats every layered rule and would override the map's own rules.
 - **Containers and routes carry no stylesheet** (ADR-0008): their look comes from the Dumbs they render, the layout and the controls.
-- **States go through `data-*` and ARIA attributes**, never a state class. Shared looks (`.button`, form controls) are CSS primitives in `controls.css`, applied by `className`, not a React component.
+- **States go through `data-*` and ARIA attributes**, never a state class. The shared controls (`.button`, the `.field` form controls) are CSS primitives in `controls.css`, applied by `className`, not a React component; any other look several components share is a Dumb they render, with its own stylesheet.
 
 ## Considered Options
 
@@ -15,6 +15,6 @@ Spec #77 split `app.css`, a single stylesheet of over 1,100 lines where every Du
 
 ## Consequences
 
-- A component stylesheet only loads on the pages whose module graph imports its `.tsx`: a component that borrows another block's class looks right on one page and broken on another. The architecture test forbids it; a shared look goes in `controls.css` or `layout.css`.
+- A component stylesheet only loads on the pages whose module graph imports its `.tsx`: a component that borrows another block's class looks right on one page and broken on another. The architecture test forbids it, in the stylesheets and in the `className`s a Dumb renders; a shared look becomes a Dumb the others render.
 - Renaming a component moves its stylesheet and renames its block with it.
 - `!important` is allowed only in base and utilities (the reduced-motion reset, `[hidden]`), which must beat every layer.
