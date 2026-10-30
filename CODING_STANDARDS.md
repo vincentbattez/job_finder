@@ -4,7 +4,7 @@ Les règles génériques du code. Le pourquoi d'une décision est dans son ADR (
 
 ## Principes
 
-- **Le moins de code qui atteint le résultat.** On écrit ce que le ticket demande. Une interface (Source, canal de notification) garde une seule implémentation tant qu'une deuxième n'est pas demandée.
+- **Le moins de code qui atteint le résultat.** On écrit ce que le ticket demande. Une famille de modules interchangeables (Sources, Canaux de notification) garde un seul module tant qu'un deuxième n'est pas demandé, mais son contrat est générique dès le premier (ADR-0010).
 - **Une règle qui compte est vérifiée par la machine** : un test, le typecheck ou le lint. Une règle seulement écrite finit contournée par oubli.
 - **Idempotence.** Relancer une commande, une Détection ou un job donne le même résultat, sans doublon.
 - **Échec visible.** Une erreur arrête la commande avec un code de sortie non nul et un message en français qui dit quoi faire. Un silence veut toujours dire « rien à signaler ».
@@ -13,12 +13,17 @@ Les règles génériques du code. Le pourquoi d'une décision est dans son ADR (
 
 - **Actions.** Chaque fonctionnalité est une action de `src/actions/`. La CLI et le front relaient vers elle, sans règle métier (ADR-0003). **(CI)**
 - **Modules.** Un module vit dans son dossier de `src/modules/`, avec un seul point d'entrée et ses prompts dans des fichiers à part. Il échange avec les autres modules par les Artefacts sur disque et par la base, sans les importer (ADR-0003). **(CI)**
+- **Modules interchangeables (ADR-0010).** Quand le Candidat choisit entre plusieurs modules qui font le même travail (un Canal de notification, la Source d'une Veille), ces modules forment une famille :
+  - le contrat de la famille vit dans `src/<famille>/` ;
+  - chaque module vit dans `src/modules/<famille>-<nom>/` et exporte un descripteur : identifiant, nom affiché, Paramètres décrits par un schéma Zod (obligatoires, optionnels, secrets), opérations ;
+  - la base garde une table par famille, avec l'identifiant du module choisi et ses Paramètres en Json ; le domaine, les actions et le front ne manipulent que la famille, et le formulaire se construit à partir du descripteur ;
+  - le nom d'un module n'apparaît que dans son dossier et dans le registre `src/actions/modules.ts`. Ajouter un module, c'est un dossier et une ligne de registre, sans migration ni écran. **(CI à venir : #59)**
 - Les imports forment un graphe sans cycle. **(CI)**
 - Toute l'application vit dans `src/`.
 
 ## Anti-corruption layer (ADR-0005)
 
-- **Domaine.** Chaque concept du domaine a son schéma Zod dans `src/domain/`, terminé par `.brand<'Domain'>()`. Son type en est tiré par `z.infer`. Une énumération (`z.enum`) reste sans brand, pour que ses littéraux s'écrivent dans le code : l'objet qui la porte a le sien. Un schéma qui porte un secret, comme le jeton d'une Connexion Home Assistant, a le brand `'Secret'` : le typecheck refuse alors qu'une action le renvoie (ADR-0006).
+- **Domaine.** Chaque concept du domaine a son schéma Zod dans `src/domain/`, terminé par `.brand<'Domain'>()`. Son type en est tiré par `z.infer`. Une énumération (`z.enum`) reste sans brand, pour que ses littéraux s'écrivent dans le code : l'objet qui la porte a le sien. Un schéma qui porte un secret, comme un Paramètre secret d'un Canal de notification, a le brand `'Secret'` : le typecheck refuse alors qu'une action le renvoie (ADR-0006).
 - **ACL.** La donnée brute (base, fichiers, HTTP, sous-processus, environnement) se lit dans un dossier `acl/`. Il la parse avec un schéma du domaine et n'exporte que des types domaine. **(CI)**
 - Une action reçoit son entrée en `unknown` et la parse. Elle renvoie `void` ou des valeurs du domaine. **(CI)**
 - Une valeur du domaine s'obtient toujours par `parse`. Les assertions `as` sont refusées. **(CI)**
