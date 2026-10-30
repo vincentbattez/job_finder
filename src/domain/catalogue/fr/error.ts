@@ -12,6 +12,9 @@ export const ERROR_FR: typeof ERROR_EN = {
     "Config invalide : {{configPath}}\n{{problem}}\nLa corriger pour qu'elle soit importée en base, ou la supprimer : les Candidats et leurs Veilles se règlent désormais dans le front.",
   configKeysMixed:
     "La config {{configPath}} contient à la fois l'ancienne clé « {{frenchKey}} » et son nouveau nom « {{englishKey}} ». Ne garder que « {{englishKey}} », en y fusionnant ce que contient « {{frenchKey}} », puis relancer.",
+  detectionRunning:
+    'Une Détection est déjà en cours, lancée le {{startedAt, datetime(dateStyle: medium; timeStyle: short; timeZone: Europe/Paris)}} : attendre son verdict, puis la relancer au besoin.',
+  detectionInterrupted: 'Interrompue : la Détection s’est arrêtée avant la fin, sans verdict. La relancer.',
 
   missingJobDescription:
     "Fiche de poste introuvable pour l'Offre {{reference}} : {{filePath}}. La remettre à cet emplacement, d'où l'outil la lit.",

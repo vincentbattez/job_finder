@@ -13,7 +13,8 @@ services:
 jobs:
   # The daily Detection (ADR-0003). Run in a login shell from the repo root, where mise puts `jf` on
   # the PATH. Its output is the run's: that no Posting is new, or the new Postings. A failed
-  # Detection exits non-zero, and lpm marks the run in error and notifies.
+  # Detection exits non-zero, and lpm marks the run in error and notifies. --automation tells the
+  # front how it was started.
   detect:
     label: Detection
     emoji: 🔎
@@ -21,4 +22,4 @@ jobs:
       at: '18:00'
     duplicate: false
     run:
-      cmd: jf detect
+      cmd: jf detect --automation

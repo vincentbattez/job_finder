@@ -156,3 +156,60 @@ enum JobState {
   done
   failed
 }
+
+// A Detection, recorded as soon as it is claimed: the front follows its steps and shows its verdict,
+// whoever started it, and an unfinished one keeps a second one from running beside it (ADR-0014)
+model Detection {
+  id          Int              @id @default(autoincrement())
+  origin      DetectionOrigin
+  // The Candidate whose Watches it covers, null for every Watch
+  candidateId String?
+  startedAt   DateTime         @default(now())
+  // Touched at each step: a Detection whose process died stops holding the lock once it is stale
+  updatedAt   DateTime         @updatedAt
+  // True while it runs, null once finished: the unique index lets a single Detection run at a time,
+  // the front's and the daily one's alike
+  runningLock Boolean?         @unique
+  finishedAt  DateTime?
+  // Why it stopped, in the locale of the Candidate whose Watch failed; the default one when its process died
+  error       String?
+  watchList   DetectionWatch[]
+}
+
+enum DetectionOrigin {
+  button
+  automation
+  cli
+}
+
+// Where a Detection stands on one Watch, then what it found there. The Watch is copied, not linked:
+// a Watch deleted since keeps its history.
+model DetectionWatch {
+  id                      Int           @id @default(autoincrement())
+  detection               Detection     @relation(fields: [detectionId], references: [id], onDelete: Cascade)
+  detectionId             Int
+  watchId                 String
+  candidateId             String
+  // What the Candidate reads to tell the Watch apart, never its identifier
+  label                   String
+  step                    DetectionStep @default(waiting)
+  isFirstLaunch           Boolean
+  // How many Postings the Source listed for the Watch, once searched
+  listedCount             Int?
+  // The Job Descriptions read so far, out of those to read, once the Source is searched
+  readCount               Int           @default(0)
+  readTotal               Int?
+  // The references and titles of the new Postings, saved as they are read so a failure tells them,
+  // the near-miss ones, and the notifications not sent
+  newPostingList          Json
+  nearMissList            Json
+  notificationFailureList Json
+}
+
+enum DetectionStep {
+  waiting
+  searching
+  reading
+  notifying
+  done
+}

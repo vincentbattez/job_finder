@@ -138,6 +138,62 @@ export const DETECTION_SCHEMA = z
 
 export type Detection = z.infer<typeof DETECTION_SCHEMA>;
 
+// How a Detection was started: from the front's button, by the daily automation or by jf detect
+export const DETECTION_ORIGIN_SCHEMA = z.enum(['button', 'automation', 'cli']);
+
+export type DetectionOrigin = z.infer<typeof DETECTION_ORIGIN_SCHEMA>;
+
+// Where a Detection stands on a Watch, the generic steps of every Source; a failed Detection keeps each
+// Watch at the step it stopped at (#63)
+const DETECTION_STEP_SCHEMA = z.enum(['waiting', 'searching', 'reading', 'notifying', 'done']);
+
+const DETECTED_POSTING_SCHEMA = z.object({ reference: z.string(), title: z.string() });
+
+// A Watch as a Detection records it: its label rather than its identifier, its step, then its verdict
+const DETECTION_WATCH_SCHEMA = z
+  .object({
+    watchId: z.string(),
+    candidateId: z.string(),
+    label: z.string(),
+    step: DETECTION_STEP_SCHEMA,
+    isFirstLaunch: z.boolean(),
+    listedCount: z.int().nullable(),
+    readCount: z.int(),
+    readTotal: z.int().nullable(),
+    newPostingList: z.array(DETECTED_POSTING_SCHEMA),
+    nearMissList: z.array(DETECTED_POSTING_SCHEMA),
+    notificationFailureList: z.array(z.string()),
+  })
+  .brand<'Domain'>();
+
+export type DetectionWatch = z.infer<typeof DETECTION_WATCH_SCHEMA>;
+
+// A Detection as recorded from its start, which the front follows whoever started it (#63)
+export const RECORDED_DETECTION_SCHEMA = z
+  .object({
+    id: z.int(),
+    origin: DETECTION_ORIGIN_SCHEMA,
+    startedAt: z.date(),
+    finishedAt: z.date().nullable(),
+    error: z.string().nullable(),
+    watchList: z.array(DETECTION_WATCH_SCHEMA),
+  })
+  .brand<'Domain'>();
+
+export type RecordedDetection = z.infer<typeof RECORDED_DETECTION_SCHEMA>;
+
+// What a Candidate sees of the Detections: the one running, and the last one that covered their Watches
+export const DETECTION_OVERVIEW_SCHEMA = z
+  .object({
+    running: RECORDED_DETECTION_SCHEMA.nullable(),
+    last: RECORDED_DETECTION_SCHEMA.nullable(),
+    // The Postings the last one found, marked New in the list until the next one
+    newReferenceList: z.array(z.string()),
+  })
+  .brand<'Domain'>();
+
+export type DetectionOverview = z.infer<typeof DETECTION_OVERVIEW_SCHEMA>;
+
 export const ARTIFACT_SCHEMA = z.enum(['research', 'letter', 'interview_brief', 'visualization']);
 
 export type Artifact = z.infer<typeof ARTIFACT_SCHEMA>;

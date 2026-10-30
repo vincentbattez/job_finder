@@ -40,7 +40,8 @@ export const CLI_EN = {
   listUsage: 'Usage: jf list <candidate>. “jf candidates” lists the Candidates.',
 
   // jf detect
-  detectDescription: 'Looks for the new Postings of each Watch',
+  detectDescription:
+    'Looks for the new Postings of each Watch; --automation marks the daily one: jf detect [--automation]',
   detectionSummary: 'Watch {{watchId}} ({{candidateId}}): {{newPostings}}{{firstLaunch}}\n',
   noNewPosting: 'no new Posting',
   newPostings: '{{newCount}} new Postings',

@@ -16,6 +16,11 @@ export const ERROR_EN = {
   configKeysMixed:
     'The config {{configPath}} holds both the old key “{{frenchKey}}” and its new name “{{englishKey}}”. Keep only “{{englishKey}}”, merging into it what “{{frenchKey}}” holds, then start again.',
 
+  detectionRunning:
+    'A Detection is already running, started on {{startedAt, datetime(dateStyle: medium; timeStyle: short; timeZone: Europe/Paris)}}: wait for its verdict, then run it again if needed.',
+  // Stored on a Detection whose process stopped before its end, so that it no longer blocks the next one
+  detectionInterrupted: 'Interrupted: the Detection stopped before its end, without a verdict. Run it again.',
+
   // The data folder
   missingJobDescription:
     'Job Description not found for Posting {{reference}}: {{filePath}}. Put it back there, where the tool reads it.',
