@@ -42,6 +42,8 @@ test('creates, changes and deletes a Veille of the Profil', async ({ page }) => 
   await expect(veille.getByRole('status')).toHaveText('Veille enregistrée.');
   await page.reload();
   await expect(veille.getByRole('textbox', { name: 'Cours d’appel de la Zone, une par ligne' })).toHaveValue('Paris');
+  // React hydrating a textarea puts back its saved text over what was typed: wait for it first
+  await expect(veille.getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
 
   await veille.getByRole('textbox', { name: 'Cours d’appel de la Zone, une par ligne' }).fill(' \n ');
   await veille.getByRole('button', { name: 'Enregistrer' }).click();
