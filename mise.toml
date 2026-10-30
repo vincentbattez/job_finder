@@ -24,7 +24,7 @@ description = "Create a migration from prisma/schema.prisma and apply it to dev-
 run = "mkdir -p dev-data && prisma migrate dev"
 
 [tasks."db:seed"]
-description = "Replace the Offres of dev-data/ with fake ones (faker)"
+description = "Replace the Postings of dev-data/ with fake ones (faker)"
 run = "prisma db seed"
 
 [tasks."db:reset"]
@@ -48,7 +48,7 @@ run = "node node_modules/@react-router/dev/bin.cjs dev --host --port 5180 --stri
 [tasks."web:dev"]
 # Regenerate first: a client older than the schema crashes at the first query
 depends = ["db:generate"]
-description = "Serve the front of dev-data/, the fake Offres of development, on port 5181 of this machine only"
+description = "Serve the front of dev-data/, the fake Postings of development, on port 5181 of this machine only"
 # The Notification Channels saved in dev-data/, never those of data/: no real phone gets notified
 env = { JF_DATA_DIRECTORY = "dev-data" }
 run = "node node_modules/@react-router/dev/bin.cjs dev --port 5181 --strictPort"
