@@ -15,13 +15,16 @@ import {
 } from 'react-router';
 
 import { readCandidate } from './candidate.server.ts';
-import { useCatalogue, useLocale } from './catalogue.ts';
+import { useCatalogue } from './catalogue.ts';
 import { CandidateMenu } from './components/candidate-menu.tsx';
+import { LocaleSwitcher } from './components/locale-switcher.tsx';
+import { LocaleProvider, useLocale } from './i18n.tsx';
 import { englishUrlOf } from './redirects.ts';
 
 import './app.css';
 
-// An English route reached with the French query of an older link moves for good to the English one
+// An English route reached with the French query of an older link moves for good to the English one.
+// Otherwise the menu's Candidates and the locale the whole page renders in (ADR-0012).
 export function loader({ request }: LoaderFunctionArgs) {
   const englishUrl = englishUrlOf(new URL(request.url));
   return englishUrl === null ? readCandidate(request) : redirect(englishUrl, 301);
@@ -36,7 +39,16 @@ export const links: LinksFunction = () => [
   },
 ];
 
+// Every page, the error page included, renders in the request's locale
 export function Layout({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <LocaleProvider>
+      <Page>{children}</Page>
+    </LocaleProvider>
+  );
+}
+
+function Page({ children }: Readonly<{ children: ReactNode }>) {
   // Undefined when the root loader itself failed: the error page then shows without the menu
   const candidateData = useRouteLoaderData<typeof loader>('root');
   const locale = useLocale();
@@ -63,7 +75,10 @@ export function Layout({ children }: Readonly<{ children: ReactNode }>) {
               <NavLink to="/instructions">{layout.instructionsLink}</NavLink>
               <NavLink to="/candidates">{layout.candidatesLink}</NavLink>
             </nav>
-            {candidateData !== undefined && <CandidateMenu {...candidateData} />}
+            <div className="topbar__end">
+              {candidateData !== undefined && <CandidateMenu {...candidateData} />}
+              <LocaleSwitcher />
+            </div>
           </div>
         </header>
         {children}

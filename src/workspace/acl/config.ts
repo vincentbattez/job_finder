@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { DEFAULT_LOCALE } from '#/domain/catalogue/index.ts';
+import { DEFAULT_LOCALE } from '#/domain/catalogue/i18n.ts';
 import { ERROR } from '#/domain/error.ts';
 import { LOCALE_SCHEMA, PARAMETERS_SCHEMA } from '#/domain/index.ts';
 

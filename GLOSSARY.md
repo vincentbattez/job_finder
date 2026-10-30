@@ -15,6 +15,10 @@ _Formerly_: Candidat
 Language a Candidate reads the tool in, French or English, French unless they chose otherwise; it never changes the language an Artifact is written in, which is that of the Job Description.
 _Avoid_: language setting, i18n, translation
 
+**Locale Switcher**:
+Control of the front's top bar that sets the Locale: that of the chosen Candidate, or, before one is chosen, the one this browser remembers.
+_Avoid_: language button, language picker
+
 **Profile**:
 What the tool knows about a Candidate in order to write on their behalf: their CV, the Facts they validated and their past letters.
 _Avoid_: file, record, CV

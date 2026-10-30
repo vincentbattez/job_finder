@@ -1,4 +1,4 @@
-import { catalogueFor } from '#/domain/catalogue/index.ts';
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import {
   JOB_DESCRIPTION_FILE_NAME,
   LANGUAGE_BY_LOCALE,
@@ -21,7 +21,7 @@ interface IEditedArtifact {
 export function composeEditPrompt({ candidate, posting, artifact, versionPath }: IEditedArtifact): string {
   const { name } = candidate;
   // The prompt is in English, as the rest of the code: the Artifact goes by its English name
-  const artifactName = catalogueFor('en').common.artifactLabelByArtifact[artifact];
+  const artifactName = tFor('en', 'common')(`artifactLabelByArtifact.${artifact}`);
   const letterFiles =
     artifact === 'letter'
       ? ` The Letter to correct is \`${versionPath}/${LETTER_MODULE.fileName}\`, and \`${versionPath}/${DRAFT_FILE_NAME}\` is its Draft, what the AI wrote.`

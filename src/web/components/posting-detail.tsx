@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useCatalogue } from '#/web/catalogue.ts';
 
@@ -67,7 +68,8 @@ export function PostingDetail({
   const { posting, jobDescription, artifactList, recipients } = detail;
   const TITLE_TAG = isPage ? 'h1' : 'h3';
   const PART_TAG = isPage ? 'h2' : 'h4';
-  const { common, posting: copy } = useCatalogue();
+  const { t } = useTranslation();
+  const { posting: copy } = useCatalogue();
   const missingContact = <span className="missing">{copy.missingContact}</span>;
   const artifactsId = useId();
   const contactsId = useId();
@@ -110,7 +112,7 @@ export function PostingDetail({
           <ul className="artifact-list">
             {artifactList.map(({ artifact, state }) => (
               <li key={artifact} data-artifact={artifact}>
-                <a href={`#${artifact}`}>{common.artifactLabelByArtifact[artifact]}</a>
+                <a href={`#${artifact}`}>{t(`artifactLabelByArtifact.${artifact}`)}</a>
                 <StateBadge state={state} />
               </li>
             ))}

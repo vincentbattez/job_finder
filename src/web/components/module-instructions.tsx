@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Form } from 'react-router';
 
 import { useCatalogue } from '#/web/catalogue.ts';
@@ -31,7 +32,8 @@ export function ModuleInstructions({
   defaultInstructions,
   candidateInstructions,
 }: Readonly<IModuleInstructions>) {
-  const { common, settings } = useCatalogue();
+  const { t } = useTranslation();
+  const { settings } = useCatalogue();
   const { instructions } = settings;
   const headingId = useId();
   const hasCandidateInstructions = candidateInstructions !== null;
@@ -39,7 +41,7 @@ export function ModuleInstructions({
   return (
     <section className="artifact instructions" data-artifact={module} aria-labelledby={headingId}>
       <div className="instructions__head">
-        <h2 id={headingId}>{common.artifactLabelByArtifact[module]}</h2>
+        <h2 id={headingId}>{t(`artifactLabelByArtifact.${module}`)}</h2>
         <span className="badge" data-instructions={hasCandidateInstructions ? 'candidate' : 'default'}>
           {hasCandidateInstructions ? instructions.candidateBadge : instructions.defaultOrigin}
         </span>

@@ -16,9 +16,10 @@ import { readCandidate } from '#/web/candidate.server.ts';
 import { useCatalogue } from '#/web/catalogue.ts';
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const { candidate } = await readCandidate(request);
+  const { candidate, locale } = await readCandidate(request);
   return {
     candidate,
+    locale,
     candidateList: await ACTIONS.listCandidates(),
     defaultDeadlinePeriod: await ACTIONS.readDefaultDeadlinePeriod(),
     obsoleteConfig: await ACTIONS.findObsoleteConfig(),
@@ -55,7 +56,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export function meta({ loaderData }: MetaArgs<typeof loader>) {
-  return [{ title: catalogueOf(loaderData?.candidate).settings.candidates.pageTitle }];
+  return [{ title: catalogueOf(loaderData).settings.candidates.pageTitle }];
 }
 
 function Refusal({ message }: Readonly<{ message: string | undefined }>) {

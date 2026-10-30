@@ -9,15 +9,15 @@ import { ExtractionLaunch } from '#/web/components/extraction-launch.tsx';
 import { PostingDetail } from '#/web/components/posting-detail.tsx';
 
 export async function loader({ params, request }: LoaderFunctionArgs) {
-  const [{ candidate }, detail] = await Promise.all([
+  const [{ candidate, locale }, detail] = await Promise.all([
     readCandidate(request),
     ACTIONS.readPosting({ reference: params.reference }),
   ]);
-  return { candidate, detail };
+  return { candidate, locale, detail };
 }
 
 export function meta({ loaderData }: MetaArgs<typeof loader>) {
-  const { posting: copy } = catalogueOf(loaderData?.candidate);
+  const { posting: copy } = catalogueOf(loaderData);
   return [{ title: copy.pageTitle(loaderData?.detail.posting.title ?? copy.unreadPosting) }];
 }
 

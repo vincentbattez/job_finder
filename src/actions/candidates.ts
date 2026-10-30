@@ -1,6 +1,7 @@
 import { z } from 'zod/v4';
 
-import { catalogueOf, DEFAULT_LOCALE, type Catalogue } from '#/domain/catalogue/index.ts';
+import { DEFAULT_LOCALE } from '#/domain/catalogue/i18n.ts';
+import { catalogueOf, type Catalogue } from '#/domain/catalogue/index.ts';
 import {
   DEFAULT_DEADLINE_PERIOD_SCHEMA,
   LOCALE_SCHEMA,
@@ -17,11 +18,13 @@ const CANDIDATE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const RENAME_INPUT_SCHEMA = z.object({ name: z.string() });
 
-// No screen sets the locale yet (spec #65)
+// French unless the Candidate is created with another locale; the switcher of the front changes it later
 const NEW_CANDIDATE_INPUT_SCHEMA = RENAME_INPUT_SCHEMA.extend({
   id: z.string(),
   locale: LOCALE_SCHEMA.default(DEFAULT_LOCALE),
 });
+
+const LOCALE_INPUT_SCHEMA = z.object({ locale: LOCALE_SCHEMA });
 
 // A field of the front arrives as text
 const DEFAULT_DEADLINE_PERIOD_INPUT_SCHEMA = z.object({ months: z.union([z.string(), z.number()]) });
@@ -75,6 +78,13 @@ export function createCandidateActions({ workspace, findCandidate }: ActionConte
       const candidate = await findCandidate(rawInput);
       const name = parseName(RENAME_INPUT_SCHEMA.parse(rawInput).name, catalogueOf(candidate));
       await workspace.renameCandidate(candidate, name);
+    },
+
+    // The Locale Switcher of the front's top bar: the front, the CLI and the notifications then speak this
+    // locale (ADR-0012)
+    async setCandidateLocale(rawInput: unknown): Promise<void> {
+      const { locale } = LOCALE_INPUT_SCHEMA.parse(rawInput);
+      await workspace.setCandidateLocale(await findCandidate(rawInput), locale);
     },
 
     readDefaultDeadlinePeriod(): Promise<DefaultDeadlinePeriod> {

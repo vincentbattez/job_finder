@@ -1,6 +1,5 @@
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
-
-import { useCatalogue } from '#/web/catalogue.ts';
 
 import { StatusBadge, type Status } from './badge.tsx';
 import { DateText } from './date.tsx';
@@ -18,18 +17,18 @@ export interface IPostingRow {
 }
 
 export function PostingList({ postingList }: Readonly<{ postingList: IPostingRow[] }>) {
-  const { postingList: copy } = useCatalogue();
+  const { t } = useTranslation('postingList');
   if (postingList.length === 0) {
-    return <p className="empty">{copy.noPosting}</p>;
+    return <p className="empty">{t('noPosting')}</p>;
   }
   return (
     <table className="posting-list">
       <thead>
         <tr>
-          <th scope="col">{copy.postingColumn}</th>
-          <th scope="col">{copy.statusColumn}</th>
-          <th scope="col">{copy.publishedAtColumn}</th>
-          <th scope="col">{copy.deadlineColumn}</th>
+          <th scope="col">{t('postingColumn')}</th>
+          <th scope="col">{t('statusColumn')}</th>
+          <th scope="col">{t('publishedAtColumn')}</th>
+          <th scope="col">{t('deadlineColumn')}</th>
         </tr>
       </thead>
       <tbody>
@@ -53,10 +52,10 @@ export function PostingList({ postingList }: Readonly<{ postingList: IPostingRow
             <td>
               <StatusBadge status={posting.status} isExpired={posting.isExpired} />
             </td>
-            <td className="date" data-column="publishedAt" data-label={copy.publishedAtColumn}>
+            <td className="date" data-column="publishedAt" data-label={t('publishedAtColumn')}>
               <DateText date={posting.publishedAt} />
             </td>
-            <td className="date" data-label={copy.deadlineColumn}>
+            <td className="date" data-label={t('deadlineColumn')}>
               <DateText date={posting.deadline} />
             </td>
           </tr>

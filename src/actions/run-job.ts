@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import type { IAiModule } from '#/ai-module/index.ts';
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import { catalogueFor, catalogueOf } from '#/domain/catalogue/index.ts';
 import {
   ARTIFACT_SCHEMA,
@@ -123,9 +124,10 @@ function wordRefusal(refusal: Refusal, posting: Posting, module: Artifact, local
     return refusal.freeze;
   }
   const { missingArtifact } = refusal;
-  const { common, error } = catalogueFor(locale);
-  const missingLabel = common.artifactLabelByArtifact[missingArtifact];
-  const moduleLabel = common.artifactLabelByArtifact[module];
+  const { error } = catalogueFor(locale);
+  const t = tFor(locale, 'common');
+  const missingLabel = t(`artifactLabelByArtifact.${missingArtifact}`);
+  const moduleLabel = t(`artifactLabelByArtifact.${module}`);
   return isForFront
     ? error.missingArtifactForFront(posting.reference, missingLabel, moduleLabel)
     : error.missingArtifactForCli(posting.reference, missingLabel, moduleLabel, missingArtifact);

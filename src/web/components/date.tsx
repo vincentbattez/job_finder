@@ -1,10 +1,10 @@
-import { useCatalogue } from '#/web/catalogue.ts';
+import { useTranslation } from 'react-i18next';
 
 export function DateText({ date }: Readonly<{ date: Date | null }>) {
-  const { common } = useCatalogue();
+  const { t } = useTranslation();
   return date === null ? (
-    <span className="missing">{common.missingDate}</span>
+    <span className="missing">{t('missingDate')}</span>
   ) : (
-    <time dateTime={date.toISOString()}>{common.formatDate(date)}</time>
+    <time dateTime={date.toISOString()}>{t('date', { date })}</time>
   );
 }

@@ -24,7 +24,8 @@ import { createRecordedFetch } from './recorded-http.ts';
 // through the fake Home Assistant; Yanis and Zoé each have theirs changed by one e2e test only. Léa's Posting
 // 2026-2409247 has a Research made with the default Instructions, then one made with hers. Jade, without
 // Watch, has hers created, changed and deleted by one e2e test only. Hugo, without Watch, gets the
-// Postings that e2e/import.test.ts imports, so that Léa's list and map stay as seeded.
+// Postings that e2e/import.test.ts imports, so that Léa's list and map stay as seeded. Nina, without
+// Watch, has her locale switched by e2e/locale-switcher.test.ts only.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 // The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
 if (!dataDirectory.startsWith(tmpdir())) {
@@ -50,6 +51,7 @@ const OTHER_CANDIDATE_LIST = [
   { id: 'rose', name: 'Rose' },
   { id: 'jade', name: 'Jade' },
   { id: 'hugo', name: 'Hugo' },
+  { id: 'nina', name: 'Nina' },
 ];
 
 // What the Letter recommends for the Béthune Posting, from its mail de candidature and contacts

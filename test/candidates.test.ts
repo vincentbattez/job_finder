@@ -58,8 +58,7 @@ describe('Candidates', () => {
     expect(existsSync(path.join(dataDirectory, 'candidates', 'jean-pierre', 'profile'))).toBe(true);
   });
 
-  // French by default, as Léa reads it: no screen sets the locale yet, only the config of the first
-  // launch and this action
+  // French by default, as Léa reads it: the switcher of the front changes it later
   it('creates a Candidate who reads the interface in English', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
@@ -105,6 +104,17 @@ describe('Candidates', () => {
     await actions.renameCandidate({ candidateId: 'lea', name: 'Léa Martin' });
 
     expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa Martin', locale: 'fr' }]);
+  });
+
+  // The switcher of the front: the CLI and the notifications follow the locale it saves
+  it("saves the locale a Candidate chose, and refuses one the front doesn't offer", async () => {
+    const actions = await createActions({ dataDirectory: createDataDirectory() });
+
+    await actions.setCandidateLocale({ candidateId: 'lea', locale: 'en' });
+
+    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa', locale: 'en' }]);
+    await expect(actions.setCandidateLocale({ candidateId: 'lea', locale: 'de' })).rejects.toThrow();
+    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa', locale: 'en' }]);
   });
 });
 

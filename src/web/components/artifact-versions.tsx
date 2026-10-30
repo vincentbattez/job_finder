@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useCatalogue } from '#/web/catalogue.ts';
 
@@ -54,11 +55,12 @@ export function ArtifactVersions({
   isEditable,
   versionList,
 }: Readonly<IArtifactVersions & { reference: string }>) {
-  const { common, posting: copy } = useCatalogue();
+  const { t } = useTranslation();
+  const { posting: copy } = useCatalogue();
   const headingId = useId();
   return (
     <section className="artifact" id={artifact} data-artifact={artifact} aria-labelledby={headingId}>
-      <h2 id={headingId}>{common.artifactLabelByArtifact[artifact]}</h2>
+      <h2 id={headingId}>{t(`artifactLabelByArtifact.${artifact}`)}</h2>
       <ModuleLaunch reference={reference} artifact={artifact} state={state} module={module} />
       {isEditable && <CopyCommand command={`jf edit ${reference} ${artifact}`} />}
       {versionList.length === 0 ? (

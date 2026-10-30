@@ -1,7 +1,4 @@
-import type { Artifact, Status } from '#/domain/index.ts';
-
-// The Candidates live in France: a date is that of Paris, whatever the locale
-const DATE_FORMAT = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'Europe/Paris' });
+import type { Artifact, Locale, Status } from '#/domain/index.ts';
 
 // The copy several screens, the CLI and the messages share, named as GLOSSARY.md names them
 export const COMMON_EN = {
@@ -18,7 +15,14 @@ export const COMMON_EN = {
     interview_brief: 'Interview Brief',
     visualization: 'Visualization',
   } satisfies Record<Artifact, string>,
-  formatDate: (date: Date) => DATE_FORMAT.format(date),
+  // The Candidates live in France: a date is that of Paris, whatever the locale
+  date: '{{date, datetime(dateStyle: medium; timeZone: Europe/Paris)}}',
   // A date the Posting does not give
   missingDate: 'Not specified',
+  // The Locale Switcher of the top bar (GLOSSARY.md)
+  localeSwitcherLabel: 'Language',
+  localeLabelByLocale: {
+    fr: 'French',
+    en: 'English',
+  } satisfies Record<Locale, string>,
 };

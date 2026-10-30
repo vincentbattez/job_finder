@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs } from 'react-router';
 
-import { catalogueOf } from '#/actions/catalogue.ts';
+import { catalogueFor } from '#/actions/catalogue.ts';
 import { messageOf, type Actions } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
@@ -19,8 +19,8 @@ function refuse(error: string) {
 // The buttons of the Notifications section of the Profile, for the Candidate of the menu; each answers
 // its own fetcher, a refusal in the words of the action. No secret Parameter comes back (ADR-0006).
 export async function action({ request }: ActionFunctionArgs) {
-  const { candidate } = await readCandidate(request);
-  const { settings } = catalogueOf(candidate);
+  const { candidate, locale } = await readCandidate(request);
+  const { settings } = catalogueFor(locale);
   const copy = settings.notificationChannel;
   const formData = await request.formData();
   const moduleId = formData.get('channel');

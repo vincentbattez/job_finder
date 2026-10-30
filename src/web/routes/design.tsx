@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { LoaderFunctionArgs, MetaArgs } from 'react-router';
 
 import { catalogueOf } from '#/actions/catalogue.ts';
@@ -158,12 +159,13 @@ export function loader({ request }: LoaderFunctionArgs) {
 }
 
 export function meta({ loaderData }: MetaArgs<typeof loader>) {
-  const { design } = catalogueOf(loaderData?.candidate).settings;
+  const { design } = catalogueOf(loaderData).settings;
   return [{ title: design.pageTitle }, { name: 'description', content: design.description }];
 }
 
 export default function Design() {
-  const { common, settings } = useCatalogue();
+  const { t } = useTranslation();
+  const { settings } = useCatalogue();
   const { design } = settings;
   return (
     <main className="container page">
@@ -206,7 +208,7 @@ export default function Design() {
       <section aria-labelledby="editor">
         <h2 id="editor">{design.editor}</h2>
         <MarkdownEditor
-          label={common.artifactLabelByArtifact.letter}
+          label={t('artifactLabelByArtifact.letter')}
           defaultValue={SAMPLE_LETTER}
           placeholder="Madame, Monsieur,"
         />

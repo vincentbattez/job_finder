@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
 import { useCatalogue } from '#/web/catalogue.ts';
@@ -15,7 +16,8 @@ export function ModuleLaunch({
   state,
   module,
 }: Readonly<Pick<IArtifactVersions, 'artifact' | 'state' | 'module'> & { reference: string }>) {
-  const { common, posting: copy } = useCatalogue();
+  const { t } = useTranslation();
+  const { posting: copy } = useCatalogue();
   const fetcher = useFetcher<{ error: string | null }>();
   const isHydrated = useIsHydrated();
   const isRunning = state === 'in_progress';
@@ -29,7 +31,7 @@ export function ModuleLaunch({
         <StateBadge state={state} />
       </span>
       <button type="submit" disabled={!isHydrated || isRunning || module.refusal !== null || fetcher.state !== 'idle'}>
-        {(state === 'absent' ? copy.launchArtifact : copy.relaunchArtifact)(common.artifactLabelByArtifact[artifact])}
+        {(state === 'absent' ? copy.launchArtifact : copy.relaunchArtifact)(t(`artifactLabelByArtifact.${artifact}`))}
       </button>
       {module.refusal !== null && <p className="module-launch__refusal">{module.refusal}</p>}
       {error !== null && <p role="alert">{error}</p>}

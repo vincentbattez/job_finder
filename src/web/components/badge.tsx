@@ -1,8 +1,10 @@
-import type { Catalogue } from '#/actions/catalogue.ts';
+import { useTranslation } from 'react-i18next';
+
+import type { Actions } from '#/actions/index.ts';
 import { useCatalogue } from '#/web/catalogue.ts';
 
-// The statuses as the catalogue names them
-export type Status = keyof Catalogue['common']['statusLabelByStatus'];
+// The statuses as the actions give them
+export type Status = Awaited<ReturnType<Actions['listPostings']>>[number]['status'];
 
 // Expired comes from the Deadline, whatever the status (GLOSSARY.md). The badge and the map
 // show it only in place of To Apply: an Applied Posting stays green past its Deadline.
@@ -11,11 +13,11 @@ export function showStatus(status: Status, isExpired: boolean): Status | 'expire
 }
 
 export function StatusBadge({ status, isExpired }: Readonly<{ status: Status; isExpired: boolean }>) {
-  const { common } = useCatalogue();
+  const { t } = useTranslation();
   const shownStatus = showStatus(status, isExpired);
   return (
     <span className="badge" data-status={shownStatus}>
-      {shownStatus === 'expired' ? common.expired : common.statusLabelByStatus[shownStatus]}
+      {shownStatus === 'expired' ? t('expired') : t(`statusLabelByStatus.${shownStatus}`)}
     </span>
   );
 }

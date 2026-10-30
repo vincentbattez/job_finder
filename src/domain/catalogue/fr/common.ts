@@ -1,7 +1,5 @@
 import type { COMMON_EN } from '#/domain/catalogue/en/common.ts';
 
-const DATE_FORMAT = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeZone: 'Europe/Paris' });
-
 export const COMMON_FR: typeof COMMON_EN = {
   statusLabelByStatus: {
     to_apply: 'À traiter',
@@ -15,6 +13,11 @@ export const COMMON_FR: typeof COMMON_EN = {
     interview_brief: 'Fiche d’entretien',
     visualization: 'Visualisation',
   },
-  formatDate: (date: Date) => DATE_FORMAT.format(date),
+  date: '{{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
   missingDate: 'Non précisée',
+  localeSwitcherLabel: 'Langue',
+  localeLabelByLocale: {
+    fr: 'Français',
+    en: 'Anglais',
+  },
 };

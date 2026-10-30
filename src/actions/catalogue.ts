@@ -1,4 +1,3 @@
-// The CLI and the front take their copy from the domain's catalogue through the actions only
-// (ADR-0003)
-export { catalogueOf, localeOf, type Catalogue } from '#/domain/catalogue/index.ts';
-export type { Locale } from '#/domain/index.ts';
+// The former in-house catalogue of the areas not yet moved to i18next (./i18n.ts, ADR-0012), reached by
+// the CLI and the front through the actions only (ADR-0003)
+export { catalogueFor, catalogueOf, type Catalogue } from '#/domain/catalogue/index.ts';

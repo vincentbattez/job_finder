@@ -2,7 +2,8 @@ import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } fr
 import { useFetcher, type FetcherWithComponents } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
-import { useCatalogue, useLocale } from '#/web/catalogue.ts';
+import { useCatalogue } from '#/web/catalogue.ts';
+import { useLocale } from '#/web/i18n.tsx';
 
 import { PARAMETER_FIELD_PREFIX, ParameterField } from './parameter-field.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';

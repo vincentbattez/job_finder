@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { z } from 'zod/v4';
 
-import { localeOf } from '#/domain/catalogue/index.ts';
+import { localeOf } from '#/domain/catalogue/i18n.ts';
 import {
   CANDIDATE_SCHEMA,
   DEFAULT_DEADLINE_PERIOD_SCHEMA,
@@ -187,6 +187,10 @@ export function openDatabase(databasePath: string) {
 
     async renameCandidate({ id }: Candidate, name: string): Promise<void> {
       await prisma.candidate.update({ where: { id }, data: { name } });
+    },
+
+    async setCandidateLocale({ id }: Candidate, locale: Locale): Promise<void> {
+      await prisma.candidate.update({ where: { id }, data: { locale } });
     },
 
     // Whether the Default Deadline Period exists: from then on, the config an older jf left is never read

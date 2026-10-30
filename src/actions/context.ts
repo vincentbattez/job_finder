@@ -1,7 +1,8 @@
 import { z } from 'zod/v4';
 
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { catalogueFor, catalogueOf, localeOf } from '#/domain/catalogue/index.ts';
+import { localeOf } from '#/domain/catalogue/i18n.ts';
+import { catalogueFor, catalogueOf } from '#/domain/catalogue/index.ts';
 import { LOCATION_SCHEMA, type Candidate, type Locale, type Location, type Posting } from '#/domain/index.ts';
 import { createApiGeo } from '#/geo/acl/api-geo.ts';
 import { createUploadConversion } from '#/modules/conversion/index.ts';

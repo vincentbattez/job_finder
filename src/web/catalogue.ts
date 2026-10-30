@@ -1,21 +1,9 @@
-import { useRouteLoaderData } from 'react-router';
+import { catalogueFor } from '#/actions/catalogue.ts';
 
-import { catalogueOf, localeOf, type Locale } from '#/actions/catalogue.ts';
+import { useLocale } from './i18n.tsx';
 
-// What the root loader gives of the Candidate chosen in the menu; undefined when it failed
-interface IRootData {
-  candidate: { locale: Locale } | null;
-}
-
-function useCandidate() {
-  return useRouteLoaderData<IRootData>('root')?.candidate;
-}
-
-// The copy of the chosen Candidate's locale, French when no one is chosen (src/domain/catalogue/)
+// The former in-house catalogue, in the locale of the request, for the areas not yet moved to
+// i18next (ADR-0012)
 export function useCatalogue() {
-  return catalogueOf(useCandidate());
-}
-
-export function useLocale(): Locale {
-  return localeOf(useCandidate());
+  return catalogueFor(useLocale());
 }

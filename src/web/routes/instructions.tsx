@@ -7,9 +7,10 @@ import { useCatalogue } from '#/web/catalogue.ts';
 import { ModuleInstructions } from '#/web/components/module-instructions.tsx';
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const { candidate } = await readCandidate(request);
+  const { candidate, locale } = await readCandidate(request);
   return {
     candidate,
+    locale,
     instructionsList: candidate === null ? [] : await ACTIONS.listInstructions({ candidateId: candidate.id }),
   };
 }
@@ -31,7 +32,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export function meta({ loaderData }: MetaArgs<typeof loader>) {
-  return [{ title: catalogueOf(loaderData?.candidate).settings.instructions.pageTitle }];
+  return [{ title: catalogueOf(loaderData).settings.instructions.pageTitle }];
 }
 
 export default function Instructions() {

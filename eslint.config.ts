@@ -74,8 +74,13 @@ export default defineConfig(
         },
         { selector: 'typeLike', format: ['PascalCase'] },
         { selector: 'interface', format: ['PascalCase'], prefix: ['I'] },
-        // Augmenting a library's interface keeps its name: Vitest's, which types inject()
-        { selector: 'interface', filter: { regex: '^ProvidedContext$', match: true }, format: ['PascalCase'] },
+        // Augmenting a library's interface keeps its name: Vitest's, which types inject(), and
+        // i18next's, which types the keys of t (ADR-0012)
+        {
+          selector: 'interface',
+          filter: { regex: '^(?:ProvidedContext|CustomTypeOptions)$', match: true },
+          format: ['PascalCase'],
+        },
         { selector: 'objectLiteralProperty', format: null },
       ],
     },

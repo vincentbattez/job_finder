@@ -3,14 +3,23 @@ import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 
 import { catalogueOf, type Catalogue } from '#/actions/catalogue.ts';
+import { localeOf, tFor, type Locale } from '#/actions/i18n.ts';
 import { createActions, messageOf, type Actions } from '#/actions/index.ts';
 
 import { readTextFile } from './acl/files.ts';
 
 const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
 
+// The copy of a locale: the former catalogue for the areas not yet moved to i18next, and the t function
+// of the common area (ADR-0012)
+type Copy = Catalogue & { t: ReturnType<typeof tFor<'common'>> };
+
+function copyOf(candidate: { locale: Locale } | null | undefined): Copy {
+  return { ...catalogueOf(candidate), t: tFor(localeOf(candidate), 'common') };
+}
+
 // What jf says before it knows the Candidate a command acts for, as jf help: the default locale
-const DEFAULT_CATALOGUE = catalogueOf(null);
+const DEFAULT_COPY = copyOf(null);
 
 // Through the actions only: the CLI never reaches the domain directly (ADR-0003)
 type Posting = Awaited<ReturnType<Actions['listPostings']>>[number];
@@ -24,29 +33,28 @@ interface ICommand {
 }
 
 // Each command speaks the locale of the Candidate it acts for (spec #65)
-async function catalogueOfCandidate(actions: Actions, candidateId: string): Promise<Catalogue> {
+async function copyOfCandidate(actions: Actions, candidateId: string): Promise<Copy> {
   const candidateList = await actions.listCandidates();
-  return catalogueOf(candidateList.find(({ id }) => id === candidateId));
+  return copyOf(candidateList.find(({ id }) => id === candidateId));
 }
 
-async function catalogueOfPosting(actions: Actions, reference: string): Promise<Catalogue> {
-  return catalogueOf(await actions.readPostingCandidate({ reference }));
+async function copyOfPosting(actions: Actions, reference: string): Promise<Copy> {
+  return copyOf(await actions.readPostingCandidate({ reference }));
 }
 
 function formatAddress({ email, source }: Recipients['ccList'][number], cli: Cli): string {
   return `${email} (${cli.fieldLabelBySource[source]})`;
 }
 
-function formatPosting(posting: Posting, { cli, common }: Catalogue): string {
+function formatPosting(posting: Posting, { cli, t }: Copy): string {
   const { repostOf, repostList } = posting;
+  const statusLabel = t(`statusLabelByStatus.${posting.status}`);
   return [
     posting.reference,
     posting.title,
     posting.workplace ?? '—',
     posting.deadline === null ? '—' : cli.formatDeadline(posting.deadline),
-    posting.isExpired
-      ? `${common.statusLabelByStatus[posting.status]}, ${common.expired}`
-      : common.statusLabelByStatus[posting.status],
+    posting.isExpired ? `${statusLabel}, ${t('expired')}` : statusLabel,
     posting.isInZone ? cli.inZone : cli.outOfZone,
     // The link of a Repost, both ways, only on the Postings that have one
     ...(repostOf === null ? [] : [cli.repostOf(repostOf.reference)]),
@@ -112,7 +120,7 @@ async function choose<T>(
 
 // Before a Candidate is chosen, no locale but the default one
 async function chooseCandidate(actions: Actions, terminal: Terminal) {
-  const { cli } = DEFAULT_CATALOGUE;
+  const { cli } = DEFAULT_COPY;
   return choose(terminal, cli, {
     question: cli.candidateQuestion,
     itemList: await actions.listCandidates(),
@@ -123,7 +131,7 @@ async function chooseCandidate(actions: Actions, terminal: Terminal) {
 
 async function chooseReference(actions: Actions, terminal: Terminal): Promise<string> {
   const candidate = await chooseCandidate(actions, terminal);
-  const catalogue = catalogueOf(candidate);
+  const catalogue = copyOf(candidate);
   const posting = await choose(terminal, catalogue.cli, {
     question: catalogue.cli.postingQuestion,
     itemList: await actions.listPostings({ candidateId: candidate.id }),
@@ -141,11 +149,11 @@ async function chooseArtifact(actions: Actions, [givenReference, givenArtifact]:
   const terminal = openTerminal();
   try {
     const reference = givenReference ?? (await chooseReference(actions, terminal));
-    const { cli, common } = await catalogueOfPosting(actions, reference);
+    const { cli, t } = await copyOfPosting(actions, reference);
     const version = await choose(terminal, cli, {
       question: cli.artifactQuestion,
       itemList: await actions.listChosenVersions({ reference }),
-      label: ({ artifact, number }) => cli.chosenVersionLabel(common.artifactLabelByArtifact[artifact], number),
+      label: ({ artifact, number }) => cli.chosenVersionLabel(t(`artifactLabelByArtifact.${artifact}`), number),
       emptyMessage: cli.noArtifact(reference),
     });
     return { reference, artifact: version.artifact };
@@ -206,11 +214,11 @@ function changeStatusCommand(status: Posting['status'], name: string, describe: 
     describe: (cli) => cli.statusCommandDescription(describe(cli), name),
     run: async (actions, [reference]) => {
       if (reference === undefined) {
-        throw new Error(DEFAULT_CATALOGUE.cli.statusUsage(name));
+        throw new Error(DEFAULT_COPY.cli.statusUsage(name));
       }
       await actions.changeStatus({ reference, status });
-      const { cli, common } = await catalogueOfPosting(actions, reference);
-      process.stdout.write(cli.statusChanged(reference, common.statusLabelByStatus[status]));
+      const { cli, t } = await copyOfPosting(actions, reference);
+      process.stdout.write(cli.statusChanged(reference, t(`statusLabelByStatus.${status}`)));
     },
   };
 }
@@ -234,7 +242,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       const candidateList = await actions.listCandidates();
       for (const detection of detectionList) {
         const { watchId, candidateId, isFirstLaunch, newPostingList, nearMissList } = detection;
-        const catalogue = catalogueOf(candidateList.find(({ id }) => id === candidateId));
+        const catalogue = copyOf(candidateList.find(({ id }) => id === candidateId));
         const { cli } = catalogue;
         process.stdout.write(cli.detectionSummary(watchId, candidateId, newPostingList.length, isFirstLaunch));
         for (const posting of newPostingList) {
@@ -258,11 +266,11 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     describe: (cli) => cli.importDescription,
     run: async (actions, [filePath, givenCandidateId], { isWaiting }) => {
       if (filePath === undefined) {
-        throw new Error(DEFAULT_CATALOGUE.cli.importUsage);
+        throw new Error(DEFAULT_COPY.cli.importUsage);
       }
       // Read before any question, in the locale of the Candidate named, if any
       const { cli: givenCli } =
-        givenCandidateId === undefined ? DEFAULT_CATALOGUE : await catalogueOfCandidate(actions, givenCandidateId);
+        givenCandidateId === undefined ? DEFAULT_COPY : await copyOfCandidate(actions, givenCandidateId);
       const markdown = readTextFile(filePath, givenCli.unreadableFile);
       let candidateId = givenCandidateId;
       if (candidateId === undefined) {
@@ -273,7 +281,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
           terminal.close();
         }
       }
-      const catalogue = await catalogueOfCandidate(actions, candidateId);
+      const catalogue = await copyOfCandidate(actions, candidateId);
       const { cli } = catalogue;
       const job = await actions.importJobDescription({ candidateId, fileName: path.basename(filePath), markdown });
       const { reference } = job.posting;
@@ -294,10 +302,10 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     describe: (cli) => cli.listDescription,
     run: async (actions, [candidateId]) => {
       if (candidateId === undefined) {
-        throw new Error(DEFAULT_CATALOGUE.cli.listUsage);
+        throw new Error(DEFAULT_COPY.cli.listUsage);
       }
       const postingList = await actions.listPostings({ candidateId });
-      const catalogue = await catalogueOfCandidate(actions, candidateId);
+      const catalogue = await copyOfCandidate(actions, candidateId);
       for (const posting of postingList) {
         process.stdout.write(`${formatPosting(posting, catalogue)}\n`);
       }
@@ -307,10 +315,10 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     describe: (cli) => cli.runDescription,
     run: async (actions, [module, reference], { isWaiting }) => {
       if (module === undefined || reference === undefined) {
-        throw new Error(DEFAULT_CATALOGUE.cli.runUsage);
+        throw new Error(DEFAULT_COPY.cli.runUsage);
       }
       const queuedJob = await actions.runModule({ module, reference });
-      const { cli } = await catalogueOfPosting(actions, reference);
+      const { cli } = await copyOfPosting(actions, reference);
       // jf versions takes the Artifact, which the module of jf run brief is not named after
       const versionsCommand = `jf versions ${reference} ${queuedJob.module}`;
       process.stdout.write(cli.queued(module, reference, queuedJob.id));
@@ -331,10 +339,10 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     describe: (cli) => cli.recipientsDescription,
     run: async (actions, [reference]) => {
       if (reference === undefined) {
-        throw new Error(DEFAULT_CATALOGUE.cli.recipientsUsage);
+        throw new Error(DEFAULT_COPY.cli.recipientsUsage);
       }
       const { to, ccList, salutation, justification } = await actions.readRecipients({ reference });
-      const { cli } = await catalogueOfPosting(actions, reference);
+      const { cli } = await copyOfPosting(actions, reference);
       const salutationSource = salutation.source === null ? '' : ` (${cli.fieldLabelBySource[salutation.source]})`;
       const lineList = [
         cli.recipient(to === null ? null : formatAddress(to, cli)),
@@ -349,10 +357,10 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     describe: (cli) => cli.versionsDescription,
     run: async (actions, [reference, artifact]) => {
       if (reference === undefined || artifact === undefined) {
-        throw new Error(DEFAULT_CATALOGUE.cli.versionsUsage);
+        throw new Error(DEFAULT_COPY.cli.versionsUsage);
       }
       const versionList = await actions.listVersions({ reference, artifact });
-      const { cli } = await catalogueOfPosting(actions, reference);
+      const { cli } = await copyOfPosting(actions, reference);
       for (const { number, state, isChosen, hasCandidateInstructions, createdAt } of versionList) {
         const columnList = [
           `v${String(number)}`,
@@ -369,10 +377,10 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     describe: (cli) => cli.chooseDescription,
     run: async (actions, [reference, artifact, version]) => {
       if (reference === undefined || artifact === undefined || version === undefined) {
-        throw new Error(DEFAULT_CATALOGUE.cli.chooseUsage);
+        throw new Error(DEFAULT_COPY.cli.chooseUsage);
       }
       await actions.chooseVersion({ reference, artifact, number: version.replace(/^v/, '') });
-      const { cli } = await catalogueOfPosting(actions, reference);
+      const { cli } = await copyOfPosting(actions, reference);
       process.stdout.write(cli.versionChosen(artifact, version, reference));
     },
   },
@@ -383,7 +391,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     describe: (cli) => cli.profileDescription,
     run: async (actions, [candidateId]) => {
       if (candidateId === undefined) {
-        throw new Error(DEFAULT_CATALOGUE.cli.profileUsage);
+        throw new Error(DEFAULT_COPY.cli.profileUsage);
       }
       await actions.openProfile({ candidateId });
     },
@@ -392,9 +400,9 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     describe: (cli) => cli.instructionsDescription,
     run: async (actions, [candidateId, module, operation]) => {
       if (candidateId === undefined) {
-        throw new Error(DEFAULT_CATALOGUE.cli.instructionsUsage);
+        throw new Error(DEFAULT_COPY.cli.instructionsUsage);
       }
-      const { cli } = await catalogueOfCandidate(actions, candidateId);
+      const { cli } = await copyOfCandidate(actions, candidateId);
       if (module === undefined) {
         const instructionsList = await actions.listInstructions({ candidateId });
         for (const { module: name, candidateInstructions } of instructionsList) {
@@ -439,18 +447,18 @@ async function run(): Promise<void> {
   });
   const [commandName, ...argumentList] = positionalList;
   if (commandName === undefined || commandName === 'help' || values.help === true) {
-    process.stdout.write(composeHelp(DEFAULT_CATALOGUE));
+    process.stdout.write(composeHelp(DEFAULT_COPY));
     return;
   }
   const command = COMMAND_BY_NAME[commandName];
   if (command === undefined) {
-    throw new Error(DEFAULT_CATALOGUE.cli.unknownCommand(commandName));
+    throw new Error(DEFAULT_COPY.cli.unknownCommand(commandName));
   }
   const actions = await createActions({ dataDirectory: DATA_DIRECTORY });
   // Imported once by the first launch that found it, then never read again (ADR-0011)
   const obsoleteConfig = await actions.findObsoleteConfig();
   if (obsoleteConfig.path !== null) {
-    process.stderr.write(`${DEFAULT_CATALOGUE.cli.obsoleteConfig(obsoleteConfig.path)}\n`);
+    process.stderr.write(`${DEFAULT_COPY.cli.obsoleteConfig(obsoleteConfig.path)}\n`);
   }
   await command.run(actions, argumentList, { isWaiting: values.wait === true });
 }

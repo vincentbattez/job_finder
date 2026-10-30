@@ -2,6 +2,7 @@ import 'leaflet/dist/leaflet.css';
 
 import type { LatLngTuple, Map as LeafletMap } from 'leaflet';
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
 import { useCatalogue } from '#/web/catalogue.ts';
@@ -54,7 +55,8 @@ function groupByLocation(postingList: ILocatedPosting[]): ILocatedPosting[][] {
 // A point per Posting, colored by status like its badge; a click opens its page. The map shows
 // metropolitan France, or only the overseas points when the filters leave nothing else.
 export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosting[] }>) {
-  const { common, posting: copy } = useCatalogue();
+  const { t } = useTranslation();
+  const { posting: copy } = useCatalogue();
   const containerReference = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const unlocatedCount = postingList.filter((posting) => !isLocated(posting)).length;
@@ -112,10 +114,10 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
     <section aria-label={copy.mapLabel} className="posting-map">
       <div ref={containerReference} className="posting-map__canvas" />
       <ul className="posting-map__legend">
-        <li data-status="to_apply">{common.statusLabelByStatus.to_apply}</li>
-        <li data-status="applied">{common.statusLabelByStatus.applied}</li>
-        <li data-status="expired">{common.expired}</li>
-        <li data-status="archived">{common.statusLabelByStatus.archived}</li>
+        <li data-status="to_apply">{t('statusLabelByStatus.to_apply')}</li>
+        <li data-status="applied">{t('statusLabelByStatus.applied')}</li>
+        <li data-status="expired">{t('expired')}</li>
+        <li data-status="archived">{t('statusLabelByStatus.archived')}</li>
       </ul>
       {unlocatedCount > 0 && <p className="posting-map__note">{copy.unlocatedPostings(unlocatedCount)}</p>}
     </section>

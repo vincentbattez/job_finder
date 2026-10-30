@@ -10,6 +10,7 @@ export default [
   route('postings/:reference/:artifact/chosen', 'routes/chosen-version.ts'),
   route('postings/:reference/visualization/:number', 'routes/visualization.ts'),
   route('candidate', 'routes/candidate.ts'),
+  route('locale', 'routes/locale.ts'),
   route('profile', 'routes/profile.tsx'),
   route('notification-channel', 'routes/notification-channel.ts'),
   route('watch', 'routes/watch.ts'),

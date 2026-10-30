@@ -1,5 +1,6 @@
 import type { Actions } from '#/actions/index.ts';
-import { useCatalogue, useLocale } from '#/web/catalogue.ts';
+import { useCatalogue } from '#/web/catalogue.ts';
+import { useLocale } from '#/web/i18n.tsx';
 
 type Parameter = Awaited<ReturnType<Actions['listSources']>>[number]['parameterList'][number];
 

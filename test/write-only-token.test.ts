@@ -47,6 +47,7 @@ const INPUT_BY_ACTION: Record<string, object> = {
   deleteUpload: UPLOAD,
   createCandidate: { id: 'camille', name: 'Camille' },
   renameCandidate: { name: 'Léa' },
+  setCandidateLocale: { locale: 'fr' },
   saveDefaultDeadlinePeriod: { months: 6 },
   saveWatch: LEA_WATCH,
   deleteWatch: { watchId: LEA_WATCH_ID },

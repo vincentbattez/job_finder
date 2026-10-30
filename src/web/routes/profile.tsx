@@ -21,9 +21,10 @@ import { Uploads } from '#/web/components/uploads.tsx';
 import { Watches } from '#/web/components/watches.tsx';
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const { candidate } = await readCandidate(request);
+  const { candidate, locale } = await readCandidate(request);
   return {
     candidate,
+    locale,
     profileFileList: candidate === null ? [] : await ACTIONS.listProfileFiles({ candidateId: candidate.id }),
     uploadList: candidate === null ? [] : await ACTIONS.listUploads({ candidateId: candidate.id }),
     sectionList: candidate === null ? [] : await ACTIONS.readFacts({ candidateId: candidate.id }),
@@ -98,7 +99,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export function meta({ loaderData }: MetaArgs<typeof loader>) {
-  return [{ title: catalogueOf(loaderData?.candidate).settings.profile.pageTitle }];
+  return [{ title: catalogueOf(loaderData).settings.profile.pageTitle }];
 }
 
 export default function Profile() {

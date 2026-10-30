@@ -1,3 +1,4 @@
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import { catalogueFor } from '#/domain/catalogue/index.ts';
 import type { Locale, Posting, Status } from '#/domain/index.ts';
 
@@ -68,12 +69,13 @@ export function assertStatusChange(posting: PostingStatus, status: Status, local
   if (status === posting.status || nextStatusList.includes(status)) {
     return;
   }
-  const { common, error } = catalogueFor(locale);
-  const nextLabelList = nextStatusList.map((nextStatus) => common.statusLabelByStatus[nextStatus]);
+  const { error } = catalogueFor(locale);
+  const t = tFor(locale, 'common');
+  const nextLabelList = nextStatusList.map((nextStatus) => t(`statusLabelByStatus.${nextStatus}`));
   throw new Error(
     error.statusChange(
       posting.reference,
-      common.statusLabelByStatus[posting.status],
+      t(`statusLabelByStatus.${posting.status}`),
       nextLabelList,
       hasBeenApplied(posting),
     ),

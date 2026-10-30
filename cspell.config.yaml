@@ -1,4 +1,4 @@
-# Everything is in English; French only in the fr catalogue, checked with the French dictionary. The
+# Everything is in English; French only in the fr resources of i18next, checked with the French dictionary. The
 # French copy of the modules is left out here and checked by the second pass (cspell.fr.config.yaml),
 # both run by scripts/spellcheck.sh
 version: '0.2'
