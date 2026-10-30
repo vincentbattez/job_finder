@@ -42,6 +42,9 @@ export default defineConfig({
   forbidOnly: process.env.CI !== undefined,
   // Even the tests of one file run side by side: one that reads what another left fails here first
   fullyParallel: true,
+  // The GitHub runner has 2 vCPUs, so Playwright's default of half the cores ran the tests one at a
+  // time; they mostly wait on the front, so two side by side fit
+  ...(process.env.CI !== undefined && { workers: 2 }),
   use: { baseURL: BASE_URL },
   // How a test reaches the fake Home Assistant, to read the notifications it received or save its
   // token in a Connexion Home Assistant (e2e/notifications.test.ts), and the data
