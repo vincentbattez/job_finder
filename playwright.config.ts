@@ -38,9 +38,14 @@ export default defineConfig({
   // Even the tests of one file run side by side: one that reads what another left fails here first
   fullyParallel: true,
   use: { baseURL: BASE_URL },
-  // How a test reaches the fake Home Assistant, to read the notifications it received, and the data
+  // How a test reaches the fake Home Assistant, to read the notifications it received or save its
+  // token in a Connexion Home Assistant (e2e/notifications.test.ts), and the data
   // folder, to put back the Profil it changes (e2e/profil.test.ts)
-  metadata: { homeAssistantUrl: HOME_ASSISTANT_URL, dataDirectory: DATA_DIRECTORY },
+  metadata: {
+    homeAssistantUrl: HOME_ASSISTANT_URL,
+    homeAssistantToken: FAKE_HOME_ASSISTANT_TOKEN,
+    dataDirectory: DATA_DIRECTORY,
+  },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {

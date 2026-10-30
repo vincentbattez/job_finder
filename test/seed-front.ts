@@ -18,7 +18,8 @@ import { createRecordedFetch } from './recorded-http.ts';
 // correct), Versailles 2026-2409178 (two Recherches), Rennes 2026-2420931 (a Recherche, ready for
 // its Lettre) and Narbonne 2026-2412591 (a Recherche en échec). Sacha, Noé, Inès and Malo, without
 // Veille either, each have their Profil changed by one e2e test only, which writes it first; Sacha
-// also has the Consignes the e2e tests change. Léa's Offre
+// also has the Consignes the e2e tests change. Yanis and Zoé each have their Connexion Home Assistant
+// changed by one e2e test only. Léa's Offre
 // 2026-2409247 has a Recherche made with the default Consignes, then one made with hers.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 // The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
@@ -56,6 +57,8 @@ const CONFIG = {
     { id: 'noe', name: 'Noé', veilleList: [] },
     { id: 'ines', name: 'Inès', veilleList: [] },
     { id: 'malo', name: 'Malo', veilleList: [] },
+    { id: 'yanis', name: 'Yanis', veilleList: [] },
+    { id: 'zoe', name: 'Zoé', veilleList: [] },
   ],
 };
 

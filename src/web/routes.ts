@@ -9,6 +9,7 @@ export default [
   route('offres/:reference/visualisation/:number', 'routes/visualisation.ts'),
   route('candidat', 'routes/candidat.ts'),
   route('profil', 'routes/profil.tsx'),
+  route('connexion-home-assistant', 'routes/connexion-home-assistant.ts'),
   route('consignes', 'routes/consignes.tsx'),
   route('run', 'routes/run.ts'),
   route('detect', 'routes/detect.ts'),

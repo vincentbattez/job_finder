@@ -119,6 +119,38 @@ describe('the Connexion Home Assistant of a Candidat', () => {
     });
   });
 
+  // The Profil tests what the Candidat typed before saving it: a refused token is never saved
+  it('tests and lists an address and a token given, without saving them', async () => {
+    const { url, token } = await startHomeAssistant();
+    const actions = await openActions();
+
+    await expect(
+      actions.testConnexionHomeAssistant({ candidatId: 'lea', url, token: 'jeton-révoqué' }),
+    ).rejects.toThrow(/Home Assistant a refusé le jeton \(HTTP 401\)/);
+    await expect(actions.testConnexionHomeAssistant({ candidatId: 'lea', url, token })).resolves.toBeUndefined();
+    const serviceList = await actions.listNotifyServices({ candidatId: 'lea', url, token });
+
+    expect(serviceList.map(({ service }) => service)).toContain(LEA_SERVICE);
+    expect(await actions.readConnexionHomeAssistant({ candidatId: 'lea' })).toEqual({
+      url: null,
+      service: LEA_SERVICE,
+      isTokenConfigured: false,
+    });
+  });
+
+  // Anyone on the LAN reaches the front (ADR-0002): the saved token goes to the saved address only
+  it('never sends the saved token to an address given without a token', async () => {
+    const { url, token } = await startHomeAssistant();
+    const other = await startHomeAssistant();
+    const actions = await openActions();
+    await actions.saveConnexionHomeAssistant({ candidatId: 'lea', url, token });
+
+    await expect(actions.testConnexionHomeAssistant({ candidatId: 'lea', url: other.url })).rejects.toThrow(
+      /Home Assistant n'est pas configuré pour Léa/,
+    );
+    await expect(actions.testConnexionHomeAssistant({ candidatId: 'lea', url })).resolves.toBeUndefined();
+  });
+
   it('keeps the token already saved when a save gives none', async () => {
     const { url, token } = await startHomeAssistant();
     const actions = await openActions();
@@ -127,6 +159,22 @@ describe('the Connexion Home Assistant of a Candidat', () => {
     await actions.saveConnexionHomeAssistant({ candidatId: 'lea', url, service: CAMILLE_SERVICE });
 
     await expect(actions.testConnexionHomeAssistant({ candidatId: 'lea' })).resolves.toBeUndefined();
+  });
+
+  // The fields of a form left blank arrive empty, not absent
+  it('keeps the token and the service already saved when a save gives them empty', async () => {
+    const { url, token } = await startHomeAssistant();
+    const actions = await openActions();
+    await actions.saveConnexionHomeAssistant({ candidatId: 'lea', url, token, service: CAMILLE_SERVICE });
+
+    await actions.saveConnexionHomeAssistant({ candidatId: 'lea', url, token: '', service: '' });
+
+    expect(await actions.readConnexionHomeAssistant({ candidatId: 'lea' })).toEqual({
+      url,
+      service: CAMILLE_SERVICE,
+      isTokenConfigured: true,
+    });
+    await expect(actions.testConnexionHomeAssistant({ candidatId: 'lea', token: '' })).resolves.toBeUndefined();
   });
 
   // The token of .env would otherwise go to whatever address the Candidat saved
