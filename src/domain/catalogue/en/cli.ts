@@ -56,7 +56,7 @@ export const CLI_EN = {
   importQueued: 'The worker starts it, then queues its Research. “jf list {{candidateId}}” shows it.\n',
   extractionWaiting: 'Waiting for the worker (lpm worker service): Claude Code reads the fields…\n',
   extractionFailed:
-    'Extraction of the fields of Posting {{reference}} failed:\n{{log}}\nRun it again: jf run extraction {{reference}}',
+    'Extraction of the fields of Posting {{reference}} failed ({{errorCode}}):\n{{log}}\nRun it again: jf run extraction {{reference}}',
   extracted: '{{postingLine}}\nIts Research is queued: “jf versions {{reference}} research” follows it.\n',
 
   // jf run
@@ -66,7 +66,7 @@ export const CLI_EN = {
   queued: '{{module}} of Posting {{reference}} queued (job {{jobId}}).\n',
   runQueued: 'The worker will produce it. “{{versionsCommand}}” follows its Versions.\n',
   runWaiting: 'Waiting for the worker (lpm worker service): Claude Code may take several minutes…\n',
-  runFailed: '{{name}} failed:\n{{log}}\nRun it again: jf run {{module}} {{reference}}',
+  runFailed: '{{name}} failed ({{errorCode}}):\n{{log}}\nRun it again: jf run {{module}} {{reference}}',
   runReady: '{{name}} ready and chosen. “{{versionsCommand}}” lists its Versions.\n',
 
   // jf recipients

@@ -1,9 +1,10 @@
+import { execFileSync } from 'node:child_process';
 import { rmSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { createActions } from '#/actions/index.ts';
+import { createActions, type Actions } from '#/actions/index.ts';
 
 import { createMigratedDataDirectory, detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
@@ -51,6 +52,25 @@ describe('an error', () => {
     await expect(actions.followJob({ jobId: 999 })).rejects.toThrow(
       'Job inconnu : 999. Son numéro est celui que « jf run » ou « jf import » a affiché.',
     );
+  });
+
+  // The front, the CLI and a test tell which failure it is by its code, whatever its message says
+  it.each([
+    { name: 'an unknown job', call: (actions: Actions) => actions.followJob({ jobId: 999 }), code: 'unknown_job' },
+    {
+      name: 'an unknown Posting',
+      call: (actions: Actions) => actions.readPosting({ reference: '2000-0000000' }),
+      code: 'unknown_posting',
+    },
+    {
+      name: 'a mistyped Artifact',
+      call: (actions: Actions) => actions.listVersions({ reference: REFERENCE, artifact: 'lettr' }),
+      code: 'unknown_artifact',
+    },
+  ])('carries the code of $name', async ({ call, code }) => {
+    const { actions } = await detectPostings();
+
+    await expect(call(actions)).rejects.toMatchObject({ code });
   });
 
   it('tells how to bring back a Job Description missing from the folder of its Posting', async () => {
@@ -113,5 +133,24 @@ describe('an error for an English-speaking Candidate', () => {
     await expect(actions.renameCandidate({ candidateId: 'emma', name: ' ' })).rejects.toThrow(
       'The Candidate’s name is empty: fill it in.',
     );
+  });
+});
+
+// jf prints the code of a failure before its message, and exits with code 1 (CODING_STANDARDS “Visible failure”)
+describe('a jf error', () => {
+  it('shows its code and its message, with exit code 1', () => {
+    const jfPath = path.join(import.meta.dirname, '..', 'src', 'cli', 'jf.ts');
+
+    let failure: unknown;
+    try {
+      execFileSync(process.execPath, [jfPath, 'frobnicate'], { encoding: 'utf8', stdio: 'pipe' });
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toMatchObject({
+      status: 1,
+      stderr: '[unknown_command] Commande inconnue : frobnicate. « jf help » liste les commandes.\n',
+    });
   });
 });

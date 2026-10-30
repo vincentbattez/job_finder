@@ -1,6 +1,7 @@
 import type { z } from 'zod/v4';
 
 import { tFor } from '#/domain/catalogue/i18n.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import {
   NOTIFICATION_CHANNEL_MODULE_SCHEMA,
   type Locale,
@@ -71,9 +72,8 @@ export function defineNotificationChannel<TShape extends ParameterShape>(
     isTestable: check !== undefined,
   });
   const composeMessage = (locale: Locale) => (labelList: string[]) => {
-    const t = tOf(locale);
-    const labels = labelList.map((text) => t('quote', { text })).join(', ');
-    return t('incompleteChannel', { channelName: name, labels });
+    const labels = labelList.map((text) => tOf(locale)('quote', { text })).join(', ');
+    return codedError('channel_parameters', { channelName: name, labels }, { locale });
   };
 
   return {
@@ -83,7 +83,7 @@ export function defineNotificationChannel<TShape extends ParameterShape>(
       send(parameters.parse(rawParameters, locale, composeMessage(locale)), notification, locale),
     async check(rawParameters, locale) {
       if (check === undefined) {
-        throw new Error(tOf(locale)('untestableChannel', { channelName: name }));
+        throw codedError('untestable_channel', { channelName: name }, { locale });
       }
       await check(parameters.parseTrial(rawParameters, locale, composeMessage(locale)), locale);
     },
@@ -92,11 +92,10 @@ export function defineNotificationChannel<TShape extends ParameterShape>(
         ([key]) => key === parameterName,
       )?.[1];
       if (listChoices === undefined) {
-        throw new Error(
-          tOf(locale)('noChoices', {
-            parameterLabel: labelOf(description.parameterList, parameterName, locale),
-            channelName: name,
-          }),
+        throw codedError(
+          'no_choices',
+          { parameterLabel: labelOf(description.parameterList, parameterName, locale), channelName: name },
+          { locale },
         );
       }
       return listChoices(parameters.parseTrial(rawParameters, locale, composeMessage(locale)), locale);

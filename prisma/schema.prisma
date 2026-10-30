@@ -146,6 +146,8 @@ model Job {
   upload      String?
   state       JobState   @default(queued)
   log         String     @default("")
+  // The code of the catalogue a failed job failed under, read by the front and the CLI (ADR-0015)
+  errorCode   String?
   sessionId   String?
   version     Version?
 }

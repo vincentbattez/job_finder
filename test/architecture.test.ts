@@ -474,6 +474,52 @@ function findControlsOfASingleFile(projectDirectory: string): string[] {
   );
 }
 
+// The one file allowed to build an Error: every failure of src/ comes from the catalogue of codes
+const CODED_ERROR_PATH = 'src/domain/coded-error.ts';
+// An Error class, built or called: Error, TypeError, a class of its own
+const ERROR_CLASS_PATTERN = /^(?:[A-Z][A-Za-z]*)?Error$/;
+
+// Each place src/ raises a failure without a code: an Error class built, called or extended, or a
+// value thrown as is (CODING_STANDARDS “Visible failure”, ADR-0015)
+function findErrorsOutsideCatalogue(projectDirectory: string): string[] {
+  const filePathList = globSync('src/**/*.{ts,tsx}', {
+    cwd: projectDirectory,
+    exclude: [CODED_ERROR_PATH, '**/*.test.{ts,tsx}', 'src/workspace/generated/**'],
+  });
+  return filePathList.flatMap((filePath) => {
+    const content = readFileSync(path.join(projectDirectory, filePath), 'utf8');
+    const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const violationList: string[] = [];
+    const report = (node: ts.Node, what: string) => {
+      const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+      violationList.push(
+        `${filePath}:${String(line + 1)} ${what} outside the catalogue of codes: throw codedError(<code>) ` +
+          '(CODING_STANDARDS “Visible failure”, ADR-0015)',
+      );
+    };
+    const isErrorClass = (expression: ts.Expression) =>
+      ts.isIdentifier(expression) && ERROR_CLASS_PATTERN.test(expression.text);
+    const visit = (node: ts.Node) => {
+      if ((ts.isNewExpression(node) || ts.isCallExpression(node)) && isErrorClass(node.expression)) {
+        report(node, `builds ${node.expression.getText(sourceFile)}`);
+      } else if (ts.isHeritageClause(node) && node.types.some(({ expression }) => isErrorClass(expression))) {
+        report(node, 'extends an Error class');
+      } else if (
+        ts.isThrowStatement(node) &&
+        (ts.isLiteralExpression(node.expression) ||
+          ts.isTemplateExpression(node.expression) ||
+          ts.isObjectLiteralExpression(node.expression) ||
+          ts.isArrayLiteralExpression(node.expression))
+      ) {
+        report(node, 'throws a value');
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
+    return violationList;
+  });
+}
+
 function createProject(fileContentByPath: Record<string, string>): string {
   const projectDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-architecture-'));
   const tsconfigPath = path.join(projectDirectory, 'tsconfig.json');
@@ -532,6 +578,32 @@ describe('architecture', () => {
 
   it('uses raw data only in an anti-corruption layer', () => {
     expect(findRawDataOutsideAcl(ROOT_DIRECTORY)).toEqual([]);
+  });
+
+  it('catches an error thrown outside the catalogue of codes', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/actions/postings.ts': "throw new Error('Offre inconnue.');\n",
+        'src/actions/jobs.ts': "export const reject = () => Promise.reject(TypeError('Job inconnu.'));\n",
+        'src/status/index.ts': "export class StatusError extends Error {}\nthrow 'Statut invalide.';\n",
+        'src/domain/coded-error.ts': 'export class CodedError extends Error {}\nnew CodedError();\n',
+        'src/actions/watches.ts': "throw codedError('unknown_watch');\n",
+      }),
+    );
+
+    expect(
+      sortedList(findErrorsOutsideCatalogue(projectDirectory)).map((violation) => violation.split(' outside', 1)[0]),
+    ).toEqual([
+      'src/actions/jobs.ts:1 builds TypeError',
+      'src/actions/postings.ts:1 builds Error',
+      'src/status/index.ts:1 extends an Error class',
+      'src/status/index.ts:2 throws a value',
+    ]);
+    expect(findErrorsOutsideCatalogue(projectDirectory)[0]).toMatch(/“Visible failure”, ADR-0015/);
+  });
+
+  it('throws only errors of the catalogue of codes', () => {
+    expect(findErrorsOutsideCatalogue(ROOT_DIRECTORY)).toEqual([]);
   });
 
   it('catches the front running the queued jobs', () => {

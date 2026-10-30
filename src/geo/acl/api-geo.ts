@@ -1,6 +1,6 @@
 import { z } from 'zod/v4';
 
-import { tFor } from '#/domain/catalogue/i18n.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import { LOCATION_SCHEMA, type Locale, type Location } from '#/domain/index.ts';
 import { wordListOf } from '#/text/index.ts';
 
@@ -27,16 +27,15 @@ export function createApiGeo(httpFetch: typeof fetch = fetch) {
     // The commune named like the city, the most populated one when several are. Its search is
     // fuzzy, so a commune with another name is never taken for the city: null.
     async findLocation(city: string, locale: Locale): Promise<Location | null> {
-      const t = tFor(locale, 'error');
       const url = `${ORIGIN}/communes?nom=${encodeURIComponent(city)}&fields=nom,centre,region&boost=population&limit=5`;
       let response: Response;
       try {
         response = await httpFetch(url);
       } catch (error) {
-        throw new Error(t('apiGeoUnreachable', { url, reason: String(error) }), { cause: error });
+        throw codedError('api_geo_unreachable', { url, reason: String(error) }, { locale, cause: error });
       }
       if (response.status !== 200) {
-        throw new Error(t('apiGeoStatus', { url, status: response.status }));
+        throw codedError('api_geo_status', { url, status: response.status }, { locale });
       }
       const communeList = z.array(COMMUNE_SCHEMA).parse(await response.json());
       const commune = communeList.find(({ nom }) => normalize(nom) === normalize(city));

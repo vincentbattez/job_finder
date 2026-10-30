@@ -70,7 +70,8 @@ describe('the job queue', () => {
     expect(followedJob).toMatchObject({ id: queuedJob.id, state: 'done', version: { number: 1, state: 'ready' } });
   });
 
-  it('fails a job whose run throws, and goes on with the next one', async () => {
+  // A library exception, such as a full disk, reaches the Candidate under a code, in French
+  it('fails a job whose run throws, under the code of an unexpected error, and goes on with the next one', async () => {
     const aiSession = createFakeAiSession({ errorMessage: 'Disque plein.' }, RESEARCH);
     const { actions } = await detectPostings(aiSession);
     await actions.runModule({ module: 'research', reference: REFERENCE });
@@ -79,7 +80,13 @@ describe('the job queue', () => {
     const jobList = await actions.runQueuedJobs();
 
     expect(jobList).toMatchObject([
-      { posting: { reference: REFERENCE }, state: 'failed', log: 'Disque plein.', version: { state: 'failed' } },
+      {
+        posting: { reference: REFERENCE },
+        state: 'failed',
+        errorCode: 'unexpected',
+        log: 'Erreur inattendue : Disque plein.\nRelancer ; si elle revient, la signaler avec ce message.',
+        version: { state: 'failed' },
+      },
       { posting: { reference: OTHER_REFERENCE }, state: 'done', version: { state: 'ready' } },
     ]);
   });
@@ -102,7 +109,9 @@ describe('the job queue', () => {
     await restartedWorker.runModule({ module: 'research', reference: REFERENCE });
     await restartedWorker.runQueuedJobs();
 
-    expect(failedJobList).toMatchObject([{ id: interruptedJob.id, state: 'failed', version: { number: 1 } }]);
+    expect(failedJobList).toMatchObject([
+      { id: interruptedJob.id, state: 'failed', errorCode: 'interrupted_job', version: { number: 1 } },
+    ]);
     expect(failedJobList[0]?.log).toMatch(/worker s'est arrêté/);
     const versionList = await restartedWorker.listVersions({ reference: REFERENCE, artifact: 'research' });
     expect(versionList.map(({ number, state, isChosen }) => ({ number, state, isChosen }))).toEqual([

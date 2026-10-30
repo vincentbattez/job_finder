@@ -1,5 +1,6 @@
 import { z } from 'zod/v4';
 
+import { ERROR_CODE_SCHEMA } from './error.ts';
 import { LOCALE_LIST, type Locale } from './locale.ts';
 
 export type { Locale } from './locale.ts';
@@ -244,6 +245,8 @@ export const JOB_SCHEMA = z
     posting: POSTING_SCHEMA,
     state: JOB_STATE_SCHEMA,
     log: z.string(),
+    // The code of the catalogue a failed job failed under (ADR-0015)
+    errorCode: ERROR_CODE_SCHEMA.nullable(),
     sessionId: z.string().nullable(),
     version: VERSION_SCHEMA.nullable(),
   })
@@ -347,7 +350,7 @@ export const POSTING_DETAIL_SCHEMA = z
     recipients: RECIPIENTS_SCHEMA.nullable(),
     // That of its latest extraction job, null for a Posting that was not imported; the log says why
     // it failed
-    extraction: z.object({ state: STATE_SCHEMA, log: z.string() }).nullable(),
+    extraction: z.object({ state: STATE_SCHEMA, log: z.string(), errorCode: ERROR_CODE_SCHEMA.nullable() }).nullable(),
   })
   .brand<'Domain'>();
 

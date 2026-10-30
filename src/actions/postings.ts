@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { tFor } from '#/domain/catalogue/i18n.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import {
   ARTIFACT_SCHEMA,
   POSTING_DETAIL_SCHEMA,
@@ -105,7 +105,11 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
         extraction:
           extractionJob === undefined
             ? null
-            : { state: STATE_BY_JOB_STATE[extractionJob.state], log: extractionJob.log },
+            : {
+                state: STATE_BY_JOB_STATE[extractionJob.state],
+                log: extractionJob.log,
+                errorCode: extractionJob.errorCode,
+              },
       });
     },
 
@@ -118,17 +122,17 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
     async readVisualization(rawInput: unknown): Promise<Visualization> {
       const { reference, number } = VISUALIZATION_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
-      const t = tFor(await findLocale(posting.candidateId), 'error');
+      const locale = await findLocale(posting.candidateId);
       const versionList = await workspace.listVersions(posting, 'visualization');
       const version = versionList.find((entry) => entry.number === number);
       if (version === undefined) {
-        throw new Error(t('unknownVersion', { reference, artifact: 'visualization', number }));
+        throw codedError('unknown_version', { reference, artifact: 'visualization', number }, { locale });
       }
       const html = workspace.readTextFile(
         path.join(workspace.versionDirectoryOf(posting, version), VISUALIZATION_MODULE.fileName),
       );
       if (html === null) {
-        throw new Error(t('visualizationWithoutPage', { reference, number }));
+        throw codedError('visualization_without_page', { reference, number }, { locale });
       }
       return VISUALIZATION_SCHEMA.parse({ html });
     },
@@ -138,7 +142,7 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
       const posting = await findPosting(reference);
       const recipients = await findRecipients(posting);
       if (recipients === null) {
-        throw new Error(tFor(await findLocale(posting.candidateId), 'error')('noChosenLetter', { reference }));
+        throw codedError('no_chosen_letter', { reference }, { locale: await findLocale(posting.candidateId) });
       }
       return recipients;
     },

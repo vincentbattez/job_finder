@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { tFor } from '#/domain/catalogue/i18n.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import {
   JOB_DESCRIPTION_FILE_NAME,
   type Artifact,
@@ -181,7 +181,7 @@ export async function openWorkspace(dataDirectory: string) {
       const filePath = path.join(postingDirectoryOf(posting), JOB_DESCRIPTION_FILE_NAME);
       const jobDescription = readTextFile(filePath);
       if (jobDescription === null) {
-        throw new Error(tFor(locale, 'error')('missingJobDescription', { reference: posting.reference, filePath }));
+        throw codedError('missing_job_description', { reference: posting.reference, filePath }, { locale });
       }
       return jobDescription;
     },

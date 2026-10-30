@@ -1,7 +1,7 @@
 import { z } from 'zod/v4';
 
 import { defaultErrorTranslator } from '#/domain/catalogue/i18n.ts';
-import { ERROR } from '#/domain/error.ts';
+import { codedError, codedErrorOf } from '#/domain/coded-error.ts';
 import {
   DETECTION_ORIGIN_SCHEMA,
   DETECTION_OVERVIEW_SCHEMA,
@@ -26,7 +26,6 @@ import {
 import { findRepostedPosting } from '#/repost/index.ts';
 import type { ISourceReadResult } from '#/source/index.ts';
 import { hasBeenApplied } from '#/status/index.ts';
-import { messageOf } from '#/text/index.ts';
 
 import type { ActionContext } from './context.ts';
 
@@ -222,7 +221,7 @@ export function createDetectActions({
       staleOption(),
     );
     if ('runningSince' in claimed) {
-      throw ERROR.detectionRunning(claimed.runningSince);
+      throw codedError('detection_running', { startedAt: claimed.runningSince });
     }
     return { detection: claimed.detection, watchList };
   }
@@ -234,7 +233,7 @@ export function createDetectActions({
       await workspace.finishDetection(detection, null);
       return detectionList;
     } catch (error) {
-      await workspace.finishDetection(detection, messageOf(error));
+      await workspace.finishDetection(detection, codedErrorOf(error).message);
       throw error;
     }
   }

@@ -1,12 +1,18 @@
-// The messages of the errors a Candidate reads, each saying what to do. Those of a coded error
-// (src/domain/error.ts) are keyed by its code, in camelCase; #39 keys the others once their codes exist.
+// The messages of the errors a Candidate reads, each saying what to do: the catalogue of the codes
+// (src/domain/error.ts) names the key of each, and the texts a message embeds
 export const ERROR_EN = {
   // A name the message quotes, such as each label of a list
   quote: '“{{text}}”',
   // Between the Statuses a Posting can move to
   orSeparator: ' or ',
 
-  // The coded errors
+  // What reaches the Candidate of a failure our code did not foresee, or of an input not as expected
+  unexpected: 'Unexpected error: {{reason}}\nRun again; if it comes back, report it with this message.',
+  invalidInput: 'Invalid input:\n{{problem}}\nCorrect it, then try again.',
+  // A module's failure, worded in its own copy (ADR-0010)
+  moduleFailure: '{{detail}}',
+
+  // The data folder
   dataLayoutMixed:
     'The data folder mixes the old layout and the new one: “{{frenchPath}}” and “{{englishPath}}” both exist. Merge the first into the second by hand, delete it, then start again.',
   dataLayoutUnexpected:
@@ -44,6 +50,8 @@ export const ERROR_EN = {
   watchParameters:
     'The Watch {{watchId}} does not give the {{sourceName}} Source the Parameters it expects: correct {{labels}} in the Profile of its Candidate.',
   sourceParameters: 'The {{sourceName}} Source expects other Parameters: fill in {{labels}}.',
+  // Each notification not sent, one per line
+  notificationsNotSent: '{{failures}}',
 
   // Statuses
   statusChange: 'Posting {{reference}} is {{statusLabel}}: it can only move to {{nextLabels}}.',
@@ -103,6 +111,7 @@ export const ERROR_EN = {
     '“{{upload}}” converts into “{{fileName}}”, which the Profile already has: it is not overwritten. Delete or rename “{{fileName}}”, then run the conversion again.',
 
   // The AI sessions and what they write
+  sessionFailed: 'The Claude Code session failed: its log says why. Run the module again.',
   sessionStopped: 'Claude Code stopped (code {{exitCode}}): {{output}}',
   sessionNotLaunched: 'Claude Code could not be launched ({{reason}}). Install “claude” and log in to it.',
   interactiveSessionFailed:
@@ -118,6 +127,10 @@ export const ERROR_EN = {
   hasScript: 'it holds a script, which the front does not run',
   recipientsFormat: 'it does not follow the requested format ({{detail}})',
   inventedAddress: 'the address {{email}} is not in the field {{field}} of the Posting',
+
+  // A mistake of a module's author, never of the Candidate
+  parameterUndeclared:
+    'The {{parameterName}} Parameter of the {{moduleName}} module is not declared with parameter(): declare it so in the module.',
 
   // API Géo, which places the Postings on the map
   apiGeoUnreachable: 'API Géo is unreachable ({{url}}): {{reason}}. Check the connection, then run again.',

@@ -3,6 +3,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { z } from 'zod/v4';
 
 import { tFor } from '#/domain/catalogue/i18n.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import { SESSION_RESULT_SCHEMA, type Locale, type SessionResult } from '#/domain/index.ts';
 import { messageOf } from '#/text/index.ts';
 
@@ -103,12 +104,11 @@ export const CLAUDE_CODE: IAiSession = {
       env: subscriptionEnvironment(),
       stdio: 'inherit',
     });
-    const t = tFor(locale, 'error');
     if (error !== undefined) {
-      throw new Error(t('sessionNotLaunched', { reason: error.message }));
+      throw codedError('session_not_launched', { reason: error.message }, { locale, cause: error });
     }
     if (status !== 0) {
-      throw new Error(t('interactiveSessionFailed', { status: String(status) }));
+      throw codedError('interactive_session_failed', { status: String(status) }, { locale });
     }
   },
 

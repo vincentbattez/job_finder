@@ -53,7 +53,7 @@ export const CLI_FR: typeof CLI_EN = {
   importQueued: 'Le worker la lance, puis met sa Recherche en file. « jf list {{candidateId}} » la montre.\n',
   extractionWaiting: 'Attente du worker (service lpm worker) : Claude Code relève les champs…\n',
   extractionFailed:
-    "Extraction des champs de l'Offre {{reference}} en échec :\n{{log}}\nRelancer : jf run extraction {{reference}}",
+    "Extraction des champs de l'Offre {{reference}} en échec ({{errorCode}}) :\n{{log}}\nRelancer : jf run extraction {{reference}}",
   extracted: '{{postingLine}}\nSa Recherche est en file : « jf versions {{reference}} research » la suit.\n',
 
   runDescription:
@@ -62,7 +62,7 @@ export const CLI_FR: typeof CLI_EN = {
   queued: "{{module}} de l'Offre {{reference}} en file (job {{jobId}}).\n",
   runQueued: 'Le worker la produira. « {{versionsCommand}} » suit ses Versions.\n',
   runWaiting: 'Attente du worker (service lpm worker) : Claude Code peut prendre plusieurs minutes…\n',
-  runFailed: '{{name}} en échec :\n{{log}}\nRelancer : jf run {{module}} {{reference}}',
+  runFailed: '{{name}} en échec ({{errorCode}}) :\n{{log}}\nRelancer : jf run {{module}} {{reference}}',
   runReady: '{{name}} prête et retenue. « {{versionsCommand}} » liste ses Versions.\n',
 
   recipientsDescription: 'Affiche à qui adresser la candidature, selon la Lettre retenue : jf recipients <offre>',

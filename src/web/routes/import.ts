@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs } from 'react-router';
 
-import { messageOf } from '#/actions/index.ts';
+import { codedErrorOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 
@@ -14,6 +14,6 @@ export async function action({ request }: ActionFunctionArgs) {
     });
     return { job, error: null };
   } catch (error) {
-    return { job: null, error: messageOf(error) };
+    return { job: null, error: codedErrorOf(error).message };
   }
 }

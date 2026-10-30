@@ -8,6 +8,7 @@ import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { z } from 'zod/v4';
 
 import { localeOf } from '#/domain/catalogue/i18n.ts';
+import type { ErrorCode } from '#/domain/error.ts';
 import {
   CANDIDATE_SCHEMA,
   DEFAULT_DEADLINE_PERIOD_SCHEMA,
@@ -411,12 +412,17 @@ export function openDatabase(databasePath: string) {
     // A ready Version becomes the Chosen Version: by default, the latest one is retained
     async finishJob(
       { job, version }: { job: Job; version: Version },
-      { isReady, log, sessionId }: { isReady: boolean; log: string; sessionId: string | null },
+      { errorCode, log, sessionId }: { errorCode: ErrorCode | null; log: string; sessionId: string | null },
     ): Promise<{ job: Job; version: Version }> {
+      // Ready unless it failed under a code
+      const isReady = errorCode === null;
       const versionWhere = { postingId: job.posting.id, artifact: version.artifact, number: version.number };
       await prisma.$transaction([
         prisma.version.updateMany({ where: versionWhere, data: { state: isReady ? 'ready' : 'failed' } }),
-        prisma.job.update({ where: { id: job.id }, data: { state: isReady ? 'done' : 'failed', log, sessionId } }),
+        prisma.job.update({
+          where: { id: job.id },
+          data: { state: isReady ? 'done' : 'failed', log, errorCode, sessionId },
+        }),
         ...(isReady ? chooseStatementList(versionWhere) : []),
       ]);
       return {
@@ -469,9 +475,11 @@ export function openDatabase(databasePath: string) {
           );
     },
 
-    // Fails the running jobs and their Versions, keeping the reason in the job's log
-    // The log of each job in the locale of its Candidate, that of its Posting or of its Upload
-    async failRunningJobs(composeLog: (locale: Locale) => string): Promise<QueuedJob[]> {
+    // Fails the running jobs and their Versions, keeping the code of the failure and its message in
+    // the job's log, in the locale of its Candidate, that of its Posting or of its Upload
+    async failRunningJobs(
+      composeError: (locale: Locale) => { code: ErrorCode; message: string },
+    ): Promise<QueuedJob[]> {
       const runningList = await prisma.job.findMany({
         where: { state: 'running' },
         select: { id: true, candidate: true, posting: { select: { candidate: true } } },
@@ -479,12 +487,10 @@ export function openDatabase(databasePath: string) {
       const idList = runningList.map(({ id }) => id);
       await prisma.$transaction([
         prisma.version.updateMany({ where: { jobId: { in: idList } }, data: { state: 'failed' } }),
-        ...runningList.map(({ id, candidate, posting }) =>
-          prisma.job.update({
-            where: { id },
-            data: { state: 'failed', log: composeLog(localeOf(candidate ?? posting?.candidate)) },
-          }),
-        ),
+        ...runningList.map(({ id, candidate, posting }) => {
+          const { code, message } = composeError(localeOf(candidate ?? posting?.candidate));
+          return prisma.job.update({ where: { id }, data: { state: 'failed', log: message, errorCode: code } });
+        }),
       ]);
       return z
         .array(QUEUED_JOB_SCHEMA)

@@ -97,7 +97,7 @@ describe('import of a Job Description in Markdown', () => {
     });
     const { jobDescription, extraction } = await actions.readPosting({ reference: job.posting.reference });
     expect(jobDescription).toBe(JOB_DESCRIPTION);
-    expect(extraction).toEqual({ state: 'in_progress', log: '' });
+    expect(extraction).toEqual({ state: 'in_progress', log: '', errorCode: null });
     // The worker runs the session, never the front nor the CLI (ADR-0003)
     expect(aiSession.headlessSessionList).toEqual([]);
   });
@@ -147,10 +147,18 @@ describe('import of a Job Description in Markdown', () => {
     const [failedJob] = await actions.runQueuedJobs();
 
     const log = "Claude Code n'a pas relevé les champs de la Fiche de poste : Claude Code a rencontré une erreur.";
-    expect(failedJob).toMatchObject({ module: 'extraction', state: 'failed', log });
+    expect(failedJob).toMatchObject({
+      module: 'extraction',
+      state: 'failed',
+      log,
+      errorCode: 'extraction_session_failed',
+    });
+    expect(await actions.followJob({ jobId: failedJob?.id })).toMatchObject({
+      errorCode: 'extraction_session_failed',
+    });
     const detail = await actions.readPosting({ reference: posting.reference });
     expect(detail.posting).toMatchObject({ title: FILE_NAME, employer: null });
-    expect(detail.extraction).toEqual({ state: 'failed', log });
+    expect(detail.extraction).toEqual({ state: 'failed', log, errorCode: 'extraction_session_failed' });
     expect(detail.artifactList.find(({ artifact }) => artifact === 'research')?.state).toBe('absent');
 
     const job = await actions.runModule({ module: 'extraction', reference: posting.reference });

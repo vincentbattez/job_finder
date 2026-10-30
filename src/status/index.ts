@@ -1,4 +1,5 @@
 import { tFor } from '#/domain/catalogue/i18n.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import type { Locale, Posting, Status } from '#/domain/index.ts';
 
 // What the status rules read of a Posting
@@ -76,7 +77,7 @@ export function assertStatusChange(posting: PostingStatus, status: Status, local
     statusLabel: tCommon(`statusLabelByStatus.${posting.status}`),
     nextLabels: nextLabelList.join(t('orSeparator')),
   };
-  throw new Error(t(hasBeenApplied(posting) ? 'statusChangeAfterApplied' : 'statusChange', values));
+  throw codedError(hasBeenApplied(posting) ? 'status_change_after_applied' : 'status_change', values, { locale });
 }
 
 // Once the Posting was Applied, the Chosen Letter is the one sent, even once the Posting is Archived
@@ -86,8 +87,7 @@ export function findLetterFreeze(posting: PostingStatus, locale: Locale): string
 
 // Every action that would change the Chosen Letter calls this first
 export function assertLetterModifiable(posting: PostingStatus, locale: Locale): void {
-  const freeze = findLetterFreeze(posting, locale);
-  if (freeze !== undefined) {
-    throw new Error(freeze);
+  if (hasBeenApplied(posting)) {
+    throw codedError('letter_frozen', { reference: posting.reference }, { locale });
   }
 }

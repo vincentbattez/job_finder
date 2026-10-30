@@ -4,7 +4,7 @@ import path from 'node:path';
 import { z } from 'zod/v4';
 
 import { DEFAULT_LOCALE } from '#/domain/catalogue/i18n.ts';
-import { ERROR } from '#/domain/error.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import { LOCALE_SCHEMA, PARAMETERS_SCHEMA } from '#/domain/index.ts';
 
 // The file where an older jf read the Candidates, their Watches and the Default Deadline Period. The database
@@ -56,7 +56,7 @@ export function readObsoleteConfig(dataDirectory: string): Config | null {
   }
   const result = CONFIG_SCHEMA.safeParse(JSON.parse(readFileSync(configPath, 'utf8')));
   if (!result.success) {
-    throw ERROR.configInvalid(configPath, z.prettifyError(result.error));
+    throw codedError('config_invalid', { configPath, problem: z.prettifyError(result.error) });
   }
   return result.data;
 }
@@ -78,7 +78,7 @@ function renameKeys(value: unknown, configPath: string): unknown {
   const entryList = Object.entries(value);
   for (const { from, to } of CONFIG_KEY_RENAME_LIST) {
     if (entryList.some(([key]) => key === from) && entryList.some(([key]) => key === to)) {
-      throw ERROR.configKeysMixed(configPath, from, to);
+      throw codedError('config_keys_mixed', { configPath, frenchKey: from, englishKey: to });
     }
   }
   return Object.fromEntries(

@@ -1,37 +1,234 @@
-import { defaultErrorTranslator } from '#/domain/catalogue/i18n.ts';
+import { z } from 'zod/v4';
 
-// A failure the Candidate can act on, identified by a code that means one thing, whatever its message
-// says (#39 grows this catalogue to every failure). The message, in the i18next resources, says what to do.
-type ErrorCode =
-  'data_layout_mixed' | 'data_layout_unexpected' | 'config_invalid' | 'config_keys_mixed' | 'detection_running';
+import type { CLI_EN } from './catalogue/en/cli.ts';
+import type { ERROR_EN } from './catalogue/en/error.ts';
+import type { NOTIFICATION_EN } from './catalogue/en/notification.ts';
 
-class CodedError extends Error {
-  readonly code: ErrorCode;
+// The keys of an area whose text is a message, as opposed to a group of texts
+type MessageKeyOf<Resource> = Extract<
+  { [Key in keyof Resource]: Resource[Key] extends string ? Key : never }[keyof Resource],
+  string
+>;
 
-  constructor(code: ErrorCode, message: string) {
-    super(message);
-    this.name = 'CodedError';
-    this.code = code;
-  }
+// The message of a code: an i18next key, namespace first, of the areas that word failures (ADR-0012)
+type ErrorMessageKey =
+  | `error:${MessageKeyOf<typeof ERROR_EN>}`
+  | `cli:${MessageKeyOf<typeof CLI_EN>}`
+  | `notification:${MessageKeyOf<typeof NOTIFICATION_EN>}`;
+
+// Every failure the Candidate can read, one code each, so that the front, the CLI, a job and a test
+// tell which failure it is whatever its message says (ADR-0015). A code is one line: its meaning in
+// the comment, its message key on the right, which the typecheck refuses if en/ or fr/ lacks it.
+// A module's failure is worded in its own copy, the only place allowed to name it (ADR-0010): its code
+// takes that text as detail.
+export const ERROR_CATALOGUE = {
+  // Something our code did not foresee threw: a library, the database, the network
+  unexpected: 'error:unexpected',
+  // An input does not follow the schema of its action
+  invalid_input: 'error:invalidInput',
+
+  // The data folder and the config an older jf left
+  // An entry of the data folder exists both in the French layout and in the English one
+  data_layout_mixed: 'error:dataLayoutMixed',
+  // A known entry of the French layout is not of the kind the tool expects, a file for a folder or the reverse
+  data_layout_unexpected: 'error:dataLayoutUnexpected',
+  // The config an older jf left does not follow the schema it is imported with
+  config_invalid: 'error:configInvalid',
+  // The config an older jf left holds a French key and its English name at once
+  config_keys_mixed: 'error:configKeysMixed',
+  // The Job Description of a Posting is no longer in its folder
+  missing_job_description: 'error:missingJobDescription',
+
+  // Candidates and Postings
+  // No Candidate has this identifier
+  unknown_candidate: 'error:unknownCandidate',
+  // An identifier a Candidate cannot have
+  invalid_candidate_id: 'error:invalidCandidateId',
+  // A Candidate's name is empty
+  empty_candidate_name: 'error:emptyCandidateName',
+  // Another Candidate already has this identifier
+  duplicate_candidate_id: 'error:duplicateCandidateId',
+  // A Default Deadline Period that is not a whole number of months
+  invalid_default_deadline_period: 'error:invalidDefaultDeadlinePeriod',
+  // No Posting has this reference
+  unknown_posting: 'error:unknownPosting',
+  // Several Postings, of different Candidates, have this reference
+  ambiguous_posting: 'error:ambiguousPosting',
+
+  // Detections, Watches and Sources
+  // A Detection is asked for while another one runs (ADR-0014)
+  detection_running: 'error:detectionRunning',
+  // A Candidate has no Watch with this identifier
+  unknown_watch: 'error:unknownWatch',
+  // No Source has this identifier
+  unknown_source: 'error:unknownSource',
+  // A saved Watch names a Source the registry no longer has
+  unknown_source_of_watch: 'error:unknownSourceOfWatch',
+  // A saved Watch does not give its Source the Parameters it expects
+  watch_parameters: 'error:watchParameters',
+  // The Parameters typed for a Source are missing or wrong
+  source_parameters: 'error:sourceParameters',
+  // The site of a Source does not answer
+  source_unreachable: 'error:moduleFailure',
+  // The site of a Source answers with an HTTP error
+  source_status: 'error:moduleFailure',
+  // What a Source answers is no longer in the format its module reads
+  source_format_changed: 'error:moduleFailure',
+  // A notification of the Detection was not sent
+  notifications_not_sent: 'error:notificationsNotSent',
+
+  // Statuses
+  // A Posting cannot move to this Status from its own
+  status_change: 'error:statusChange',
+  // An Applied Posting cannot move to this Status, Applied being never undone
+  status_change_after_applied: 'error:statusChangeAfterApplied',
+  // The Chosen Letter of an Applied Posting is frozen as sent
+  letter_frozen: 'error:letterFrozen',
+
+  // Modules, jobs and Versions
+  // No module has this name
+  unknown_module: 'error:unknownModule',
+  // No Artifact has this name
+  unknown_artifact: 'error:unknownArtifact',
+  // An Artifact the module relies on has no Chosen Version
+  missing_artifact: 'error:missingArtifactForCli',
+  // The extraction is asked for a Posting its Source gave the fields of
+  not_imported: 'error:notImported',
+  // No job has this number
+  unknown_job: 'error:unknownJob',
+  // The worker stopped while the job ran
+  interrupted_job: 'error:interruptedJob',
+  // The Claude Code session of a job ended on an error
+  session_failed: 'error:sessionFailed',
+  // A file the module must write is missing
+  missing_output: 'error:missingOutput',
+  // A file the module must write is empty
+  empty_output: 'error:emptyOutput',
+  // A file the module wrote does not have its format
+  malformed_output: 'error:malformedOutput',
+  // The Visualization is asked to be edited, while it follows the Interview Brief
+  visualization_not_editable: 'error:visualizationNotEditable',
+  // An Artifact to edit has no Chosen Version
+  no_chosen_version_to_edit: 'error:noChosenVersionToEdit',
+  // The Draft is asked to be edited, while it keeps what the AI wrote
+  draft_not_editable: 'error:draftNotEditable',
+  // An Artifact has no Version with this number
+  unknown_version: 'error:unknownVersion',
+  // A failed Version is chosen
+  version_failed: 'error:versionFailed',
+  // A Version in progress is chosen
+  version_running: 'error:versionRunning',
+  // A file asked for is not one of the Chosen Version
+  not_a_version_file: 'error:notAVersionFile',
+  // A Visualization Version has no page
+  visualization_without_page: 'error:visualizationWithoutPage',
+  // A Posting has no Chosen Letter to send
+  no_chosen_letter: 'error:noChosenLetter',
+
+  // The Profile and its Uploads
+  // A name that is not that of a Profile file
+  invalid_profile_file_name: 'error:invalidProfileFileName',
+  // The Profile has no file with this name
+  missing_profile_file: 'error:missingProfileFile',
+  // The Profile already has a file with this name
+  duplicate_profile_file: 'error:duplicateProfileFile',
+  // An Upload was sent without its file
+  no_file_received: 'error:noFileReceived',
+  // A name that is not that of an Upload
+  invalid_upload_name: 'error:invalidUploadName',
+  // An Upload that is not a PDF
+  not_a_pdf: 'error:notAPdf',
+  // An Upload over the size limit
+  upload_too_large: 'error:uploadTooLarge',
+  // The Profile has no Upload with this name
+  missing_upload: 'error:missingUpload',
+  // The Upload to convert left the Profile before its conversion
+  upload_gone: 'error:uploadGone',
+  // The conversion of an Upload wrote no file
+  conversion_without_file: 'error:conversionWithoutFile',
+  // The conversion of an Upload wrote a file the Profile does not take
+  conversion_refused: 'error:conversionRefused',
+  // The conversion of an Upload would overwrite a different Profile file
+  conversion_overwrite: 'error:conversionOverwrite',
+
+  // The AI sessions and what they write
+  // Claude Code could not be launched
+  session_not_launched: 'error:sessionNotLaunched',
+  // An interactive Claude Code session ended on an error
+  interactive_session_failed: 'error:interactiveSessionFailed',
+  // The session converting an Upload failed
+  conversion_session_failed: 'error:conversionSessionFailed',
+  // The session reading the fields of a Job Description failed
+  extraction_session_failed: 'error:extractionSessionFailed',
+  // The fields read in a Job Description are not valid
+  invalid_extraction: 'error:invalidExtraction',
+
+  // API Géo, which places the Postings on the map
+  // API Géo does not answer
+  api_geo_unreachable: 'error:apiGeoUnreachable',
+  // API Géo answers with an HTTP error
+  api_geo_status: 'error:apiGeoStatus',
+
+  // Modules of a family, their Parameters and the Notification Channels (ADR-0010)
+  // A module declares a Parameter without parameter(), a mistake of its author
+  parameter_undeclared: 'error:parameterUndeclared',
+  // The Parameters of a Notification Channel are missing or wrong
+  channel_parameters: 'notification:incompleteChannel',
+  // A Notification Channel without a check is tried
+  untestable_channel: 'notification:untestableChannel',
+  // The choices of a Parameter that has none are asked for
+  no_choices: 'notification:noChoices',
+  // A Candidate has chosen no Notification Channel
+  no_channel: 'notification:noChannel',
+  // No Notification Channel has this identifier
+  unknown_channel: 'notification:unknownChannel',
+  // A Notification Channel lacks the Parameters to reach its service
+  channel_not_configured: 'error:moduleFailure',
+  // The service of a Notification Channel does not answer
+  channel_unreachable: 'error:moduleFailure',
+  // The service of a Notification Channel refuses its credentials
+  channel_token_refused: 'error:moduleFailure',
+  // The service of a Notification Channel answers with an HTTP error
+  channel_status: 'error:moduleFailure',
+
+  // The CLI
+  // No command has this name
+  unknown_command: 'cli:unknownCommand',
+  // A file named on the command line cannot be read
+  unreadable_file: 'cli:unreadableFile',
+  // The Candidate closed the question without answering
+  no_choice: 'cli:noChoice',
+  // An answer that is none of the numbers offered
+  invalid_choice: 'cli:invalidChoice',
+  // There is no Candidate to choose from
+  no_candidate: 'cli:noCandidate',
+  // The Candidate has no Posting to choose from
+  no_posting: 'cli:noPosting',
+  // The Posting has no Artifact to choose from
+  no_artifact: 'cli:noArtifact',
+  // jf instructions gets an operation it does not know
+  unknown_operation: 'cli:unknownOperation',
+  // The extraction jf import waited for failed
+  extraction_failed: 'cli:extractionFailed',
+  // The job jf run waited for failed
+  run_failed: 'cli:runFailed',
+  // A command lacks its arguments: each usage tells which
+  import_usage: 'cli:importUsage',
+  list_usage: 'cli:listUsage',
+  run_usage: 'cli:runUsage',
+  recipients_usage: 'cli:recipientsUsage',
+  versions_usage: 'cli:versionsUsage',
+  choose_usage: 'cli:chooseUsage',
+  status_usage: 'cli:statusUsage',
+  profile_usage: 'cli:profileUsage',
+  instructions_usage: 'cli:instructionsUsage',
+} satisfies Record<string, ErrorMessageKey>;
+
+export type ErrorCode = keyof typeof ERROR_CATALOGUE;
+
+function isErrorCode(value: unknown): value is ErrorCode {
+  return typeof value === 'string' && Object.hasOwn(ERROR_CATALOGUE, value);
 }
 
-// Each code, built with the values of the case into the message that goes with it. It is raised as
-// the workspace opens, before any Candidate is known: in the default locale.
-const t = defaultErrorTranslator();
-
-export const ERROR = {
-  // An entry of the data folder exists both in the French layout and in the English one
-  dataLayoutMixed: (frenchPath: string, englishPath: string) =>
-    new CodedError('data_layout_mixed', t('dataLayoutMixed', { frenchPath, englishPath })),
-  // A known entry of the French layout is not what the tool expects, a file for a folder or the reverse
-  dataLayoutUnexpected: (frenchPath: string) =>
-    new CodedError('data_layout_unexpected', t('dataLayoutUnexpected', { frenchPath })),
-  // The config an older jf left does not follow the schema it is imported with
-  configInvalid: (configPath: string, problem: string) =>
-    new CodedError('config_invalid', t('configInvalid', { configPath, problem })),
-  // The config an older jf left holds a French key and its English name at once
-  configKeysMixed: (configPath: string, frenchKey: string, englishKey: string) =>
-    new CodedError('config_keys_mixed', t('configKeysMixed', { configPath, frenchKey, englishKey })),
-  // A Detection is asked for while another one runs, the front's or the daily one: one at a time (#63)
-  detectionRunning: (startedAt: Date) => new CodedError('detection_running', t('detectionRunning', { startedAt })),
-};
+// The code a failed job keeps, as the database holds it
+export const ERROR_CODE_SCHEMA = z.custom<ErrorCode>(isErrorCode);

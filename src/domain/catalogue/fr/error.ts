@@ -4,6 +4,10 @@ export const ERROR_FR: typeof ERROR_EN = {
   quote: '« {{text}} »',
   orSeparator: ' ou ',
 
+  unexpected: 'Erreur inattendue : {{reason}}\nRelancer ; si elle revient, la signaler avec ce message.',
+  invalidInput: 'Saisie invalide :\n{{problem}}\nLa corriger, puis réessayer.',
+  moduleFailure: '{{detail}}',
+
   dataLayoutMixed:
     "Le dossier de données mélange l'ancienne et la nouvelle disposition : « {{frenchPath}} » et « {{englishPath}} » existent tous deux. Fusionner le premier dans le second à la main, le supprimer, puis relancer.",
   dataLayoutUnexpected:
@@ -36,6 +40,7 @@ export const ERROR_FR: typeof ERROR_EN = {
   watchParameters:
     "La Veille {{watchId}} ne donne pas à la Source {{sourceName}} les Paramètres qu'elle attend : corriger {{labels}} dans le Profil de son Candidat.",
   sourceParameters: "La Source {{sourceName}} attend d'autres Paramètres : renseigner {{labels}}.",
+  notificationsNotSent: '{{failures}}',
 
   statusChange: "L'Offre {{reference}} est {{statusLabel}} : elle ne peut passer qu'en {{nextLabels}}.",
   statusChangeAfterApplied:
@@ -93,6 +98,7 @@ export const ERROR_FR: typeof ERROR_EN = {
   conversionOverwrite:
     "« {{upload}} » se convertit en « {{fileName}} », que le Profil a déjà : il n'est pas écrasé. Supprimer ou renommer « {{fileName}} », puis relancer la conversion.",
 
+  sessionFailed: 'La session Claude Code a échoué : son journal dit pourquoi. Relancer le module.',
   sessionStopped: "Claude Code s'est arrêté (code {{exitCode}}) : {{output}}",
   sessionNotLaunched: "Impossible de lancer Claude Code ({{reason}}). Installer « claude » et s'y connecter.",
   interactiveSessionFailed:
@@ -108,6 +114,9 @@ export const ERROR_FR: typeof ERROR_EN = {
   hasScript: "il contient un script, que le front n'exécute pas",
   recipientsFormat: 'il ne suit pas le format demandé ({{detail}})',
   inventedAddress: "l'adresse {{email}} ne figure pas dans le champ {{field}} de l'Offre",
+
+  parameterUndeclared:
+    "Le Paramètre {{parameterName}} du module {{moduleName}} n'est pas déclaré avec parameter() : l'y déclarer ainsi dans le module.",
 
   apiGeoUnreachable: 'API Géo est injoignable ({{url}}) : {{reason}}. Vérifier la connexion, puis relancer.',
   apiGeoStatus: 'API Géo a répondu HTTP {{status}} pour {{url}}. Relancer plus tard.',

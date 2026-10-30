@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { IAiModule } from '#/ai-module/index.ts';
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
 import { tFor } from '#/domain/catalogue/i18n.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import {
   ARTIFACT_SCHEMA,
   type Artifact,
@@ -38,23 +39,23 @@ const AI_MODULE_BY_ARTIFACT: Record<Artifact, IAiModule> = {
 };
 
 // An Artifact, or the module that produces it, named after it or by the module's alias
-function parseArtifactName(name: string, locale: Locale, errorKey: 'unknownModule' | 'unknownArtifact'): Artifact {
+function parseArtifactName(name: string, locale: Locale, errorCode: 'unknown_module' | 'unknown_artifact'): Artifact {
   const artifact = ARTIFACT_SCHEMA.options.find(
     (option) => name === option || name === AI_MODULE_BY_ARTIFACT[option].alias,
   );
   if (artifact === undefined) {
     const nameList = Object.entries(AI_MODULE_BY_ARTIFACT).map(([option, aiModule]) => aiModule.alias ?? option);
-    throw new Error(tFor(locale, 'error')(errorKey, { name, names: nameList.join(', ') }));
+    throw codedError(errorCode, { name, names: nameList.join(', ') }, { locale });
   }
   return artifact;
 }
 
 export function parseModule(name: string, locale: Locale): Artifact {
-  return parseArtifactName(name, locale, 'unknownModule');
+  return parseArtifactName(name, locale, 'unknown_module');
 }
 
 export function parseArtifact(name: string, locale: Locale): Artifact {
-  return parseArtifactName(name, locale, 'unknownArtifact');
+  return parseArtifactName(name, locale, 'unknown_artifact');
 }
 
 // Those of the Candidate's locale, the ones they read and edit; the Artifact's language is set by the
@@ -116,21 +117,34 @@ async function findRefusal(
   return undefined;
 }
 
-// The refusal in the words of the CLI, with the command that lifts it, or of the front, beside the
-// button of the missing Artifact
-function wordRefusal(refusal: Refusal, posting: Posting, module: Artifact, locale: Locale, isForFront = false): string {
-  if ('freeze' in refusal) {
-    return refusal.freeze;
-  }
-  const { missingArtifact } = refusal;
-  const t = tFor(locale, 'error');
+// What a refusal for a missing Artifact names
+function missingArtifactValues(missingArtifact: Artifact, posting: Posting, module: Artifact, locale: Locale) {
   const tCommon = tFor(locale, 'common');
-  const missingLabel = tCommon(`artifactLabelByArtifact.${missingArtifact}`);
-  const moduleLabel = tCommon(`artifactLabelByArtifact.${module}`);
-  const { reference } = posting;
-  return isForFront
-    ? t('missingArtifactForFront', { reference, missingLabel, moduleLabel })
-    : t('missingArtifactForCli', { reference, missingLabel, moduleLabel, missingArtifact });
+  return {
+    reference: posting.reference,
+    missingArtifact,
+    missingLabel: tCommon(`artifactLabelByArtifact.${missingArtifact}`),
+    moduleLabel: tCommon(`artifactLabelByArtifact.${module}`),
+  };
+}
+
+// The refusal in the words of the front, beside the button of the missing Artifact
+function wordRefusal(refusal: Refusal, posting: Posting, module: Artifact, locale: Locale): string {
+  return 'freeze' in refusal
+    ? refusal.freeze
+    : tFor(locale, 'error')(
+        'missingArtifactForFront',
+        missingArtifactValues(refusal.missingArtifact, posting, module, locale),
+      );
+}
+
+// The refusal as the error of an action, in the words of the CLI, with the command that lifts it
+function refusalError(refusal: Refusal, posting: Posting, module: Artifact, locale: Locale) {
+  return 'freeze' in refusal
+    ? codedError('letter_frozen', { reference: posting.reference }, { locale })
+    : codedError('missing_artifact', missingArtifactValues(refusal.missingArtifact, posting, module, locale), {
+        locale,
+      });
 }
 
 // What the Candidate sends, the Letter, is frozen once the Posting was Applied
@@ -145,7 +159,7 @@ export function assertNotFrozen(posting: Posting, artifact: Artifact, locale: Lo
 export async function findInputs(workspace: Workspace, posting: Posting, module: Artifact, locale: Locale) {
   const refusal = await findRefusal(workspace, posting, module, locale);
   if (refusal !== undefined) {
-    throw new Error(wordRefusal(refusal, posting, module, locale));
+    throw refusalError(refusal, posting, module, locale);
   }
   const aiModule = AI_MODULE_BY_ARTIFACT[module];
   const artifactList = [...(aiModule.requiredArtifactList ?? []), ...(aiModule.optionalArtifactList ?? [])];
@@ -161,7 +175,7 @@ export async function findInputs(workspace: Workspace, posting: Posting, module:
 // The Posting page offers a module with the very checks of a launch
 export async function describeModule(workspace: Workspace, posting: Posting, artifact: Artifact, locale: Locale) {
   const refusal = await findRefusal(workspace, posting, artifact, locale);
-  return { refusal: refusal === undefined ? null : wordRefusal(refusal, posting, artifact, locale, true) };
+  return { refusal: refusal === undefined ? null : wordRefusal(refusal, posting, artifact, locale) };
 }
 
 // The worker runs each queued job with it (ADR-0003); the Version keeps the Instructions it was made
@@ -178,18 +192,19 @@ export function createJobRunner(
     outputDirectory: string,
     locale: Locale,
   ) {
-    const t = tFor(locale, 'error');
     const filePath = path.join(outputDirectory, name);
     const outputPath = path.relative(workspace.postingDirectoryOf(posting), filePath);
     const content = workspace.readTextFile(filePath);
     if (content === null) {
-      return t('missingOutput', { outputPath });
+      return codedError('missing_output', { outputPath }, { locale });
     }
     if (content.trim() === '') {
-      return t('emptyOutput', { outputPath });
+      return codedError('empty_output', { outputPath }, { locale });
     }
     const formatError = findFormatError?.(content, locale, posting);
-    return formatError === undefined ? undefined : t('malformedOutput', { outputPath, formatError });
+    return formatError === undefined
+      ? undefined
+      : codedError('malformed_output', { outputPath, formatError }, { locale });
   }
 
   return async function runJob(
@@ -241,15 +256,15 @@ export function createJobRunner(
           .map((outputFile) => findOutputProblem(outputFile, posting, outputDirectory, locale))
           .find((fileProblem) => fileProblem !== undefined)
       : undefined;
-    const isReady = session.isSuccess && problem === undefined;
-    if (isReady) {
+    const errorCode = session.isSuccess ? (problem?.code ?? null) : 'session_failed';
+    if (errorCode === null) {
       aiModule.completeVersion?.(outputDirectory);
     }
     return workspace.finishJob(
       { job, version },
       {
-        isReady,
-        log: problem === undefined ? session.log : `${problem}\n${session.log}`,
+        errorCode,
+        log: problem === undefined ? session.log : `${problem.message}\n${session.log}`,
         sessionId: session.sessionId,
       },
     );

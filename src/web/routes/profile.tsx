@@ -10,7 +10,7 @@ import {
 } from 'react-router';
 
 import { localeOf, tFor } from '#/actions/i18n.ts';
-import { messageOf } from '#/actions/index.ts';
+import { codedErrorOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { CopyCommand } from '#/web/components/copy-command.tsx';
@@ -92,7 +92,7 @@ export async function action({ request }: ActionFunctionArgs) {
       }
     }
   } catch (error) {
-    return { refusal: { isCreation: intent === 'create', fileName, message: messageOf(error) } };
+    return { refusal: { isCreation: intent === 'create', fileName, message: codedErrorOf(error).message } };
   }
   // The Uploads are sent by a fetcher, which revalidates the page by itself and keeps what it receives
   return intent === 'upload' || intent === 'deleteUpload' || intent === 'convertUpload'

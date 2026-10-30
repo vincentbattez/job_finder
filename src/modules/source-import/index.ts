@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { tFor } from '#/domain/catalogue/i18n.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import { JOB_DESCRIPTION_SCHEMA, LISTED_POSTING_SCHEMA, type Locale } from '#/domain/index.ts';
 
 import { emptyExtractionDirectory, EXTRACTION_FILE_NAME, readExtraction } from './acl/extraction.ts';
@@ -47,7 +47,7 @@ export function createImportSource(aiSession: IAiSession) {
         locale,
       });
       if (!session.isSuccess) {
-        throw new Error(tFor(locale, 'error')('extractionSessionFailed', { log: session.log }));
+        throw codedError('extraction_session_failed', { log: session.log }, { locale });
       }
       return { ...readExtraction(outputDirectory, jobDescription, locale), session };
     },

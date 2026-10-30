@@ -10,7 +10,7 @@ import {
 } from 'react-router';
 
 import { localeOf, tFor } from '#/actions/i18n.ts';
-import { messageOf } from '#/actions/index.ts';
+import { codedErrorOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { SettingsPanel, SettingsStep } from '#/web/components/settings-panel.tsx';
@@ -50,7 +50,7 @@ export async function action({ request }: ActionFunctionArgs) {
       }
     }
   } catch (error) {
-    return { refusal: { intent, candidateId, message: messageOf(error) } };
+    return { refusal: { intent, candidateId, message: codedErrorOf(error).message } };
   }
   return redirect('/candidates');
 }
