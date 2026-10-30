@@ -3,15 +3,18 @@
   .uploads h2 {
     font: 600 var(--text-md) / 1.4 var(--font-body);
   }
+
   .uploads__empty {
     color: var(--color-ink-2);
   }
+
   .uploads__list {
     display: grid;
     margin: 0;
     padding: 0;
     list-style: none;
   }
+
   .uploads__item {
     display: flex;
     flex-wrap: wrap;
@@ -21,28 +24,34 @@
     border-bottom: var(--rule-hair) solid var(--color-paper-2);
     min-width: 0;
   }
+
   .uploads__file-name {
     overflow-wrap: anywhere;
     font-family: var(--font-outlier);
     font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
   }
+
   .uploads__date {
     color: var(--color-ink-2);
     font-size: var(--text-sm);
   }
+
   /* Deleting an Upload takes unfolding, then a button in the color of what cannot be undone */
   .uploads__delete {
     margin-inline-start: auto;
   }
+
   .uploads__delete summary {
     color: var(--color-muted);
     font-size: var(--text-sm);
     cursor: pointer;
   }
+
   .uploads__delete[open] summary {
     margin-bottom: var(--space-sm);
   }
+
   .uploads__delete form {
     display: flex;
     flex-wrap: wrap;
@@ -50,6 +59,7 @@
     gap: var(--space-xs) var(--space-sm);
     margin-top: var(--space-xs);
   }
+
   /* The state of its conversion, then the button that runs it and why it failed, if it did */
   .uploads__conversion {
     display: flex;
@@ -58,13 +68,16 @@
     align-items: center;
     gap: var(--space-xs) var(--space-sm);
   }
+
   .uploads__conversion p {
     flex-basis: 100%;
     font-size: var(--text-sm);
   }
+
   .uploads__refusal {
     color: var(--color-muted);
   }
+
   .uploads__conversion [role='alert'] {
     color: var(--color-error);
   }

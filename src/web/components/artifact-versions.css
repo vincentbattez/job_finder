@@ -1,27 +1,33 @@
 /* Below the label, each Artifact opens like its compartment: its tint along the top edge */
 @layer components {
   .artifact-versions {
+    --tint: var(--p-mon);
+
     display: grid;
     align-content: start;
     gap: var(--space-md);
     min-width: 0;
     padding-top: var(--space-md);
     border-top: 4px solid var(--tint);
-    --tint: var(--p-mon);
   }
+
   .artifact-versions[data-artifact='letter'] {
     --tint: var(--p-tue);
   }
+
   .artifact-versions[data-artifact='interview_brief'] {
     --tint: var(--p-wed);
   }
+
   .artifact-versions[data-artifact='visualization'] {
     --tint: var(--p-fri);
   }
+
   .artifact-versions__missing {
     color: var(--color-muted);
     font-family: var(--font-body);
   }
+
   /* One folded card per Version, its Instructions folded the same way inside it */
   .artifact-versions__list {
     display: grid;
@@ -30,11 +36,13 @@
     padding: 0;
     list-style: none;
   }
+
   .artifact-versions__list details {
     border: var(--rule-hair) solid var(--color-rule);
     border-radius: var(--radius-card);
     background: var(--light);
   }
+
   .artifact-versions__list summary {
     display: flex;
     flex-wrap: wrap;
@@ -43,11 +51,13 @@
     padding: var(--space-sm) var(--space-md);
     cursor: pointer;
   }
+
   .artifact-versions__reference {
     font-family: var(--font-outlier);
     font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
   }
+
   .artifact-versions__date {
     margin-inline-start: auto;
     color: var(--color-muted);
@@ -56,9 +66,11 @@
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
+
   .artifact-versions__list details > :not(summary) {
     margin: 0 var(--space-md) var(--space-md);
   }
+
   /* The Visualization, a page of its own, read in a tall frame on the paper of the Posting page */
   .artifact-versions__visualization iframe {
     display: block;
@@ -68,12 +80,14 @@
     border-radius: var(--radius-input);
     background: var(--glint);
   }
+
   /* The Instructions each Version was produced with, folded under it */
   .artifact-versions__instructions summary {
     color: var(--color-accent-deep);
     font-weight: 500;
     cursor: pointer;
   }
+
   .artifact-versions__instructions[open] summary {
     margin-bottom: var(--space-sm);
   }

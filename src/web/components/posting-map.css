@@ -5,6 +5,7 @@
     display: grid;
     gap: var(--space-md);
   }
+
   .posting-map__canvas {
     height: clamp(320px, 60vh, 560px);
     border: var(--rule-hair) solid var(--color-rule);
@@ -12,20 +13,25 @@
     background: var(--color-paper-2);
     font: var(--text-xs) var(--font-body);
   }
+
   /* Leaflet's own link colors, which the links of base would otherwise turn to the text's */
   .posting-map__canvas.leaflet-container a {
     color: var(--color-leaflet-link);
   }
+
   .posting-map__canvas.leaflet-container a[role='button'] {
     color: var(--color-leaflet-control);
   }
+
   .posting-map__canvas.leaflet-container a[aria-disabled='true'] {
     color: var(--color-leaflet-control-disabled);
   }
+
   .posting-map__point,
   .posting-map__legend li {
     --point: var(--color-status-to-apply);
   }
+
   .posting-map__point,
   .posting-map__legend li::before {
     border: 2px solid var(--light);
@@ -33,22 +39,27 @@
     background: var(--point);
     box-shadow: 0 1px 3px color-mix(in oklab, var(--color-ink) 45%, transparent);
   }
+
   .posting-map__point {
     cursor: pointer;
   }
+
   .posting-map__point[data-status='applied'],
   .posting-map__legend li[data-status='applied'] {
     --point: var(--color-status-applied);
   }
+
   .posting-map__point[data-status='expired'],
   .posting-map__legend li[data-status='expired'] {
     --point: var(--color-status-expired);
   }
+
   .posting-map__point[data-status='archived'],
   .posting-map__legend li[data-status='archived']::before {
     border: 2px dashed var(--color-muted);
     background: var(--color-status-archived-soft);
   }
+
   .posting-map__legend {
     display: flex;
     flex-wrap: wrap;
@@ -59,16 +70,19 @@
     color: var(--color-ink-2);
     font-size: var(--text-sm);
   }
+
   .posting-map__legend li {
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
   }
+
   .posting-map__legend li::before {
     content: '';
     width: 14px;
     height: 14px;
   }
+
   .posting-map__note {
     color: var(--color-muted);
     font-size: var(--text-sm);

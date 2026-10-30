@@ -11,20 +11,24 @@
     color: var(--color-ink-2);
     transition: background-color var(--dur-short) var(--ease-out);
   }
+
   .drop-zone[data-drag-over='true'] {
     border-style: solid;
     border-color: var(--color-accent);
     background: var(--color-accent-soft);
   }
+
   /* A label in the look of a button, for the hidden file input it holds */
   .drop-zone__choose {
     display: inline-flex;
     align-items: center;
   }
+
   .drop-zone__choose:focus-within {
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
   }
+
   .drop-zone__error {
     color: var(--color-error);
   }

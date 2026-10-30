@@ -5,10 +5,12 @@
     align-items: center;
     gap: var(--space-xs);
   }
+
   .candidate-menu label {
     color: var(--color-muted);
     font: 500 var(--text-sm) var(--font-body);
   }
+
   /* The front creates Candidates (ADR-0011): a long name stays inside a phone screen */
   .candidate-menu__select {
     min-width: 0;

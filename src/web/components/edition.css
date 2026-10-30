@@ -4,22 +4,26 @@
     display: grid;
     gap: var(--space-xs);
   }
+
   .edition__document figcaption {
     color: var(--color-muted);
     font-family: var(--font-outlier);
     font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
   }
+
   .edition {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-xs) var(--space-sm);
   }
+
   .edition p {
     color: var(--color-muted);
     font-size: var(--text-sm);
   }
+
   .edition__document form {
     display: grid;
     gap: var(--space-sm);

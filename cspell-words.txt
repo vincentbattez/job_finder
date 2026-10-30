@@ -19,8 +19,11 @@ isbot
 knip
 lefthook
 nums
+oklab
+oklch
 Revalidator
 Schibsted
+sloplint
 spinbutton
 topbar
 unstub

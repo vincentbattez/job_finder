@@ -7,7 +7,7 @@
 /* The cascade order, once: a rule wins by its layer before its specificity or its line */
 @layer vendor, tokens, base, layout, components, utilities;
 
-@import 'leaflet/dist/leaflet.css' layer(vendor);
+@import url('leaflet/dist/leaflet.css') layer(vendor);
 @import url('./tokens.css') layer(tokens);
 @import url('./base.css') layer(base);
 @import url('./layout.css') layer(layout);
