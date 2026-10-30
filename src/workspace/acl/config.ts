@@ -1,8 +1,9 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { z } from 'zod/v4';
 
+import { ERROR } from '#/domain/error.ts';
 import { PARAMETRES_SCHEMA } from '#/domain/index.ts';
 
 // The file where an older jf read the Candidates, their Veilles and the Délai par défaut. The database
@@ -58,4 +59,42 @@ export function readObsoleteConfig(dataDirectory: string): Config | null {
     );
   }
   return result.data;
+}
+
+// Each French key of the config and its English name, wherever it sits in the file (#65)
+const CONFIG_KEY_RENAME_LIST = [{ from: 'candidatList', to: 'candidateList' }];
+
+function renameKeys(value: unknown, configPath: string): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item: unknown) => renameKeys(item, configPath));
+  }
+  if (typeof value !== 'object' || value === null) {
+    return value;
+  }
+  const entryList = Object.entries(value);
+  for (const { from, to } of CONFIG_KEY_RENAME_LIST) {
+    if (entryList.some(([key]) => key === from) && entryList.some(([key]) => key === to)) {
+      throw ERROR.dataLayoutMixed(`${configPath} → ${from}`, `${configPath} → ${to}`);
+    }
+  }
+  return Object.fromEntries(
+    entryList.map(([key, item]) => [
+      CONFIG_KEY_RENAME_LIST.find(({ from }) => from === key)?.to ?? key,
+      renameKeys(item, configPath),
+    ]),
+  );
+}
+
+// The config an older jf left keeps its French keys until the first launch of this one, which
+// rewrites them in place, once: the file stays untouched when they are already English
+export function migrateObsoleteConfig(dataDirectory: string): void {
+  const configPath = findObsoleteConfig(dataDirectory);
+  if (configPath === null) {
+    return;
+  }
+  const config: unknown = JSON.parse(readFileSync(configPath, 'utf8'));
+  const migratedConfig = renameKeys(config, configPath);
+  if (JSON.stringify(migratedConfig) !== JSON.stringify(config)) {
+    writeFileSync(configPath, `${JSON.stringify(migratedConfig, null, 2)}\n`);
+  }
 }

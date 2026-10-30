@@ -25,6 +25,7 @@ import {
   writeTextFile,
   writeUpload,
 } from './acl/files.ts';
+import { migrateLayout } from './layout.ts';
 
 const UPLOADS_FOLDER = 'uploads';
 // Among the Uploads, but not one: neither a PDF nor a Markdown file of the Profile
@@ -37,8 +38,10 @@ function slugify(text: string): string {
 // Safe to call on every launch; the database and the files are only read in acl/ (ADR-0005). The
 // database holds the Candidates, their Veilles and the Délai par défaut: the config an older jf left
 // is imported at the first launch of a database without a Délai par défaut, then never read again
-// (ADR-0011).
+// (ADR-0011). The French layout an older jf left moves to the English one first, before anything reads
+// the data folder.
 export async function openWorkspace(dataDirectory: string) {
+  migrateLayout(dataDirectory);
   const database = openDatabase(path.join(dataDirectory, 'job_finder.sqlite'));
   if (!(await database.hasDelaiParDefaut())) {
     await database.createDelaiParDefaut(readObsoleteConfig(dataDirectory));

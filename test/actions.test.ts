@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { createActions } from '#/actions/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
+import { writeOlderDatabase } from './older-database.ts';
 import { migrateDeploy } from './prisma-cli.ts';
 
 function createEmptyDataDirectory(): string {
@@ -20,7 +21,6 @@ function writeConfig(dataDirectory: string, config: object): void {
 
 const LEA_CONFIG = { id: 'lea', name: 'Léa', veilleList: [] };
 
-const PRISMA_DIRECTORY = path.join(import.meta.dirname, '..', 'prisma');
 const FIRST_MIGRATION = '20261029133617_init';
 // The last migration before the Canaux de notification, which turned each Connexion Home Assistant
 // into one (ADR-0010)
@@ -30,30 +30,6 @@ const CONNEXION_HOME_ASSISTANT_MIGRATION = '20261030090736_job_profil';
 const CANAL_NOTIFICATION_MIGRATION = '20261030110155_canal_notification';
 // The last migration before the row of the settings became that of the Délai par défaut
 const SETTINGS_MIGRATION = '20261030114047_settings';
-
-// The database an older jf left, migrated through a config that only knows the migrations up to the
-// given one
-function writeOlderDatabase(dataDirectory: string, lastMigration = FIRST_MIGRATION): string {
-  const prismaDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-prisma-'));
-  const migrationList = readdirSync(path.join(PRISMA_DIRECTORY, 'migrations')).filter(
-    (fileName) => fileName <= lastMigration || fileName === 'migration_lock.toml',
-  );
-  for (const fileName of migrationList) {
-    cpSync(path.join(PRISMA_DIRECTORY, 'migrations', fileName), path.join(prismaDirectory, 'migrations', fileName), {
-      recursive: true,
-    });
-  }
-  const databasePath = path.join(dataDirectory, 'job_finder.sqlite');
-  const config = {
-    schema: path.join(PRISMA_DIRECTORY, 'schema.prisma'),
-    migrations: { path: path.join(prismaDirectory, 'migrations') },
-    datasource: { url: `file:${databasePath}` },
-  };
-  const configPath = path.join(prismaDirectory, 'prisma.config.ts');
-  writeFileSync(configPath, `export default ${JSON.stringify(config)};`);
-  migrateDeploy(databasePath, configPath);
-  return databasePath;
-}
 
 function listLeaProfileFiles(dataDirectory: string): string[] {
   return readdirSync(path.join(dataDirectory, 'candidates', 'lea', 'profile'));
@@ -89,7 +65,7 @@ describe('actions', () => {
   it('brings the database an older jf left up to date', async () => {
     const dataDirectory = createEmptyDataDirectory();
     writeConfig(dataDirectory, { defaultDelayMonths: 6, candidateList: [LEA_CONFIG] });
-    writeOlderDatabase(dataDirectory);
+    writeOlderDatabase(dataDirectory, FIRST_MIGRATION);
 
     const actions = await createActions({ dataDirectory });
 
