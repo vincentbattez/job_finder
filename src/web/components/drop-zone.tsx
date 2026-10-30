@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react';
 
 import { useIsHydrated } from './use-is-hydrated.ts';
 
+import './drop-zone.css';
+
 // A tray that takes one file, dropped or chosen, between what it is for and what became of it;
 // disabled until React hydrates, since the file leaves through a fetcher
 export function DropZone({

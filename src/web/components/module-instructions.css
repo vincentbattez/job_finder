@@ -12,6 +12,17 @@
     display: grid;
     gap: var(--space-sm);
   }
+  /* Save, back to the default, and whether a change waits to be saved */
+  .module-instructions__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs) var(--space-sm);
+  }
+  .module-instructions__actions p {
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+  }
   .module-instructions__head {
     display: flex;
     flex-wrap: wrap;
@@ -26,13 +37,6 @@
   }
   .module-instructions__default[open] summary {
     margin-bottom: var(--space-sm);
-  }
-  /* The Markdown they unfold, on the full width of the compartment */
-  .module-instructions__default > :not(summary) {
-    max-width: none;
-    padding: var(--space-md);
-    border-radius: var(--radius-input);
-    background: var(--color-paper-2);
   }
   /* Which Instructions produced a Version: a small tag, like the source of a recipient */
   .module-instructions__origin {

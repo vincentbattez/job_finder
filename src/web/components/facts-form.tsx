@@ -79,7 +79,7 @@ export function FactsForm({ sectionList }: Readonly<{ sectionList: Section[] }>)
             </label>
           ),
         )}
-        <div className="edition">
+        <div className="facts-form__actions">
           <button type="submit" className="button button--primary">
             {t('facts.save')}
           </button>

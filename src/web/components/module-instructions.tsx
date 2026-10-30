@@ -53,7 +53,7 @@ export function ModuleInstructions({
           placeholder={t('instructions.placeholder')}
           onChange={setEditedInstructions}
         />
-        <div className="edition">
+        <div className="module-instructions__actions">
           <button type="submit" name="intent" value="save" className="button button--primary">
             {t('instructions.save')}
           </button>

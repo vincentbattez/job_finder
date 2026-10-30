@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Markdown } from './markdown.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 
+import './markdown-editor.css';
+
 // The textarea posts its text under `name` within a form. It stays read-only until React runs the
 // page: React taking over the field resets it, which would drop or misplace the text typed before.
 export function MarkdownEditor({
@@ -26,9 +28,11 @@ export function MarkdownEditor({
   const { t } = useTranslation('posting');
   const isHydrated = useIsHydrated();
   return (
-    <div className="editor">
-      <div className="editor__pane">
-        <label htmlFor={textareaId}>{label}</label>
+    <div className="markdown-editor">
+      <div className="markdown-editor__pane">
+        <label className="markdown-editor__label" htmlFor={textareaId}>
+          {label}
+        </label>
         <textarea
           id={textareaId}
           name={name}
@@ -42,8 +46,8 @@ export function MarkdownEditor({
           }}
         />
       </div>
-      <section className="editor__pane" aria-labelledby={previewId}>
-        <h4 id={previewId} className="editor__label">
+      <section className="markdown-editor__pane" aria-labelledby={previewId}>
+        <h4 id={previewId} className="markdown-editor__label">
           {t('preview')}
         </h4>
         <Markdown markdown={markdown} />

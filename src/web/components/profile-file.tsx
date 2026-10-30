@@ -4,6 +4,8 @@ import { Form } from 'react-router';
 
 import { MarkdownEditor } from './markdown-editor.tsx';
 
+import './profile-file.css';
+
 // One Markdown file of the Profile, such as facts.md, edited in place
 export function ProfileFile({
   fileName,
@@ -27,7 +29,7 @@ export function ProfileFile({
           placeholder={t('profileFile.contentPlaceholder')}
           onChange={setEditedMarkdown}
         />
-        <div className="edition">
+        <div className="profile-file__actions">
           <button type="submit" name="intent" value="save" className="button button--primary">
             {t('profileFile.save')}
           </button>
@@ -42,7 +44,7 @@ export function ProfileFile({
       {/* Folded, so a deletion always takes a second, deliberate click, with or without JavaScript */}
       <details className="profile-file__delete">
         <summary>{t('profileFile.deleteSummary', { fileName })}</summary>
-        <Form method="post" preventScrollReset className="edition">
+        <Form method="post" preventScrollReset className="profile-file__actions">
           <input type="hidden" name="fileName" value={fileName} />
           <p>{t('profileFile.deleteWarning')}</p>
           <button type="submit" name="intent" value="delete" className="button button--danger">
@@ -81,7 +83,7 @@ export function ProfileFileCreation({ error }: Readonly<{ error: string | null }
           defaultValue=""
           placeholder={t('profileFile.creationContentPlaceholder')}
         />
-        <div className="edition">
+        <div className="profile-file__actions">
           <button type="submit" name="intent" value="create" className="button button--primary">
             {t('profileFile.create')}
           </button>

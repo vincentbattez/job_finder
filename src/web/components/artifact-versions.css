@@ -1,0 +1,58 @@
+/* Below the label, each Artifact opens like its compartment: its tint along the top edge */
+@layer components {
+  .artifact-versions {
+    display: grid;
+    align-content: start;
+    gap: var(--space-md);
+    min-width: 0;
+    padding-top: var(--space-md);
+    border-top: 4px solid var(--tint);
+  }
+  /* One folded card per Version, its Instructions folded the same way inside it */
+  .artifact-versions__list {
+    display: grid;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .artifact-versions__list details {
+    border: var(--rule-hair) solid var(--color-rule);
+    border-radius: var(--radius-card);
+    background: var(--light);
+  }
+  .artifact-versions__list summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs) var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    cursor: pointer;
+  }
+  .artifact-versions__date {
+    margin-inline-start: auto;
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+  }
+  .artifact-versions__list details > :not(summary) {
+    margin: 0 var(--space-md) var(--space-md);
+  }
+  /* The Visualization, a page of its own, read in a tall frame on the paper of the Posting page */
+  .artifact-versions__visualization iframe {
+    display: block;
+    width: 100%;
+    height: min(80vh, 48rem);
+    border: var(--rule-hair) solid var(--color-rule);
+    border-radius: var(--radius-input);
+    background: var(--glint);
+  }
+  /* The Instructions each Version was produced with, folded under it */
+  .artifact-versions__instructions summary {
+    color: var(--color-accent-deep);
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .artifact-versions__instructions[open] summary {
+    margin-bottom: var(--space-sm);
+  }
+}

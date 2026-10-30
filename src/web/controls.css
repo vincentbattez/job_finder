@@ -105,7 +105,7 @@
   flex-basis: 100%;
   color: var(--color-error);
 }
-/* A job of the worker, such as a module or a conversion: its state, the button that launches it,
+/* A job of the worker, a module or the extraction: its state, the button that launches it,
    then why it waits or what failed */
 .launch {
   display: flex;
