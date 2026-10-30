@@ -3,8 +3,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { projectFiles, projectSlices } from 'archunit';
-import postcss from 'postcss';
+import postcss, { AtRule } from 'postcss';
 import selectorParser from 'postcss-selector-parser';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const ROOT_DIRECTORY = path.join(import.meta.dirname, '..');
@@ -349,6 +350,101 @@ function findImportsOutsideEntryStylesheet(projectDirectory: string): string[] {
   );
 }
 
+// The global stylesheets sit beside the root, where sloplint finds them, and a component's beside it:
+// a route or a container carries none, its look comes from the Dumbs it renders and the layout
+function findStylesheetsOutsideTheirFolders(projectDirectory: string): string[] {
+  return sortedList(
+    readStylesheets(projectDirectory)
+      .filter(({ filePath }) => ![FRONT_DIRECTORY, COMPONENT_DIRECTORY].includes(path.dirname(filePath)))
+      .map(({ filePath }) => `${filePath} is neither a global stylesheet nor a component stylesheet`),
+  );
+}
+
+// Whether the nearest @layer around a node is the components one
+function isInComponentsLayer(node: postcss.Node): boolean {
+  for (let parent = node.parent; parent !== undefined; parent = parent.parent) {
+    if (parent instanceof AtRule && parent.name === 'layer') {
+      return parent.params === 'components';
+    }
+  }
+  return false;
+}
+
+// A component's rules win over the layout and lose to the utilities only inside their layer: a rule
+// outside any layer would beat every layered one
+function findComponentRulesOutsideTheirLayer(projectDirectory: string): string[] {
+  const componentStylesheetList = readStylesheets(projectDirectory).filter(({ isComponent }) => isComponent);
+  return sortedList(
+    componentStylesheetList.flatMap(({ filePath, content }) => {
+      const outsideList: string[] = [];
+      const stylesheetRoot = postcss.parse(content);
+      stylesheetRoot.walkAtRules(/keyframes$/, (keyframes) => {
+        if (!isInComponentsLayer(keyframes)) {
+          outsideList.push(`${filePath} has @keyframes ${keyframes.params} outside @layer components`);
+        }
+        keyframes.remove();
+      });
+      stylesheetRoot.walkRules((rule) => {
+        if (!isInComponentsLayer(rule)) {
+          outsideList.push(`${filePath} has ${rule.selector} outside @layer components`);
+        }
+      });
+      return outsideList;
+    }),
+  );
+}
+
+// The global stylesheets a Dumb may draw on: the shared controls and the utilities. The layout is the
+// frame of the routes and the root, not of a component.
+const COMPONENT_GLOBAL_STYLESHEET_SET = new Set(['src/web/controls.css', 'src/web/utilities.css']);
+
+// Every class a .tsx writes in a className, literal or inside an expression
+function renderedClassesOf(filePath: string, content: string): string[] {
+  const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, false, ts.ScriptKind.TSX);
+  const classNameList: string[] = [];
+  const collectLiterals = (node: ts.Node) => {
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) || ts.isTemplateLiteralToken(node)) {
+      classNameList.push(...node.text.split(/\s+/).filter((className) => className !== ''));
+    } else if (ts.isTemplateExpression(node)) {
+      collectLiterals(node.head);
+      node.templateSpans.forEach(({ expression, literal }) => {
+        collectLiterals(expression);
+        collectLiterals(literal);
+      });
+      return;
+    }
+    ts.forEachChild(node, collectLiterals);
+  };
+  const visit = (node: ts.Node) => {
+    if (ts.isJsxAttribute(node) && node.name.getText(sourceFile) === 'className' && node.initializer !== undefined) {
+      collectLiterals(node.initializer);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return classNameList;
+}
+
+// A Dumb renders the classes of its own block and the shared controls, never another component's
+// block, nor the layout: its stylesheet loads with it, another one's only on the pages that import it
+function findForeignClassesInComponents(projectDirectory: string): string[] {
+  const sharedClassSet = new Set(
+    readStylesheets(projectDirectory)
+      .filter(({ filePath }) => COMPONENT_GLOBAL_STYLESHEET_SET.has(filePath))
+      .flatMap(({ content }) => selectedClassesOf(content).map(({ className }) => className)),
+  );
+  const componentPathList = globSync(`${COMPONENT_DIRECTORY}/**/*.tsx`, { cwd: projectDirectory });
+  return sortedList(
+    componentPathList.flatMap((filePath) => {
+      const block = blockOf(filePath);
+      const foreignList = renderedClassesOf(filePath, readFileSync(path.join(projectDirectory, filePath), 'utf8'))
+        .filter((className) => !isOfBlock(className, block) && !sharedClassSet.has(className))
+        .map((className) => `${filePath} renders .${className}, neither of the block ${block} nor of a shared control`);
+      return [...new Set(foreignList)];
+    }),
+  );
+}
+
 function createProject(fileContentByPath: Record<string, string>): string {
   const projectDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-architecture-'));
   const tsconfigPath = path.join(projectDirectory, 'tsconfig.json');
@@ -577,8 +673,88 @@ describe('architecture', () => {
     expect(findImportsOutsideEntryStylesheet(projectDirectory)).toEqual(['src/web/layout.css imports ./tokens.css']);
   });
 
+  it('catches a stylesheet beside a route or a container', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/layout.css': '.page {\n}\n',
+        'src/web/routes/postings.css': '.postings {\n}\n',
+        'src/web/containers/posting.css': '.posting {\n}\n',
+        'src/web/components/badge.css': '@layer components {\n  .badge {\n  }\n}\n',
+      }),
+    );
+
+    expect(findStylesheetsOutsideTheirFolders(projectDirectory)).toEqual([
+      'src/web/containers/posting.css is neither a global stylesheet nor a component stylesheet',
+      'src/web/routes/postings.css is neither a global stylesheet nor a component stylesheet',
+    ]);
+  });
+
+  it('catches a rule of a component stylesheet outside the components layer', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/components/badge.css': [
+          '@layer components {',
+          '  .badge {',
+          '  }',
+          '}',
+          '.badge__dot {',
+          '}',
+          '@media (width <= 40rem) {',
+          '  .badge {',
+          '  }',
+          '}',
+          '@layer utilities {',
+          '  .badge--wide {',
+          '  }',
+          '}',
+        ].join('\n'),
+      }),
+    );
+
+    expect(findComponentRulesOutsideTheirLayer(projectDirectory)).toEqual([
+      'src/web/components/badge.css has .badge outside @layer components',
+      'src/web/components/badge.css has .badge__dot outside @layer components',
+      'src/web/components/badge.css has .badge--wide outside @layer components',
+    ]);
+  });
+
+  it('catches a component rendering a class of another block or of the layout', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/controls.css': '.button {\n}\n.button--primary {\n}\n.field input {\n}\n',
+        'src/web/utilities.css': '.visually-hidden {\n}\n',
+        'src/web/layout.css': '.page__empty {\n}\n.reminder-card {\n}\n',
+        'src/web/components/badge.tsx': 'export const Badge = () => <span className="badge" />;\n',
+        'src/web/components/reminder.tsx': [
+          'export const Reminder = ({ className }) => (',
+          '  <section className="reminder reminder--due">',
+          '    <h2 className="reminder__title">Due</h2>',
+          '    <span className="badge" />',
+          '    <p className="page__empty" />',
+          "    <div className={'reminder-card'} />",
+          '    <label className="field">',
+          '      <span className="visually-hidden">Name</span>',
+          '    </label>',
+          '    <button className={className} />',
+          '    <button className={`button button--primary ${className}`} />',
+          '  </section>',
+          ');',
+        ].join('\n'),
+      }),
+    );
+
+    expect(findForeignClassesInComponents(projectDirectory)).toEqual([
+      'src/web/components/reminder.tsx renders .badge, neither of the block reminder nor of a shared control',
+      'src/web/components/reminder.tsx renders .page__empty, neither of the block reminder nor of a shared control',
+      'src/web/components/reminder.tsx renders .reminder-card, neither of the block reminder nor of a shared control',
+    ]);
+  });
+
   it.each([
     { rule: 'at most 200 lines a stylesheet', find: findOversizedStylesheets },
+    { rule: 'stylesheets only beside the root or in the components folder', find: findStylesheetsOutsideTheirFolders },
+    { rule: 'every component rule in the components layer', find: findComponentRulesOutsideTheirLayer },
+    { rule: 'only its block or the shared controls in a component', find: findForeignClassesInComponents },
     { rule: 'each component stylesheet beside its component, which alone imports it', find: findMisplacedStylesheets },
     { rule: 'only its block in a component stylesheet', find: findClassesOutsideTheirBlock },
     { rule: 'no component block in a global stylesheet', find: findComponentBlocksInGlobalStylesheets },
