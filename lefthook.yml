@@ -26,11 +26,16 @@ commit-msg:
     - name: commitlint
       run: npx commitlint --edit {1}
 
-# The Prisma client (src/workspace/generated) is out of git: regenerate it whenever the checkout moves,
-# so a pull that changes prisma/schema.prisma never leaves it stale. Skipped before npm install.
-post-merge: &generate
+# A checkout without node_modules, such as a new git worktree, runs the setup of mise.toml first:
+# every hook needs it, and mise's enter hook never fires in an agent's shell, which mise does not
+# activate. The Prisma client (src/workspace/generated) is out of git: regenerate it whenever the
+# checkout moves, so a pull that changes prisma/schema.prisma never leaves it stale.
+post-merge: &setup
+  piped: true
   jobs:
+    - name: install
+      run: test -d node_modules || mise install
     - name: prisma-generate
-      run: test ! -d node_modules || npx prisma generate
-post-checkout: *generate
-post-rewrite: *generate
+      run: npx prisma generate
+post-checkout: *setup
+post-rewrite: *setup

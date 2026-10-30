@@ -16,6 +16,8 @@ export default defineConfig(
       'test-results/',
       '.react-router/',
       'build/',
+      // Each git worktree that Claude Code creates there lints itself
+      '.claude/worktrees/',
     ],
   },
   js.configs.recommended,
