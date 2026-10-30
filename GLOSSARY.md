@@ -12,6 +12,18 @@ _Avoid_: utilisateur, user, compte
 Ce que l'outil sait d'un Candidat pour écrire à sa place : son CV, les faits qu'il a validés et ses lettres passées.
 _Avoid_: dossier, CV
 
+**Faits**:
+Partie du Profil qui recense, par rubrique, ce que le Candidat a validé sur lui-même : identité, coordonnées, diplômes, expériences, compétences, motivations, mobilité.
+_Avoid_: renseignements, informations, fiche
+
+**Pièce**:
+Document d'origine, comme un CV ou une lettre passée en PDF, que le Candidat dépose dans son Profil ; il est gardé tel quel, et le Profil en contient la conversion en Markdown.
+_Avoid_: upload, pièce jointe, fichier source
+
+**Connexion Home Assistant**:
+Accès d'un Candidat à son Home Assistant (adresse, jeton et service de notification) par lequel l'outil le prévient sur son téléphone.
+_Avoid_: intégration, compte Home Assistant, canal
+
 **Veille**:
 Recherche permanente d'un Candidat sur une Source, définie par ses critères et sa Zone.
 _Avoid_: alerte, abonnement, recherche sauvegardée
