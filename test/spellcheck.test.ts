@@ -62,9 +62,6 @@ const WIRING_LIST = [
   },
 ];
 
-// Each run of the hook or of CI starts cspell cold, twice: seconds on the 2-vCPU GitHub runner
-const WIRING_TIMEOUT = 60_000;
-
 // A copy of the repo's spellcheck, its script and configs only, around the staged files: the command
 // of the hook or of CI runs there as it runs in the repo, and resolves to its exit code
 function runInSandbox(command: string, stagedFileList: Record<string, string>): Promise<number | null> {
@@ -89,7 +86,10 @@ function runInSandbox(command: string, stagedFileList: Record<string, string>): 
   });
 }
 
-describe('spellcheck', () => {
+// Each case starts cspell cold, up to twice: seconds on the 2-vCPU GitHub runner
+const SPELLCHECK_TIMEOUT = 60_000;
+
+describe('spellcheck', { timeout: SPELLCHECK_TIMEOUT }, () => {
   it('lets pass English code', () => {
     expect(isSpelledRight('src/actions/fixture.ts', 'export const candidateList = []; // The Candidates\n')).toBe(true);
   });
@@ -143,21 +143,17 @@ describe('spellcheck', () => {
 
   // Both English files share one run; each failure needs its own, as the script stops at the first
   // failing pass. The three runs go side by side
-  it.each(WIRING_LIST)(
-    'runs both passes in $name',
-    async ({ command }) => {
-      const [englishStatus, frenchIdentifierStatus, misspelledLabelStatus] = await Promise.all([
-        runInSandbox(command, {
-          'src/actions/fixture.ts': 'export const candidateList = [];\n',
-          'src/modules/pep/copy.ts': moduleCopy({}),
-        }),
-        runInSandbox(command, { 'src/actions/fixture.ts': 'export const listeCandidats = [];\n' }),
-        runInSandbox(command, { 'src/modules/pep/copy.ts': moduleCopy({ label: 'Le site est injoignabl.' }) }),
-      ]);
-      expect(englishStatus).toBe(0);
-      expect(frenchIdentifierStatus).not.toBe(0);
-      expect(misspelledLabelStatus).not.toBe(0);
-    },
-    WIRING_TIMEOUT,
-  );
+  it.each(WIRING_LIST)('runs both passes in $name', async ({ command }) => {
+    const [englishStatus, frenchIdentifierStatus, misspelledLabelStatus] = await Promise.all([
+      runInSandbox(command, {
+        'src/actions/fixture.ts': 'export const candidateList = [];\n',
+        'src/modules/pep/copy.ts': moduleCopy({}),
+      }),
+      runInSandbox(command, { 'src/actions/fixture.ts': 'export const listeCandidats = [];\n' }),
+      runInSandbox(command, { 'src/modules/pep/copy.ts': moduleCopy({ label: 'Le site est injoignabl.' }) }),
+    ]);
+    expect(englishStatus).toBe(0);
+    expect(frenchIdentifierStatus).not.toBe(0);
+    expect(misspelledLabelStatus).not.toBe(0);
+  });
 });
