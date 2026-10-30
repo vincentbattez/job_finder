@@ -1,4 +1,3 @@
-import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -8,6 +7,7 @@ import { createActions, type Actions } from '#/actions/index.ts';
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeCanalNotification } from './fake-canal-notification.ts';
+import { LEA_VEILLE, LEA_VEILLE_ID } from './lea.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
 // The Boulogne parquet Poste, published as 2026-2231960 then again as 2026-2338409, both in Léa's
@@ -39,10 +39,6 @@ const LETTRE_RUN = {
 // appeal of Douai, that of Boulogne.
 async function detectBeforeRepublication(aiSession = createFakeAiSession(), { isOutOfZone = false } = {}) {
   const dataDirectory = createDataDirectory();
-  if (isOutOfZone) {
-    const configPath = path.join(dataDirectory, 'config.json');
-    writeFileSync(configPath, readFileSync(configPath, 'utf8').replace('["Douai", "Amiens"]', '["Amiens"]'));
-  }
   const notificationChannel = createFakeCanalNotification();
   const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout([REPUBLICATION_REFERENCE]) } });
   const earlierActions = await createActions({
@@ -51,6 +47,14 @@ async function detectBeforeRepublication(aiSession = createFakeAiSession(), { is
     fetch: earlierFetch.fetch,
     canalNotificationList: notificationChannel.canalNotificationList,
   });
+  if (isOutOfZone) {
+    await earlierActions.saveVeille({
+      candidatId: 'lea',
+      veilleId: LEA_VEILLE_ID,
+      source: 'pep',
+      parametres: { ...LEA_VEILLE.parametres, courtOfAppealList: ['Amiens'] },
+    });
+  }
   await notificationChannel.saveFor(earlierActions);
   await earlierActions.detect();
   const actions = await createActions({

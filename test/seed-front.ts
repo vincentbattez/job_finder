@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -7,6 +7,7 @@ import type { IHeadlessSession } from '#/ai-session/acl/claude-code.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { FAKE_HOME_ASSISTANT_TOKEN } from './fake-home-assistant.ts';
+import { createLea } from './lea.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 // Fills the data folder of the front's e2e tests, which playwright.config.ts names in
@@ -21,7 +22,8 @@ import { createRecordedFetch } from './recorded-http.ts';
 // Veille either, each have their Profil changed by one e2e test only, which writes it first; Sacha
 // also has the Consignes the e2e tests change. Léa, Camille and Sacha have their Canal de notification
 // through the fake Home Assistant; Yanis and Zoé each have theirs changed by one e2e test only. Léa's Offre
-// 2026-2409247 has a Recherche made with the default Consignes, then one made with hers.
+// 2026-2409247 has a Recherche made with the default Consignes, then one made with hers. Jade, without
+// Veille, has hers created, changed and deleted by one e2e test only.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 // The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
 if (!dataDirectory.startsWith(tmpdir())) {
@@ -35,30 +37,18 @@ const NARBONNE_REFERENCE = '2026-2412591';
 const CONSIGNES_REFERENCE = '2026-2409247';
 // Where playwright.config.ts started the fake Home Assistant
 const FAKE_HOME_ASSISTANT_URL = process.env.FAKE_HOME_ASSISTANT_URL ?? '';
-const CONFIG = {
-  defaultDelayMonths: 6,
-  candidatList: [
-    {
-      id: 'lea',
-      name: 'Léa',
-      veilleList: [
-        {
-          id: 'attache-de-justice-hauts-de-france',
-          source: 'pep',
-          parametres: { title: 'attaché de justice', courtOfAppealList: ['Douai', 'Amiens'] },
-        },
-      ],
-    },
-    { id: 'camille', name: 'Camille', veilleList: [] },
-    { id: 'sacha', name: 'Sacha', veilleList: [] },
-    { id: 'noe', name: 'Noé', veilleList: [] },
-    { id: 'ines', name: 'Inès', veilleList: [] },
-    { id: 'malo', name: 'Malo', veilleList: [] },
-    { id: 'yanis', name: 'Yanis', veilleList: [] },
-    { id: 'zoe', name: 'Zoé', veilleList: [] },
-    { id: 'rose', name: 'Rose', veilleList: [] },
-  ],
-};
+// Without a Veille, beside Léa (test/lea.ts)
+const OTHER_CANDIDAT_LIST = [
+  { id: 'camille', name: 'Camille' },
+  { id: 'sacha', name: 'Sacha' },
+  { id: 'noe', name: 'Noé' },
+  { id: 'ines', name: 'Inès' },
+  { id: 'malo', name: 'Malo' },
+  { id: 'yanis', name: 'Yanis' },
+  { id: 'zoe', name: 'Zoé' },
+  { id: 'rose', name: 'Rose' },
+  { id: 'jade', name: 'Jade' },
+];
 
 // What the Lettre recommends for the Béthune Offre, from its mail de candidature and contacts
 const RECIPIENTS = {
@@ -116,7 +106,6 @@ function versionOf({ outputDirectory }: IHeadlessSession): string {
 
 rmSync(dataDirectory, { recursive: true, force: true });
 mkdirSync(dataDirectory, { recursive: true });
-writeFileSync(path.join(dataDirectory, 'config.json'), JSON.stringify(CONFIG));
 const actions = await createActions({
   dataDirectory,
   fetch: createRecordedFetch().fetch,
@@ -126,6 +115,11 @@ const actions = await createActions({
       createFakeAiSession(RUN_BY_VERSION[versionOf(session)] ?? {}).runHeadless(session),
   },
 });
+// Created as from the front, which the database alone now knows (ADR-0011)
+await createLea(actions);
+for (const candidat of OTHER_CANDIDAT_LIST) {
+  await actions.createCandidat(candidat);
+}
 // A notify service of the fake Home Assistant (test/fake-home-assistant.ts) for each phone
 for (const [candidatId, service] of [
   ['lea', 'notify.mobile_app_iphone_de_lea'],

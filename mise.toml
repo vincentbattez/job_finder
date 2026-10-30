@@ -15,11 +15,8 @@ CHECKPOINT_DISABLE = "1"
 postinstall = "npm install && lefthook install"
 
 [tasks.init]
-description = "Create data/config.json from config.example.json if it is missing, and seed dev-data/"
-run = [
-  "mkdir -p data && { [ -f data/config.json ] || cp config.example.json data/config.json; }",
-  "mise run db:seed",
-]
+description = "Seed dev-data/; the Candidats of data/ are created from the front"
+run = "mise run db:seed"
 
 # The db: tasks work on dev-data/, fake data for development. The app migrates data/ itself at launch.
 [tasks."db:migrate"]

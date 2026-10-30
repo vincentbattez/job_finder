@@ -12,7 +12,7 @@ import {
 } from '#/domain/index.ts';
 import { wordListOf } from '#/text/index.ts';
 
-import { loadConfig } from './acl/config.ts';
+import { findObsoleteConfig, readLegacyConfig } from './acl/config.ts';
 import { openDatabase, type INewOffre } from './acl/database.ts';
 import {
   createDirectory,
@@ -34,17 +34,22 @@ function slugify(text: string): string {
   return wordListOf(text).join('-');
 }
 
-// Safe to call on every launch; the config and the database are only read in acl/ (ADR-0005)
+// Safe to call on every launch; the database and the files are only read in acl/ (ADR-0005). The
+// database holds the Candidats, their Veilles and the Délai par défaut: the config an older jf left
+// is imported at the first launch of a database without settings, then never read again (ADR-0011).
 export async function openWorkspace(dataDirectory: string) {
-  const config = loadConfig(path.join(dataDirectory, 'config.json'));
-  const database = openDatabase(path.join(dataDirectory, 'job_finder.sqlite'), config.defaultDelayMonths);
-  await database.copyConfig(config);
+  const database = openDatabase(path.join(dataDirectory, 'job_finder.sqlite'));
+  if (!(await database.hasSettings())) {
+    await database.createSettings(readLegacyConfig(dataDirectory));
+  }
+  await database.readDefaultDelayMonths();
   const candidatDirectoryOf = (candidatId: string): string => path.join(dataDirectory, 'candidats', candidatId);
   const profilDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'profil');
   // Its own subfolder, which the Markdown files of the Profil leave out
   const piecesDirectoryOf = (candidatId: string): string => path.join(profilDirectoryOf(candidatId), PIECES_FOLDER);
   const consignesDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'consignes');
-  for (const candidat of config.candidatList) {
+  const candidatList = await database.listCandidats();
+  for (const candidat of candidatList) {
     createDirectory(profilDirectoryOf(candidat.id));
   }
 
@@ -62,6 +67,15 @@ export async function openWorkspace(dataDirectory: string) {
   return {
     ...database,
     profilDirectoryOf,
+
+    // A Candidat gets their Profil folder as soon as they exist, as at launch
+    async createCandidat(candidat: { id: string; name: string }): Promise<void> {
+      await database.createCandidat(candidat);
+      createDirectory(profilDirectoryOf(candidat.id));
+    },
+
+    // The config left behind once imported, which jf says is no longer read until it is deleted
+    findObsoleteConfig: () => findObsoleteConfig(dataDirectory),
     offreDirectoryOf,
     versionDirectoryOf,
     readTextFile,

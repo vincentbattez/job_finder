@@ -9,8 +9,8 @@ datasource db {
   provider = "sqlite"
 }
 
-// Candidats and Veilles are copied from data/config.json at every launch: the config is
-// their source of truth, never edit these rows, except Veille.detectedAt, which only jf writes.
+// Candidats, their Veilles and the Délai par défaut are written from the front: the database is
+// their source of truth (ADR-0011). A Candidat is never deleted, so the rows tied to them stay.
 model Candidat {
   id                String             @id
   name              String
@@ -20,9 +20,17 @@ model Candidat {
   jobList           Job[]
 }
 
-// The Canal de notification a Candidat chose, apart from Candidat, which only data/config.json
-// writes: the Candidat saves it from the front. Its Paramètres are those of its module, parsed by the
-// module's schema (ADR-0010); a secret one is write-only, no action returns it (ADR-0006).
+// What every Candidat shares, in a single row. Created at the first launch, from the data/config.json
+// an older jf read when one is left, imported once and never read again (ADR-0011).
+model Settings {
+  id                 Int @id
+  // The Délai par défaut, in months
+  defaultDelayMonths Int
+}
+
+// The Canal de notification a Candidat chose, saved from the front. Its Paramètres are those of its
+// module, parsed by the module's schema (ADR-0010); a secret one is write-only, no action returns it
+// (ADR-0006).
 model CanalNotification {
   candidat   Candidat @relation(fields: [candidatId], references: [id], onDelete: Cascade)
   candidatId String   @id

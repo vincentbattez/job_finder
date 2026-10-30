@@ -1,22 +1,15 @@
-import { readFileSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
-
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
 
-import { createMigratedDataDirectory } from './data-directory.ts';
+import { createDataDirectory, createMigratedDataDirectory } from './data-directory.ts';
+import { LEA_VEILLE } from './lea.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
-const EXAMPLE_CONFIG = readFileSync(path.join(import.meta.dirname, '..', 'config.example.json'), 'utf8');
-
+// The Délai par défaut set as from the front, before the Détection
 async function detectWithDefaultDelay(defaultDelayMonths: number): Promise<Actions> {
-  const dataDirectory = createMigratedDataDirectory();
-  writeFileSync(
-    path.join(dataDirectory, 'config.json'),
-    EXAMPLE_CONFIG.replace('"defaultDelayMonths": 6', () => `"defaultDelayMonths": ${String(defaultDelayMonths)}`),
-  );
-  const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
+  const actions = await createActions({ dataDirectory: createDataDirectory(), fetch: createRecordedFetch().fetch });
+  await actions.saveSettings({ defaultDelayMonths });
   await actions.detect();
   return actions;
 }
@@ -148,18 +141,14 @@ describe('statut of an Offre', () => {
 });
 
 it('refuses a reference shared by the Offres of two Candidats', async () => {
-  const dataDirectory = createMigratedDataDirectory();
-  const veille = {
-    source: 'pep',
-    parametres: { title: 'attaché de justice', courtOfAppealList: ['Douai'] },
-  };
-  const candidatList = ['lea', 'camille'].map((id) => ({
-    id,
-    name: id,
-    veilleList: [{ ...veille, id: `attache-de-justice-${id}` }],
-  }));
-  writeFileSync(path.join(dataDirectory, 'config.json'), JSON.stringify({ defaultDelayMonths: 6, candidatList }));
-  const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
+  const actions = await createActions({
+    dataDirectory: createMigratedDataDirectory(),
+    fetch: createRecordedFetch().fetch,
+  });
+  for (const candidatId of ['lea', 'camille']) {
+    await actions.createCandidat({ id: candidatId, name: candidatId });
+    await actions.saveVeille({ candidatId, ...LEA_VEILLE });
+  }
   await actions.detect();
 
   await expect(actions.changeStatut({ reference: '2026-2445600', statut: 'postulee' })).rejects.toThrow(
@@ -180,7 +169,7 @@ describe('Expirée', () => {
   });
 
   // 2026-2412620 has no Date limite and was published on 2026-09-24
-  it('flags an Offre without a Date limite once its publication plus the default delay of the config is over', async () => {
+  it('flags an Offre without a Date limite once its publication plus the Délai par défaut is over', async () => {
     const offreList = [
       await findOffre(await detectWithDefaultDelay(6), '2026-2412620'),
       await findOffre(await detectWithDefaultDelay(1), '2026-2412620'),
@@ -190,5 +179,26 @@ describe('Expirée', () => {
       { dateLimite: null, isExpiree: false },
       { dateLimite: null, isExpiree: true },
     ]);
+  });
+
+  it('follows the Délai par défaut set from the front at once, and at the next launch', async () => {
+    const dataDirectory = createDataDirectory();
+    const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
+    await actions.detect();
+
+    await actions.saveSettings({ defaultDelayMonths: '1' });
+
+    expect(await actions.readSettings()).toEqual({ defaultDelayMonths: 1, obsoleteConfigPath: null });
+    expect(await findOffre(actions, '2026-2412620')).toMatchObject({ isExpiree: true });
+    expect(await findOffre(await createActions({ dataDirectory }), '2026-2412620')).toMatchObject({ isExpiree: true });
+  });
+
+  it('refuses a Délai par défaut that is not a whole number of months', async () => {
+    const actions = await createActions({ dataDirectory: createDataDirectory() });
+
+    await expect(actions.saveSettings({ defaultDelayMonths: '0' })).rejects.toThrow(
+      'Le Délai par défaut est un nombre entier de mois, au moins 1.',
+    );
+    expect(await actions.readSettings()).toMatchObject({ defaultDelayMonths: 6 });
   });
 });

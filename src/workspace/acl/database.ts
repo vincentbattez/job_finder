@@ -51,6 +51,11 @@ const OFFRE_INCLUDE = {
   republicationOf: LINKED_OFFRE_SELECT,
   republicationList: { ...LINKED_OFFRE_SELECT, orderBy: { reference: 'asc' } },
 } as const;
+// The single row of the settings every Candidat shares
+const SETTINGS_ID = 1;
+// The Délai par défaut of a new database, that of the example config of older versions
+const DEFAULT_DELAY_MONTHS = 6;
+
 const JOB_INCLUDE = { offre: { include: OFFRE_INCLUDE }, version: { include: VERSION_INCLUDE } };
 
 export interface INewOffre {
@@ -89,7 +94,7 @@ function hasPendingMigration(databasePath: string): boolean {
 
 // Migrates first, but only when a migration is pending: the Prisma CLI takes 0.3 s to start
 // (ADR-0004). Prisma never leaves this file (ADR-0005).
-export function openDatabase(databasePath: string, defaultDelayMonths: number) {
+export function openDatabase(databasePath: string) {
   const url = `file:${databasePath}`;
   if (hasPendingMigration(databasePath)) {
     execFileSync(process.execPath, [PRISMA_CLI_PATH, 'migrate', 'deploy'], {
@@ -98,6 +103,8 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       stdio: 'pipe',
     });
   }
+  // Read at launch once the settings exist, then changed by the process that saves them (ADR-0011)
+  let defaultDelayMonths = DEFAULT_DELAY_MONTHS;
   // Expirée depends on the day, so every Offre read computes it rather than storing it
   const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url }) }).$extends({
     result: {
@@ -156,8 +163,81 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       });
     },
 
-    async listVeilles(): Promise<Veille[]> {
-      return z.array(VEILLE_SCHEMA).parse(await prisma.veille.findMany({ orderBy: { id: 'asc' } }));
+    async createCandidat({ id, name }: { id: string; name: string }): Promise<void> {
+      await prisma.candidat.create({ data: { id, name } });
+    },
+
+    async renameCandidat({ id }: Candidat, name: string): Promise<void> {
+      await prisma.candidat.update({ where: { id }, data: { name } });
+    },
+
+    // Whether the settings exist: from then on, the config an older jf left is never read again
+    // (ADR-0011)
+    async hasSettings(): Promise<boolean> {
+      return (await prisma.settings.count()) > 0;
+    },
+
+    // Creates the settings, from the config an older jf left when there is one: its Candidats and
+    // Veilles are added or updated, never deleted, and each Veille keeps when its Détection last went
+    // through. The row is claimed first, so a process launched at the same time imports nothing.
+    async createSettings(config: Config | null): Promise<void> {
+      const delayMonths = config?.defaultDelayMonths ?? DEFAULT_DELAY_MONTHS;
+      await prisma.$transaction(async (transaction) => {
+        const claimedCount = await transaction.$executeRaw`
+          INSERT INTO "Settings" ("id", "defaultDelayMonths") VALUES (${SETTINGS_ID}, ${delayMonths})
+          ON CONFLICT DO NOTHING`;
+        if (claimedCount === 0 || config === null) {
+          return;
+        }
+        for (const { id, name, veilleList } of config.candidatList) {
+          await transaction.candidat.upsert({ where: { id }, create: { id, name }, update: { name } });
+          for (const { id: veilleId, source, parametres } of veilleList) {
+            const veille = { candidatId: id, source, parametres };
+            await transaction.veille.upsert({
+              where: { id: veilleId },
+              create: { id: veilleId, ...veille },
+              update: veille,
+            });
+          }
+        }
+      });
+    },
+
+    // Also what Expirée computes with from then on, in this process
+    async readDefaultDelayMonths(): Promise<number> {
+      const settings = await prisma.settings.findUniqueOrThrow({ where: { id: SETTINGS_ID } });
+      defaultDelayMonths = z.int().positive().parse(settings.defaultDelayMonths);
+      return defaultDelayMonths;
+    },
+
+    async saveDefaultDelayMonths(delayMonths: number): Promise<void> {
+      await prisma.settings.update({ where: { id: SETTINGS_ID }, data: { defaultDelayMonths: delayMonths } });
+      defaultDelayMonths = delayMonths;
+    },
+
+    // Every Veille, for the Détection, or those of a Candidat
+    async listVeilles(candidatId?: string): Promise<Veille[]> {
+      return z.array(VEILLE_SCHEMA).parse(
+        await prisma.veille.findMany({
+          where: candidatId === undefined ? {} : { candidatId },
+          orderBy: { id: 'asc' },
+        }),
+      );
+    },
+
+    // A new Veille is on its first launch: detectedAt stays null
+    async createVeille(veille: { id: string; candidatId: string; source: string; parametres: Parametres }) {
+      await prisma.veille.create({ data: veille });
+    },
+
+    // A Veille whose Source or Paramètres change starts its first launch again (ADR-0011)
+    async updateVeille({ id }: Veille, { source, parametres }: { source: string; parametres: Parametres }) {
+      await prisma.veille.update({ where: { id }, data: { source, parametres, detectedAt: null } });
+    },
+
+    // Its Offres stay: they belong to the Candidat, not to the Veille
+    async deleteVeille({ id }: Veille): Promise<void> {
+      await prisma.veille.delete({ where: { id } });
     },
 
     async listOffres(candidatId: string): Promise<Offre[]> {
@@ -381,24 +461,6 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
           include: OFFRE_INCLUDE,
         }),
       );
-    },
-
-    // The config is the source of truth, except when a Veille's Détection last went through; a
-    // Candidat removed with Offres left fails the launch on the foreign key rather than orphan them
-    async copyConfig(config: Config): Promise<void> {
-      const veilleList = config.candidatList.flatMap((candidat) =>
-        candidat.veilleList.map((veille) => ({ ...veille, candidatId: candidat.id })),
-      );
-      await prisma.$transaction([
-        prisma.veille.deleteMany({ where: { id: { notIn: veilleList.map(({ id }) => id) } } }),
-        prisma.candidat.deleteMany({ where: { id: { notIn: config.candidatList.map((candidat) => candidat.id) } } }),
-        ...config.candidatList.map(({ id, name }) =>
-          prisma.candidat.upsert({ where: { id }, create: { id, name }, update: { name } }),
-        ),
-        ...veilleList.map((veille) =>
-          prisma.veille.upsert({ where: { id: veille.id }, create: veille, update: veille }),
-        ),
-      ]);
     },
   };
 }

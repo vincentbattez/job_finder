@@ -35,13 +35,20 @@
   color: var(--color-muted);
   font: 500 var(--text-sm) var(--font-body);
 }
+/* The front creates Candidats (ADR-0011): a long name stays inside a phone screen */
+.candidat-menu select {
+  min-width: 0;
+  max-width: 12rem;
+  text-overflow: ellipsis;
+}
 .candidat-menu select,
 .candidat-menu button,
 .command button,
 .module-launch button,
 .detection button,
 .edition button,
-.canal button {
+.canal button,
+.settings button {
   min-height: 40px;
   padding: 0 var(--space-sm);
   border: var(--rule-hair) solid var(--color-muted);
@@ -56,14 +63,16 @@
 .candidat-menu select:hover,
 .command button:hover,
 .edition button:hover,
-.canal button:hover:enabled {
+.canal button:hover:enabled,
+.settings button:hover:enabled {
   background: var(--color-paper-2);
 }
 .candidat-menu button,
 .module-launch button,
 .detection button,
 .edition .button--primary,
-.canal .button--primary {
+.canal .button--primary,
+.settings .button--primary {
   border-color: transparent;
   background: var(--color-accent);
   color: var(--color-accent-ink);
@@ -72,13 +81,15 @@
 .module-launch button:hover:enabled,
 .detection button:hover:enabled,
 .edition .button--primary:hover,
-.canal .button--primary:hover:enabled {
+.canal .button--primary:hover:enabled,
+.settings .button--primary:hover:enabled {
   background: var(--color-accent-deep);
 }
 /* A module missing an input, an Artefact en cours, a Détection running: the button waits */
 .module-launch button:disabled,
 .detection button:disabled,
-.canal button:disabled {
+.canal button:disabled,
+.settings button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -1062,21 +1073,28 @@ a:active {
 
 /* The Canal de notification: each field, then the button that tries it and what it answered */
 .canal,
-.canal form {
+.canal form,
+.settings,
+.settings form {
   display: grid;
   gap: var(--space-md);
   min-width: 0;
 }
-.canal h2 {
+.canal h2,
+.settings h2,
+.settings h3 {
   font: 600 var(--text-md) / 1.4 var(--font-body);
 }
-.canal > p {
+.canal > p,
+.settings > p {
   color: var(--color-ink-2);
 }
-.canal form {
+.canal form,
+.settings form {
   max-width: 32rem;
 }
-.canal__field {
+.canal__field,
+.settings__field {
   display: grid;
   gap: var(--space-xs);
   min-width: 0;
@@ -1084,7 +1102,9 @@ a:active {
   font: 500 var(--text-sm) / 1.4 var(--font-body);
 }
 .canal__field input,
-.canal__field select {
+.canal__field select,
+.settings__field input,
+.settings__field textarea {
   min-width: 0;
   min-height: 40px;
   padding: 0 var(--space-sm);
@@ -1097,7 +1117,9 @@ a:active {
   font: 400 var(--text-sm) / 1.4 var(--font-outlier);
 }
 .canal__field input:focus-visible,
-.canal__field select:focus-visible {
+.canal__field select:focus-visible,
+.settings__field input:focus-visible,
+.settings__field textarea:focus-visible {
   outline-color: var(--color-focus);
 }
 /* Write-only, the token never shows again: only whether one is saved (ADR-0006) */
@@ -1105,17 +1127,42 @@ a:active {
   color: var(--color-success);
   font-weight: 600;
 }
-.canal__step {
+.canal__step,
+.settings__step {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-xs) var(--space-sm);
   font-size: var(--text-sm);
 }
-.canal__step [role='status'] {
+.canal__step [role='status'],
+.settings__step [role='status'] {
   color: var(--color-success);
 }
 .canal__step [role='alert'] {
   flex-basis: 100%;
   color: var(--color-error);
+}
+.settings__step [role='alert'] {
+  flex-basis: 100%;
+  color: var(--color-error);
+}
+/* A list Paramètre, one value per line, such as the courts of appeal of a Zone */
+.settings__field textarea {
+  padding: var(--space-xs) var(--space-sm);
+  resize: vertical;
+}
+/* Each Veille in its own frame, the new one last */
+.settings fieldset {
+  display: grid;
+  gap: var(--space-md);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-md);
+  border: var(--rule-hair) solid var(--color-muted);
+  border-radius: var(--radius-input);
+}
+.settings legend {
+  padding: 0 var(--space-xs);
+  font: 600 var(--text-sm) / 1.4 var(--font-body);
 }

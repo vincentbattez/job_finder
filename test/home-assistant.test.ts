@@ -1,12 +1,10 @@
-import { writeFileSync } from 'node:fs';
-import path from 'node:path';
-
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
 import { startFakeHomeAssistant } from './fake-home-assistant.ts';
+import { LEA_VEILLE } from './lea.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
 const LEA_SERVICE = 'notify.mobile_app_iphone_de_lea';
@@ -243,19 +241,10 @@ describe('the notification of a new Offre', () => {
   it("goes to each Candidat's own Home Assistant", async () => {
     const homeAssistantByCandidatId = { lea: await startHomeAssistant(), camille: await startHomeAssistant() };
     const dataDirectory = createDataDirectory();
-    // Both follow the Offres of the courts of appeal of Douai and Amiens
-    const candidatList = Object.keys(homeAssistantByCandidatId).map((id) => ({
-      id,
-      name: id,
-      veilleList: [
-        {
-          id: `attache-de-justice-${id}`,
-          source: 'pep',
-          parametres: { title: 'attaché de justice', courtOfAppealList: ['Douai', 'Amiens'] },
-        },
-      ],
-    }));
-    writeFileSync(path.join(dataDirectory, 'config.json'), JSON.stringify({ defaultDelayMonths: 6, candidatList }));
+    // Camille follows the same Offres as Léa, those of the courts of appeal of Douai and Amiens
+    const frontActions = await createActions({ dataDirectory });
+    await frontActions.createCandidat({ id: 'camille', name: 'Camille' });
+    await frontActions.saveVeille({ candidatId: 'camille', ...LEA_VEILLE });
     const actions = await detectBeforeBethune(dataDirectory);
     const { lea, camille } = homeAssistantByCandidatId;
     await saveCanal(actions, { url: lea.url, token: lea.token, service: LEA_SERVICE });

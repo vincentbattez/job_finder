@@ -12,6 +12,7 @@ import { parametre } from '#/parametre/index.ts';
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { startFakeHomeAssistant } from './fake-home-assistant.ts';
+import { LEA_VEILLE, LEA_VEILLE_ID } from './lea.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 // A Béthune Offre in Léa's Zone, from the responses recorded on 2026-10-29
@@ -44,6 +45,11 @@ const INPUT_BY_ACTION: Record<string, object> = {
   },
   convertPiece: PIECE,
   deletePiece: PIECE,
+  createCandidat: { id: 'camille', name: 'Camille' },
+  renameCandidat: { name: 'Léa' },
+  saveSettings: { defaultDelayMonths: 6 },
+  saveVeille: LEA_VEILLE,
+  deleteVeille: { veilleId: LEA_VEILLE_ID },
 };
 
 type ActionMap = Record<string, (rawInput: unknown) => Promise<unknown>>;

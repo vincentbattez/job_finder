@@ -10,6 +10,8 @@ export default [
   route('candidat', 'routes/candidat.ts'),
   route('profil', 'routes/profil.tsx'),
   route('canal-notification', 'routes/canal-notification.ts'),
+  route('veille', 'routes/veille.ts'),
+  route('candidats', 'routes/candidats.tsx'),
   route('consignes', 'routes/consignes.tsx'),
   route('run', 'routes/run.ts'),
   route('detect', 'routes/detect.ts'),

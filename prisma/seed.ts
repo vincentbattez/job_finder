@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { fakerFR as faker } from '@faker-js/faker';
@@ -9,7 +9,6 @@ import { openWorkspace } from '#/workspace/index.ts';
 
 // Same folder as the default database of prisma.config.ts
 const DEVELOPMENT_DATA_DIRECTORY = path.join(import.meta.dirname, '..', 'dev-data');
-const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
 const OFFRE_COUNT_PER_CANDIDAT = 30;
 const COURT_OF_APPEAL_LIST = ['Douai', 'Amiens', 'Paris', 'Rennes', 'Lyon', 'Bordeaux'];
 const SERVICE_LIST = ['pôle civil', 'pôle pénal', 'parquet', "service de l'application des peines", 'pôle mineurs'];
@@ -46,14 +45,13 @@ function fakeOffre(candidatId: string): Prisma.OffreUncheckedCreateInput {
 }
 
 // Development data only: replaces the Offres of dev-data/ with fake ones, the same on every run,
-// for the Candidats of its config (copied from config.example.json when missing). data/ is never
-// touched.
+// for its Candidats, Léa when it has none yet. data/ is never touched.
 mkdirSync(DEVELOPMENT_DATA_DIRECTORY, { recursive: true });
-const configPath = path.join(DEVELOPMENT_DATA_DIRECTORY, 'config.json');
-if (!existsSync(configPath)) {
-  copyFileSync(EXAMPLE_CONFIG_PATH, configPath);
-}
 const workspace = await openWorkspace(DEVELOPMENT_DATA_DIRECTORY);
+const existingCandidatList = await workspace.listCandidats();
+if (existingCandidatList.length === 0) {
+  await workspace.createCandidat({ id: 'lea', name: 'Léa' });
+}
 const candidatList = await workspace.listCandidats();
 // The seed is tooling, not the application: it writes raw rows without the anti-corruption
 // layer (ADR-0005)

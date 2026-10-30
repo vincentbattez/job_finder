@@ -108,7 +108,7 @@ async function chooseCandidat(actions: Actions, terminal: Terminal) {
     question: 'Candidat',
     itemList: await actions.listCandidats(),
     label: ({ name }) => name,
-    emptyMessage: 'Aucun Candidat : les déclarer dans data/config.json.',
+    emptyMessage: 'Aucun Candidat : en créer un dans la page Candidats du front.',
   });
 }
 
@@ -209,7 +209,7 @@ function changeStatutCommand(statut: Offre['statut'], name: string, description:
 // The CLI only relays to the actions: no business rule here (ADR-0003)
 const COMMAND_BY_NAME: Record<string, ICommand> = {
   candidats: {
-    description: 'Liste les Candidats déclarés dans data/config.json',
+    description: 'Liste les Candidats, que la page Candidats du front crée et renomme',
     run: async (actions) => {
       const candidatList = await actions.listCandidats();
       for (const candidat of candidatList) {
@@ -445,9 +445,15 @@ async function run(): Promise<void> {
   if (command === undefined) {
     throw new Error(`Commande inconnue : ${commandName}. « jf help » liste les commandes.`);
   }
-  await command.run(await createActions({ dataDirectory: DATA_DIRECTORY }), argumentList, {
-    isWaiting: values.wait === true,
-  });
+  const actions = await createActions({ dataDirectory: DATA_DIRECTORY });
+  // Imported once by the first launch that found it, then never read again (ADR-0011)
+  const { obsoleteConfigPath } = await actions.readSettings();
+  if (obsoleteConfigPath !== null) {
+    process.stderr.write(
+      `${obsoleteConfigPath} n'est plus lu : son contenu est en base, et les Candidats, leurs Veilles et le Délai par défaut se règlent désormais dans le front. Le supprimer.\n`,
+    );
+  }
+  await command.run(actions, argumentList, { isWaiting: values.wait === true });
 }
 
 try {

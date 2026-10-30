@@ -8,7 +8,8 @@ import { createActions } from '#/actions/index.ts';
 import { createDataDirectory, createMigratedDataDirectory } from './data-directory.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
-// A data folder whose config gives Léa a single Veille
+// A data folder where Léa has a single Veille, imported from the config an older jf left (ADR-0011):
+// the front would refuse it, but a Source may also leave the registry
 function createDataDirectoryWith(veille: object): string {
   const dataDirectory = createMigratedDataDirectory();
   const config = { defaultDelayMonths: 6, candidatList: [{ id: 'lea', name: 'Léa', veilleList: [veille] }] };

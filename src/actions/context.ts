@@ -82,6 +82,16 @@ export async function openContext({
     return module;
   }
 
+  // A Source by its identifier, as a Veille saved it or as the Candidat picked it (ADR-0010)
+  function findSource(sourceId: string): ISource {
+    const source = sourceList.find(({ description: { id } }) => id === sourceId);
+    if (source === undefined) {
+      const knownList = sourceList.map(({ description: { id } }) => id).join(', ');
+      throw new Error(`Source inconnue : ${sourceId}. En choisir une parmi ${knownList} dans les Veilles du Profil.`);
+    }
+    return source;
+  }
+
   // Through the Canal the Candidat saved, with its saved Paramètres
   async function sendNotification(candidatId: string, notification: INotification): Promise<void> {
     const { candidatName, module, parametres } = await workspace.findCanalNotification(candidatId);
@@ -109,6 +119,7 @@ export async function openContext({
     aiSession,
     httpFetch: fetch,
     sourceList,
+    findSource,
     importSource: createImportSource(aiSession),
     pieceConversion: createPieceConversion(aiSession),
     runJob: createJobRunner(workspace, aiSession),

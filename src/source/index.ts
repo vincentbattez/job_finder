@@ -1,9 +1,11 @@
 import type { z } from 'zod/v4';
 
 import {
+  PARAMETRES_SCHEMA,
   SOURCE_MODULE_SCHEMA,
   type FicheDePoste,
   type ListedOffre,
+  type Parametres,
   type SourceModule,
   type Veille,
 } from '#/domain/index.ts';
@@ -41,9 +43,11 @@ interface ISourceDefinition<TShape extends ParametreShape> {
 }
 
 // A module as the Détection uses it, whatever its Paramètres: each operation parses those of the
-// Veille with the module's own schema, since the database keeps them as JSON (ADR-0010)
+// Veille with the module's own schema, since the database keeps them as JSON (ADR-0010). The form of
+// a Veille saves only the Paramètres its Source accepts.
 export interface ISource {
   description: SourceModule;
+  parseParametres(rawParametres: unknown): Parametres;
   search(veille: Veille, httpFetch?: typeof fetch): Promise<ISearchResult>;
   readFicheDePoste(reference: string, veille: Veille, httpFetch?: typeof fetch): Promise<IReadResult>;
 }
@@ -61,19 +65,28 @@ export function defineSource<TShape extends ParametreShape>({
     parametreList: describeParametres(name, parametreSchema),
   });
 
-  // The config writes the Veilles until the front does (#57)
+  // The front writes the Veilles, in the Profil of their Candidat (ADR-0011)
   function parseParametresOf({ id: veilleId, parametres }: Veille): ParametresOf<TShape> {
     return parseParametres(
       parametreSchema,
       parametres,
       description.parametreList,
       (labelList) =>
-        `La Veille ${veilleId} ne donne pas à la Source ${name} les Paramètres qu'elle attend : corriger ${labelList} dans data/config.json.`,
+        `La Veille ${veilleId} ne donne pas à la Source ${name} les Paramètres qu'elle attend : corriger ${labelList} dans le Profil de son Candidat.`,
     );
   }
 
   return {
     description,
+    parseParametres: (rawParametres) =>
+      PARAMETRES_SCHEMA.parse(
+        parseParametres(
+          parametreSchema,
+          rawParametres,
+          description.parametreList,
+          (labelList) => `La Source ${name} attend d'autres Paramètres : renseigner ${labelList}.`,
+        ),
+      ),
     search: (veille, httpFetch) => search(parseParametresOf(veille), httpFetch),
     readFicheDePoste: (reference, veille, httpFetch) =>
       readFicheDePoste(reference, parseParametresOf(veille), httpFetch),

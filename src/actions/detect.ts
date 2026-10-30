@@ -28,7 +28,7 @@ export function createDetectActions({ workspace, sourceList, httpFetch, locate, 
     if (found === undefined) {
       const knownList = sourceList.map(({ description }) => description.id).join(', ');
       throw new Error(
-        `La Veille ${id} suit une Source inconnue : ${source}. En choisir une parmi ${knownList} dans data/config.json.`,
+        `La Veille ${id} suit une Source inconnue : ${source}. En choisir une parmi ${knownList} dans le Profil de son Candidat.`,
       );
     }
     return found;

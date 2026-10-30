@@ -18,9 +18,7 @@ function writeConfig(dataDirectory: string, config: object): void {
   writeFileSync(path.join(dataDirectory, 'config.json'), JSON.stringify(config));
 }
 
-function candidatConfig(id: string, name: string): object {
-  return { id, name, veilleList: [] };
-}
+const LEA_CONFIG = { id: 'lea', name: 'Léa', veilleList: [] };
 
 const PRISMA_DIRECTORY = path.join(import.meta.dirname, '..', 'prisma');
 const FIRST_MIGRATION = '20261029133617_init';
@@ -60,7 +58,7 @@ function listLeaProfilFiles(dataDirectory: string): string[] {
 }
 
 describe('actions', () => {
-  it('lists the Candidats declared in the config', async () => {
+  it('lists the Candidats', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
     expect(await actions.listCandidats()).toEqual([{ id: 'lea', name: 'Léa' }]);
@@ -85,23 +83,10 @@ describe('actions', () => {
     expect(await actions.listCandidats()).toEqual([{ id: 'lea', name: 'Léa' }]);
   });
 
-  it('forgets a Candidat removed from the config', async () => {
-    const dataDirectory = createEmptyDataDirectory();
-    writeConfig(dataDirectory, {
-      defaultDelayMonths: 6,
-      candidatList: [candidatConfig('lea', 'Léa'), candidatConfig('vincent', 'Vincent')],
-    });
-    await createActions({ dataDirectory });
-    writeConfig(dataDirectory, { defaultDelayMonths: 6, candidatList: [candidatConfig('lea', 'Léa')] });
-
-    const actions = await createActions({ dataDirectory });
-
-    expect(await actions.listCandidats()).toEqual([{ id: 'lea', name: 'Léa' }]);
-  });
-
+  // The real data/ comes with the config the older jf read: it is imported too (ADR-0011)
   it('brings the database an older jf left up to date', async () => {
     const dataDirectory = createEmptyDataDirectory();
-    writeConfig(dataDirectory, { defaultDelayMonths: 6, candidatList: [candidatConfig('lea', 'Léa')] });
+    writeConfig(dataDirectory, { defaultDelayMonths: 6, candidatList: [LEA_CONFIG] });
     writeOlderDatabase(dataDirectory);
 
     const actions = await createActions({ dataDirectory });
@@ -117,7 +102,7 @@ describe('actions', () => {
   // The main checkout migrates the real data/: Léa keeps her Connexion, nothing to type again
   it('turns the Connexion Home Assistant of each Candidat into their Canal de notification, without loss', async () => {
     const dataDirectory = createEmptyDataDirectory();
-    writeConfig(dataDirectory, { defaultDelayMonths: 6, candidatList: [candidatConfig('lea', 'Léa')] });
+    writeConfig(dataDirectory, { defaultDelayMonths: 6, candidatList: [LEA_CONFIG] });
     const database = new DatabaseSync(writeOlderDatabase(dataDirectory, CONNEXION_HOME_ASSISTANT_MIGRATION));
     database.exec(`INSERT INTO Candidat (id, name) VALUES ('lea', 'Léa');
       INSERT INTO ConnexionHomeAssistant (candidatId, url, token, service)
@@ -173,14 +158,9 @@ describe('actions', () => {
     await expect(actions.listOffres({ candidatId: 'inconnu' })).rejects.toThrow(/Candidat inconnu : inconnu/);
   });
 
-  it('refuses to start without a config, pointing to the example', async () => {
-    await expect(createActions({ dataDirectory: createEmptyDataDirectory() })).rejects.toThrow(/config\.example\.json/);
-  });
+  it('starts in an empty data folder, creating its database, without any config', async () => {
+    const actions = await createActions({ dataDirectory: createEmptyDataDirectory() });
 
-  it('refuses an invalid config, naming the faulty field', async () => {
-    const dataDirectory = createEmptyDataDirectory();
-    writeConfig(dataDirectory, { defaultDelayMonths: 6, candidatList: [{ id: 'lea' }] });
-
-    await expect(createActions({ dataDirectory })).rejects.toThrow(/candidatList\[0\]\.name/);
+    expect(await actions.listCandidats()).toEqual([]);
   });
 });
