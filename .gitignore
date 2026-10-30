@@ -12,3 +12,5 @@ playwright-report/
 /build/
 .hallmark/
 test-results/
+# The git worktrees Claude Code creates inside the checkout, each a checkout of its own
+/.claude/worktrees/
