@@ -1,7 +1,7 @@
 import { z } from 'zod/v4';
 
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { catalogueOf, localeOf } from '#/domain/catalogue/index.ts';
+import { catalogueFor, catalogueOf, localeOf } from '#/domain/catalogue/index.ts';
 import { LOCATION_SCHEMA, type Candidate, type Locale, type Location, type Posting } from '#/domain/index.ts';
 import { createApiGeo } from '#/geo/acl/api-geo.ts';
 import { createUploadConversion } from '#/modules/conversion/index.ts';
@@ -48,9 +48,8 @@ export async function openContext({
 
   async function findCandidate(rawInput: unknown): Promise<Candidate> {
     const { candidateId } = CANDIDATE_INPUT_SCHEMA.parse(rawInput);
-    const candidateList = await workspace.listCandidates();
-    const candidate = candidateList.find(({ id }) => id === candidateId);
-    if (candidate === undefined) {
+    const candidate = await workspace.findCandidate(candidateId);
+    if (candidate === null) {
       throw new Error(catalogueOf(null).error.unknownCandidate(candidateId));
     }
     return candidate;
@@ -58,8 +57,7 @@ export async function openContext({
 
   // The locale of the Candidate an action acts for, in which its messages speak (spec #65)
   async function findLocale(candidateId: string): Promise<Locale> {
-    const candidateList = await workspace.listCandidates();
-    return localeOf(candidateList.find(({ id }) => id === candidateId));
+    return localeOf(await workspace.findCandidate(candidateId));
   }
 
   // Before the Posting is found, no Candidate tells the locale: the default one
@@ -105,7 +103,7 @@ export async function openContext({
     const source = sourceList.find(({ description: { id } }) => id === sourceId);
     if (source === undefined) {
       const knownList = sourceList.map(({ description: { id } }) => id).join(', ');
-      throw new Error(catalogueOf({ locale }).error.unknownSource(sourceId, knownList, watchId));
+      throw new Error(catalogueFor(locale).error.unknownSource(sourceId, knownList, watchId));
     }
     return source;
   }
@@ -125,7 +123,7 @@ export async function openContext({
     } catch (error) {
       const locale = await findLocale(posting.candidateId);
       const { title } = composeNotification(locale);
-      return catalogueOf({ locale }).notification.notSent(title, posting.reference, messageOf(error));
+      return catalogueFor(locale).notification.notSent(title, posting.reference, messageOf(error));
     }
   }
 

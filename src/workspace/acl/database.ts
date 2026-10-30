@@ -151,6 +151,11 @@ export function openDatabase(databasePath: string) {
       return z.array(CANDIDATE_SCHEMA).parse(await prisma.candidate.findMany({ orderBy: { name: 'asc' } }));
     },
 
+    // A single Candidate by their identifier, null when there is none
+    async findCandidate(candidateId: string): Promise<Candidate | null> {
+      return CANDIDATE_SCHEMA.nullable().parse(await prisma.candidate.findUnique({ where: { id: candidateId } }));
+    },
+
     // Secret Parameters included, for the actions to reduce or send, never to return (ADR-0006)
     async findNotificationChannel(candidateId: string): Promise<SavedNotificationChannel> {
       const { notificationChannel, ...candidate } = await prisma.candidate.findUniqueOrThrow({
