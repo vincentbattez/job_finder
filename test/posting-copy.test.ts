@@ -6,15 +6,21 @@ import { tFor } from '#/actions/i18n.ts';
 describe('the counted copy of the Posting area', () => {
   const t = tFor('fr', 'posting');
 
-  it('sums up a Detection by its count of new Postings', () => {
-    expect(t('detectionSummary', { watchId: 'lea-1', count: 0 })).toBe('Veille lea-1 : aucune nouvelle Offre');
-    expect(t('detectionSummary', { watchId: 'lea-1', count: 1 })).toBe('Veille lea-1 : 1 nouvelle Offre');
-    expect(t('detectionSummary', { watchId: 'lea-1', count: 12 })).toBe('Veille lea-1 : 12 nouvelles Offres');
+  it('sums up what a Detection found on a Watch, by its count, French counting 0 apart', () => {
+    const label = 'attaché de justice';
+    expect(t('detection.nothingNew', { label, count: 81 })).toBe(
+      'attaché de justice : la Source a listé 81 Offres, toutes déjà connues.',
+    );
+    expect(t('detection.nothingNew', { label, count: 0 })).toBe(
+      'attaché de justice : la Source n’a listé aucune Offre.',
+    );
+    expect(t('detection.newPostings', { label, count: 1 })).toBe('attaché de justice : 1 nouvelle Offre.');
+    expect(t('detection.newHeading', { count: 12 })).toBe('12 nouvelles Offres');
   });
 
-  it('says a first launch imported without triggering anything', () => {
-    expect(t('firstLaunchDetectionSummary', { watchId: 'lea-1', count: 3 })).toBe(
-      'Veille lea-1 : 3 nouvelles Offres, premier lancement : importées sans rien déclencher',
+  it('says a first launch imported without starting a Research or a notification', () => {
+    expect(t('detection.firstLaunch', { label: 'attaché de justice', count: 81 })).toBe(
+      'attaché de justice : premier lancement, 81 Offres importées, sans Recherche ni notification.',
     );
   });
 

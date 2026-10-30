@@ -34,6 +34,18 @@
     font-weight: 500;
   }
 
+  /* Beside a Posting the last Detection found, until the next one (#63) */
+  .posting-list__new {
+    width: fit-content;
+    padding: 0 var(--space-xs);
+    border-radius: var(--radius-pill);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-deep);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    line-height: 1.6;
+  }
+
   .posting-list__workplace,
   .posting-list__reference {
     color: var(--color-muted);

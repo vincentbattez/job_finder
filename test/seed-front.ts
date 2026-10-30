@@ -3,10 +3,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { createActions } from '#/actions/index.ts';
+import { SOURCE_LIST } from '#/actions/modules.ts';
 import type { IHeadlessSession } from '#/ai-session/acl/claude-code.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { FAKE_HOME_ASSISTANT_TOKEN } from './fake-home-assistant.ts';
+import { createSlowSource } from './fake-slow-source.ts';
 import { createLea } from './lea.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
@@ -25,7 +27,10 @@ import { createRecordedFetch } from './recorded-http.ts';
 // 2026-2409247 has a Research made with the default Instructions, then one made with hers. Jade, without
 // Watch, has hers created, changed and deleted by one e2e test only. Hugo, without Watch, gets the
 // Postings that e2e/import.test.ts imports, so that Léa's list and map stay as seeded. Nina, without
-// Watch, has her locale switched by e2e/locale-switcher.test.ts only.
+// Watch, has her locale switched by e2e/locale-switcher.test.ts only. Lou, Jules, Iris and Théo each
+// follow the slow fake Source, for e2e/detection.test.ts only: Lou and Jules past their first launch,
+// Lou always finding the same Postings, Jules new ones; Iris and Théo never detected by the seed, the
+// Source of Théo failing after two Job Descriptions.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 // The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
 if (!dataDirectory.startsWith(tmpdir())) {
@@ -113,6 +118,7 @@ mkdirSync(dataDirectory, { recursive: true });
 const actions = await createActions({
   dataDirectory,
   fetch: createRecordedFetch().fetch,
+  sourceFactoryList: [...SOURCE_LIST, createSlowSource],
   aiSession: {
     ...createFakeAiSession(),
     runHeadless: (session: IHeadlessSession) =>
@@ -137,6 +143,22 @@ for (const [candidateId, service] of [
   });
 }
 await actions.detect();
+// Already past their first launch: Lou's Source lists the same Postings each time, Jules' new ones
+for (const { id, name, parameters } of [
+  { id: 'lou', name: 'Lou', parameters: { title: 'Greffier placé', referencePrefix: 'lou' } },
+  { id: 'jules', name: 'Jules', parameters: { title: 'Greffier placé' } },
+]) {
+  await actions.createCandidate({ id, name });
+  await actions.saveWatch({ candidateId: id, source: 'slow', parameters });
+}
+await actions.detect();
+for (const { id, name, parameters } of [
+  { id: 'iris', name: 'Iris', parameters: { title: 'Greffier placé' } },
+  { id: 'theo', name: 'Théo', parameters: { title: 'Greffier placé', failAfter: '2' } },
+]) {
+  await actions.createCandidate({ id, name });
+  await actions.saveWatch({ candidateId: id, source: 'slow', parameters });
+}
 await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
 await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
 // The worker's turn, which the e2e tests take here rather than in a worker process

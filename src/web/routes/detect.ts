@@ -1,12 +1,17 @@
+import type { ActionFunctionArgs } from 'react-router';
+
 import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
+import { readCandidate } from '#/web/candidate.server.ts';
 
-// The Detection button posts here: the same action as jf detect and the daily automation. A failed
-// Detection goes back to the button with its message.
-export async function action() {
+// The Detection button posts here, for the Candidate of the menu: the Detection runs on in the server,
+// and the page follows it (#63). A refusal, such as a Detection already running, goes back to the button.
+export async function action({ request }: ActionFunctionArgs) {
+  const { candidate } = await readCandidate(request);
   try {
-    return { detectionList: await ACTIONS.detect(), error: null };
+    await ACTIONS.startDetection({ candidateId: candidate?.id });
+    return { error: null };
   } catch (error) {
-    return { detectionList: [], error: messageOf(error) };
+    return { error: messageOf(error) };
   }
 }

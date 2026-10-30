@@ -10,5 +10,6 @@ export const POSTING_LIST_FR: typeof POSTING_LIST_EN = {
   postingColumn: 'Offre',
   statusColumn: 'Statut',
   publishedAtColumn: 'Publiée le',
+  newMark: 'Nouvelle',
   deadlineColumn: 'Date limite',
 };

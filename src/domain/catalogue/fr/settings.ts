@@ -153,6 +153,7 @@ export const SETTINGS_FR: typeof SETTINGS_EN = {
     statuses: 'Statuts d’une Offre',
     states: 'États d’un Artefact',
     postingList: 'Liste d’Offres',
+    detection: 'Détection : sa progression, puis chaque verdict',
     emptyList: 'Liste vide',
     postingDetail: 'Fiche d’une Offre',
     editor: 'Éditeur Markdown',
