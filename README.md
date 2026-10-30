@@ -1,116 +1,116 @@
 # job_finder
 
-Veille d'offres d'emploi et préparation des candidatures. Vocabulaire : `GLOSSARY.md`. Décisions : `docs/adr/`. Règles de code : `CODING_STANDARDS.md`.
+Job Posting watch and Application preparation. Vocabulary: `GLOSSARY.md`. Decisions: `docs/adr/`. Code rules: `CODING_STANDARDS.md`.
 
 ## Installation
 
 ```bash
-mise install                                   # Node 26, lefthook, gitleaks, puis npm install (et prisma generate) et les git hooks
-mise run init                                  # remplit dev-data/ de données factices ; les Candidats de data/ se créent dans le front
-jf                                             # affiche l'aide
-jf detect                                      # cherche les nouvelles Offres de chaque Veille
-jf import offre.md lea                         # importe une Fiche de poste en Markdown trouvée ailleurs : le worker en relève les champs avec Claude, puis met sa Recherche en file ; --wait attend l'extraction
-jf run extraction import-1a2b3c4d5e            # relance l'extraction des champs d'une Offre importée, après un échec
-jf list lea                                    # liste les Offres d'un Candidat, avec leur statut et celles qui sont Expirées
-jf postuler 2026-2445600                       # passe une Offre en Postulée, ce qui fige sa Lettre pour de bon : Postulée ne s'annule jamais
-jf archiver 2026-2445600                       # archive une Offre, Postulée ou non ; jf postuler la remet en Postulée si elle l'a été, jf traiter sinon la remet À traiter
-jf run recherche 2026-2445600                  # met en file une nouvelle Version de la Recherche d'une Offre ; --wait attend que le worker l'ait produite
-jf run lettre 2026-2445600                     # met en file une nouvelle Version de la Lettre, sur la Recherche retenue
-jf run fiche 2026-2445600                      # met en file une nouvelle Version de la Fiche d'entretien, sur la Recherche retenue, et la Lettre retenue s'il y en a une
-jf run visualisation 2026-2445600              # met en file une nouvelle Version de la Visualisation, une page HTML tirée de la Fiche d'entretien retenue
-jf destinataires 2026-2445600                  # affiche à qui adresser la candidature, selon la Lettre retenue
-jf versions 2026-2445600 recherche             # liste les Versions d'un Artefact, chacune avec l'origine de ses Consignes : par défaut ou du Candidat
-jf retenir 2026-2445600 recherche 1            # change la Version retenue
-jf edit 2026-2445600 recherche                 # corrige la Version retenue d'un Artefact avec Claude Code, sauf la Visualisation qu'on relance ; sans argument, propose les Offres puis l'Artefact
-jf consignes lea                               # dit, pour chaque module, si le Candidat suit les Consignes par défaut ou les siennes
-jf consignes lea lettre                        # affiche les Consignes que suit la Lettre ; « defaut » affiche celles par défaut
-jf consignes lea lettre remplacer < c.md       # remplace les Consignes de la Lettre par celles du fichier ; « supprimer » revient à celles par défaut
+mise install                                   # Node 26, lefthook, gitleaks, then npm install (and prisma generate) and the git hooks
+mise run init                                  # fills dev-data/ with fake data; the Candidates of data/ are created in the front
+jf                                             # shows the help
+jf detect                                      # looks for the new Postings of each Watch
+jf import offre.md lea                         # imports a Markdown Job Description found elsewhere: the worker extracts its fields with Claude, then queues its Research; --wait waits for the extraction
+jf run extraction import-1a2b3c4d5e            # runs the field extraction of an imported Posting again, after a failure
+jf list lea                                    # lists a Candidate's Postings, with their Status and the Expired ones
+jf postuler 2026-2445600                       # makes a Posting Applied, which freezes its Letter for good: Applied is never undone
+jf archiver 2026-2445600                       # archives a Posting, Applied or not; jf postuler makes it Applied again if it was, otherwise jf traiter makes it To Apply again
+jf run recherche 2026-2445600                  # queues a new Version of a Posting's Research; --wait waits for the worker to produce it
+jf run lettre 2026-2445600                     # queues a new Version of the Letter, on the Chosen Version of the Research
+jf run fiche 2026-2445600                      # queues a new Version of the Interview Brief, on the Chosen Research, and the Chosen Letter if there is one
+jf run visualisation 2026-2445600              # queues a new Version of the Visualization, an HTML page drawn from the Chosen Interview Brief
+jf destinataires 2026-2445600                  # shows whom to address the application to, according to the Chosen Letter
+jf versions 2026-2445600 recherche             # lists the Versions of an Artifact, each with the origin of its Instructions: default or the Candidate's
+jf retenir 2026-2445600 recherche 1            # changes the Chosen Version
+jf edit 2026-2445600 recherche                 # corrects the Chosen Version of an Artifact with Claude Code, except the Visualization, which is run again; with no argument, offers the Postings then the Artifact
+jf consignes lea                               # says, for each module, whether the Candidate follows the default Instructions or their own
+jf consignes lea lettre                        # shows the Instructions the Letter follows; "defaut" shows the default ones
+jf consignes lea lettre remplacer < c.md       # replaces the Letter's Instructions with those of the file; "supprimer" goes back to the default ones
 ```
 
-`jf` est sur le `PATH` dès que mise est actif dans le dossier du repo.
+`jf` is on the `PATH` as soon as mise is active in the repo folder.
 
 ## Front
 
-Le front, service lpm `web` déclaré dans `.lpm.yml` (`mise run web`), sert les Offres de `data/` sur le port 5180, sans authentification : il n'est joignable qu'en LAN et via WireGuard, jamais depuis internet (ADR-0002). On l'ouvre par l'adresse IP du Mac mini ou par son nom `.local`, par exemple `http://mac-mini-vincent.local:5180`. Le Candidat se choisit dans le menu du haut, mémorisé par un cookie ; la fiche de chaque Offre montre ses contacts bruts, les destinataires recommandés par la Lettre retenue, la Fiche de poste et toutes les Versions de chaque Artefact, avec la commande `jf edit` à copier et les Consignes qui ont produit chaque Version : leur origine, et leur texte replié, pour comparer deux Versions. La Visualisation s'y lit dans un cadre isolé, qui n'exécute aucun script et ne charge rien de l'extérieur ; on la relance, sans jamais la modifier à la main. La page Candidats crée un Candidat (son nom et son identifiant, qui nomme son dossier et ses commandes `jf`), le renomme et règle le Délai par défaut, commun à tous ; un Candidat ne se supprime pas, et n'importe quel visiteur du front peut faire tout cela (ADR-0011). La page Profil règle les Veilles du Candidat, chacune sur une Source, avec le formulaire que construit le descripteur de cette Source ; une Veille créée ou modifiée importe d'abord les Offres déjà en ligne sans rien lancer, et une Veille supprimée garde ses Offres. Elle modifie aussi les fichiers du Profil du Candidat ; la page Consignes montre les Consignes par défaut de chaque module, et y crée, modifie ou supprime celles du Candidat. La partie fixe des prompts n'y apparaît pas : elle reste dans le code.
+The front, lpm service `web` declared in `.lpm.yml` (`mise run web`), serves the Postings of `data/` on port 5180, without authentication: it is only reachable on the LAN and through WireGuard, never from the internet (ADR-0002). It is opened through the Mac mini's IP address or its `.local` name, for example `http://mac-mini-vincent.local:5180`. The Candidate is picked in the top menu, remembered by a cookie; each Posting's page shows its raw contacts, the recipients recommended by the Chosen Letter, the Job Description and every Version of each Artifact, with the `jf edit` command to copy and the Instructions that produced each Version: their origin, and their folded text, to compare two Versions. The Visualization is read there in an isolated frame, which runs no script and loads nothing from outside; it is run again, never edited by hand. The Candidates page creates a Candidate (their name and their id, which names their folder and their `jf` commands), renames them and sets the Default Deadline Period, shared by all; a Candidate cannot be deleted, and any visitor of the front can do all of this (ADR-0011). The Profile page sets the Candidate's Watches, each on a Source, with the form built by that Source's descriptor; a created or changed Watch first imports the Postings already online without starting anything, and a deleted Watch keeps its Postings. It also edits the files of the Candidate's Profile; the Instructions page shows the default Instructions of each module, and creates, edits or deletes the Candidate's own there. The fixed part of the prompts does not appear there: it stays in the code.
 
-Sur la fiche, chaque Artefact montre son état (absent, en cours, prêt, en échec) et le bouton de son module : il met le job en file, comme `jf run`, et le worker l'exécute. Le bouton attend tant qu'il manque au module une entrée, par exemple une Recherche retenue pour la Lettre, et dit laquelle. L'état se met à jour tout seul jusqu'à ce que le job soit fini. La liste des Offres a un bouton « Lancer une Détection », la même action que `jf detect`, qui dit ce qu'elle a trouvé pour chaque Veille. Une Fiche de poste en Markdown glissée sur la liste, ou choisie avec « Importer une Fiche de poste », devient aussitôt une Offre, au nom de son fichier, comme avec `jf import` ; sa fiche suit l'extraction de ses champs par le worker, et la relance après un échec.
+On the Posting's page, each Artifact shows its state (missing, running, ready, failed) and its module's button: it queues the job, like `jf run`, and the worker runs it. The button waits as long as the module lacks an input, for example a Chosen Research for the Letter, and says which one. The state updates by itself until the job is done. The Posting list has a "Run a Detection" button, the same action as `jf detect`, which says what it found for each Watch. A Markdown Job Description dropped on the list, or picked with "Import a Job Description", becomes a Posting right away, named after its file, as with `jf import`; its page follows the extraction of its fields by the worker, and runs it again after a failure.
 
-Pour développer, `mise run web:dev` sert le front de `dev-data/`, les Offres factices de `mise run db:seed`, sur le port 5181 de cette machine seulement : seuls les Canaux de notification enregistrés dans `dev-data/` reçoivent ses notifications. `JF_DATA_DIRECTORY` nomme ce dossier.
+To develop, `mise run web:dev` serves the front of `dev-data/`, the fake Postings of `mise run db:seed`, on port 5181 of this machine only: only the Notification Channels saved in `dev-data/` receive its notifications. `JF_DATA_DIRECTORY` names this folder.
 
 ## Worker
 
-Lancer un module ne fait que mettre son job en file. Le worker, service lpm `worker` déclaré dans `.lpm.yml` (`mise run worker`), exécute les jobs de `data/` un par un, donc une seule session Claude à la fois, dans son propre processus : redémarrer le front ne coupe pas une session (ADR-0003). Un job interrompu par un arrêt du worker passe « en échec » à son redémarrage, et se relance avec `jf run`. Une nouvelle Offre détectée dans la Zone met sa Recherche en file, sauf au premier lancement.
+Running a module only queues its job. The worker, lpm service `worker` declared in `.lpm.yml` (`mise run worker`), runs the jobs of `data/` one by one, so a single Claude session at a time, in its own process: restarting the front does not cut a session (ADR-0003). A job interrupted by a worker stop becomes "failed" when it restarts, and is run again with `jf run`. A new Posting detected in the Zone queues its Research, except on the first launch.
 
-## Détection quotidienne
+## Daily Detection
 
-L'automation lpm `detect`, déclarée dans `.lpm.yml`, lance `jf detect` chaque jour à 18:00 (ADR-0003). Son run affiche « aucune nouvelle Offre » ou la liste des nouvelles Offres. Une Détection en échec sort en erreur : lpm marque le run « needs a look » et notifie. Chaque Veille a sa Zone : une Offre est dans la Zone dès qu'elle est dans celle de l'une des Veilles de son Candidat. Une Offre qu'une Veille a enregistrée hors de sa Zone est relue une fois par chacune des autres Veilles de la même Source, et celle qui la trouve dans sa Zone l'y place ; elle a alors sa Recherche et sa notification, une seule fois, sauf au premier lancement de cette Veille. `.lpm.yml` se vérifie avec `lpm config validate .lpm.yml`.
+The lpm automation `detect`, declared in `.lpm.yml`, runs `jf detect` every day at 18:00 (ADR-0003). Its run shows "no new Posting" or the list of new Postings. A failed Detection exits with an error: lpm marks the run "needs a look" and notifies. Each Watch has its Zone: a Posting is in the Zone as soon as it is in the Zone of one of its Candidate's Watches. A Posting a Watch recorded outside its Zone is read again once by each of the other Watches of the same Source, and the one that finds it in its Zone places it there; it then gets its Research and its notification, only once, except on that Watch's first launch. `.lpm.yml` is checked with `lpm config validate .lpm.yml`.
 
 ## Notifications
 
-Le Candidat est notifié sur son téléphone :
+The Candidate is notified on their phone:
 
-- d'une nouvelle Offre dans sa Zone, avec son titre, sa juridiction et sa Date limite. Rien n'est envoyé au premier lancement, ni quand la Détection ne trouve rien ;
-- de la Republication d'une Offre : dans sa Zone, en nommant l'Offre qu'elle publie à nouveau ; quelle que soit la Zone quand cette Offre a été Postulée, et aucune Recherche n'est alors lancée ;
-- d'une Recherche prête, quand le worker l'a produite.
+- of a new Posting in their Zone, with its title, its jurisdiction and its Deadline. Nothing is sent on the first launch, nor when the Detection finds nothing;
+- of the Repost of a Posting: in their Zone, naming the Posting it publishes again; whatever the Zone when that Posting was Applied, and no Research is then started;
+- of a ready Research, when the worker has produced it.
 
-Chaque Candidat choisit son Canal de notification dans la section Notifications de son Profil, parmi les modules de la famille (ADR-0010) ; le seul aujourd'hui est Home Assistant, qui demande l'adresse du Home Assistant, un jeton d'accès longue durée (profil Home Assistant, onglet Sécurité) et le service `notify.mobile_app_*` du téléphone, à choisir dans la liste que donne ce Home Assistant. Le formulaire se construit à partir du descripteur du module. Les actions listent les Canaux, lisent et enregistrent celui du Candidat, le testent, listent les choix d'un Paramètre et envoient une notification de test. Un Paramètre secret, comme le jeton, est en écriture seule : aucune action ne le renvoie, seulement s'il est configuré (ADR-0006), et `test/write-only-token.test.ts` le vérifie pour tout Paramètre secret de tout module. Laissé vide, il garde celui enregistré, sauf si un Paramètre saisi avec lui, comme l'adresse, a changé. Une sauvegarde de `data/` contient donc un secret. Sans Canal enregistré, aucune notification ne part, et l'échec dit d'en choisir un. Une notification qui ne part pas n'empêche rien : la Détection enregistre d'abord toutes les nouvelles Offres et met leur Recherche en file ; `jf detect` affiche alors ce qu'elle a trouvé, puis chaque notification non envoyée avec ce qu'il faut vérifier, et sort en erreur. Le worker, lui, ne s'arrête pas : il écrit l'échec dans son log (`lpm logs worker`) et continue la file.
+Each Candidate picks their Notification Channel in the Notifications section of their Profile, among the modules of the family (ADR-0010); the only one today is Home Assistant, which asks for the address of the Home Assistant, a long-lived access token (Home Assistant profile, Security tab) and the phone's `notify.mobile_app_*` service, picked from the list that Home Assistant gives. The form is built from the module's descriptor. The actions list the Channels, read and save the Candidate's, test it, list the choices of a Parameter and send a test notification. A secret Parameter, such as the token, is write-only: no action returns it, only whether it is configured (ADR-0006), and `test/write-only-token.test.ts` checks it for every secret Parameter of every module. Left empty, it keeps the saved one, unless a Parameter entered with it, such as the address, has changed. A backup of `data/` therefore holds a secret. Without a saved Channel, no notification goes out, and the failure says to pick one. A notification that does not go out blocks nothing: the Detection first records every new Posting and queues their Research; `jf detect` then shows what it found, then each unsent notification with what to check, and exits with an error. The worker does not stop: it writes the failure in its log (`lpm logs worker`) and goes on with the queue.
 
-## Données
+## Data
 
-Tout vit dans `data/`, hors de git et sans sauvegarde :
+Everything lives in `data/`, outside git and without backup:
 
-- `job_finder.sqlite` : la base, migrée à chaque lancement. Elle est la source de vérité des Candidats, de leurs Veilles, du Délai par défaut et du Canal de notification de chaque Candidat, Paramètres secrets compris ; le front les écrit (ADR-0011). Le fichier de configuration que lisaient les versions précédentes est importé une seule fois, au premier lancement d'une base qui n'a pas encore son Délai par défaut, puis n'est plus jamais lu : `jf` le signale à chaque commande tant qu'il reste là, et la page Candidats aussi ;
-- `candidats/<id>/profil/` : le Profil de chaque Candidat, en fichiers Markdown : `faits.md`, `cv.md` et une `lettre-<employeur>-<année>.md` par lettre passée. `jf profil <candidat>` les écrit et les complète au fil d'une session Claude Code interactive ;
-- `candidats/<id>/offres/<référence>-<titre>/` : un dossier par Offre, avec sa Fiche de poste (`fiche-de-poste.md`) sauvegardée dès la Détection, et un dossier par Version de chaque Artefact, par exemple `recherche/v2/recherche.md`. Une Version de la Lettre (`lettre/v<n>/`) contient le Brouillon (`brouillon.md`, en lecture seule), la Lettre à corriger (`lettre.md`, d'abord sa copie) et les destinataires recommandés (`destinataires.json`). Une Version de la Fiche d'entretien (`fiche_entretien/v<n>/fiche-entretien.md`) commence par un titre ; ses Consignes par défaut l'organisent en « À réviser », « Moyens mnémotechniques », « Présentez-vous » et « Questions probables », et celles du Candidat peuvent l'organiser autrement. Une Version de la Visualisation (`visualisation/v<n>/visualisation.html`) est une page HTML autonome, sans script ;
-- `candidats/<id>/consignes/<artefact>.md` : les Consignes d'un module que le Candidat a remplacées, par exemple `recherche.md`. Sans ce fichier, le module suit ses Consignes par défaut.
+- `job_finder.sqlite`: the database, migrated on every launch. It is the source of truth for the Candidates, their Watches, the Default Deadline Period and each Candidate's Notification Channel, secret Parameters included; the front writes them (ADR-0011). The config file that previous versions read is imported only once, on the first launch of a database that does not have its Default Deadline Period yet, then never read again: `jf` reports it on every command as long as it is still there, and so does the Candidates page;
+- `candidats/<id>/profil/`: each Candidate's Profile, as Markdown files: `faits.md`, `cv.md` and one `lettre-<employer>-<year>.md` per past letter. `jf profil <candidate>` writes and completes them during an interactive Claude Code session;
+- `candidats/<id>/offres/<reference>-<title>/`: one folder per Posting, with its Job Description (`fiche-de-poste.md`) saved at Detection time, and one folder per Version of each Artifact, for example `recherche/v2/recherche.md`. A Version of the Letter (`lettre/v<n>/`) holds the Draft (`brouillon.md`, read-only), the Letter to correct (`lettre.md`, first a copy of it) and the recommended recipients (`destinataires.json`). A Version of the Interview Brief (`fiche_entretien/v<n>/fiche-entretien.md`) starts with a title; its default Instructions organise it into "À réviser", "Moyens mnémotechniques", "Présentez-vous" and "Questions probables", and the Candidate's own can organise it differently. A Version of the Visualization (`visualisation/v<n>/visualisation.html`) is a standalone HTML page, without script;
+- `candidats/<id>/consignes/<artifact>.md`: the Instructions of a module the Candidate replaced, for example `recherche.md`. Without this file, the module follows its default Instructions.
 
-`dev-data/` a la même forme, avec des Offres factices pour le développement. Les commandes Prisma et les tasks `db:` ne touchent qu'à lui.
+`dev-data/` has the same shape, with fake Postings for development. Prisma commands and `db:` tasks only touch it.
 
-## Base de données
+## Database
 
-Le schéma est décrit dans `prisma/schema.prisma`, seule source à éditer. Après une modification, `mise run db:migrate` génère la migration dans `prisma/migrations/` et l'applique à `dev-data/`. Une migration générée ne s'édite pas à la main, sauf pour recopier les données d'une table ou de colonnes qu'elle remplace, comme `20261030110155_canal_notification` ou `20261030112510_veille_parametres`. `jf` applique les migrations en attente à `data/` à chaque lancement.
+The schema is described in `prisma/schema.prisma`, the only source to edit. After a change, `mise run db:migrate` generates the migration in `prisma/migrations/` and applies it to `dev-data/`. A generated migration is not edited by hand, except to copy the data of a table or of columns it replaces, such as `20261030110155_canal_notification` or `20261030112510_veille_parametres`. `jf` applies pending migrations to `data/` on every launch.
 
 ## Code
 
-- `src/actions/` : la couche d'actions, seule source de vérité de chaque fonctionnalité. La CLI et le front ne font que l'appeler (ADR-0003). Les tests passent par elle. `index.ts` (`createActions`) réunit un fichier par fonctionnalité : `detect.ts` (la Détection, qui lit les modules de Source et ne peut donc pas être un module), `import-fiche-de-poste.ts`, `statut.ts`, `profil.ts`, `consignes.ts`, `edition.ts`, `jobs.ts`, `offres.ts` et `canal-notification.ts`, sur ce que partage `context.ts`. `modules.ts` est le registre des modules interchangeables : le seul fichier qui les importe, et donc qui les nomme (ADR-0010, vérifié par `test/architecture.test.ts`).
-- `src/cli/` : la CLI `jf`, qui relaie vers les actions.
-- `src/worker/` : le worker, qui relaie lui aussi vers les actions : il vide la file de jobs. Seul lui exécute les jobs, ce que vérifie `test/architecture.test.ts`.
-- `src/web/` : le front React Router, qui relaie lui aussi vers les actions, ouvertes une fois pour tout le serveur dans `acl/actions.server.ts`. `/design` montre ses composants avec des Offres d'exemple. Les couleurs, les polices et les espacements sont des tokens de `src/web/tokens.css`.
-- `src/domain/` : les types domaine, tirés de leurs schémas Zod. Une fois passée l'anti-corruption layer, le code ne manipule qu'eux (ADR-0005).
-- `src/workspace/` : l'accès au dossier de données (base, dossiers des Candidats). Seul son dossier `acl/` lit la base, et le fichier de configuration d'une version précédente, pour l'importer une fois ; `test/architecture.test.ts` vérifie qu'aucun autre fichier de `src/` ne le nomme. Le client Prisma est généré dans `generated/`, hors de git.
-- `src/ai-session/` : le lancement des sessions d'IA. Seul `acl/claude-code.ts` sait qu'elles tournent sur Claude Code, toujours sur l'abonnement (`claude -p`, sans clé API) ; les tests le remplacent par un faux.
-- `src/actions/run-job.ts` : l'exécution d'un job d'un module IA : la Version, le prompt en deux parties (partie fixe et Consignes), la vérification du fichier produit et la Version retenue.
-- `src/profil/` : le prompt fixe de `jf profil`.
-- `src/edit/` : le prompt fixe de `jf edit`, qui ouvre une session dans le dossier de l'Offre, sans shell ni web, où aucun Brouillon ne peut être modifié.
-- `src/statut/` : les règles du statut d'une Offre : les statuts où elle peut passer, le calcul d'Expirée, et le gel de la Lettre retenue d'une Offre qui a été Postulée.
-- `src/modules/` : un dossier par module, avec un seul point d'entrée. Un module n'en importe jamais un autre, ce que vérifie `test/architecture.test.ts`. Un module IA, comme `recherche/`, a sa partie fixe du prompt dans `prompt.ts` et ses Consignes par défaut dans `consignes.ts`.
-- `src/modules/source-import/` : la Source Import Markdown. L'import enregistre l'Offre et met en file l'extraction de ses champs ; le worker la lance comme un module, dans une session Claude sans interface au prompt fixe, qui écrit `extraction/extraction.json` dans le dossier de l'Offre. `acl/extraction.ts` refuse toute valeur que la Fiche de poste ne contient pas telle quelle. Les champs remplissent l'Offre, dont le dossier suit le nouveau titre, puis sa Recherche est mise en file. La référence de l'Offre vient du contenu du fichier : importer deux fois le même fichier redonne la même Offre, sans nouveau job.
-- `src/notification/` : le contrat de la famille des Canaux de notification (ADR-0010) : le descripteur qu'exporte chaque module (identifiant, nom affiché, Paramètres décrits par un schéma Zod, envoi, et en option test et choix d'un Paramètre), et le texte de chaque notification.
-- `src/source/` : le contrat de la famille des Sources qu'une Veille suit (ADR-0010) : le descripteur qu'exporte chaque module (identifiant, nom affiché, Paramètres d'une Veille décrits par un schéma Zod, Zone comprise, recherche des Offres et lecture de la fiche détaillée, qui dit si l'Offre est dans la Zone). L'action `listSources` donne ces descripteurs, dont le formulaire d'une Veille se construit.
-- `src/parametre/` : la déclaration des Paramètres, commune aux deux familles : `parametre(schema, { label, placeholder, type, isSecret })`, où `type` vaut `text`, `url` ou `list`, et leur lecture par chaque contrat (`declareParametres`) : leur description, dont le front construit le formulaire, et leur parsing par le schéma du module, dont l'erreur nomme les Paramètres refusés par leur libellé.
-- `src/modules/source-pep/` : la Source PEP, Place de l'Emploi Public (ADR-0001). Seul son `acl/talent-soft.ts` lit le site. Ajouter une Source, c'est un dossier `src/modules/source-<nom>/` et une ligne dans `src/actions/modules.ts`.
-- `src/modules/notification-home-assistant/` : le Canal Home Assistant. Seul son `acl/home-assistant.ts` sait appeler Home Assistant. Ajouter un Canal, c'est un dossier `src/modules/notification-<nom>/` et une ligne dans `src/actions/modules.ts`, sans migration, action ni écran.
-- `prisma/` : le schéma, les migrations et le seed.
-- `test/fixtures/pep/` : les réponses du site PEP enregistrées le 2026-10-29, que `test/recorded-http.ts` sert aux tests à la place du vrai site.
-- `test/fake-canal-notification.ts` : un faux module de la famille des Canaux de notification, qui garde les notifications au lieu de les envoyer. Un test le passe à `createActions` à la place du registre et l'enregistre comme Canal du Candidat. Un Candidat sans Canal enregistré n'est jamais notifié : un test qui oublie le faux n'envoie aucune vraie notification.
-- `test/fake-home-assistant.ts` : le faux Home Assistant, un serveur HTTP sur un port libre qui répond comme sa REST API (jeton, liste des services, `notify`), garde les notifications reçues et sait simuler une panne. `test/home-assistant.test.ts` et `test/write-only-token.test.ts` passent par lui, et `playwright.config.ts` le démarre en premier : le seed y enregistre le Canal de Léa, Camille et Sacha.
-- `test/fake-ai-session.ts` : le faux lancement de Claude, qui écrit l'Artefact prévu et garde le prompt reçu. `test/fixtures/claude/claude` remplace le binaire `claude` pour tester le vrai lancement sans ouvrir de session.
-- `test/lea.ts` : Léa et sa Veille, créées par les actions comme depuis le front. `test/global-setup.ts` en fait une base modèle (`test/create-lea-database.ts`), que `createDataDirectory` copie pour chaque test.
-- `test/seed-front.ts` : les données des tests Playwright, produites par les actions avec les faux dans un dossier temporaire, jamais `data/`. `playwright.config.ts` le lance avant le serveur de développement, qu'il pointe sur ce dossier.
-- `test/e2e-actions.server.ts` : les actions des tests Playwright, avec les faux. Le serveur de développement les sert à la place de `src/web/acl/actions.server.ts` en mode `e2e` (`vite.config.ts`), et `test/e2e-worker.ts`, le worker des tests, exécute avec elles les jobs mis en file par le front.
+- `src/actions/`: the action layer, the only source of truth of each feature. The CLI and the front only call it (ADR-0003). Tests go through it. `index.ts` (`createActions`) brings together one file per feature: `detect.ts` (the Detection, which reads the Source modules and therefore cannot be a module), `import-fiche-de-poste.ts`, `statut.ts`, `profil.ts`, `consignes.ts`, `edition.ts`, `jobs.ts`, `offres.ts` and `canal-notification.ts`, on what `context.ts` shares. `modules.ts` is the registry of interchangeable modules: the only file that imports them, and therefore names them (ADR-0010, checked by `test/architecture.test.ts`).
+- `src/cli/`: the `jf` CLI, which relays to the actions.
+- `src/worker/`: the worker, which also relays to the actions: it drains the job queue. Only it runs the jobs, which `test/architecture.test.ts` checks.
+- `src/web/`: the React Router front, which also relays to the actions, opened once for the whole server in `acl/actions.server.ts`. `/design` shows its components with sample Postings. Colours, fonts and spacings are tokens of `src/web/tokens.css`.
+- `src/domain/`: the domain types, derived from their Zod schemas. Past the anti-corruption layer, the code only handles them (ADR-0005).
+- `src/workspace/`: access to the data folder (database, Candidates' folders). Only its `acl/` folder reads the database, and the config file of a previous version, to import it once; `test/architecture.test.ts` checks that no other file of `src/` names it. The Prisma client is generated in `generated/`, outside git.
+- `src/ai-session/`: the launch of AI sessions. Only `acl/claude-code.ts` knows they run on Claude Code, always on the subscription (`claude -p`, with no API key); tests replace it with a fake.
+- `src/actions/run-job.ts`: running a job of an AI module: the Version, the two-part prompt (fixed part and Instructions), the check of the produced file and the Chosen Version.
+- `src/profil/`: the fixed prompt of `jf profil`.
+- `src/edit/`: the fixed prompt of `jf edit`, which opens a session in the Posting's folder, with no shell nor web, where no Draft can be changed.
+- `src/statut/`: the rules of a Posting's Status: the Statuses it can move to, the Expired computation, and the freeze of the Chosen Letter of a Posting that was Applied.
+- `src/modules/`: one folder per module, with a single entry point. A module never imports another, which `test/architecture.test.ts` checks. An AI module, such as `recherche/`, has the fixed part of its prompt in `prompt.ts` and its default Instructions in `consignes.ts`.
+- `src/modules/source-import/`: the Markdown Import Source. The import records the Posting and queues the extraction of its fields; the worker runs it like a module, in a headless Claude session with a fixed prompt, which writes `extraction/extraction.json` in the Posting's folder. `acl/extraction.ts` refuses any value the Job Description does not contain verbatim. The fields fill the Posting, whose folder follows the new title, then its Research is queued. The Posting's reference comes from the file's content: importing the same file twice gives the same Posting again, with no new job.
+- `src/notification/`: the contract of the Notification Channel family (ADR-0010): the descriptor each module exports (id, display name, Parameters described by a Zod schema, sending, and optionally test and choices of a Parameter), and the text of each notification.
+- `src/source/`: the contract of the family of Sources a Watch follows (ADR-0010): the descriptor each module exports (id, display name, Watch Parameters described by a Zod schema, Zone included, search of Postings and reading of the detail page, which says whether the Posting is in the Zone). The `listSources` action gives these descriptors, from which a Watch's form is built.
+- `src/parametre/`: the declaration of Parameters, shared by both families: `parametre(schema, { label, placeholder, type, isSecret })`, where `type` is `text`, `url` or `list`, and their reading by each contract (`declareParametres`): their description, from which the front builds the form, and their parsing by the module's schema, whose error names the refused Parameters by their label.
+- `src/modules/source-pep/`: the PEP Source, Place de l'Emploi Public (ADR-0001). Only its `acl/talent-soft.ts` reads the site. Adding a Source is a `src/modules/source-<name>/` folder and a line in `src/actions/modules.ts`.
+- `src/modules/notification-home-assistant/`: the Home Assistant Channel. Only its `acl/home-assistant.ts` knows how to call Home Assistant. Adding a Channel is a `src/modules/notification-<name>/` folder and a line in `src/actions/modules.ts`, with no migration, action or screen.
+- `prisma/`: the schema, the migrations and the seed.
+- `test/fixtures/pep/`: the PEP site's responses recorded on 2026-10-29, which `test/recorded-http.ts` serves to the tests instead of the real site.
+- `test/fake-canal-notification.ts`: a fake module of the Notification Channel family, which keeps the notifications instead of sending them. A test passes it to `createActions` instead of the registry and saves it as the Candidate's Channel. A Candidate without a saved Channel is never notified: a test that forgets the fake sends no real notification.
+- `test/fake-home-assistant.ts`: the fake Home Assistant, an HTTP server on a free port that answers like its REST API (token, list of services, `notify`), keeps the notifications received and can simulate an outage. `test/home-assistant.test.ts` and `test/write-only-token.test.ts` go through it, and `playwright.config.ts` starts it first: the seed saves there the Channel of Léa, Camille and Sacha.
+- `test/fake-ai-session.ts`: the fake Claude launch, which writes the expected Artifact and keeps the prompt received. `test/fixtures/claude/claude` replaces the `claude` binary to test the real launch without opening a session.
+- `test/lea.ts`: Léa and her Watch, created by the actions as from the front. `test/global-setup.ts` makes a template database of it (`test/create-lea-database.ts`), which `createDataDirectory` copies for each test.
+- `test/seed-front.ts`: the data of the Playwright tests, produced by the actions with the fakes in a temporary folder, never `data/`. `playwright.config.ts` runs it before the development server, which it points at this folder.
+- `test/e2e-actions.server.ts`: the actions of the Playwright tests, with the fakes. The development server serves them instead of `src/web/acl/actions.server.ts` in `e2e` mode (`vite.config.ts`), and `test/e2e-worker.ts`, the test worker, runs with them the jobs queued by the front.
 
-## Commandes
+## Commands
 
-| Commande              | Rôle                                                              |
-| --------------------- | ----------------------------------------------------------------- |
-| `mise run ci`         | Lint, typecheck et tests, comme la CI                             |
-| `mise run lint`       | ESLint, Prettier, Knip, et les migrations à jour du schéma        |
-| `mise run typecheck`  | TypeScript                                                        |
-| `mise run test:unit`  | Vitest : les actions et l'architecture                            |
-| `mise run test:e2e`   | Playwright : les parcours du front                                |
-| `mise run web`        | Sert le front de `data/` sur le port 5180 : le service lpm `web`  |
-| `mise run web:dev`    | Sert le front de `dev-data/` sur le port 5181, pour développer    |
-| `mise run worker`     | Lance le worker sur `data/` : le service lpm `worker`             |
-| `mise run db:migrate` | Crée une migration depuis le schéma et l'applique à `dev-data/`   |
-| `mise run db:seed`    | Remplace les Offres de `dev-data/` par des Offres factices        |
-| `mise run db:reset`   | Recrée la base de `dev-data/` depuis les migrations, puis la seed |
+| Command               | Role                                                                  |
+| --------------------- | --------------------------------------------------------------------- |
+| `mise run ci`         | Lint, typecheck and tests, as in CI                                   |
+| `mise run lint`       | ESLint, Prettier, Knip, and migrations up to date with the schema     |
+| `mise run typecheck`  | TypeScript                                                            |
+| `mise run test:unit`  | Vitest: the actions and the architecture                              |
+| `mise run test:e2e`   | Playwright: the front's flows                                         |
+| `mise run web`        | Serves the front of `data/` on port 5180: the lpm service `web`       |
+| `mise run web:dev`    | Serves the front of `dev-data/` on port 5181, for development         |
+| `mise run worker`     | Runs the worker on `data/`: the lpm service `worker`                  |
+| `mise run db:migrate` | Creates a migration from the schema and applies it to `dev-data/`     |
+| `mise run db:seed`    | Replaces the Postings of `dev-data/` with fake Postings               |
+| `mise run db:reset`   | Recreates the `dev-data/` database from the migrations, then seeds it |

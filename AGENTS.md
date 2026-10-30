@@ -4,6 +4,8 @@
 
 Before writing or reviewing code, read `CODING_STANDARDS.md`.
 
+Everything is in English (code, docs, commits, issues), with the vocabulary of `GLOSSARY.md`; user-facing copy goes only through the FR/EN catalogue. See the Code section of `CODING_STANDARDS.md`.
+
 ### Coding when no spec
 
 When I ask for a code change outside `/implement-spec`, keep that workflow's discipline, scaled to the change: load the `domain-modeling` and `tdd` skills to start; when finished, run `code-review` with my request as the spec, fix what it raises, then `commit`.

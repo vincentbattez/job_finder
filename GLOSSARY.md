@@ -1,171 +1,218 @@
 # Job Finder
 
-Veille d'offres d'emploi et préparation des candidatures : repérer les offres qui correspondent à un candidat, puis produire pour chacune de quoi postuler et préparer l'entretien.
+Job Posting watch and Application preparation: spot the Postings that match a Candidate, then produce for each one what it takes to apply and to prepare the Interview.
 
-## Candidats
+Each entry keeps its former French term on a `_Formerly_:` line, so that older issues, commits and PRs stay readable.
 
-**Candidat**:
-Personne qui cherche un emploi avec l'outil ; chaque Offre appartient à un seul Candidat.
-_Avoid_: utilisateur, user, compte
+## Candidates
 
-**Profil**:
-Ce que l'outil sait d'un Candidat pour écrire à sa place : son CV, les faits qu'il a validés et ses lettres passées.
-_Avoid_: dossier, CV
+**Candidate**:
+Person looking for a job with the tool; each Posting belongs to a single Candidate.
+_Avoid_: user, account
+_Formerly_: Candidat
 
-**Faits**:
-Partie du Profil qui recense, par rubrique, ce que le Candidat a validé sur lui-même : identité, coordonnées, diplômes, expériences, compétences, motivations, mobilité.
-_Avoid_: renseignements, informations, fiche
+**Profile**:
+What the tool knows about a Candidate in order to write on their behalf: their CV, the Facts they validated and their past letters.
+_Avoid_: file, record, CV
+_Formerly_: Profil
 
-**Pièce**:
-Document d'origine, comme un CV ou une lettre passée en PDF, que le Candidat dépose dans son Profil ; il est gardé tel quel, et le Profil en contient la conversion en Markdown.
-_Avoid_: upload, pièce jointe, fichier source
+**Facts**:
+Part of the Profile that lists, by section, what the Candidate validated about themselves: identity, contact details, degrees, experience, skills, motivations, mobility.
+_Avoid_: details, information, sheet
+_Formerly_: Faits
 
-**Canal de notification**:
-Moyen par lequel l'outil prévient un Candidat, comme son Home Assistant qui envoie la notification sur son téléphone ; chaque Candidat choisit le sien et en règle les Paramètres.
-_Avoid_: Connexion Home Assistant, intégration, provider
+**Upload**:
+Original document, such as a CV or a past letter as a PDF, that the Candidate drops into their Profile; it is kept as is, and the Profile holds its Markdown conversion.
+_Avoid_: attachment, file, source file
+_Formerly_: Pièce
 
-**Paramètre**:
-Valeur que demande un Canal de notification ou une Source pour fonctionner, comme l'adresse et le jeton d'un Home Assistant, ou le titre recherché et la Zone d'une Veille ; chacun déclare les siens, obligatoires ou optionnels, et un Paramètre secret ne se relit jamais.
-_Avoid_: réglage, option, config
+**Notification Channel**:
+Way the tool alerts a Candidate, such as their Home Assistant sending the notification to their phone; each Candidate picks theirs and sets its Parameters.
+_Avoid_: Home Assistant connection, integration, provider
+_Formerly_: Canal de notification
 
-**Veille**:
-Recherche permanente d'un Candidat sur une Source, définie par les Paramètres que demande cette Source, sa Zone comprise.
-_Avoid_: alerte, abonnement, recherche sauvegardée
+**Parameter**:
+Value a Notification Channel or a Source needs to work, such as the address and token of a Home Assistant, or the searched title and the Zone of a Watch; each declares its own, required or optional, and a secret Parameter is never read back.
+_Avoid_: setting, option, config
+_Formerly_: Paramètre
 
-## Offres
+**Watch**:
+Standing search of a Candidate on a Source, defined by the Parameters that Source asks for, its Zone included.
+_Avoid_: alert, subscription, saved search
+_Formerly_: Veille
 
-**Offre**:
-Annonce publiée par un employeur, identifiée par sa référence dans sa Source ; c'est l'unité que l'outil suit.
-_Avoid_: poste, fiche de poste, annonce, job
+## Postings
 
-**Fiche de poste**:
-Contenu descriptif d'une Offre (missions, profil recherché, conditions, contacts), conservé tel que publié.
-_Avoid_: description, offre
+**Posting**:
+Job ad published by an employer, identified by its reference in its Source; it is the unit the tool tracks.
+_Avoid_: offer, ad, listing, job
+_Formerly_: Offre
 
-**Poste**:
-L'emploi réel derrière une Offre ; un même Poste peut être publié en plusieurs Offres successives.
-_Avoid_: offre
+**Job Description**:
+Descriptive content of a Posting (duties, profile sought, conditions, contacts), kept as published.
+_Avoid_: description, posting
+_Formerly_: Fiche de poste
 
-**Republication**:
-Offre qui annonce à nouveau un Poste déjà publié sous une autre référence.
-_Avoid_: doublon, mise à jour
+**Position**:
+The actual job behind a Posting; the same Position can be published as several successive Postings.
+_Avoid_: posting, role
+_Formerly_: Poste
+
+**Repost**:
+Posting that announces again a Position already published under another reference.
+_Avoid_: duplicate, update, republication
+_Formerly_: Republication
 
 **Source**:
-Origine des Offres : un site d'emploi interrogé automatiquement, ou une Fiche de poste importée à la main.
-_Avoid_: flux, provider, site
+Origin of Postings: a job site queried automatically, or a Job Description imported by hand.
+_Avoid_: feed, provider, site
+_Formerly_: Source
 
-**Détection**:
-Passage qui interroge la Source de chaque Veille et enregistre les Offres qu'on n'avait encore jamais vues.
-_Avoid_: scan, crawl, alerte
+**Detection**:
+Run that queries the Source of each Watch and records the Postings never seen before.
+_Avoid_: scan, crawl, alert
+_Formerly_: Détection
 
 **Zone**:
-Territoire d'une Veille où une Offre détectée lance automatiquement sa Recherche ; chaque Source l'exprime à sa façon, et une Offre hors Zone est conservée mais pas traitée.
-_Avoid_: périmètre, secteur
+Territory of a Watch where a detected Posting automatically starts its Research; each Source expresses it its own way, and a Posting outside the Zone is kept but not processed.
+_Avoid_: perimeter, area
+_Formerly_: Zone
 
-**Ville**:
-Commune du lieu d'affectation d'une Offre, qui la place sur la carte.
-_Avoid_: localité, lieu
+**City**:
+Municipality of a Posting's place of work, which puts it on the map.
+_Avoid_: town, locality, place
+_Formerly_: Ville
 
-**Région**:
-Région administrative de la Ville d'une Offre, par laquelle le Candidat filtre ses Offres ; elle n'a rien à voir avec la Zone.
-_Avoid_: zone, territoire
+**Region**:
+Administrative region of a Posting's City, by which the Candidate filters their Postings; it has nothing to do with the Zone.
+_Avoid_: zone, territory
+_Formerly_: Région
 
-**Date limite**:
-Dernier jour pour postuler à une Offre ; quand l'Offre n'en donne pas, sa date de publication plus le Délai par défaut, une Fiche de poste importée étant publiée le jour de son import.
-_Avoid_: date de fin, échéance
+**Deadline**:
+Last day to apply to a Posting; when the Posting gives none, its publication date plus the Default Deadline Period, an imported Job Description being published on the day of its import.
+_Avoid_: end date, due date, closing date
+_Formerly_: Date limite
 
-**Délai par défaut**:
-Nombre de mois, commun à tous les Candidats, qui donne sa Date limite à une Offre publiée sans.
-_Avoid_: durée de validité, réglage
+**Default Deadline Period**:
+Number of months, shared by all Candidates, that gives its Deadline to a Posting published without one.
+_Avoid_: validity period, setting
+_Formerly_: Délai par défaut
 
-## Statut d'une Offre
+## Status of a Posting
 
-**À traiter**:
-Statut d'une Offre à laquelle le Candidat n'a pas encore postulé.
-_Avoid_: nouvelle, en attente
+**Status**:
+Where a Posting stands in its Application: To Apply, Applied, Invited, Interviewed, Hired or Rejected.
+_Avoid_: state, stage
+_Formerly_: Statut
 
-**Postulée**:
-Statut d'une Offre dont le Candidat a envoyé la candidature et qui attend son issue ; sa Candidature commence là, et sa Lettre ne change plus ensuite.
-_Avoid_: envoyée, candidatée, postulé
+**To Apply**:
+Status of a Posting the Candidate has not applied to yet.
+_Avoid_: new, pending, to process
+_Formerly_: À traiter
 
-**Candidature**:
-Process de recrutement d'une Offre, de l'envoi de la candidature jusqu'à son issue ; une Offre a une Candidature dès qu'elle a été Postulée, même Archivée ensuite.
-_Avoid_: process, suivi, offre en cours
+**Applied**:
+Status of a Posting whose Candidate sent their application and is waiting for its outcome; its Application starts there, and its Letter never changes afterwards.
+_Avoid_: sent, submitted
+_Formerly_: Postulée
 
-**Convoquée**:
-Se dit d'une Candidature sans issue qui a un Entretien à venir.
-_Avoid_: entretien prévu, invitée
+**Application**:
+Recruitment process of a Posting, from sending the application to its outcome; a Posting has an Application as soon as it was Applied, even if Archived later.
+_Avoid_: process, follow-up, candidacy
+_Formerly_: Candidature
 
-**Entretien**:
-Rendez-vous que l'employeur fixe au Candidat pour une Candidature, avec son début, sa durée et son lieu ; une Candidature peut en compter plusieurs, un par tour.
-_Avoid_: rendez-vous, convocation, tour
+**Invited**:
+Said of an Application with no outcome that has an upcoming Interview.
+_Avoid_: interview scheduled, summoned
+_Formerly_: Convoquée
 
-**Interlocuteurs**:
-Personnes que le Candidat rencontre à un Entretien, décrites par lui en texte libre (nom, rôle, tout ce qu'il sait).
-_Avoid_: jury, recruteurs, contacts
+**Interview**:
+Appointment the employer sets with the Candidate for an Application, with its start, duration and place; an Application can have several, one per round.
+_Avoid_: meeting, appointment, round
+_Formerly_: Entretien
 
-**Entretien passé**:
-Se dit d'une Candidature sans issue dont tous les Entretiens ont eu lieu.
-_Avoid_: en attente, résultat attendu
+**Interviewers**:
+People the Candidate meets at an Interview, described by the Candidate in free text (name, role, anything they know).
+_Avoid_: panel, recruiters, contacts
+_Formerly_: Interlocuteurs
 
-**Obtenue**:
-Issue d'une Candidature où le Candidat a le poste.
-_Avoid_: retenue, acceptée, embauché
+**Interviewed**:
+Said of an Application with no outcome whose Interviews have all taken place.
+_Avoid_: pending, awaiting result
+_Formerly_: Entretien passé
 
-**Refusée**:
-Issue d'une Candidature où l'employeur n'a pas retenu le Candidat.
-_Avoid_: rejetée, échec, non retenue
+**Hired**:
+Outcome of an Application where the Candidate gets the job.
+_Avoid_: accepted, won, offer
+_Formerly_: Obtenue
 
-**Archivée**:
-Se dit d'une Offre que le Candidat a décidé de ne plus suivre, quel que soit son statut, qu'elle garde ; la désarchiver la rend telle qu'elle était.
-_Avoid_: supprimée, ignorée
+**Rejected**:
+Outcome of an Application where the employer did not pick the Candidate.
+_Avoid_: refused, declined, failed
+_Formerly_: Refusée
 
-**Expirée**:
-Se dit d'une Offre dont la Date limite est passée, quel que soit son statut.
-_Avoid_: fermée, close, périmée
+**Archived**:
+Said of a Posting the Candidate decided to stop following, whatever its Status, which it keeps; unarchiving it restores it as it was.
+_Avoid_: deleted, ignored, hidden
+_Formerly_: Archivée
+
+**Expired**:
+Said of a Posting whose Deadline has passed, whatever its Status.
+_Avoid_: closed, outdated
+_Formerly_: Expirée
 
 **Notes**:
-Texte libre que le Candidat tient sur une Offre, quel que soit son statut, et qu'il réécrit à volonté.
-_Avoid_: journal, commentaires, suivi
+Free text the Candidate keeps on a Posting, whatever its Status, and rewrites at will.
+_Avoid_: log, comments, journal
+_Formerly_: Notes
 
-## Artefacts
+## Artifacts
 
-**Artefact**:
-Document produit pour une Offre, ou pour l'un de ses Entretiens, et rattaché à lui : Recherche, Brouillon, Lettre, Portrait, Fiche d'entretien, Visualisation.
-_Avoid_: livrable, output, fichier
+**Artifact**:
+Document produced for a Posting, or for one of its Interviews, and attached to it: Research, Draft, Letter, Portrait, Interview Brief, Visualization.
+_Avoid_: deliverable, output, file
+_Formerly_: Artefact
 
 **Version**:
-Un exemplaire d'un Artefact, produit chaque fois qu'on relance sa génération ; une correction humaine modifie la Version sans en créer une nouvelle.
-_Avoid_: révision, itération
+One copy of an Artifact, produced each time its generation is run again; a human correction changes the Version without creating a new one.
+_Avoid_: revision, iteration
+_Formerly_: Version
 
-**Version retenue**:
-La Version d'un Artefact que le Candidat a choisie ; c'est sur elle que s'appuient les Artefacts suivants et, pour la Lettre, c'est elle qui est envoyée.
-_Avoid_: version courante, version active, version sélectionnée
+**Chosen Version**:
+The Version of an Artifact the Candidate picked; the following Artifacts build on it and, for the Letter, it is the one that is sent.
+_Avoid_: current version, active version, selected version
+_Formerly_: Version retenue
 
-**Consignes**:
-Instructions qui disent à l'IA comment produire un type d'Artefact ; chaque type a des Consignes par défaut, qu'un Candidat peut remplacer par les siennes.
-_Avoid_: prompt, template, instructions
+**Instructions**:
+Directions that tell the AI how to produce a type of Artifact; each type has default Instructions, which a Candidate can replace with their own.
+_Avoid_: prompt, template, guidelines
+_Formerly_: Consignes
 
-**Recherche**:
-Artefact qui établit, sources à l'appui, ce que les recruteurs attendent pour une Offre et dans quel contexte (employeur, service, lieu).
-_Avoid_: analyse, étude, dossier
+**Research**:
+Artifact that establishes, with sources, what the recruiters expect for a Posting and in which context (employer, department, place).
+_Avoid_: analysis, study, report
+_Formerly_: Recherche
 
-**Brouillon**:
-Lettre de motivation rédigée par l'IA pour une Offre ; il n'est plus jamais modifié ensuite.
-_Avoid_: draft, première version
+**Draft**:
+Cover letter written by the AI for a Posting; it is never changed afterwards.
+_Avoid_: first version, rough copy
+_Formerly_: Brouillon
 
-**Lettre**:
-Lettre de motivation corrigée par l'humain à partir du Brouillon ; c'est elle qui est envoyée.
-_Avoid_: lettre finale, LM
+**Letter**:
+Cover letter corrected by the human from the Draft; it is the one that is sent.
+_Avoid_: final letter, cover letter, CL
+_Formerly_: Lettre
 
 **Portrait**:
-Artefact d'un Entretien qui établit, sources à l'appui, ce que l'on sait publiquement du parcours et des positions professionnelles de ses Interlocuteurs.
-_Avoid_: recherche, profil, fiche
+Artifact of an Interview that establishes, with sources, what is publicly known about the career and professional positions of its Interviewers.
+_Avoid_: research, profile, bio
+_Formerly_: Portrait
 
-**Fiche d'entretien**:
-Artefact qui prépare un Entretien précis en croisant l'Offre et ses Interlocuteurs : le discours à leur tenir, ce qu'il faut réviser et comment s'entraîner.
-_Avoid_: fiche de révision, fiche de compréhension, fiche mnémotechnique
+**Interview Brief**:
+Artifact that prepares a given Interview by crossing the Posting and its Interviewers: what to tell them, what to review and how to practise.
+_Avoid_: review sheet, cheat sheet, study notes
+_Formerly_: Fiche d'entretien
 
-**Visualisation**:
-Mise en forme HTML d'une Fiche d'entretien, avec le même contenu.
-_Avoid_: rendu, version HTML
+**Visualization**:
+HTML rendering of an Interview Brief, with the same content.
+_Avoid_: rendering, HTML version
+_Formerly_: Visualisation
