@@ -350,18 +350,19 @@ export const PARAMETRE_SCHEMA = z
 
 export type Parametre = z.infer<typeof PARAMETRE_SCHEMA>;
 
-// A module of the Canaux de notification, as its descriptor presents it to the Candidat (ADR-0010)
+// A module of a family of interchangeable modules, as its descriptor presents it to the Candidat: the
+// form asks for its Paramètres (ADR-0010)
+const MODULE_DESCRIPTION_SHAPE = { id: z.string(), name: z.string(), parametreList: z.array(PARAMETRE_SCHEMA) };
+
+// A Canal de notification may also be tested
 export const CANAL_NOTIFICATION_MODULE_SCHEMA = z
-  .object({ id: z.string(), name: z.string(), parametreList: z.array(PARAMETRE_SCHEMA), isTestable: z.boolean() })
+  .object({ ...MODULE_DESCRIPTION_SHAPE, isTestable: z.boolean() })
   .brand<'Domain'>();
 
 export type CanalNotificationModule = z.infer<typeof CANAL_NOTIFICATION_MODULE_SCHEMA>;
 
-// A Source a Veille follows, as its descriptor presents it: the form of a Veille asks for its
-// Paramètres (ADR-0010)
-export const SOURCE_MODULE_SCHEMA = z
-  .object({ id: z.string(), name: z.string(), parametreList: z.array(PARAMETRE_SCHEMA) })
-  .brand<'Domain'>();
+// A Source a Veille follows
+export const SOURCE_MODULE_SCHEMA = z.object(MODULE_DESCRIPTION_SHAPE).brand<'Domain'>();
 
 export type SourceModule = z.infer<typeof SOURCE_MODULE_SCHEMA>;
 

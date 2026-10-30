@@ -1,6 +1,6 @@
 import { z } from 'zod/v4';
 
-import { PARAMETRE_SCHEMA, type Parametre } from '#/domain/index.ts';
+import { PARAMETRE_SCHEMA, PARAMETRES_SCHEMA, type Parametre, type Parametres } from '#/domain/index.ts';
 
 // How each family of interchangeable modules declares its Paramètres, so that the front builds its
 // form from the descriptor of a module (ADR-0010)
@@ -28,7 +28,7 @@ export type ParametresOf<TShape extends ParametreShape> = z.output<z.ZodObject<T
 
 // Each Paramètre of a module as the front builds its field. A Paramètre is required when its schema
 // refuses it missing, and has choices when the module lists them.
-export function describeParametres(
+function describeParametres(
   moduleName: string,
   parametreSchema: z.ZodObject<ParametreShape>,
   choiceNameList: readonly string[] = [],
@@ -50,20 +50,38 @@ export function describeParametres(
   });
 }
 
-// Parses Paramètres with the schema of their module; when some are missing or wrong, the error names
-// them in the words of the form
-export function parseParametres<T extends z.ZodType>(
-  schema: T,
-  rawParametres: unknown,
-  parametreList: readonly Parametre[],
-  composeMessage: (labelList: string) => string,
-): z.infer<T> {
-  const result = schema.safeParse(rawParametres);
-  if (!result.success) {
-    const labelList = result.error.issues.map((issue) => labelOf(parametreList, issue.path[0]));
-    throw new Error(composeMessage([...new Set(labelList)].map((label) => `« ${label} »`).join(', ')));
+// The Paramètres of a module of either family: their description, from which the front builds the
+// form, and their parsing with the module's own schema, since the database keeps them as JSON
+// (ADR-0010). When some are missing or wrong, the error names them in the words of the form.
+export function declareParametres<TShape extends ParametreShape>(
+  moduleName: string,
+  parametreSchema: z.ZodObject<TShape>,
+  choiceNameList: readonly string[] = [],
+) {
+  const parametreList = describeParametres(moduleName, parametreSchema, choiceNameList);
+  // The error a module gives when some Paramètres are missing or wrong, given their labels
+  type MessageComposer = (labelList: string) => string;
+
+  function parseWith<T extends z.ZodType>(schema: T, rawParametres: unknown, composeMessage: MessageComposer) {
+    const result = schema.safeParse(rawParametres);
+    if (!result.success) {
+      const labelList = result.error.issues.map((issue) => labelOf(parametreList, issue.path[0]));
+      throw new Error(composeMessage([...new Set(labelList)].map((label) => `« ${label} »`).join(', ')));
+    }
+    return result.data;
   }
-  return result.data;
+
+  return {
+    parametreList,
+    parse: (rawParametres: unknown, composeMessage: MessageComposer) =>
+      parseWith(parametreSchema, rawParametres, composeMessage),
+    // What the Candidat typed, to try it: each Paramètre may be missing
+    parseTrial: (rawParametres: unknown, composeMessage: MessageComposer) =>
+      parseWith(parametreSchema.partial(), rawParametres, composeMessage),
+    // As the database keeps them
+    parseToSave: (rawParametres: unknown, composeMessage: MessageComposer): Parametres =>
+      PARAMETRES_SCHEMA.parse(parseWith(parametreSchema, rawParametres, composeMessage)),
+  };
 }
 
 export function labelOf(parametreList: readonly Parametre[], parametreName: PropertyKey | undefined): string {

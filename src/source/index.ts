@@ -1,7 +1,6 @@
 import type { z } from 'zod/v4';
 
 import {
-  PARAMETRES_SCHEMA,
   SOURCE_MODULE_SCHEMA,
   type FicheDePoste,
   type ListedOffre,
@@ -9,7 +8,7 @@ import {
   type SourceModule,
   type Veille,
 } from '#/domain/index.ts';
-import { describeParametres, parseParametres, type ParametreShape, type ParametresOf } from '#/parametre/index.ts';
+import { declareParametres, type ParametreShape, type ParametresOf } from '#/parametre/index.ts';
 
 // The contract of the family of the Sources a Veille follows: what each module of
 // src/modules/source-<nom>/ declares, and what the rest of the application knows of them (ADR-0010)
@@ -62,33 +61,24 @@ export function defineSource<TShape extends ParametreShape>({
   search,
   readFicheDePoste,
 }: ISourceDefinition<TShape>): SourceFactory {
-  const description = SOURCE_MODULE_SCHEMA.parse({
-    id,
-    name,
-    parametreList: describeParametres(name, parametreSchema),
-  });
+  const parametres = declareParametres(name, parametreSchema);
+  const description = SOURCE_MODULE_SCHEMA.parse({ id, name, parametreList: parametres.parametreList });
 
   // The front writes the Veilles, in the Profil of their Candidat (ADR-0011)
-  function parseParametresOf({ id: veilleId, parametres }: Veille): ParametresOf<TShape> {
-    return parseParametres(
-      parametreSchema,
-      parametres,
-      description.parametreList,
+  function parseParametresOf(veille: Veille): ParametresOf<TShape> {
+    return parametres.parse(
+      veille.parametres,
       (labelList) =>
-        `La Veille ${veilleId} ne donne pas à la Source ${name} les Paramètres qu'elle attend : corriger ${labelList} dans le Profil de son Candidat.`,
+        `La Veille ${veille.id} ne donne pas à la Source ${name} les Paramètres qu'elle attend : corriger ${labelList} dans le Profil de son Candidat.`,
     );
   }
 
   return (httpFetch) => ({
     description,
     parseParametres: (rawParametres) =>
-      PARAMETRES_SCHEMA.parse(
-        parseParametres(
-          parametreSchema,
-          rawParametres,
-          description.parametreList,
-          (labelList) => `La Source ${name} attend d'autres Paramètres : renseigner ${labelList}.`,
-        ),
+      parametres.parseToSave(
+        rawParametres,
+        (labelList) => `La Source ${name} attend d'autres Paramètres : renseigner ${labelList}.`,
       ),
     search: (veille) => search(parseParametresOf(veille), httpFetch),
     readFicheDePoste: (reference, veille) => readFicheDePoste(reference, parseParametresOf(veille), httpFetch),

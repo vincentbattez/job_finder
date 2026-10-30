@@ -2,19 +2,12 @@ import type { z } from 'zod/v4';
 
 import {
   CANAL_NOTIFICATION_MODULE_SCHEMA,
-  PARAMETRES_SCHEMA,
   type CanalNotificationModule,
   type Offre,
   type ParametreChoice,
   type Parametres,
 } from '#/domain/index.ts';
-import {
-  describeParametres,
-  labelOf,
-  parseParametres,
-  type ParametreShape,
-  type ParametresOf,
-} from '#/parametre/index.ts';
+import { declareParametres, labelOf, type ParametreShape, type ParametresOf } from '#/parametre/index.ts';
 
 // The contract of the family of the Canaux de notification: what each module of
 // src/modules/notification-<nom>/ declares, and what the rest of the application knows of them (ADR-0010)
@@ -57,33 +50,25 @@ export function defineCanalNotification<TShape extends ParametreShape>(
   definition: ICanalNotificationDefinition<TShape>,
 ): ICanalNotification {
   const { id, name, parametreSchema, send, check, listChoicesByParametre = {} } = definition;
+  const parametres = declareParametres(name, parametreSchema, Object.keys(listChoicesByParametre));
   const description = CANAL_NOTIFICATION_MODULE_SCHEMA.parse({
     id,
     name,
-    parametreList: describeParametres(name, parametreSchema, Object.keys(listChoicesByParametre)),
+    parametreList: parametres.parametreList,
     isTestable: check !== undefined,
   });
-
-  // The Paramètres missing or wrong, in the words of the form
-  function parseWith<T extends z.ZodType>(schema: T, rawParametres: unknown): z.infer<T> {
-    return parseParametres(
-      schema,
-      rawParametres,
-      description.parametreList,
-      (labelList) =>
-        `Le Canal de notification ${name} est incomplet : renseigner ${labelList} dans la section Notifications du Profil.`,
-    );
-  }
+  const composeMessage = (labelList: string) =>
+    `Le Canal de notification ${name} est incomplet : renseigner ${labelList} dans la section Notifications du Profil.`;
 
   return {
     description,
-    parseParametres: (rawParametres) => PARAMETRES_SCHEMA.parse(parseWith(parametreSchema, rawParametres)),
-    send: (rawParametres, notification) => send(parseWith(parametreSchema, rawParametres), notification),
+    parseParametres: (rawParametres) => parametres.parseToSave(rawParametres, composeMessage),
+    send: (rawParametres, notification) => send(parametres.parse(rawParametres, composeMessage), notification),
     async check(rawParametres) {
       if (check === undefined) {
         throw new Error(`Le Canal de notification ${name} ne se teste pas : envoyer une notification de test.`);
       }
-      await check(parseWith(parametreSchema.partial(), rawParametres));
+      await check(parametres.parseTrial(rawParametres, composeMessage));
     },
     async listChoices(parametreName, rawParametres) {
       const listChoices = Object.entries<ChoiceLister<TShape> | undefined>(listChoicesByParametre).find(
@@ -94,7 +79,7 @@ export function defineCanalNotification<TShape extends ParametreShape>(
           `Le Paramètre ${labelOf(description.parametreList, parametreName)} du Canal ${name} n'a pas de choix à lister.`,
         );
       }
-      return listChoices(parseWith(parametreSchema.partial(), rawParametres));
+      return listChoices(parametres.parseTrial(rawParametres, composeMessage));
     },
   };
 }
