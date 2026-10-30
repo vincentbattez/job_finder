@@ -161,6 +161,7 @@ const SAMPLE_WATCH = {
   newPostingList: [],
   nearMissList: [{ reference: '2026-0000099', title: 'Attaché d’administration, chef de cabinet' }],
   notificationFailureList: [],
+  locationFailure: null,
 } satisfies IRecordedDetection['watchList'][number];
 
 const SAMPLE_DETECTION = {

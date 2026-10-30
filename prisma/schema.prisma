@@ -206,6 +206,8 @@ model DetectionWatch {
   newPostingList          Json
   nearMissList            Json
   notificationFailureList Json
+  // Why the Postings it saved stay without coordinates, API Géo being down: the next Detection locates them
+  locationFailure         String?
 }
 
 enum DetectionStep {

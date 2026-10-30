@@ -21,6 +21,24 @@ function normalize(name: string): string {
   return wordListOf(name).join(' ');
 }
 
+// Not JSON, or JSON of another shape: API Géo changed, which a code tells rather than a raw
+// SyntaxError or ZodError
+async function parseCommunes(response: Response, url: string, locale: Locale) {
+  const text = await response.text();
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch (error) {
+    throw codedError('api_geo_format_changed', { url, problem: String(error) }, { locale, cause: error });
+  }
+  const parsed = z.array(COMMUNE_SCHEMA).safeParse(body);
+  if (!parsed.success) {
+    const problem = z.prettifyError(parsed.error);
+    throw codedError('api_geo_format_changed', { url, problem }, { locale, cause: parsed.error });
+  }
+  return parsed.data;
+}
+
 // API Géo, the State's directory of communes: no key, and no AI that could invent a location
 export function createApiGeo(httpFetch: typeof fetch = fetch) {
   return {
@@ -37,7 +55,7 @@ export function createApiGeo(httpFetch: typeof fetch = fetch) {
       if (response.status !== 200) {
         throw codedError('api_geo_status', { url, status: response.status }, { locale });
       }
-      const communeList = z.array(COMMUNE_SCHEMA).parse(await response.json());
+      const communeList = await parseCommunes(response, url, locale);
       const commune = communeList.find(({ nom }) => normalize(nom) === normalize(city));
       if (commune === undefined) {
         return null;

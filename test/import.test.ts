@@ -1,8 +1,11 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
 
-import { createDataDirectory } from './data-directory.ts';
+import { createDataDirectory, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch } from './recorded-http.ts';
@@ -168,6 +171,37 @@ describe('import of a Job Description in Markdown', () => {
       state: 'done',
       posting: { title: 'Greffier placé – Tribunal judiciaire de Lille' },
     });
+  });
+
+  // The folder named after the new title is taken: its rename fails, and the Posting keeps its title
+  it('fails the extraction visibly when its folder cannot follow the new title, keeping the database and the disk in agreement', async () => {
+    const dataDirectory = createDataDirectory();
+    const actions = await createActions({
+      dataDirectory,
+      aiSession: createFakeAiSession(extractionRun()),
+      fetch: createRecordedFetch().fetch,
+    });
+    const { posting } = await actions.importJobDescription({
+      candidateId: 'lea',
+      fileName: FILE_NAME,
+      markdown: JOB_DESCRIPTION,
+    });
+    const takenDirectory = path.join(
+      dataDirectory,
+      LEA_POSTINGS_PATH,
+      `${posting.reference}-greffier-place-tribunal-judiciaire-de-lille`,
+    );
+    mkdirSync(takenDirectory, { recursive: true });
+    writeFileSync(path.join(takenDirectory, 'notes.md'), '# Notes\n');
+
+    const [failedJob] = await actions.runQueuedJobs();
+
+    expect(failedJob).toMatchObject({ module: 'extraction', state: 'failed', errorCode: 'posting_folder_not_moved' });
+    expect(failedJob?.log).toMatch(/^Le dossier de l'Offre import-\w+ n'a pas pu suivre son nouveau titre/);
+    const detail = await actions.readPosting({ reference: posting.reference });
+    expect(detail.posting).toMatchObject({ title: FILE_NAME, employer: null });
+    expect(detail.jobDescription).toBe(JOB_DESCRIPTION);
+    expect(detail.extraction).toMatchObject({ state: 'failed', errorCode: 'posting_folder_not_moved' });
   });
 
   it('refuses the extraction of a Posting that a Source other than the import detected', async () => {

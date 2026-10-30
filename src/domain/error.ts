@@ -158,6 +158,8 @@ export const ERROR_CATALOGUE = {
   interactive_session_failed: 'error:interactiveSessionFailed',
   // The session converting an Upload failed
   conversion_session_failed: 'error:conversionSessionFailed',
+  // The folder of a Posting cannot take the name of its new title: the Posting keeps its title
+  posting_folder_not_moved: 'error:postingFolderNotMoved',
   // The session reading the fields of a Job Description failed
   extraction_session_failed: 'error:extractionSessionFailed',
   // The fields read in a Job Description are not valid
@@ -168,6 +170,8 @@ export const ERROR_CATALOGUE = {
   api_geo_unreachable: 'error:apiGeoUnreachable',
   // API Géo answers with an HTTP error
   api_geo_status: 'error:apiGeoStatus',
+  // API Géo answers something other than its list of communes: its API changed
+  api_geo_format_changed: 'error:apiGeoFormatChanged',
 
   // Modules of a family, their Parameters and the Notification Channels (ADR-0010)
   // A module declares a Parameter without parameter(), a mistake of its author

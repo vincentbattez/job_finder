@@ -21,11 +21,11 @@ export async function runExtraction(
   );
   // A Job Description without a title keeps the name of its file: nothing is invented
   const location = await locate(city, locale);
-  const filledPosting = await workspace.fillPosting(posting, {
-    title: title ?? posting.title,
-    jobDescription,
-    location,
-  });
+  const filledPosting = await workspace.fillPosting(
+    posting,
+    { title: title ?? posting.title, jobDescription, location },
+    locale,
+  );
   // Imported by the Candidate, it gets its Research whatever the Zone
   await workspace.createJob(filledPosting, 'research');
   return { job: await workspace.finishJobWithoutVersion(job, { log: session.log, sessionId: session.sessionId }) };
