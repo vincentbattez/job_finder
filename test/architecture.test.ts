@@ -97,6 +97,71 @@ function findJobsRunOutsideWorker(projectDirectory: string): string[] {
   );
 }
 
+// The families of interchangeable modules, each module in src/modules/<famille>-<nom>/ (ADR-0010).
+// source-import is no Source a Veille chooses but the import of a Fiche de poste by hand: an
+// ordinary module, out of the family.
+const FAMILY_LIST = ['notification', 'source'];
+const ORDINARY_MODULE_SET = new Set(['source-import']);
+
+// The one file that imports the modules of a family, and so names them
+const MODULE_REGISTRY_PATH = 'src/actions/modules.ts';
+
+// A name in any spelling: kebab, Pascal, camel, snake, with spaces, whatever the case. The match
+// stands on word edges, a camelCase hump included, so « rehypePlugins » never names pep.
+function spellingPatternOf(moduleName: string): RegExp {
+  return new RegExp(moduleName.replaceAll('-', '[-_ ]?'), 'gi');
+}
+
+function isWordEdge(before: string | undefined, after: string | undefined): boolean {
+  const isOutsideWord =
+    before === undefined || after === undefined || !/[a-z0-9]/i.test(before) || !/[a-z0-9]/i.test(after);
+  return isOutsideWord || (/[a-z0-9]/.test(before) && /[A-Z]/.test(after));
+}
+
+function isNamingModule(content: string, moduleName: string): boolean {
+  const matchList = content.matchAll(spellingPatternOf(moduleName));
+  for (const { 0: match, index } of matchList) {
+    if (isWordEdge(content[index - 1], match[0]) && isWordEdge(match.at(-1), content[index + match.length])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// The name of an interchangeable module appears only in its own folder and in the registry: adding
+// one is a folder and a line of registry, without migration, action or screen (ADR-0010)
+function findModuleNamesOutsideTheirFolder(projectDirectory: string): string[] {
+  const moduleList = globSync('src/modules/*/', { cwd: projectDirectory })
+    .map((folder) => path.basename(folder))
+    .filter((folder) => !ORDINARY_MODULE_SET.has(folder))
+    .map((folder) => ({ folder, family: FAMILY_LIST.find((familyName) => folder.startsWith(`${familyName}-`)) }))
+    .filter(({ family }) => family !== undefined)
+    .map(({ folder, family = '' }) => ({ folder, name: folder.slice(family.length + 1) }));
+  const filePathList = [
+    ...globSync('src/**/*.{ts,tsx,css}', {
+      cwd: projectDirectory,
+      exclude: ['**/*.test.{ts,tsx}', 'src/workspace/generated/**', MODULE_REGISTRY_PATH],
+    }),
+    ...globSync('prisma/schema.prisma', { cwd: projectDirectory }),
+  ];
+  return filePathList.flatMap((filePath) => {
+    const content = readFileSync(path.join(projectDirectory, filePath), 'utf8');
+    return moduleList
+      .filter(({ folder, name }) => !filePath.startsWith(`src/modules/${folder}/`) && isNamingModule(content, name))
+      .map(({ name }) => `${filePath} names ${name}`);
+  });
+}
+
+// The Source PEP is not a module of the family yet: #60 makes it one, and empties this list
+const KNOWN_SOURCE_LEAK_LIST = [
+  'src/actions/context.ts names pep',
+  'src/actions/detect.ts names pep',
+  'src/domain/index.ts names pep',
+  'src/geo/city.ts names pep',
+  'src/modules/source-import/acl/extraction.ts names pep',
+  'src/workspace/acl/config.ts names pep',
+];
+
 function createProject(fileContentByPath: Record<string, string>): string {
   const projectDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-architecture-'));
   const tsconfigPath = path.join(projectDirectory, 'tsconfig.json');
@@ -167,6 +232,55 @@ describe('architecture', () => {
 
   it('runs the queued jobs only in the worker', () => {
     expect(findJobsRunOutsideWorker(ROOT_DIRECTORY)).toEqual([]);
+  });
+
+  it.each([
+    { spelling: 'HomeAssistant', content: 'export const channel = HomeAssistant;\n' },
+    { spelling: 'homeAssistant', content: 'export const channel = homeAssistant;\n' },
+    { spelling: 'home-assistant', content: "export const channel = 'home-assistant';\n" },
+    { spelling: 'HOME_ASSISTANT', content: 'export const channel = HOME_ASSISTANT;\n' },
+    { spelling: 'Home Assistant', content: '// Pushes to the phone through Home Assistant\n' },
+  ])('catches the front naming a notification module as $spelling', ({ content }) => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/modules/notification-home-assistant/index.ts': 'export const homeAssistant = 1;\n',
+        'src/actions/modules.ts': "import { homeAssistant } from '#/modules/notification-home-assistant/index.ts';\n",
+        'src/web/routes/profil.tsx': content,
+      }),
+    );
+
+    expect(findModuleNamesOutsideTheirFolder(projectDirectory)).toEqual([
+      'src/web/routes/profil.tsx names home-assistant',
+    ]);
+  });
+
+  it('catches a table of its own for a notification module', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/modules/notification-telegram/index.ts': 'export const telegram = 1;\n',
+        'prisma/schema.prisma': 'model ConnexionTelegram {\n  candidatId String @id\n  botToken String\n}\n',
+      }),
+    );
+
+    expect(findModuleNamesOutsideTheirFolder(projectDirectory)).toEqual(['prisma/schema.prisma names telegram']);
+  });
+
+  it('lets pass a word that merely contains a module name, and the ordinary modules', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/modules/source-pep/index.ts': 'export const pep = 1;\n',
+        'src/modules/source-import/index.ts': 'export const fiche = 1;\n',
+        'src/web/components/markdown.tsx': "import { a } from './a.ts';\nexport const rehypePlugins = [a];\n",
+      }),
+    );
+
+    expect(findModuleNamesOutsideTheirFolder(projectDirectory)).toEqual([]);
+  });
+
+  it('names an interchangeable module only in its folder and in the registry', () => {
+    expect(findModuleNamesOutsideTheirFolder(ROOT_DIRECTORY).toSorted((a, b) => a.localeCompare(b))).toEqual(
+      KNOWN_SOURCE_LEAK_LIST,
+    );
   });
 
   // The client generated by Prisma has cycles of its own, out of our hands
