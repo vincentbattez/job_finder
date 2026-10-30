@@ -68,7 +68,7 @@ export function defineSource<TShape extends ParameterShape>({
 
   // The front writes the Watches, in the Profile of their Candidate (ADR-0011)
   function parseParametersOf(watch: Watch, locale: Locale): ParametersOf<TShape> {
-    return parameters.parse(watch.parameters, (labelList) =>
+    return parameters.parse(watch.parameters, locale, (labelList) =>
       catalogueOf({ locale }).error.watchParameters(watch.id, name, labelList),
     );
   }
@@ -76,7 +76,7 @@ export function defineSource<TShape extends ParameterShape>({
   return (httpFetch) => ({
     description,
     parseParameters: (rawParameters, locale) =>
-      parameters.parseToSave(rawParameters, (labelList) =>
+      parameters.parseToSave(rawParameters, locale, (labelList) =>
         catalogueOf({ locale }).error.sourceParameters(name, labelList),
       ),
     search: (watch, locale) => search(parseParametersOf(watch, locale), httpFetch),

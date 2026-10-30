@@ -74,23 +74,23 @@ export function defineNotificationChannel<TShape extends ParameterShape>(
 
   return {
     description,
-    parseParameters: (rawParameters, locale) => parameters.parseToSave(rawParameters, composeMessage(locale)),
+    parseParameters: (rawParameters, locale) => parameters.parseToSave(rawParameters, locale, composeMessage(locale)),
     send: (rawParameters, notification, locale) =>
-      send(parameters.parse(rawParameters, composeMessage(locale)), notification, locale),
+      send(parameters.parse(rawParameters, locale, composeMessage(locale)), notification, locale),
     async check(rawParameters, locale) {
       if (check === undefined) {
         throw new Error(copyOf(locale).untestableChannel(name));
       }
-      await check(parameters.parseTrial(rawParameters, composeMessage(locale)), locale);
+      await check(parameters.parseTrial(rawParameters, locale, composeMessage(locale)), locale);
     },
     async listChoices(parameterName, rawParameters, locale) {
       const listChoices = Object.entries<ChoiceLister<TShape> | undefined>(listChoicesByParameter).find(
         ([key]) => key === parameterName,
       )?.[1];
       if (listChoices === undefined) {
-        throw new Error(copyOf(locale).noChoices(labelOf(description.parameterList, parameterName), name));
+        throw new Error(copyOf(locale).noChoices(labelOf(description.parameterList, parameterName, locale), name));
       }
-      return listChoices(parameters.parseTrial(rawParameters, composeMessage(locale)), locale);
+      return listChoices(parameters.parseTrial(rawParameters, locale, composeMessage(locale)), locale);
     },
   };
 }
