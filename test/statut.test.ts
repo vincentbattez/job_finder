@@ -1,17 +1,17 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
 
+import { createMigratedDataDirectory } from './data-directory.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 const EXAMPLE_CONFIG = readFileSync(path.join(import.meta.dirname, '..', 'config.example.json'), 'utf8');
 
 async function detectWithDefaultDelay(defaultDelayMonths: number): Promise<Actions> {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+  const dataDirectory = createMigratedDataDirectory();
   writeFileSync(
     path.join(dataDirectory, 'config.json'),
     EXAMPLE_CONFIG.replace('"defaultDelayMonths": 6', () => `"defaultDelayMonths": ${String(defaultDelayMonths)}`),
@@ -148,7 +148,7 @@ describe('statut of an Offre', () => {
 });
 
 it('refuses a reference shared by the Offres of two Candidats', async () => {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+  const dataDirectory = createMigratedDataDirectory();
   const veille = {
     source: 'pep',
     criteria: { title: 'attaché de justice' },

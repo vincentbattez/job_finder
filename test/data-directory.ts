@@ -1,6 +1,8 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+
+import { inject } from 'vitest';
 
 import { createActions } from '#/actions/index.ts';
 
@@ -13,11 +15,18 @@ const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example
 // Where the folder of each of Léa's Offres lives, in a data folder
 export const LEA_OFFRES_PATH = 'candidats/lea/offres';
 
+// A temporary data folder, never data/, whose database is already migrated (test/global-setup.ts)
+export function createMigratedDataDirectory(): string {
+  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+  copyFileSync(inject('migratedDatabasePath'), path.join(dataDirectory, 'job_finder.sqlite'));
+  return dataDirectory;
+}
+
 // A temporary data folder, never data/, with the example config: Léa follows the attaché de justice
 // Offres, her Zone the courts of appeal of Douai and Amiens. Her notify service is in the config, as
 // in data/config.json before the Connexion Home Assistant moved to the database (ADR-0006).
 export function createDataDirectory(): string {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+  const dataDirectory = createMigratedDataDirectory();
   const config = readFileSync(EXAMPLE_CONFIG_PATH, 'utf8').replace(
     '"name": "Léa",',
     '"name": "Léa",\n      "notification": { "channel": "home-assistant", "service": "notify.mobile_app_iphone_de_lea" },',

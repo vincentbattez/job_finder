@@ -72,6 +72,8 @@ export default defineConfig(
         },
         { selector: 'typeLike', format: ['PascalCase'] },
         { selector: 'interface', format: ['PascalCase'], prefix: ['I'] },
+        // Augmenting a library's interface keeps its name: Vitest's, which types inject()
+        { selector: 'interface', filter: { regex: '^ProvidedContext$', match: true }, format: ['PascalCase'] },
         { selector: 'objectLiteralProperty', format: null },
       ],
     },
