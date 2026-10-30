@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 
 import type { Actions } from '#/actions/index.ts';
 
+import './parameter-field.css';
+
 type Parameter = Awaited<ReturnType<Actions['listSources']>>[number]['parameterList'][number];
 
 // The name of a Parameter's field, apart from the fields of the form itself, such as the intent
@@ -20,13 +22,11 @@ function valueOf(value: unknown): string {
 export function ParameterField({
   parameter: { name, label, placeholder: placeholderOrNull, type, isRequired, isSecret },
   savedValue,
-  className,
   isConfigured = false,
   secretReference,
 }: Readonly<{
   parameter: Parameter;
   savedValue: unknown;
-  className: string;
   isConfigured?: boolean;
   secretReference?: (input: HTMLInputElement | null) => void;
 }>) {
@@ -36,7 +36,7 @@ export function ParameterField({
   const fieldName = `${PARAMETER_FIELD_PREFIX}${name}`;
   if (isSecret) {
     return (
-      <label className={className}>
+      <label className="field">
         <span>
           {label}
           {isConfigured && <span className="parameter-field__configured">{t('parameter.configured')}</span>}
@@ -53,7 +53,7 @@ export function ParameterField({
   }
   if (type === 'list') {
     return (
-      <label className={className}>
+      <label className="field">
         {t('parameter.onePerLine', { label })}
         <textarea
           name={fieldName}
@@ -66,7 +66,7 @@ export function ParameterField({
     );
   }
   return (
-    <label className={className}>
+    <label className="field">
       {label}
       <input
         type={type}

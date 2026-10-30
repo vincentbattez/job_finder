@@ -26,6 +26,7 @@ export function JobDescriptionImport() {
       label={t('importLabel')}
       isBusy={isImporting}
       onFile={(file) => void importFile(file)}
+      error={isImporting ? null : fetcher.data?.error}
     >
       {!isImporting && fetcher.data?.job != null && (
         <p>
@@ -34,7 +35,6 @@ export function JobDescriptionImport() {
           {t('importedPostingNext')}
         </p>
       )}
-      {!isImporting && fetcher.data?.error != null && <p className="drop-zone__error">{fetcher.data.error}</p>}
     </DropZone>
   );
 }

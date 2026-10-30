@@ -3,6 +3,9 @@ import { Link } from 'react-router';
 
 import { StatusBadge, type Status } from './badge.tsx';
 import { DateText } from './date.tsx';
+import { EmptyState } from './empty-state.tsx';
+
+import './posting-list.css';
 
 // The fields of a Posting that the list shows, named as the actions name them
 export interface IPostingRow {
@@ -19,7 +22,7 @@ export interface IPostingRow {
 export function PostingList({ postingList }: Readonly<{ postingList: IPostingRow[] }>) {
   const { t } = useTranslation('postingList');
   if (postingList.length === 0) {
-    return <p className="empty">{t('noPosting')}</p>;
+    return <EmptyState>{t('noPosting')}</EmptyState>;
   }
   return (
     <table className="posting-list">
@@ -41,9 +44,9 @@ export function PostingList({ postingList }: Readonly<{ postingList: IPostingRow
                 </Link>
                 {posting.workplace !== null && <span className="posting-list__workplace">{posting.workplace}</span>}
                 {posting.url === null ? (
-                  <span className="reference">{posting.reference}</span>
+                  <span className="posting-list__reference">{posting.reference}</span>
                 ) : (
-                  <a className="reference" href={posting.url}>
+                  <a className="posting-list__reference" href={posting.url}>
                     {posting.reference}
                   </a>
                 )}
@@ -52,10 +55,10 @@ export function PostingList({ postingList }: Readonly<{ postingList: IPostingRow
             <td>
               <StatusBadge status={posting.status} isExpired={posting.isExpired} />
             </td>
-            <td className="date" data-column="publishedAt" data-label={t('publishedAtColumn')}>
+            <td className="posting-list__date" data-column="publishedAt" data-label={t('publishedAtColumn')}>
               <DateText date={posting.publishedAt} />
             </td>
-            <td className="date" data-label={t('deadlineColumn')}>
+            <td className="posting-list__date" data-label={t('deadlineColumn')}>
               <DateText date={posting.deadline} />
             </td>
           </tr>

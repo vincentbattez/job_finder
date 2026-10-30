@@ -1,0 +1,12 @@
+/* A quiet summary to unfold before what cannot be undone */
+@layer components {
+  .deletion summary {
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+    cursor: pointer;
+  }
+
+  .deletion[open] summary {
+    margin-bottom: var(--space-sm);
+  }
+}

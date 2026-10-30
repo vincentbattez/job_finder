@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import './copy-command.css';
+
 // Over plain http on the LAN (ADR-0002), browsers withhold the Clipboard API: a hidden field is
 // copied the way every browser still allows
 function copyText(text: string): void {
@@ -23,6 +25,7 @@ function CopyButton({ text, label, copiedLabel }: Readonly<{ text: string; label
   const [isCopied, setIsCopied] = useState(false);
   return (
     <button
+      className="button"
       type="button"
       onClick={() => {
         copyText(text);
@@ -37,7 +40,7 @@ function CopyButton({ text, label, copiedLabel }: Readonly<{ text: string; label
 export function CopyCommand({ command }: Readonly<{ command: string }>) {
   const { t } = useTranslation('posting');
   return (
-    <div className="command">
+    <div className="copy-command">
       <code>{command}</code>
       <CopyButton text={command} label={t('copy')} copiedLabel={t('copiedCommand')} />
     </div>

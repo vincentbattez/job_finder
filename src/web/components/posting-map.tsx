@@ -1,11 +1,11 @@
-import 'leaflet/dist/leaflet.css';
-
 import type { LatLngTuple, Map as LeafletMap } from 'leaflet';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
 import { showStatus, type Status } from './badge.tsx';
+
+import './posting-map.css';
 
 interface IMappedPosting {
   reference: string;
@@ -83,7 +83,7 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
         for (const [index, posting] of locationPostingList.entries()) {
           const shift = (index - (locationPostingList.length - 1) / 2) * POINT_STEP;
           const icon = leaflet.divIcon({
-            className: 'posting-point',
+            className: 'posting-map__point',
             iconSize: [POINT_SIZE, POINT_SIZE],
             iconAnchor: [POINT_SIZE / 2 - shift, POINT_SIZE / 2],
           });
@@ -111,10 +111,18 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
     <section aria-label={t('mapLabel')} className="posting-map">
       <div ref={containerReference} className="posting-map__canvas" />
       <ul className="posting-map__legend">
-        <li data-status="to_apply">{t('statusLabelByStatus.to_apply', { ns: 'common' })}</li>
-        <li data-status="applied">{t('statusLabelByStatus.applied', { ns: 'common' })}</li>
-        <li data-status="expired">{t('expired', { ns: 'common' })}</li>
-        <li data-status="archived">{t('statusLabelByStatus.archived', { ns: 'common' })}</li>
+        <li className="posting-map__key" data-status="to_apply">
+          {t('statusLabelByStatus.to_apply', { ns: 'common' })}
+        </li>
+        <li className="posting-map__key" data-status="applied">
+          {t('statusLabelByStatus.applied', { ns: 'common' })}
+        </li>
+        <li className="posting-map__key" data-status="expired">
+          {t('expired', { ns: 'common' })}
+        </li>
+        <li className="posting-map__key" data-status="archived">
+          {t('statusLabelByStatus.archived', { ns: 'common' })}
+        </li>
       </ul>
       {unlocatedCount > 0 && <p className="posting-map__note">{t('unlocatedPostings', { count: unlocatedCount })}</p>}
     </section>

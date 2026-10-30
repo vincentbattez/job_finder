@@ -1,8 +1,11 @@
-import { globSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, globSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { projectFiles, projectSlices } from 'archunit';
+import postcss, { AtRule } from 'postcss';
+import selectorParser from 'postcss-selector-parser';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const ROOT_DIRECTORY = path.join(import.meta.dirname, '..');
@@ -167,6 +170,310 @@ function findConfigReadsOutsideImport(projectDirectory: string): string[] {
   );
 }
 
+// The CSS of the front: global stylesheets beside the root, imported by the entry one, and one
+// stylesheet per component beside its .tsx, styling only its BEM block (ADR-0013)
+const FRONT_DIRECTORY = 'src/web';
+const COMPONENT_DIRECTORY = 'src/web/components';
+const ENTRY_STYLESHEET_PATH = 'src/web/app.css';
+const MAX_STYLESHEET_LINE_COUNT = 200;
+
+function sortedList(messageList: string[]): string[] {
+  return messageList.toSorted((first, second) => first.localeCompare(second));
+}
+
+function readStylesheets(projectDirectory: string) {
+  return globSync(`${FRONT_DIRECTORY}/**/*.css`, { cwd: projectDirectory }).map((filePath) => ({
+    filePath,
+    content: readFileSync(path.join(projectDirectory, filePath), 'utf8'),
+    isComponent: filePath.startsWith(`${COMPONENT_DIRECTORY}/`),
+  }));
+}
+
+// A component's block is its file name: posting-list.tsx is the block .posting-list
+function blockOf(filePath: string): string {
+  return path.basename(filePath, path.extname(filePath));
+}
+
+function isOfBlock(className: string, block: string): boolean {
+  return className === block || className.startsWith(`${block}__`) || className.startsWith(`${block}--`);
+}
+
+function componentBlocksOf(projectDirectory: string): string[] {
+  return globSync(`${COMPONENT_DIRECTORY}/**/*.tsx`, { cwd: projectDirectory }).map((filePath) => blockOf(filePath));
+}
+
+// Each class a stylesheet selects, with the classes of its compound selector: in .a.b .c, .a goes
+// with .b, and .c alone. The steps of a @keyframes select no element.
+function selectedClassesOf(content: string) {
+  const selectedClassList: { className: string; compoundClassList: string[] }[] = [];
+  const collect = selectorParser((selectorRoot) => {
+    selectorRoot.walkClasses((classNode) => {
+      const siblingList = classNode.parent?.nodes ?? [];
+      const index = siblingList.indexOf(classNode);
+      const isCompoundEdge = (position: number) => selectorParser.isCombinator(siblingList[position]);
+      let first = index;
+      while (first > 0 && !isCompoundEdge(first - 1)) first -= 1;
+      let last = index;
+      while (last < siblingList.length - 1 && !isCompoundEdge(last + 1)) last += 1;
+      const compoundClassList = siblingList
+        .slice(first, last + 1)
+        .filter((node) => selectorParser.isClassName(node))
+        .map((node) => node.value);
+      selectedClassList.push({ className: classNode.value, compoundClassList });
+    });
+  });
+  const stylesheetRoot = postcss.parse(content);
+  stylesheetRoot.walkAtRules(/keyframes$/, (keyframes) => {
+    keyframes.remove();
+  });
+  stylesheetRoot.walkRules((rule) => {
+    collect.processSync(rule.selector);
+  });
+  return selectedClassList;
+}
+
+// The paths a stylesheet's @import name, with or without url()
+function stylesheetImportsOf(content: string): string[] {
+  const importedPathList: string[] = [];
+  postcss.parse(content).walkAtRules('import', ({ params: parameters }) => {
+    importedPathList.push(/^(?:url\()?\s*['"]?([^'")\s]+)/.exec(parameters)?.[1] ?? parameters);
+  });
+  return importedPathList;
+}
+
+function resolveImport(importer: string, specifier: string): string {
+  return specifier.startsWith('#/')
+    ? path.join('src', specifier.slice(2))
+    : path.join(path.dirname(importer), specifier);
+}
+
+// Every stylesheet imported in src/, by a module or by another stylesheet, as a path of the project
+function importsOfStylesheets(projectDirectory: string) {
+  const moduleImportList = globSync('src/**/*.{ts,tsx}', { cwd: projectDirectory }).flatMap((importer) =>
+    Array.from(
+      readFileSync(path.join(projectDirectory, importer), 'utf8').matchAll(/['"]((?:\.|#\/)[^'"]*\.css)['"]/g),
+      ([, specifier = '']) => ({ importer, imported: resolveImport(importer, specifier) }),
+    ),
+  );
+  const stylesheetImportList = readStylesheets(projectDirectory).flatMap(({ filePath, content }) =>
+    stylesheetImportsOf(content).map((specifier) => ({
+      importer: filePath,
+      imported: resolveImport(filePath, specifier),
+    })),
+  );
+  return [...moduleImportList, ...stylesheetImportList];
+}
+
+// A stylesheet that outgrows a screen is split, never appended to
+function findOversizedStylesheets(projectDirectory: string): string[] {
+  return readStylesheets(projectDirectory)
+    .map(({ filePath, content }) => ({
+      filePath,
+      lineCount: content.split('\n').length - (content.endsWith('\n') ? 1 : 0),
+    }))
+    .filter(({ lineCount }) => lineCount > MAX_STYLESHEET_LINE_COUNT)
+    .map(({ filePath, lineCount }) => `${filePath} has ${String(lineCount)} lines`);
+}
+
+// A component's stylesheet sits beside its .tsx, which alone imports it: the stylesheet loads with
+// the component, on the pages that render it
+function findMisplacedStylesheets(projectDirectory: string): string[] {
+  const importList = importsOfStylesheets(projectDirectory);
+  const componentStylesheetList = readStylesheets(projectDirectory).filter(({ isComponent }) => isComponent);
+  return sortedList(
+    componentStylesheetList.flatMap(({ filePath }) => {
+      const componentPath = filePath.replace(/\.css$/, '.tsx');
+      const componentName = path.basename(componentPath);
+      const importerList = importList.filter(({ imported }) => imported === filePath).map(({ importer }) => importer);
+      const otherImporterList = importerList
+        .filter((importer) => importer !== componentPath)
+        .map((importer) => `${importer} imports ${filePath}`);
+      if (!existsSync(path.join(projectDirectory, componentPath))) {
+        return [`${filePath} has no ${componentName} beside it`, ...otherImporterList];
+      }
+      if (!importerList.includes(componentPath)) {
+        return [`${filePath} is not imported by ${componentName}`, ...otherImporterList];
+      }
+      return otherImporterList;
+    }),
+  );
+}
+
+// A component's stylesheet styles only its block; a class of a library, such as Leaflet's, only
+// compounded with the block, and never another component's block
+function findClassesOutsideTheirBlock(projectDirectory: string): string[] {
+  const componentBlockList = componentBlocksOf(projectDirectory);
+  const componentStylesheetList = readStylesheets(projectDirectory).filter(({ isComponent }) => isComponent);
+  return sortedList(
+    componentStylesheetList.flatMap(({ filePath, content }) => {
+      const block = blockOf(filePath);
+      const isOtherBlock = (className: string) =>
+        componentBlockList.some((otherBlock) => otherBlock !== block && isOfBlock(className, otherBlock));
+      const outsideList = selectedClassesOf(content)
+        .filter(
+          ({ className, compoundClassList }) =>
+            !isOfBlock(className, block) &&
+            (isOtherBlock(className) || compoundClassList.every((compoundClass) => !isOfBlock(compoundClass, block))),
+        )
+        .map(({ className }) => `${filePath} styles .${className} outside the block ${block}`);
+      return [...new Set(outsideList)];
+    }),
+  );
+}
+
+// A global stylesheet styles what belongs to no component: a component's look goes in its own file
+function findComponentBlocksInGlobalStylesheets(projectDirectory: string): string[] {
+  const componentBlockList = componentBlocksOf(projectDirectory);
+  const globalStylesheetList = readStylesheets(projectDirectory).filter(({ isComponent }) => !isComponent);
+  return sortedList(
+    globalStylesheetList.flatMap(({ filePath, content }) => {
+      const blockClassList = selectedClassesOf(content)
+        .map(({ className }) => ({
+          className,
+          block: componentBlockList.find((componentBlock) => isOfBlock(className, componentBlock)),
+        }))
+        .filter(({ block }) => block !== undefined)
+        .map(({ className, block = '' }) => `${filePath} styles .${className} of the component ${block}`);
+      return [...new Set(blockClassList)];
+    }),
+  );
+}
+
+// The entry stylesheet alone imports, each global file into its layer: the import graph stays flat
+function findImportsOutsideEntryStylesheet(projectDirectory: string): string[] {
+  return sortedList(
+    readStylesheets(projectDirectory)
+      .filter(({ filePath }) => filePath !== ENTRY_STYLESHEET_PATH)
+      .flatMap(({ filePath, content }) =>
+        stylesheetImportsOf(content).map((importedPath) => `${filePath} imports ${importedPath}`),
+      ),
+  );
+}
+
+// The global stylesheets sit beside the root, where sloplint finds them, and a component's beside it:
+// a route or a container carries none, its look comes from the Dumbs it renders and the layout
+function findStylesheetsOutsideTheirFolders(projectDirectory: string): string[] {
+  return sortedList(
+    readStylesheets(projectDirectory)
+      .filter(({ filePath }) => ![FRONT_DIRECTORY, COMPONENT_DIRECTORY].includes(path.dirname(filePath)))
+      .map(({ filePath }) => `${filePath} is neither a global stylesheet nor a component stylesheet`),
+  );
+}
+
+// Whether the nearest @layer around a node is the components one
+function isInComponentsLayer(node: postcss.Node): boolean {
+  for (let parent = node.parent; parent !== undefined; parent = parent.parent) {
+    if (parent instanceof AtRule && parent.name === 'layer') {
+      return parent.params === 'components';
+    }
+  }
+  return false;
+}
+
+// A component's rules win over the layout and lose to the utilities only inside their layer: a rule
+// outside any layer would beat every layered one
+function findComponentRulesOutsideTheirLayer(projectDirectory: string): string[] {
+  const componentStylesheetList = readStylesheets(projectDirectory).filter(({ isComponent }) => isComponent);
+  return sortedList(
+    componentStylesheetList.flatMap(({ filePath, content }) => {
+      const outsideList: string[] = [];
+      const stylesheetRoot = postcss.parse(content);
+      stylesheetRoot.walkAtRules(/keyframes$/, (keyframes) => {
+        if (!isInComponentsLayer(keyframes)) {
+          outsideList.push(`${filePath} has @keyframes ${keyframes.params} outside @layer components`);
+        }
+        keyframes.remove();
+      });
+      stylesheetRoot.walkRules((rule) => {
+        if (!isInComponentsLayer(rule)) {
+          outsideList.push(`${filePath} has ${rule.selector} outside @layer components`);
+        }
+      });
+      return outsideList;
+    }),
+  );
+}
+
+// The global stylesheets a Dumb may draw on: the shared controls and the utilities. The layout is the
+// frame of the routes and the root, not of a component.
+const COMPONENT_GLOBAL_STYLESHEET_SET = new Set(['src/web/controls.css', 'src/web/utilities.css']);
+
+// Every class a .tsx writes in a className, literal or inside an expression
+function renderedClassesOf(filePath: string, content: string): string[] {
+  const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, false, ts.ScriptKind.TSX);
+  const classNameList: string[] = [];
+  const collectLiterals = (node: ts.Node) => {
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) || ts.isTemplateLiteralToken(node)) {
+      classNameList.push(...node.text.split(/\s+/).filter((className) => className !== ''));
+    } else if (ts.isTemplateExpression(node)) {
+      collectLiterals(node.head);
+      node.templateSpans.forEach(({ expression, literal }) => {
+        collectLiterals(expression);
+        collectLiterals(literal);
+      });
+      return;
+    }
+    ts.forEachChild(node, collectLiterals);
+  };
+  const visit = (node: ts.Node) => {
+    if (ts.isJsxAttribute(node) && node.name.getText(sourceFile) === 'className' && node.initializer !== undefined) {
+      collectLiterals(node.initializer);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return classNameList;
+}
+
+// A Dumb renders the classes of its own block and the shared controls, never another component's
+// block, nor the layout: its stylesheet loads with it, another one's only on the pages that import it
+function findForeignClassesInComponents(projectDirectory: string): string[] {
+  const sharedClassSet = new Set(
+    readStylesheets(projectDirectory)
+      .filter(({ filePath }) => COMPONENT_GLOBAL_STYLESHEET_SET.has(filePath))
+      .flatMap(({ content }) => selectedClassesOf(content).map(({ className }) => className)),
+  );
+  const componentPathList = globSync(`${COMPONENT_DIRECTORY}/**/*.tsx`, { cwd: projectDirectory });
+  return sortedList(
+    componentPathList.flatMap((filePath) => {
+      const block = blockOf(filePath);
+      const foreignList = renderedClassesOf(filePath, readFileSync(path.join(projectDirectory, filePath), 'utf8'))
+        .filter((className) => !isOfBlock(className, block) && !sharedClassSet.has(className))
+        .map((className) => `${filePath} renders .${className}, neither of the block ${block} nor of a shared control`);
+      return [...new Set(foreignList)];
+    }),
+  );
+}
+
+// A control is shared: a class of controls.css that a single file renders is that file's look,
+// which belongs in its own stylesheet
+const CONTROL_STYLESHEET_PATH = 'src/web/controls.css';
+
+function findControlsOfASingleFile(projectDirectory: string): string[] {
+  const renderList = globSync(`${FRONT_DIRECTORY}/**/*.tsx`, { cwd: projectDirectory }).map((filePath) => {
+    const content = readFileSync(path.join(projectDirectory, filePath), 'utf8');
+    return { filePath, classNameSet: new Set(renderedClassesOf(filePath, content)) };
+  });
+  const controlStylesheet = readStylesheets(projectDirectory).find(
+    ({ filePath }) => filePath === CONTROL_STYLESHEET_PATH,
+  );
+  const controlClassSet = new Set(
+    selectedClassesOf(controlStylesheet?.content ?? '').map(({ className }) => className),
+  );
+  return sortedList(
+    [...controlClassSet]
+      .map((className) => ({
+        className,
+        rendererList: renderList.filter(({ classNameSet }) => classNameSet.has(className)),
+      }))
+      .filter(({ rendererList }) => rendererList.length === 1)
+      .map(
+        ({ className, rendererList }) =>
+          `${CONTROL_STYLESHEET_PATH} styles .${className}, which only ${rendererList[0]?.filePath ?? ''} renders`,
+      ),
+  );
+}
+
 function createProject(fileContentByPath: Record<string, string>): string {
   const projectDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-architecture-'));
   const tsconfigPath = path.join(projectDirectory, 'tsconfig.json');
@@ -302,6 +609,205 @@ describe('architecture', () => {
 
   it('reads data/config.json only to import it once', () => {
     expect(findConfigReadsOutsideImport(ROOT_DIRECTORY)).toEqual([]);
+  });
+
+  it('catches a stylesheet over 200 lines', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/layout.css': '.page {\n}\n'.repeat(100) + '/* the 201st line */\n',
+        'src/web/base.css': '.page {\n}\n'.repeat(100),
+      }),
+    );
+
+    expect(findOversizedStylesheets(projectDirectory)).toEqual(['src/web/layout.css has 201 lines']);
+  });
+
+  it('catches a component stylesheet without its component', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/components/badge.css': '@layer components {\n  .badge {\n  }\n}\n',
+        'src/web/components/posting-list.css': '@layer components {\n  .posting-list {\n  }\n}\n',
+        'src/web/components/posting-list.tsx': 'export const PostingList = () => null;\n',
+      }),
+    );
+
+    expect(findMisplacedStylesheets(projectDirectory)).toEqual([
+      'src/web/components/badge.css has no badge.tsx beside it',
+      'src/web/components/posting-list.css is not imported by posting-list.tsx',
+    ]);
+  });
+
+  it("catches a component stylesheet imported by another file than its component's", () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/components/badge.css': '@layer components {\n  .badge {\n  }\n}\n',
+        'src/web/components/badge.tsx': "import './badge.css';\nexport const Badge = () => null;\n",
+        'src/web/components/posting-list.tsx': "import './badge.css';\nexport const PostingList = () => null;\n",
+        'src/web/routes/design.tsx': "import '#/web/components/badge.css';\nexport default () => null;\n",
+      }),
+    );
+
+    expect(findMisplacedStylesheets(projectDirectory)).toEqual([
+      'src/web/components/posting-list.tsx imports src/web/components/badge.css',
+      'src/web/routes/design.tsx imports src/web/components/badge.css',
+    ]);
+  });
+
+  it("catches a component stylesheet styling another block's class", () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/components/badge.tsx': 'export const Badge = () => null;\n',
+        'src/web/components/posting-map.css': [
+          '@layer components {',
+          '  .posting-map__canvas.leaflet-container a {',
+          '  }',
+          '  .posting-map__canvas .badge {',
+          '  }',
+          '  .leaflet-control {',
+          '  }',
+          '}',
+        ].join('\n'),
+      }),
+    );
+
+    expect(findClassesOutsideTheirBlock(projectDirectory)).toEqual([
+      'src/web/components/posting-map.css styles .badge outside the block posting-map',
+      'src/web/components/posting-map.css styles .leaflet-control outside the block posting-map',
+    ]);
+  });
+
+  it("catches a global stylesheet styling a component's block", () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/components/badge.tsx': 'export const Badge = () => null;\n',
+        'src/web/components/posting-list.tsx': 'export const PostingList = () => null;\n',
+        'src/web/layout.css': '.badge-list {\n}\n.page .posting-list__title {\n}\n',
+      }),
+    );
+
+    expect(findComponentBlocksInGlobalStylesheets(projectDirectory)).toEqual([
+      'src/web/layout.css styles .posting-list__title of the component posting-list',
+    ]);
+  });
+
+  it('catches a CSS @import outside the entry stylesheet', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        [ENTRY_STYLESHEET_PATH]: "@import url('./tokens.css') layer(tokens);\n",
+        'src/web/tokens.css': ':root {\n}\n',
+        'src/web/layout.css': "@import url('./tokens.css');\n",
+      }),
+    );
+
+    expect(findImportsOutsideEntryStylesheet(projectDirectory)).toEqual(['src/web/layout.css imports ./tokens.css']);
+  });
+
+  it('catches a stylesheet beside a route or a container', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/layout.css': '.page {\n}\n',
+        'src/web/routes/postings.css': '.postings {\n}\n',
+        'src/web/containers/posting.css': '.posting {\n}\n',
+        'src/web/components/badge.css': '@layer components {\n  .badge {\n  }\n}\n',
+      }),
+    );
+
+    expect(findStylesheetsOutsideTheirFolders(projectDirectory)).toEqual([
+      'src/web/containers/posting.css is neither a global stylesheet nor a component stylesheet',
+      'src/web/routes/postings.css is neither a global stylesheet nor a component stylesheet',
+    ]);
+  });
+
+  it('catches a rule of a component stylesheet outside the components layer', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/components/badge.css': [
+          '@layer components {',
+          '  .badge {',
+          '  }',
+          '}',
+          '.badge__dot {',
+          '}',
+          '@media (width <= 40rem) {',
+          '  .badge {',
+          '  }',
+          '}',
+          '@layer utilities {',
+          '  .badge--wide {',
+          '  }',
+          '}',
+        ].join('\n'),
+      }),
+    );
+
+    expect(findComponentRulesOutsideTheirLayer(projectDirectory)).toEqual([
+      'src/web/components/badge.css has .badge outside @layer components',
+      'src/web/components/badge.css has .badge__dot outside @layer components',
+      'src/web/components/badge.css has .badge--wide outside @layer components',
+    ]);
+  });
+
+  it('catches a component rendering a class of another block or of the layout', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/controls.css': '.button {\n}\n.button--primary {\n}\n.field input {\n}\n',
+        'src/web/utilities.css': '.visually-hidden {\n}\n',
+        'src/web/layout.css': '.page__empty {\n}\n.reminder-card {\n}\n',
+        'src/web/components/badge.tsx': 'export const Badge = () => <span className="badge" />;\n',
+        'src/web/components/reminder.tsx': [
+          'export const Reminder = ({ className }) => (',
+          '  <section className="reminder reminder--due">',
+          '    <h2 className="reminder__title">Due</h2>',
+          '    <span className="badge" />',
+          '    <p className="page__empty" />',
+          "    <div className={'reminder-card'} />",
+          '    <label className="field">',
+          '      <span className="visually-hidden">Name</span>',
+          '    </label>',
+          '    <button className={className} />',
+          '    <button className={`button button--primary ${className}`} />',
+          '  </section>',
+          ');',
+        ].join('\n'),
+      }),
+    );
+
+    expect(findForeignClassesInComponents(projectDirectory)).toEqual([
+      'src/web/components/reminder.tsx renders .badge, neither of the block reminder nor of a shared control',
+      'src/web/components/reminder.tsx renders .page__empty, neither of the block reminder nor of a shared control',
+      'src/web/components/reminder.tsx renders .reminder-card, neither of the block reminder nor of a shared control',
+    ]);
+  });
+
+  it('catches a shared control that a single file renders', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/controls.css': '.button {\n}\n.button--danger {\n}\n.reminder-card {\n}\n',
+        'src/web/components/uploads.tsx':
+          'export const Uploads = () => <button className="button button--danger" />;\n',
+        'src/web/components/profile-file.tsx':
+          'export const ProfileFile = () => <button className="button button--danger" />;\n',
+        'src/web/components/reminder.tsx': 'export const Reminder = () => <section className="reminder-card" />;\n',
+      }),
+    );
+
+    expect(findControlsOfASingleFile(projectDirectory)).toEqual([
+      'src/web/controls.css styles .reminder-card, which only src/web/components/reminder.tsx renders',
+    ]);
+  });
+
+  it.each([
+    { rule: 'at most 200 lines a stylesheet', find: findOversizedStylesheets },
+    { rule: 'every shared control rendered by several files', find: findControlsOfASingleFile },
+    { rule: 'stylesheets only beside the root or in the components folder', find: findStylesheetsOutsideTheirFolders },
+    { rule: 'every component rule in the components layer', find: findComponentRulesOutsideTheirLayer },
+    { rule: 'only its block or the shared controls in a component', find: findForeignClassesInComponents },
+    { rule: 'each component stylesheet beside its component, which alone imports it', find: findMisplacedStylesheets },
+    { rule: 'only its block in a component stylesheet', find: findClassesOutsideTheirBlock },
+    { rule: 'no component block in a global stylesheet', find: findComponentBlocksInGlobalStylesheets },
+    { rule: 'CSS @import only in the entry stylesheet', find: findImportsOutsideEntryStylesheet },
+  ])('keeps $rule', ({ find }) => {
+    expect(find(ROOT_DIRECTORY)).toEqual([]);
   });
 
   // The client generated by Prisma has cycles of its own, out of our hands

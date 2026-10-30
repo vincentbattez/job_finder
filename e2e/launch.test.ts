@@ -27,7 +27,7 @@ test.describe('launching the modules of a Posting', () => {
     await expect(letter.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
     await expect(letter.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
     await expect(letter.locator('figcaption')).toHaveText(['draft.md', 'letter.md']);
-    await expect(page.locator('.artifact-list [data-artifact="letter"]')).toContainText('Prêt');
+    await expect(page.locator('.posting-detail__compartment[data-artifact="letter"]')).toContainText('Prêt');
   });
 
   test('relaunches a failed Research, which lets the Letter run and notifies it ready', async ({ page, request }) => {

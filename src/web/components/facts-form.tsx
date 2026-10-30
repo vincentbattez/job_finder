@@ -4,7 +4,10 @@ import { Form } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
 
+import { ButtonRow } from './button-row.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
+
+import './facts-form.css';
 
 type Section = Awaited<ReturnType<Actions['readFacts']>>[number];
 
@@ -15,15 +18,16 @@ function ListSection({ title, example, entryList }: Readonly<Section>) {
   const isHydrated = useIsHydrated();
   const { t } = useTranslation('settings');
   return (
-    <fieldset className="facts__section">
+    <fieldset className="facts-form__section">
       <legend>{title}</legend>
       {entryItemList.map(({ key, entry }, index) => (
-        <div key={key} className="facts__entry">
+        <div key={key} className="facts-form__entry">
           <label>
             {t('facts.entry', { number: index + 1 })}
             <textarea name={title} defaultValue={entry} rows={2} placeholder={example} />
           </label>
           <button
+            className="button"
             type="button"
             disabled={!isHydrated}
             aria-label={t('facts.deleteEntry', { number: index + 1 })}
@@ -36,6 +40,7 @@ function ListSection({ title, example, entryList }: Readonly<Section>) {
         </div>
       ))}
       <button
+        className="button facts-form__add"
         type="button"
         disabled={!isHydrated}
         onClick={() => {
@@ -55,7 +60,7 @@ export function FactsForm({ sectionList }: Readonly<{ sectionList: Section[] }>)
   const headingId = useId();
   const { t } = useTranslation('settings');
   return (
-    <section className="facts" aria-labelledby={headingId}>
+    <section className="facts-form" aria-labelledby={headingId}>
       <h2 id={headingId}>{t('facts.heading')}</h2>
       <p>{t('facts.intro')}</p>
       <Form method="post" preventScrollReset>
@@ -64,7 +69,7 @@ export function FactsForm({ sectionList }: Readonly<{ sectionList: Section[] }>)
           section.isList ? (
             <ListSection key={section.title} {...section} />
           ) : (
-            <label key={section.title} className="facts__section">
+            <label key={section.title} className="facts-form__section">
               {section.title}
               <textarea
                 name={section.title}
@@ -75,11 +80,11 @@ export function FactsForm({ sectionList }: Readonly<{ sectionList: Section[] }>)
             </label>
           ),
         )}
-        <div className="edition">
-          <button type="submit" className="button--primary">
+        <ButtonRow>
+          <button type="submit" className="button button--primary">
             {t('facts.save')}
           </button>
-        </div>
+        </ButtonRow>
       </Form>
     </section>
   );

@@ -1,3 +1,7 @@
+// First of all: app.css declares the order of the cascade layers, which the first @layer to appear
+// sets, and the components imported below bring their own CSS
+import './app.css';
+
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,8 +24,6 @@ import { CandidateMenu } from './components/candidate-menu.tsx';
 import { LocaleSwitcher } from './components/locale-switcher.tsx';
 import { LocaleProvider, useLocale } from './i18n.tsx';
 import { englishUrlOf } from './redirects.ts';
-
-import './app.css';
 
 // An English route reached with the French query of an older link moves for good to the English one.
 // Otherwise the menu's Candidates and the locale the whole page renders in (ADR-0012).

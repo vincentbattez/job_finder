@@ -1,10 +1,11 @@
-import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher, type FetcherWithComponents } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
 
 import { PARAMETER_FIELD_PREFIX, ParameterField } from './parameter-field.tsx';
+import { SettingsPanel, SettingsStep } from './settings-panel.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 
 type NotificationChannel = Awaited<ReturnType<Actions['readNotificationChannel']>>;
@@ -40,6 +41,7 @@ function Step({
   isHydrated,
   children,
   accessibleName,
+  className = 'button',
   ...buttonProperties
 }: Readonly<{
   fetcher: Fetcher;
@@ -53,13 +55,13 @@ function Step({
 }>) {
   const isIdle = fetcher.state === 'idle';
   return (
-    <div className="channel__step">
-      <button {...buttonProperties} aria-label={accessibleName} disabled={!isHydrated || !isIdle}>
+    <SettingsStep>
+      <button {...buttonProperties} className={className} aria-label={accessibleName} disabled={!isHydrated || !isIdle}>
         {children}
       </button>
       {isIdle && fetcher.data?.error != null && <p role="alert">{fetcher.data.error}</p>}
       {isIdle && fetcher.data?.message != null && <p role="status">{fetcher.data.message}</p>}
-    </div>
+    </SettingsStep>
   );
 }
 
@@ -80,7 +82,7 @@ function ChoiceField({
   const valueList = fetcher.data?.choiceList?.map(({ value }) => value) ?? (savedValue === '' ? [] : [savedValue]);
   return (
     <>
-      <label className="channel__field">
+      <label className="field">
         {label}
         <select name={`${PARAMETER_FIELD_PREFIX}${name}`} defaultValue={savedValue}>
           {/* A hint, never a choice: a Parameter left out keeps the one saved */}
@@ -115,7 +117,6 @@ export function NotificationChannelForm({
   channel,
   moduleList,
 }: Readonly<{ channel: NotificationChannel; moduleList: NotificationChannelModule[] }>) {
-  const headingId = useId();
   const isHydrated = useIsHydrated();
   const { t } = useTranslation('settings');
   const formReference = useRef<HTMLFormElement>(null);
@@ -144,8 +145,7 @@ export function NotificationChannelForm({
   }
 
   return (
-    <section className="channel" aria-labelledby={headingId}>
-      <h2 id={headingId}>{t('notificationChannel.heading')}</h2>
+    <SettingsPanel heading={t('notificationChannel.heading')}>
       <p>{t('notificationChannel.intro')}</p>
       <form
         ref={formReference}
@@ -156,7 +156,7 @@ export function NotificationChannelForm({
           send(formReference, saveFetcher, 'save');
         }}
       >
-        <label className="channel__field">
+        <label className="field">
           {t('notificationChannel.channel')}
           <select
             name="channel"
@@ -187,7 +187,6 @@ export function NotificationChannelForm({
               key={`${moduleId}:${parameter.name}`}
               parameter={parameter}
               savedValue={savedValueOf(parameter.name)}
-              className="channel__field"
               isConfigured={isSavedModule && channel.configuredSecretList.includes(parameter.name)}
               secretReference={(input) => {
                 if (input !== null) {
@@ -209,7 +208,7 @@ export function NotificationChannelForm({
             {t('notificationChannel.test')}
           </Step>
         )}
-        <Step type="submit" className="button--primary" fetcher={saveFetcher} isHydrated={isHydrated}>
+        <Step type="submit" className="button button--primary" fetcher={saveFetcher} isHydrated={isHydrated}>
           {t('notificationChannel.save')}
         </Step>
         <Step
@@ -223,6 +222,6 @@ export function NotificationChannelForm({
           {t('notificationChannel.notify')}
         </Step>
       </form>
-    </section>
+    </SettingsPanel>
   );
 }

@@ -1,0 +1,18 @@
+/* Buttons and a quiet note on one wrapping line; a refusal in the red of every refusal */
+@layer components {
+  .button-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs) var(--space-sm);
+  }
+
+  .button-row p {
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+  }
+
+  .button-row [role='alert'] {
+    color: var(--color-error);
+  }
+}

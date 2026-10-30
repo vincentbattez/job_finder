@@ -1,11 +1,14 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
 
 import { ParameterField } from './parameter-field.tsx';
+import { SettingsPanel, SettingsStep } from './settings-panel.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
+
+import './watches.css';
 
 type Watch = Awaited<ReturnType<Actions['listWatches']>>[number];
 type SourceModule = Awaited<ReturnType<Actions['listSources']>>[number];
@@ -29,10 +32,10 @@ function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; source
   const isDisabled = !isHydrated || fetcher.state !== 'idle';
   return (
     <fetcher.Form method="post" action="/watch">
-      <fieldset>
+      <fieldset className="watches__watch">
         <legend>{watch === null ? t('watches.newWatch') : t('watches.watch', { watchId: watch.id })}</legend>
         {watch !== null && <input type="hidden" name="watchId" value={watch.id} />}
-        <label className="settings__field">
+        <label className="field">
           {t('watches.source')}
           <select
             name="source"
@@ -54,21 +57,20 @@ function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; source
             key={`${sourceId}:${parameter.name}`}
             parameter={parameter}
             savedValue={savedParameters?.[parameter.name]}
-            className="settings__field"
           />
         ))}
-        <div className="settings__step">
-          <button type="submit" name="intent" value="save" className="button--primary" disabled={isDisabled}>
+        <SettingsStep>
+          <button type="submit" name="intent" value="save" className="button button--primary" disabled={isDisabled}>
             {watch === null ? t('watches.create') : t('watches.save')}
           </button>
           {watch !== null && (
-            <button type="submit" name="intent" value="delete" disabled={isDisabled} formNoValidate>
+            <button className="button" type="submit" name="intent" value="delete" disabled={isDisabled} formNoValidate>
               {t('watches.delete')}
             </button>
           )}
           {fetcher.state === 'idle' && fetcher.data?.error != null && <p role="alert">{fetcher.data.error}</p>}
           {fetcher.state === 'idle' && fetcher.data?.message != null && <p role="status">{fetcher.data.message}</p>}
-        </div>
+        </SettingsStep>
       </fieldset>
     </fetcher.Form>
   );
@@ -76,17 +78,15 @@ function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; source
 
 // The Watches of the Candidate, each on its Source; a deleted Watch leaves its Postings behind
 export function Watches({ watchList, sourceList }: Readonly<{ watchList: Watch[]; sourceList: SourceModule[] }>) {
-  const headingId = useId();
   const { t } = useTranslation('settings');
   return (
-    <section className="settings" aria-labelledby={headingId}>
-      <h2 id={headingId}>{t('watches.heading')}</h2>
+    <SettingsPanel heading={t('watches.heading')}>
       <p>{t('watches.intro')}</p>
       {watchList.map((watch) => (
         <WatchForm key={watch.id} watch={watch} sourceList={sourceList} />
       ))}
       {/* Remounted once a Watch is created, so the form starts blank again */}
       <WatchForm key={watchList.map(({ id }) => id).join('/')} watch={null} sourceList={sourceList} />
-    </section>
+    </SettingsPanel>
   );
 }

@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react';
 
 import { useIsHydrated } from './use-is-hydrated.ts';
 
+import './drop-zone.css';
+
 // A tray that takes one file, dropped or chosen, between what it is for and what became of it;
 // disabled until React hydrates, since the file leaves through a fetcher
 export function DropZone({
@@ -10,6 +12,7 @@ export function DropZone({
   label,
   isBusy,
   onFile,
+  error,
   children,
 }: Readonly<{
   intro: string;
@@ -17,7 +20,9 @@ export function DropZone({
   label: string;
   isBusy: boolean;
   onFile: (file: File) => void;
-  children: ReactNode;
+  // What the action refused, in the red of every refusal
+  error?: string | null | undefined;
+  children?: ReactNode;
 }>) {
   const isHydrated = useIsHydrated();
   const [isDragOver, setIsDragOver] = useState(false);
@@ -47,7 +52,7 @@ export function DropZone({
       }}
     >
       <p>{intro}</p>
-      <label className="drop-zone__choose" data-disabled={!isHydrated || isBusy}>
+      <label className="button drop-zone__choose" data-disabled={!isHydrated || isBusy}>
         {label}
         <input
           type="file"
@@ -60,7 +65,14 @@ export function DropZone({
           }}
         />
       </label>
-      <div aria-live="polite">{children}</div>
+      <div aria-live="polite">
+        {children}
+        {error != null && (
+          <p role="alert" className="drop-zone__error">
+            {error}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

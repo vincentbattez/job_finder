@@ -4,9 +4,13 @@ import { useFetcher } from 'react-router';
 
 import { StateBadge, type State } from './badge.tsx';
 import { DateText } from './date.tsx';
+import { Deletion } from './deletion.tsx';
 import { DropZone } from './drop-zone.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
+import { WorkerTask } from './worker-task.tsx';
+
+import './uploads.css';
 
 // What the Profile action answers a fetcher: a refusal, in the words of the action, or none
 interface IUploadRefusal {
@@ -27,28 +31,32 @@ function UploadConversion({ fileName, conversion }: Readonly<{ fileName: string;
   const { state, log } = conversion;
   const { t } = useTranslation('settings');
   return (
-    <fetcher.Form
-      method="post"
-      action="/profile"
-      className="module-launch uploads__conversion"
-      aria-labelledby={labelId}
-    >
+    <fetcher.Form method="post" action="/profile" className="uploads__conversion" aria-labelledby={labelId}>
       <input type="hidden" name="fileName" value={fileName} />
-      <span id={labelId}>
-        {t('uploads.conversion')}
-        <span className="visually-hidden">{t('uploads.ofFile', { fileName })}</span>
-      </span>
-      <span role="status">
-        <StateBadge state={state} />
-      </span>
-      {(state === 'absent' || state === 'failed') && (
-        <button type="submit" name="intent" value="convertUpload" disabled={!isHydrated || fetcher.state !== 'idle'}>
-          {state === 'absent' ? t('uploads.convert') : t('uploads.convertAgain')}
+      <WorkerTask
+        refusal={state === 'failed' ? log : null}
+        error={fetcher.state === 'idle' ? fetcher.data?.refusal?.message : null}
+      >
+        <span id={labelId}>
+          {t('uploads.conversion')}
           <span className="visually-hidden">{t('uploads.ofFile', { fileName })}</span>
-        </button>
-      )}
-      {state === 'failed' && <p className="module-launch__refusal">{log}</p>}
-      {fetcher.state === 'idle' && fetcher.data?.refusal != null && <p role="alert">{fetcher.data.refusal.message}</p>}
+        </span>
+        <span role="status">
+          <StateBadge state={state} />
+        </span>
+        {(state === 'absent' || state === 'failed') && (
+          <button
+            className="button button--primary"
+            type="submit"
+            name="intent"
+            value="convertUpload"
+            disabled={!isHydrated || fetcher.state !== 'idle'}
+          >
+            {state === 'absent' ? t('uploads.convert') : t('uploads.convertAgain')}
+            <span className="visually-hidden">{t('uploads.ofFile', { fileName })}</span>
+          </button>
+        )}
+      </WorkerTask>
     </fetcher.Form>
   );
 }
@@ -80,25 +88,29 @@ export function Uploads({
         <ul className="uploads__list">
           {uploadList.map(({ fileName, savedAt, conversion }) => (
             <li key={fileName} className="uploads__item">
-              <span className="reference">{fileName}</span>
+              <span className="uploads__file-name">{fileName}</span>
               <span className="uploads__date">
                 {t('uploads.savedOn')} <DateText date={savedAt} />
               </span>
-              {/* Folded, so a deletion always takes a second, deliberate click */}
-              <details className="profile-file__delete">
-                {/* The name is read aloud only: the row already shows it */}
-                <summary>
-                  {t('uploads.delete')}
-                  <span className="visually-hidden"> {fileName}</span>…
-                </summary>
-                <fetcher.Form method="post" action="/profile" className="edition">
-                  <input type="hidden" name="fileName" value={fileName} />
-                  <button type="submit" name="intent" value="deleteUpload" className="button--danger">
-                    {t('uploads.deleteForGood')}
-                    <span className="visually-hidden"> {fileName}</span>
-                  </button>
-                </fetcher.Form>
-              </details>
+              <div className="uploads__delete">
+                <Deletion
+                  summary={
+                    // The name is read aloud only: the row already shows it
+                    <>
+                      {t('uploads.delete')}
+                      <span className="visually-hidden"> {fileName}</span>…
+                    </>
+                  }
+                >
+                  <fetcher.Form method="post" action="/profile">
+                    <input type="hidden" name="fileName" value={fileName} />
+                    <button type="submit" name="intent" value="deleteUpload" className="button button--danger">
+                      {t('uploads.deleteForGood')}
+                      <span className="visually-hidden"> {fileName}</span>
+                    </button>
+                  </fetcher.Form>
+                </Deletion>
+              </div>
               <UploadConversion fileName={fileName} conversion={conversion} />
             </li>
           ))}
@@ -110,13 +122,8 @@ export function Uploads({
         label={t('uploads.drop')}
         isBusy={isSending}
         onFile={(file) => void saveUpload(file)}
-      >
-        {!isSending && fetcher.data?.refusal != null && (
-          <p role="alert" className="drop-zone__error">
-            {fetcher.data.refusal.message}
-          </p>
-        )}
-      </DropZone>
+        error={isSending ? null : fetcher.data?.refusal?.message}
+      />
     </section>
   );
 }

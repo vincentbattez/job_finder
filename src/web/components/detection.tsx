@@ -3,6 +3,8 @@ import { Link, useFetcher } from 'react-router';
 
 import { useIsHydrated } from './use-is-hydrated.ts';
 
+import './detection.css';
+
 // The shape of the detect action, per Watch
 interface IDetection {
   watchId: string;
@@ -20,7 +22,7 @@ export function Detection() {
   const { t } = useTranslation('posting');
   return (
     <fetcher.Form method="post" action="/detect" className="detection">
-      <button type="submit" disabled={!isHydrated || isRunning}>
+      <button className="button button--primary" type="submit" disabled={!isHydrated || isRunning}>
         {isRunning ? t('detectionRunning') : t('runDetection')}
       </button>
       <div role="status">

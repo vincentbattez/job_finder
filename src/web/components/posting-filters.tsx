@@ -3,6 +3,8 @@ import { Form, useSearchParams } from 'react-router';
 
 import type { Status } from './badge.tsx';
 
+import './posting-filters.css';
+
 interface IFilteredPosting {
   status: Status;
   city: string | null;
@@ -33,30 +35,40 @@ export function PostingFilters({ postingList }: Readonly<{ postingList: IFiltere
   const { t } = useTranslation('posting');
   const [searchParameters] = useSearchParams();
   return (
-    <Form role="search" aria-label={t('filtersLabel')} className="filters" key={searchParameters.toString()}>
-      <label>
+    <Form role="search" aria-label={t('filtersLabel')} className="posting-filters" key={searchParameters.toString()}>
+      <label className="posting-filters__field">
         {t('cityFilter')}
-        <select name="city" defaultValue={searchParameters.get('city') ?? ''}>
+        <select
+          className="button posting-filters__control"
+          name="city"
+          defaultValue={searchParameters.get('city') ?? ''}
+        >
           <option value="">{t('allChoices')}</option>
           {listChoices(postingList.map(({ city }) => city)).map((city) => (
             <option key={city}>{city}</option>
           ))}
         </select>
       </label>
-      <label>
+      <label className="posting-filters__field">
         {t('regionFilter')}
-        <select name="region" defaultValue={searchParameters.get('region') ?? ''}>
+        <select
+          className="button posting-filters__control"
+          name="region"
+          defaultValue={searchParameters.get('region') ?? ''}
+        >
           <option value="">{t('allChoices')}</option>
           {listChoices(postingList.map(({ region }) => region)).map((region) => (
             <option key={region}>{region}</option>
           ))}
         </select>
       </label>
-      <label className="filters__check">
+      <label className="posting-filters__check">
         <input type="checkbox" name="archived" defaultChecked={searchParameters.has('archived')} />
         {t('showArchived')}
       </label>
-      <button type="submit">{t('filter')}</button>
+      <button className="button button--primary posting-filters__control" type="submit">
+        {t('filter')}
+      </button>
     </Form>
   );
 }
