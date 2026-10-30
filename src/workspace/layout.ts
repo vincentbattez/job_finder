@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import { ARTIFACT_RENAME_LIST } from '#/domain/artifact-rename.ts';
 import { ERROR } from '#/domain/error.ts';
 
 import { migrateObsoleteConfig } from './acl/config.ts';
@@ -23,26 +24,22 @@ const LAYOUT_STEP_LIST: ILayoutStep[] = [
   { from: 'candidates/*/consignes', to: 'candidates/*/instructions' },
   { from: 'candidates/*/offres', to: 'candidates/*/postings' },
   { from: 'candidates/*/postings/*/fiche-de-poste.md', to: 'candidates/*/postings/*/job-description.md' },
-  { from: 'candidates/*/instructions/recherche.md', to: 'candidates/*/instructions/research.md' },
-  { from: 'candidates/*/instructions/lettre.md', to: 'candidates/*/instructions/letter.md' },
-  { from: 'candidates/*/instructions/fiche_entretien.md', to: 'candidates/*/instructions/interview_brief.md' },
-  { from: 'candidates/*/instructions/visualisation.md', to: 'candidates/*/instructions/visualization.md' },
-  // Each Artifact folder, then the files of each of its Versions
-  { from: 'candidates/*/postings/*/recherche', to: 'candidates/*/postings/*/research' },
+  // The Instructions of each Artifact, each Artifact folder, then the files of each of its Versions
+  ...ARTIFACT_RENAME_LIST.flatMap(({ from, to }) => [
+    { from: `candidates/*/instructions/${from}.md`, to: `candidates/*/instructions/${to}.md` },
+    { from: `candidates/*/postings/*/${from}`, to: `candidates/*/postings/*/${to}` },
+  ]),
   { from: 'candidates/*/postings/*/research/*/recherche.md', to: 'candidates/*/postings/*/research/*/research.md' },
-  { from: 'candidates/*/postings/*/lettre', to: 'candidates/*/postings/*/letter' },
   { from: 'candidates/*/postings/*/letter/*/brouillon.md', to: 'candidates/*/postings/*/letter/*/draft.md' },
   { from: 'candidates/*/postings/*/letter/*/lettre.md', to: 'candidates/*/postings/*/letter/*/letter.md' },
   {
     from: 'candidates/*/postings/*/letter/*/destinataires.json',
     to: 'candidates/*/postings/*/letter/*/recipients.json',
   },
-  { from: 'candidates/*/postings/*/fiche_entretien', to: 'candidates/*/postings/*/interview_brief' },
   {
     from: 'candidates/*/postings/*/interview_brief/*/fiche-entretien.md',
     to: 'candidates/*/postings/*/interview_brief/*/interview-brief.md',
   },
-  { from: 'candidates/*/postings/*/visualisation', to: 'candidates/*/postings/*/visualization' },
   {
     from: 'candidates/*/postings/*/visualization/*/visualisation.html',
     to: 'candidates/*/postings/*/visualization/*/visualization.html',
@@ -68,7 +65,10 @@ function expandStep(dataDirectory: string, { from, to }: ILayoutStep): ILayoutSt
     pairList = pairList.flatMap((pair) =>
       matchSegment(path.join(dataDirectory, pair.from), segment).map(({ name, wildcard }) => ({
         from: path.join(pair.from, name),
-        to: path.join(pair.to, (toSegmentList[index] ?? '').replace('*', () => wildcard)),
+        to: path.join(
+          pair.to,
+          (toSegmentList[index] ?? '').replace('*', () => wildcard),
+        ),
       })),
     );
   }

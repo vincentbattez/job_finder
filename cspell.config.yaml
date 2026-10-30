@@ -31,7 +31,8 @@ overrides:
   - filename: src/modules/*/copy.ts
     language: en,fr
   # The former French names that the data layout migration, the config import and the redirects match
-  - filename: [src/web/redirects.ts, src/workspace/layout.ts, src/workspace/acl/config.ts]
+  - filename:
+      [src/domain/artifact-rename.ts, src/web/redirects.ts, src/workspace/layout.ts, src/workspace/acl/config.ts]
     ignoreRegExpList:
       - "/\\bfrom: *(['\"`])(?:\\\\.|(?!\\1)[^\\\\\\n])*\\1/gu"
   # The glossary keeps each former French term, so that older issues and commits stay readable

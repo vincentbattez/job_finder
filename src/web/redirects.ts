@@ -1,12 +1,6 @@
 import { generatePath, matchPath } from 'react-router';
 
-// The Artifacts as the French routes named them, and their English names
-const ARTIFACT_RENAME_LIST = [
-  { from: 'recherche', to: 'research' },
-  { from: 'lettre', to: 'letter' },
-  { from: 'fiche_entretien', to: 'interview_brief' },
-  { from: 'visualisation', to: 'visualization' },
-];
+import { ARTIFACT_RENAME_LIST } from '#/actions/index.ts';
 
 // The routes of the French front and their English ones, as route patterns: a link Léa saved keeps
 // working (#65). A `:param` of the French route goes into the English one; an Artifact in a path has
