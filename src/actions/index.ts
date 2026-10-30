@@ -8,6 +8,7 @@ import { createFaitsActions } from './faits.ts';
 import { createImportActions } from './import-fiche-de-poste.ts';
 import { createJobActions } from './jobs.ts';
 import { createOffreActions } from './offres.ts';
+import { createPieceActions } from './pieces.ts';
 import { createProfilActions } from './profil.ts';
 import { createStatutActions } from './statut.ts';
 
@@ -26,6 +27,7 @@ export async function createActions(option: IActionsOption) {
     ...createImportActions(context),
     ...createStatutActions(context),
     ...createProfilActions(context),
+    ...createPieceActions(context),
     ...createFaitsActions(context),
     ...createConsignesActions(context),
     ...createEditionActions(context),

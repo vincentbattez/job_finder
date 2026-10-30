@@ -98,8 +98,8 @@
   color: var(--color-error);
 }
 
-/* The drop zone of a Fiche de poste found elsewhere: a dashed tray that lights up under a file */
-.fiche-de-poste-import {
+/* The drop zone of a file, such as a Fiche de poste or a Pièce: a dashed tray that lights up under a file */
+.drop-zone {
   display: grid;
   justify-items: start;
   gap: var(--space-sm);
@@ -110,12 +110,12 @@
   color: var(--color-ink-2);
   transition: background-color var(--dur-short) var(--ease-out);
 }
-.fiche-de-poste-import[data-drag-over='true'] {
+.drop-zone[data-drag-over='true'] {
   border-style: solid;
   border-color: var(--color-accent);
   background: var(--color-accent-soft);
 }
-.fiche-de-poste-import__choose {
+.drop-zone__choose {
   display: inline-flex;
   align-items: center;
   min-height: 40px;
@@ -128,19 +128,19 @@
   font-weight: 500;
   cursor: pointer;
 }
-.fiche-de-poste-import__choose:hover {
+.drop-zone__choose:hover {
   background: var(--color-paper-2);
 }
-.fiche-de-poste-import__choose:focus-within {
+.drop-zone__choose:focus-within {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
 /* Waiting for React, or for Claude to read the Fiche de poste */
-.fiche-de-poste-import__choose[data-disabled='true'] {
+.drop-zone__choose[data-disabled='true'] {
   opacity: 0.55;
   cursor: not-allowed;
 }
-.fiche-de-poste-import__error {
+.drop-zone__error {
   color: var(--color-error);
 }
 /* The pages of the Candidat chosen in the menu: their Offres, their Profil, their Consignes */
@@ -1013,4 +1013,41 @@ a:active {
 .faits__rubrique button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* The PDFs of the Profil, kept as dropped: one row each, name and date, deletion folded */
+.pieces h2 {
+  font: 600 var(--text-md) / 1.4 var(--font-body);
+}
+.pieces__empty {
+  color: var(--color-ink-2);
+}
+.pieces__list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pieces__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2xs) var(--space-md);
+  padding-block: var(--space-sm);
+  border-bottom: var(--rule-hair) solid var(--color-paper-2);
+  min-width: 0;
+}
+.pieces__item .reference {
+  overflow-wrap: anywhere;
+}
+.pieces__date {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+.pieces__item .profil-file__delete {
+  margin-inline-start: auto;
+}
+.pieces__item .profil-file__delete form {
+  display: flex;
+  margin-top: var(--space-xs);
 }

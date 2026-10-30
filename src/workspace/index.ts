@@ -7,6 +7,7 @@ import {
   type FicheDePoste,
   type Lieu,
   type Offre,
+  type PieceFileName,
   type ProfilFileName,
   type Version,
 } from '#/domain/index.ts';
@@ -14,7 +15,7 @@ import { wordListOf } from '#/text/index.ts';
 
 import { loadConfig } from './acl/config.ts';
 import { openDatabase, type INewOffre } from './acl/database.ts';
-import { readMarkdownFiles, readTextFile } from './acl/files.ts';
+import { readMarkdownFiles, readPieces, readTextFile, writePiece } from './acl/files.ts';
 
 function slugify(text: string): string {
   return wordListOf(text).join('-');
@@ -27,6 +28,8 @@ export async function openWorkspace(dataDirectory: string) {
   await database.copyConfig(config);
   const candidatDirectoryOf = (candidatId: string): string => path.join(dataDirectory, 'candidats', candidatId);
   const profilDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'profil');
+  // Its own subfolder, which the Markdown files of the Profil leave out
+  const piecesDirectoryOf = (candidatId: string): string => path.join(profilDirectoryOf(candidatId), 'pieces');
   const consignesDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'consignes');
   for (const candidat of config.candidatList) {
     mkdirSync(profilDirectoryOf(candidat.id), { recursive: true });
@@ -61,6 +64,18 @@ export async function openWorkspace(dataDirectory: string) {
 
     deleteProfilFile(candidatId: string, fileName: ProfilFileName): void {
       rmSync(path.join(profilDirectoryOf(candidatId), fileName));
+    },
+
+    readPieces(candidatId: string) {
+      return readPieces(piecesDirectoryOf(candidatId));
+    },
+
+    savePiece(candidatId: string, fileName: PieceFileName, content: Uint8Array): void {
+      writePiece(piecesDirectoryOf(candidatId), fileName, content);
+    },
+
+    deletePiece(candidatId: string, fileName: PieceFileName): void {
+      rmSync(path.join(piecesDirectoryOf(candidatId), fileName));
     },
 
     // The Markdown files of a Version, such as the Brouillon and the Lettre of a Lettre Version

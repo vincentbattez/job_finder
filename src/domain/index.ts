@@ -210,6 +210,19 @@ export const PROFIL_FILE_NAME_SCHEMA = z
 
 export type ProfilFileName = z.infer<typeof PROFIL_FILE_NAME_SCHEMA>;
 
+// The name of a Pièce, under the same guard as a file of the Profil, ending in .pdf
+export const PIECE_FILE_NAME_SCHEMA = z
+  .string()
+  .regex(/^[\p{L}\p{N}][\p{L}\p{N}_.-]*\.pdf$/iu)
+  .brand<'Domain'>();
+
+export type PieceFileName = z.infer<typeof PIECE_FILE_NAME_SCHEMA>;
+
+// A PDF the Candidat dropped into their Profil, such as a CV or a past lettre, kept as is
+export const PIECE_SCHEMA = z.object({ fileName: PIECE_FILE_NAME_SCHEMA, savedAt: z.date() }).brand<'Domain'>();
+
+export type Piece = z.infer<typeof PIECE_SCHEMA>;
+
 // A rubrique of the Faits, such as Diplômes, as the form edits it: a list rubrique has one entry per
 // item of faits.md, a text rubrique a single one
 export const RUBRIQUE_SCHEMA = z

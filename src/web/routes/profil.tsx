@@ -5,6 +5,7 @@ import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidat } from '#/web/candidat.server.ts';
 import { CopyCommand } from '#/web/components/copy-command.tsx';
 import { FaitsForm } from '#/web/components/faits-form.tsx';
+import { Pieces } from '#/web/components/pieces.tsx';
 import { ProfilFile, ProfilFileCreation } from '#/web/components/profil-file.tsx';
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -12,6 +13,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return {
     candidat,
     profilFileList: candidat === null ? [] : await ACTIONS.listProfilFiles({ candidatId: candidat.id }),
+    pieceList: candidat === null ? [] : await ACTIONS.listPieces({ candidatId: candidat.id }),
     rubriqueList: candidat === null ? [] : await ACTIONS.readFaits({ candidatId: candidat.id }),
   };
 }
@@ -41,6 +43,21 @@ export async function action({ request }: ActionFunctionArgs) {
         await ACTIONS.saveProfilFile(formInput);
         break;
       }
+      case 'piece': {
+        // No file at all is refused by the action, like a file that is not a PDF
+        const piece = formData.get('piece');
+        const file = piece instanceof File ? piece : new File([], '');
+        await ACTIONS.savePiece({
+          candidatId: candidat.id,
+          fileName: file.name,
+          content: new Uint8Array(await file.arrayBuffer()),
+        });
+        break;
+      }
+      case 'deletePiece': {
+        await ACTIONS.deletePiece(formInput);
+        break;
+      }
       case 'faits': {
         // Each field is named after its rubrique, one per entry of a list rubrique
         const titleList = [...new Set(formData.keys())].filter((name) => name !== 'intent');
@@ -54,7 +71,8 @@ export async function action({ request }: ActionFunctionArgs) {
   } catch (error) {
     return { refusal: { isCreation: intent === 'create', fileName, message: messageOf(error) } };
   }
-  return redirect('/profil');
+  // The Pièces are sent by a fetcher, which revalidates the page by itself and keeps what it receives
+  return intent === 'piece' || intent === 'deletePiece' ? { refusal: null } : redirect('/profil');
 }
 
 export function meta() {
@@ -62,7 +80,7 @@ export function meta() {
 }
 
 export default function Profil() {
-  const { candidat, profilFileList, rubriqueList } = useLoaderData<typeof loader>();
+  const { candidat, profilFileList, pieceList, rubriqueList } = useLoaderData<typeof loader>();
   const refusal = useActionData<typeof action>()?.refusal ?? null;
   return (
     <main className="container page">
@@ -82,6 +100,7 @@ export default function Profil() {
           </div>
           {/* Keyed by their content, so that a save of one shows in the other */}
           <FaitsForm key={JSON.stringify(rubriqueList)} rubriqueList={rubriqueList} />
+          <Pieces pieceList={pieceList} />
           {profilFileList.length === 0 ? (
             <div className="empty">
               <p>

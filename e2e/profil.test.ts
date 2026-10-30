@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { expect, test } from '@playwright/test';
 
 // test/seed-front.ts gives Sacha a Profil of two files; only these tests change it, and leave it as found
@@ -11,7 +13,13 @@ test.describe('Profil of a Candidat', () => {
     await page.getByRole('link', { name: 'Profil', exact: true }).click();
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Profil de Sacha');
-    await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Faits', 'cv.md', 'faits.md', 'Nouveau fichier']);
+    await expect(page.getByRole('heading', { level: 2 })).toHaveText([
+      'Faits',
+      'Pièces',
+      'cv.md',
+      'faits.md',
+      'Nouveau fichier',
+    ]);
     const faits = page.getByRole('region', { name: 'faits.md' });
     await expect(faits.getByRole('textbox')).toHaveValue('# Faits\n\n## Mobilité\n\n- Lille et alentours\n');
     await faits.getByRole('textbox').fill('# Faits\n\n## Mobilité\n\n- Lille, Arras et Béthune\n');
@@ -57,7 +65,13 @@ test.describe('Profil of a Candidat', () => {
     await lettre.getByRole('button', { name: 'Supprimer définitivement lettre-tj-lille-2025.md' }).click();
     await expect(lettre).toHaveCount(0);
     await page.reload();
-    await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Faits', 'cv.md', 'faits.md', 'Nouveau fichier']);
+    await expect(page.getByRole('heading', { level: 2 })).toHaveText([
+      'Faits',
+      'Pièces',
+      'cv.md',
+      'faits.md',
+      'Nouveau fichier',
+    ]);
   });
 
   test('shows in faits.md what the form of the Faits saves, and in the form what faits.md says', async ({ page }) => {
@@ -92,6 +106,44 @@ test.describe('Profil of a Candidat', () => {
     await faitsMarkdown.fill(foundMarkdown);
     await page.getByRole('region', { name: 'faits.md' }).getByRole('button', { name: 'Enregistrer' }).click();
     await expect(faitsForm.getByRole('textbox', { name: 'Identité' })).toHaveValue('');
+  });
+
+  test('keeps a dropped PDF as a Pièce, refuses a file that is not one, then deletes it', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Sacha');
+    await page.getByRole('button', { name: 'Choisir' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Sacha');
+    await page.getByRole('link', { name: 'Profil', exact: true }).click();
+    const pieces = page.getByRole('region', { name: 'Pièces' });
+    await expect(pieces.getByText('Aucune Pièce pour l’instant.')).toBeVisible();
+    // Disabled until React hydrates: a file chosen before would go nowhere
+    await expect(pieces.getByLabel('Déposer une Pièce')).toBeEnabled();
+
+    await pieces
+      .getByLabel('Déposer une Pièce')
+      .setInputFiles({ name: 'cv.md', mimeType: 'text/markdown', buffer: Buffer.from('# CV\n') });
+    await expect(pieces.getByRole('alert')).toContainText("« cv.md » n'est pas un nom de Pièce");
+    await pieces
+      .getByLabel('Déposer une Pièce')
+      .setInputFiles(path.join(import.meta.dirname, '../test/fixtures/profil/cv.pdf'));
+
+    await expect(pieces.getByRole('listitem')).toHaveCount(1);
+    await expect(pieces.getByRole('listitem')).toContainText('cv.pdf');
+    await expect(pieces.getByRole('listitem')).toContainText('déposée le');
+    await expect(pieces.getByRole('alert')).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 2 })).toHaveText([
+      'Faits',
+      'Pièces',
+      'cv.md',
+      'faits.md',
+      'Nouveau fichier',
+    ]);
+    await expect(pieces.getByRole('listitem')).toContainText('cv.pdf');
+
+    await pieces.getByText('Supprimer cv.pdf…').click();
+    await pieces.getByRole('button', { name: 'Supprimer définitivement cv.pdf' }).click();
+    await expect(pieces.getByText('Aucune Pièce pour l’instant.')).toBeVisible();
   });
 
   test('says how to fill an empty Profil', async ({ page }) => {
