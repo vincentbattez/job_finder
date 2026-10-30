@@ -4,7 +4,7 @@
 
 Before writing or reviewing code, read `CODING_STANDARDS.md`.
 
-Everything is in English (code, docs, commits, issues), with the vocabulary of `GLOSSARY.md`; user-facing copy goes only through the FR/EN catalogue. See the Code section of `CODING_STANDARDS.md`.
+Everything is in English (code, docs, commits, issues), with the vocabulary of `GLOSSARY.md`; user-facing copy goes only through i18next and its FR/EN resources. See the Code section of `CODING_STANDARDS.md`.
 
 ### Coding when no spec
 

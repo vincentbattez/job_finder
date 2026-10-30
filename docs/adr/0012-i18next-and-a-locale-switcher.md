@@ -15,5 +15,6 @@ Spec #65 put every word a Candidate reads in an in-house typed catalogue, with n
 
 ## Consequences
 
-- During the migration (#79), the areas not yet moved still go through the former catalogue (`catalogueOf`, `catalogueFor`, `useCatalogue`), which then follows the same Locale rule; it is deleted once empty.
+- Every word a Candidate reads goes through i18next: the in-house catalogue is gone. A module's Parameter labels and placeholders are keys of its own namespace (`textKeyOf`, checked by the typecheck), which the error messages and the front's loader translate on the server with `textOf`, since the front's bundle never loads a module; a test checks that every registered module's keys read in both locales.
+- The Locales come from one list, `LOCALE_LIST` (`src/domain/locale.ts`): the schema, the i18next instances and the Locale Switcher derive from it.
 - French plural rules (`Intl.PluralRules`) treat 0 as singular: a French copy that used the plural for 0 needs an explicit `_zero` key, in both locales since `fr` is typed against `en`.
