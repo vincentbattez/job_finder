@@ -40,7 +40,7 @@ async function request({ url, token }: IAccess, locale: Locale, pathname: string
 }
 
 // Before the Candidate relies on it: a wrong address or token fails here rather than on a new Posting
-export async function checkConnexion(access: IAccess, locale: Locale): Promise<void> {
+export async function checkConnection(access: IAccess, locale: Locale): Promise<void> {
   const response = await request(access, locale, '/api/');
   if (!response.ok) {
     throw new Error(COPY_BY_LOCALE[locale].unexpectedStatus(response.status));

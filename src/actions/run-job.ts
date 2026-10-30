@@ -186,7 +186,7 @@ export function createJobRunner(
     if (content.trim() === '') {
       return error.emptyOutput(outputPath);
     }
-    const formatError = findFormatError?.(content, posting);
+    const formatError = findFormatError?.(content, locale, posting);
     return formatError === undefined ? undefined : error.malformedOutput(outputPath, formatError);
   }
 
@@ -232,6 +232,7 @@ export function createJobRunner(
           .filter((directory) => path.relative(postingDirectory, directory).startsWith('..')),
       ],
       outputDirectory,
+      locale,
     });
     const problem = session.isSuccess
       ? aiModule.outputFileList

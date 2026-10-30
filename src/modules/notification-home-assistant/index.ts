@@ -3,7 +3,7 @@ import { z } from 'zod/v4';
 import { defineNotificationChannel } from '#/notification/index.ts';
 import { parameter } from '#/parameter/index.ts';
 
-import { callNotifyService, checkConnexion, listNotifyServices } from './acl/home-assistant.ts';
+import { callNotifyService, checkConnection, listNotifyServices } from './acl/home-assistant.ts';
 
 const URL_PARAMETER = parameter(z.url(), {
   label: { fr: 'Adresse de Home Assistant', en: 'Home Assistant address' },
@@ -30,6 +30,6 @@ export const HOME_ASSISTANT = defineNotificationChannel({
   name: 'Home Assistant',
   parameterSchema: z.object({ url: URL_PARAMETER, token: TOKEN_PARAMETER, service: SERVICE_PARAMETER }),
   send: callNotifyService,
-  check: checkConnexion,
+  check: checkConnection,
   listChoicesByParameter: { service: listNotifyServices },
 });

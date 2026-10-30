@@ -4,14 +4,15 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { CLAUDE_CODE } from '#/ai-session/acl/claude-code.ts';
+import { CLAUDE_CODE, type IHeadlessSession } from '#/ai-session/acl/claude-code.ts';
 
 const FAKE_CLAUDE_DIRECTORY = path.join(import.meta.dirname, 'fixtures', 'claude');
 
-const SESSION = {
+const SESSION: Omit<IHeadlessSession, 'directory' | 'outputDirectory'> = {
   fixedPrompt: "Tu produis la Recherche d'une Offre.\nN'invente jamais un fait.",
   instructions: 'Va droit au but.\n',
   readDirectoryList: [],
+  locale: 'fr',
 };
 
 function createDirectory(): string {
@@ -100,7 +101,7 @@ describe('the interactive launch of Claude Code', () => {
     stubClaude({}, 3);
 
     expect(() => {
-      CLAUDE_CODE.openInteractive({ prompt: 'Bonjour', directory: createDirectory() });
+      CLAUDE_CODE.openInteractive({ prompt: 'Bonjour', directory: createDirectory(), locale: 'fr' });
     }).toThrow(
       "La session Claude Code s'est arrêtée en erreur (code 3). Relancer la commande ; si l'erreur revient, lancer « claude » seul pour lire son message.",
     );
@@ -115,6 +116,7 @@ describe('the interactive launch of Claude Code', () => {
       prompt: SESSION.fixedPrompt,
       directory,
       readOnlyPathList: ['/donnees/posting/**/draft.md'],
+      locale: 'fr',
     });
 
     const argumentList = readRecord(recordDirectory, 'arguments').split('\0');

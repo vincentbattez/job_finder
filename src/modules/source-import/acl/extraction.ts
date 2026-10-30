@@ -3,7 +3,8 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { EXTRACTION_SCHEMA, JOB_DESCRIPTION_SCHEMA, type Extraction } from '#/domain/index.ts';
+import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { EXTRACTION_SCHEMA, JOB_DESCRIPTION_SCHEMA, type Extraction, type Locale } from '#/domain/index.ts';
 
 export const EXTRACTION_FILE_NAME = 'extraction.json';
 
@@ -19,11 +20,11 @@ function normalize(text: string): string {
 
 // The fields the session found in the Job Description, null when it does not give them. Each one is
 // copied from the Job Description, so a value it does not contain was invented: refused.
-function extractionSchemaOf(markdown: string) {
+function extractionSchemaOf(markdown: string, locale: Locale) {
   const excerpt = z
     .string()
     .refine((value) => normalize(markdown).includes(normalize(value)), {
-      error: "ne figure pas tel quel dans la Fiche de poste : la session l'a inventé",
+      error: catalogueOf({ locale }).error.extractionInvented,
     })
     .nullable();
   return z.object({
@@ -38,15 +39,15 @@ function extractionSchemaOf(markdown: string) {
   });
 }
 
-function parseExtraction(filePath: string, markdown: string) {
+function parseExtraction(filePath: string, markdown: string, locale: Locale) {
   let json: string;
   try {
     json = readFileSync(filePath, 'utf8');
   } catch {
-    return { error: 'la session ne les a pas écrits' };
+    return { error: catalogueOf({ locale }).error.extractionNotWritten };
   }
   try {
-    const result = extractionSchemaOf(markdown).safeParse(JSON.parse(json));
+    const result = extractionSchemaOf(markdown, locale).safeParse(JSON.parse(json));
     return result.success ? { extraction: result.data } : { error: z.prettifyError(result.error) };
   } catch (error) {
     return { error: String(error) };
@@ -54,12 +55,10 @@ function parseExtraction(filePath: string, markdown: string) {
 }
 
 // The extraction a session wrote as JSON, parsed into the domain (ADR-0005)
-export function readExtraction(directory: string, markdown: string): Extraction {
-  const { extraction, error } = parseExtraction(path.join(directory, EXTRACTION_FILE_NAME), markdown);
+export function readExtraction(directory: string, markdown: string, locale: Locale): Extraction {
+  const { extraction, error } = parseExtraction(path.join(directory, EXTRACTION_FILE_NAME), markdown, locale);
   if (extraction === undefined) {
-    throw new Error(
-      `Les champs relevés dans la Fiche de poste ne sont pas valables (${EXTRACTION_FILE_NAME}) : ${error}.`,
-    );
+    throw new Error(catalogueOf({ locale }).error.invalidExtraction(EXTRACTION_FILE_NAME, error));
   }
   const { title, deadline, city, ...jobDescriptionField } = extraction;
   return EXTRACTION_SCHEMA.parse({

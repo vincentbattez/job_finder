@@ -75,9 +75,10 @@ export async function openContext({
     return posting;
   }
 
-  // A city API Géo does not know stays as read, without coordinates, to be located again later
-  async function locate(city: string | null): Promise<Location> {
-    const location = city === null ? null : await apiGeo.findLocation(city);
+  // A city API Géo does not know stays as read, without coordinates, to be located again later; a
+  // failure of API Géo speaks the locale of the Candidate
+  async function locate(city: string | null, locale: Locale): Promise<Location> {
+    const location = city === null ? null : await apiGeo.findLocation(city, locale);
     return location ?? LOCATION_SCHEMA.parse({ city, region: null, latitude: null, longitude: null });
   }
 

@@ -108,6 +108,7 @@ export function createEditionActions({ workspace, aiSession, findCandidate, find
         prompt: composeEditPrompt({ candidate, posting, artifact, versionPath }),
         directory: postingDirectory,
         readOnlyPathList: [path.join(postingDirectory, '**', DRAFT_FILE_NAME)],
+        locale: candidate.locale,
       });
     },
 

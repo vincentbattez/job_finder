@@ -1,14 +1,17 @@
 import type { IAiModule } from '#/ai-module/index.ts';
+import { catalogueOf } from '#/domain/catalogue/index.ts';
+import type { Locale } from '#/domain/index.ts';
 
 import { composeVisualizationPrompt, VISUALIZATION_FILE_NAME } from './prompt.ts';
 
 // A whole HTML page, without a script: the front's sandboxed frame runs none, so a diagram drawn by
 // one would never show
-function findFormatError(html: string): string | undefined {
+function findFormatError(html: string, locale: Locale): string | undefined {
+  const { error } = catalogueOf({ locale });
   if (!/^<!doctype html>/i.test(html.trimStart()) || !/<\/html>\s*$/i.test(html)) {
-    return "ce n'est pas une page HTML complète, de « <!DOCTYPE html> » à « </html> »";
+    return error.notACompletePage;
   }
-  return /<script\b/i.test(html) ? "il contient un script, que le front n'exécute pas" : undefined;
+  return /<script\b/i.test(html) ? error.hasScript : undefined;
 }
 
 // The Visualization of a Posting: a headless Claude session writes a single HTML page from the Chosen

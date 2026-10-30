@@ -1,6 +1,7 @@
 import { z } from 'zod/v4';
 
-import { LOCATION_SCHEMA, type Location } from '#/domain/index.ts';
+import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { LOCATION_SCHEMA, type Locale, type Location } from '#/domain/index.ts';
 import { wordListOf } from '#/text/index.ts';
 
 const ORIGIN = 'https://geo.api.gouv.fr';
@@ -25,18 +26,17 @@ export function createApiGeo(httpFetch: typeof fetch = fetch) {
   return {
     // The commune named like the city, the most populated one when several are. Its search is
     // fuzzy, so a commune with another name is never taken for the city: null.
-    async findLocation(city: string): Promise<Location | null> {
+    async findLocation(city: string, locale: Locale): Promise<Location | null> {
+      const { error: message } = catalogueOf({ locale });
       const url = `${ORIGIN}/communes?nom=${encodeURIComponent(city)}&fields=nom,centre,region&boost=population&limit=5`;
       let response: Response;
       try {
         response = await httpFetch(url);
       } catch (error) {
-        throw new Error(`API Géo est injoignable (${url}) : ${String(error)}. Vérifier la connexion, puis relancer.`, {
-          cause: error,
-        });
+        throw new Error(message.apiGeoUnreachable(url, String(error)), { cause: error });
       }
       if (response.status !== 200) {
-        throw new Error(`API Géo a répondu HTTP ${String(response.status)} pour ${url}. Relancer plus tard.`);
+        throw new Error(message.apiGeoStatus(url, response.status));
       }
       const communeList = z.array(COMMUNE_SCHEMA).parse(await response.json());
       const commune = communeList.find(({ nom }) => normalize(nom) === normalize(city));

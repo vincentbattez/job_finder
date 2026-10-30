@@ -37,6 +37,7 @@ export function createProfileActions({ workspace, aiSession, findCandidate }: Ac
       aiSession.openInteractive({
         prompt: composeProfilePrompt(candidate),
         directory: workspace.profileDirectoryOf(candidate.id),
+        locale: candidate.locale,
       });
     },
 

@@ -4,6 +4,7 @@ import {
   DETECTION_SCHEMA,
   type Detection,
   type ListedPosting,
+  type Locale,
   type Posting,
   type SourceModule,
   type Watch,
@@ -39,6 +40,7 @@ interface IWatchRun {
   isFirstLaunch: boolean;
   // Every Posting of its Candidate, those this Detection saves included: a Repost is found there
   postingList: Posting[];
+  locale: Locale;
 }
 
 // The Detection, in the actions rather than a module: it reads the Source modules, which no module
@@ -55,12 +57,12 @@ export function createDetectActions({ workspace, sourceList, findSource, findLoc
   // The Postings already online at the first launch start nothing (ADR-0003). The Repost of an
   // Posting once Applied gets no Research whatever the Zone: the Candidate, who applied already, decides.
   async function saveNewPosting(
-    { watch: { candidateId, source }, isFirstLaunch, postingList }: IWatchRun,
+    { watch: { candidateId, source }, isFirstLaunch, postingList, locale }: IWatchRun,
     listedPosting: ListedPosting,
     { jobDescription, isInZone }: ISourceReadResult,
   ): Promise<{ posting: Posting; notification: NotificationComposer | undefined }> {
     const repostOf = findRepostedPosting({ ...listedPosting, ...jobDescription }, postingList);
-    const location = await locate(readCity(jobDescription.workplace));
+    const location = await locate(readCity(jobDescription.workplace), locale);
     const posting = await workspace.savePosting({
       candidateId,
       source,
@@ -105,6 +107,7 @@ export function createDetectActions({ workspace, sourceList, findSource, findLoc
       watch,
       isFirstLaunch: watch.detectedAt === null,
       postingList: await workspace.listPostings(candidateId),
+      locale,
     };
     const newPostingList: Posting[] = [];
     const notificationList: INotifiedPosting[] = [];
@@ -144,7 +147,8 @@ export function createDetectActions({ workspace, sourceList, findSource, findLoc
       // The Postings saved before they had a city, or whose city API Géo did not know
       const unlocatedPostingList = await workspace.listUnlocatedPostings();
       for (const posting of unlocatedPostingList) {
-        await workspace.setLocation(posting, await locate(posting.city ?? readCity(posting.workplace)));
+        const locale = await findLocale(posting.candidateId);
+        await workspace.setLocation(posting, await locate(posting.city ?? readCity(posting.workplace), locale));
       }
       const watchList = await workspace.listWatches();
       const foundList: IFoundPostings[] = [];

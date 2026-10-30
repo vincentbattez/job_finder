@@ -91,4 +91,26 @@ export const ERROR_FR: typeof ERROR_EN = {
     `La conversion de ${quote(upload)} est refusée : ${quote(fileName)} n'est ni « cv.md » ni une lettre « letter-<employer>-<year>.md ».`,
   conversionOverwrite: (upload, fileName) =>
     `${quote(upload)} se convertit en ${quote(fileName)}, que le Profil a déjà : il n'est pas écrasé. Supprimer ou renommer ${quote(fileName)}, puis relancer la conversion.`,
+
+  sessionStopped: (exitCode, output) => `Claude Code s'est arrêté (code ${String(exitCode)}) : ${output}`,
+  sessionNotLaunched: (reason) =>
+    `Impossible de lancer Claude Code (${reason}). Installer « claude » et s'y connecter.`,
+  interactiveSessionFailed: (status) =>
+    `La session Claude Code s'est arrêtée en erreur (code ${String(status)}). Relancer la commande ; si l'erreur revient, lancer « claude » seul pour lire son message.`,
+  conversionSessionFailed: (upload, log) => `Claude Code n'a pas converti la Pièce ${quote(upload)} : ${log}`,
+  extractionSessionFailed: (log) => `Claude Code n'a pas relevé les champs de la Fiche de poste : ${log}`,
+  invalidExtraction: (fileName, problem) =>
+    `Les champs relevés dans la Fiche de poste ne sont pas valables (${fileName}) : ${problem}.`,
+  extractionNotWritten: 'la session ne les a pas écrits',
+  extractionInvented: "ne figure pas tel quel dans la Fiche de poste : la session l'a inventé",
+  noLevelOneHeading: 'il ne commence pas par un titre de niveau 1 (« # »)',
+  noSourcesSection: "il n'a pas de section « ## Sources » avec au moins un lien",
+  notACompletePage: "ce n'est pas une page HTML complète, de « <!DOCTYPE html> » à « </html> »",
+  hasScript: "il contient un script, que le front n'exécute pas",
+  recipientsFormat: (detail) => `il ne suit pas le format demandé (${detail})`,
+  inventedAddress: (email, field) => `l'adresse ${email} ne figure pas dans le champ ${field} de l'Offre`,
+
+  apiGeoUnreachable: (url, reason) =>
+    `API Géo est injoignable (${url}) : ${reason}. Vérifier la connexion, puis relancer.`,
+  apiGeoStatus: (url, status) => `API Géo a répondu HTTP ${String(status)} pour ${url}. Relancer plus tard.`,
 };

@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { JOB_DESCRIPTION_SCHEMA, LISTED_POSTING_SCHEMA } from '#/domain/index.ts';
+import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { JOB_DESCRIPTION_SCHEMA, LISTED_POSTING_SCHEMA, type Locale } from '#/domain/index.ts';
 
 import { emptyExtractionDirectory, EXTRACTION_FILE_NAME, readExtraction } from './acl/extraction.ts';
 import { composeExtractionPrompt, EXTRACTION_REQUEST } from './prompt.ts';
@@ -33,7 +34,7 @@ export function createImportSource(aiSession: IAiSession) {
 
     // A headless Claude session, with a fixed prompt, reads the fields of the Job Description in the
     // folder of the Posting. Throws when the session fails or writes an extraction that is not valid.
-    async extract(postingDirectory: string, jobDescription: string) {
+    async extract(postingDirectory: string, jobDescription: string, locale: Locale) {
       const outputDirectory = path.join(postingDirectory, EXTRACTION_DIRECTORY_NAME);
       // The extraction of an earlier run never passes for that of this one
       emptyExtractionDirectory(outputDirectory);
@@ -43,11 +44,12 @@ export function createImportSource(aiSession: IAiSession) {
         directory: postingDirectory,
         readDirectoryList: [],
         outputDirectory,
+        locale,
       });
       if (!session.isSuccess) {
-        throw new Error(`Claude Code n'a pas relevé les champs de la Fiche de poste : ${session.log}`);
+        throw new Error(catalogueOf({ locale }).error.extractionSessionFailed(session.log));
       }
-      return { ...readExtraction(outputDirectory, jobDescription), session };
+      return { ...readExtraction(outputDirectory, jobDescription, locale), session };
     },
   };
 }

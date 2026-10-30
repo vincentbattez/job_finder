@@ -104,4 +104,30 @@ export const ERROR_EN = {
     `The conversion of ${quote(upload)} is refused: ${quote(fileName)} is neither “cv.md” nor a letter “letter-<employer>-<year>.md”.`,
   conversionOverwrite: (upload: string, fileName: string) =>
     `${quote(upload)} converts into ${quote(fileName)}, which the Profile already has: it is not overwritten. Delete or rename ${quote(fileName)}, then run the conversion again.`,
+
+  // The AI sessions and what they write
+  sessionStopped: (exitCode: number | null, output: string) =>
+    `Claude Code stopped (code ${String(exitCode)}): ${output}`,
+  sessionNotLaunched: (reason: string) =>
+    `Claude Code could not be launched (${reason}). Install “claude” and log in to it.`,
+  interactiveSessionFailed: (status: number | null) =>
+    `The Claude Code session stopped on an error (code ${String(status)}). Run the command again; if the error comes back, run “claude” alone to read its message.`,
+  conversionSessionFailed: (upload: string, log: string) =>
+    `Claude Code did not convert the Upload ${quote(upload)}: ${log}`,
+  extractionSessionFailed: (log: string) => `Claude Code did not read the fields of the Job Description: ${log}`,
+  invalidExtraction: (fileName: string, problem: string) =>
+    `The fields read in the Job Description are not valid (${fileName}): ${problem}.`,
+  extractionNotWritten: 'the session did not write them',
+  extractionInvented: 'is not found as is in the Job Description: the session invented it',
+  noLevelOneHeading: 'it does not start with a level 1 heading (“#”)',
+  noSourcesSection: 'it has no “## Sources” section with at least one link',
+  notACompletePage: 'it is not a complete HTML page, from “<!DOCTYPE html>” to “</html>”',
+  hasScript: 'it holds a script, which the front does not run',
+  recipientsFormat: (detail: string) => `it does not follow the requested format (${detail})`,
+  inventedAddress: (email: string, field: string) => `the address ${email} is not in the field ${field} of the Posting`,
+
+  // API Géo, which places the Postings on the map
+  apiGeoUnreachable: (url: string, reason: string) =>
+    `API Géo is unreachable (${url}): ${reason}. Check the connection, then run again.`,
+  apiGeoStatus: (url: string, status: number) => `API Géo answered HTTP ${String(status)} for ${url}. Run again later.`,
 };

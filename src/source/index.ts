@@ -13,7 +13,7 @@ import {
 import { declareParameters, type ParameterShape, type ParametersOf } from '#/parameter/index.ts';
 
 // The contract of the family of the Sources a Watch follows: what each module of
-// src/modules/source-<nom>/ declares, and what the rest of the application knows of them (ADR-0010)
+// src/modules/source-<name>/ declares, and what the rest of the application knows of them (ADR-0010)
 
 // The Postings of the Source that match the Watch, and those that came close: they reveal a new way
 // of writing what the Watch looks for
@@ -30,16 +30,22 @@ export interface ISourceReadResult {
 }
 
 // What a module of the family declares to defineSource. Its operations read the site with the fetch
-// the Source was created with, which the tests replace with recorded responses.
+// the Source was created with, which the tests replace with recorded responses, and tell a failure in
+// the locale of the Watch's Candidate.
 interface ISourceDefinition<TShape extends ParameterShape> {
   id: string;
   name: string;
   parameterSchema: z.ZodObject<TShape>;
-  search: (parameters: ParametersOf<TShape>, httpFetch: typeof fetch | undefined) => Promise<ISearchResult>;
+  search: (
+    parameters: ParametersOf<TShape>,
+    httpFetch: typeof fetch | undefined,
+    locale: Locale,
+  ) => Promise<ISearchResult>;
   readJobDescription: (
     reference: string,
     parameters: ParametersOf<TShape>,
     httpFetch: typeof fetch | undefined,
+    locale: Locale,
   ) => Promise<ISourceReadResult>;
 }
 
@@ -79,8 +85,8 @@ export function defineSource<TShape extends ParameterShape>({
       parameters.parseToSave(rawParameters, locale, (labelList) =>
         catalogueOf({ locale }).error.sourceParameters(name, labelList),
       ),
-    search: (watch, locale) => search(parseParametersOf(watch, locale), httpFetch),
+    search: (watch, locale) => search(parseParametersOf(watch, locale), httpFetch, locale),
     readJobDescription: (reference, watch, locale) =>
-      readJobDescription(reference, parseParametersOf(watch, locale), httpFetch),
+      readJobDescription(reference, parseParametersOf(watch, locale), httpFetch, locale),
   });
 }

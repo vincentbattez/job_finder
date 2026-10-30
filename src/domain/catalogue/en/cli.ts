@@ -140,4 +140,6 @@ export const CLI_EN = {
   artifactDone: 'ready and chosen',
   artifactJob: (jobId: number, artifact: string, reference: string, outcome: string) =>
     `job ${String(jobId)}, ${artifact} of Posting ${reference}: ${outcome}\n`,
+  // The first message of an interactive session, which Claude answers in the language of the Candidate
+  sessionGreeting: 'Hello!',
 };

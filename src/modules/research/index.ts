@@ -1,14 +1,17 @@
 import type { IAiModule } from '#/ai-module/index.ts';
+import { catalogueOf } from '#/domain/catalogue/index.ts';
+import type { Locale } from '#/domain/index.ts';
 
 import { composeResearchPrompt, RESEARCH_FILE_NAME } from './prompt.ts';
 
 // A Research starts with its title and ends with its sources, at least one link
-function findFormatError(markdown: string): string | undefined {
+function findFormatError(markdown: string, locale: Locale): string | undefined {
+  const { error } = catalogueOf({ locale });
   if (!markdown.trimStart().startsWith('# ')) {
-    return 'il ne commence pas par un titre de niveau 1 (« # »)';
+    return error.noLevelOneHeading;
   }
   const sources = markdown.split(/^## Sources[ \t]*$/m, 2)[1] ?? '';
-  return /https?:\/\//.test(sources) ? undefined : "il n'a pas de section « ## Sources » avec au moins un lien";
+  return /https?:\/\//.test(sources) ? undefined : error.noSourcesSection;
 }
 
 // The Research of a Posting: a headless Claude session writes a single sourced Markdown file

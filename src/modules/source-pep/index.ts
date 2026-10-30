@@ -32,9 +32,9 @@ export const PEP = defineSource({
   parameterSchema: z.object({ title: TITLE_PARAMETER, courtOfAppealList: COURT_OF_APPEAL_LIST_PARAMETER }),
 
   // The Postings of the feed whose title matches that of the Watch, and those that came close
-  async search({ title }, httpFetch) {
+  async search({ title }, httpFetch, locale) {
     const matchTitle = createTitleMatcher(title);
-    const listedPostingList = await readFeed(httpFetch);
+    const listedPostingList = await readFeed(locale, httpFetch);
     return {
       matchingList: listedPostingList.filter((listedPosting) => matchTitle(listedPosting.title) === 'retained'),
       nearMissList: listedPostingList.filter((listedPosting) => matchTitle(listedPosting.title) === 'near-miss'),
@@ -43,8 +43,8 @@ export const PEP = defineSource({
 
   // Downloads the detail page of a Posting. The Zone is read in the employing court of appeal,
   // never in the department the offer shows, which is sometimes wrong (ADR-0001).
-  async readJobDescription(reference, { courtOfAppealList }, httpFetch) {
-    const { jobDescription, courtOfAppeal } = await readJobDescription(reference, httpFetch);
+  async readJobDescription(reference, { courtOfAppealList }, httpFetch, locale) {
+    const { jobDescription, courtOfAppeal } = await readJobDescription(reference, locale, httpFetch);
     const isInZone =
       courtOfAppeal !== null &&
       courtOfAppealList.some((name) => normalizeCourtOfAppeal(name) === normalizeCourtOfAppeal(courtOfAppeal));

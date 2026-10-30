@@ -1,4 +1,4 @@
-import { JOB_DESCRIPTION_FILE_NAME, type Artifact, type Posting } from '#/domain/index.ts';
+import { JOB_DESCRIPTION_FILE_NAME, type Artifact, type Locale, type Posting } from '#/domain/index.ts';
 
 // An Artifact is written for the employer: in the language of the Job Description, whatever the
 // Candidate's locale and the language of their Instructions (spec #65). Each fixed part states it.
@@ -17,8 +17,8 @@ export interface IPromptInput {
 
 interface IOutputFile {
   name: string;
-  // What makes the file malformed, if anything
-  findFormatError?: (content: string, posting: Posting) => string | undefined;
+  // What makes the file malformed, if anything, told in the Candidate's locale
+  findFormatError?: (content: string, locale: Locale, posting: Posting) => string | undefined;
 }
 
 // What an AI module gives the job runner, from the single entry point of its folder; the runner

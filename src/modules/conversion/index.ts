@@ -1,6 +1,7 @@
 import path from 'node:path';
 
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 import type { Candidate, SessionResult, UploadFileName } from '#/domain/index.ts';
 
 import { composeConversionPrompt, CONVERSION_REQUEST } from './prompt.ts';
@@ -39,9 +40,10 @@ export function createUploadConversion(aiSession: IAiSession) {
         // Inside the Profile, where the session runs: nothing to add
         readDirectoryList: [],
         outputDirectory,
+        locale: candidate.locale,
       });
       if (!session.isSuccess) {
-        throw new Error(`Claude Code n'a pas converti la Pièce « ${upload} » : ${session.log}`);
+        throw new Error(catalogueOf(candidate).error.conversionSessionFailed(upload, session.log));
       }
       return session;
     },

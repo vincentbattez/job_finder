@@ -13,12 +13,14 @@ export async function runExtraction(
   job: Job,
 ): Promise<{ job: Job }> {
   const { posting } = job;
+  const locale = await findLocale(posting.candidateId);
   const { title, jobDescription, city, session } = await importSource.extract(
     workspace.postingDirectoryOf(posting),
-    workspace.readJobDescription(posting, await findLocale(posting.candidateId)),
+    workspace.readJobDescription(posting, locale),
+    locale,
   );
   // A Job Description without a title keeps the name of its file: nothing is invented
-  const location = await locate(city);
+  const location = await locate(city, locale);
   const filledPosting = await workspace.fillPosting(posting, {
     title: title ?? posting.title,
     jobDescription,
@@ -51,7 +53,7 @@ export function createImportActions({ workspace, importSource, findCandidate, lo
         source: 'import',
         listedPosting,
         jobDescription,
-        location: await locate(null),
+        location: await locate(null, candidate.locale),
         // No Watch detected it, so no Zone holds it; chosen by the Candidate, it gets its Research
         // once extracted, whatever the Zone (ADR-0003)
         isInZone: false,

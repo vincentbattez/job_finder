@@ -122,4 +122,5 @@ export const CLI_FR: typeof CLI_EN = {
   artifactDone: 'prête et retenue',
   artifactJob: (jobId, artifact, reference, outcome) =>
     `job ${String(jobId)}, ${artifact} de l'Offre ${reference} : ${outcome}\n`,
+  sessionGreeting: 'Bonjour !',
 };

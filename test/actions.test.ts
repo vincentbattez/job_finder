@@ -22,9 +22,9 @@ function writeConfig(dataDirectory: string, config: object): void {
 const LEA_CONFIG = { id: 'lea', name: 'Léa', watchList: [] };
 
 const FIRST_MIGRATION = '20261029133617_init';
-// The last migration before the Notification Channels, which turned each Connexion Home Assistant
+// The last migration before the Notification Channels, which turned each Home Assistant connection
 // into one (ADR-0010)
-const CONNEXION_HOME_ASSISTANT_MIGRATION = '20261030090736_job_profil';
+const HOME_ASSISTANT_CONNECTION_MIGRATION = '20261030090736_job_profil';
 // The last migration before the Sources became a family, which gathered the criteria and the Zone of
 // each Watch into its Parameters (ADR-0010)
 const NOTIFICATION_CHANNEL_MIGRATION = '20261030110155_canal_notification';
@@ -77,11 +77,11 @@ describe('actions', () => {
     });
   });
 
-  // The main checkout migrates the real data/: Léa keeps her Connexion, nothing to type again
-  it('turns the Connexion Home Assistant of each Candidate into their Notification Channel, without loss', async () => {
+  // The main checkout migrates the real data/: Léa keeps her connection, nothing to type again
+  it('turns the Home Assistant connection of each Candidate into their Notification Channel, without loss', async () => {
     const dataDirectory = createEmptyDataDirectory();
     writeConfig(dataDirectory, { defaultDelayMonths: 6, candidateList: [LEA_CONFIG] });
-    const database = new DatabaseSync(writeOlderDatabase(dataDirectory, CONNEXION_HOME_ASSISTANT_MIGRATION));
+    const database = new DatabaseSync(writeOlderDatabase(dataDirectory, HOME_ASSISTANT_CONNECTION_MIGRATION));
     database.exec(`INSERT INTO Candidat (id, name) VALUES ('lea', 'Léa');
       INSERT INTO ConnexionHomeAssistant (candidatId, url, token, service)
       VALUES ('lea', 'https://domotique.example', 'jeton-de-lea', 'notify.mobile_app_iphone_de_lea');`);
@@ -145,7 +145,7 @@ describe('actions', () => {
     expect(await actions.listCandidates()).toEqual([]);
   });
 
-  it('refuses to list the Offres of an unknown Candidate', async () => {
+  it('refuses to list the Postings of an unknown Candidate', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
     await expect(actions.listPostings({ candidateId: 'inconnu' })).rejects.toThrow(/Candidat inconnu : inconnu/);
