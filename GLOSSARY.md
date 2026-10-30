@@ -82,7 +82,7 @@ _Avoid_: feed, provider, site
 _Formerly_: Source
 
 **Detection**:
-Run that queries the Source of each Watch and records the Postings never seen before.
+Run that queries the Source of each Watch, or only those of one Candidate when started from their page, and records the Postings never seen before; one runs at a time, and the last one's verdict stays shown until the next.
 _Avoid_: scan, crawl, alert
 _Formerly_: Détection
 
