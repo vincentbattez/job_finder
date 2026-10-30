@@ -5,6 +5,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
+import { ERROR_CATALOGUE } from '#/domain/error.ts';
 
 import { createMigratedDataDirectory, detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
@@ -85,6 +86,52 @@ describe('an error', () => {
     await expect(actions.readPosting({ reference: REFERENCE })).rejects.toThrow(
       `Fiche de poste introuvable pour l'Offre ${REFERENCE} : ${path.join(postingDirectory, 'job-description.md')}. La remettre à cet emplacement, d'où l'outil la lit.`,
     );
+  });
+});
+
+// What a mistyped command or a forged form sends: nothing, or a number that is none
+const ABSURD_INPUT_LIST = [{}, { number: 'vx' }, { reference: REFERENCE, artifact: 'research', number: 'vx' }];
+
+// Every action, those added later included, refuses an input it cannot read under a code of the
+// catalogue, in French, never as the JSON of a ZodError (CODING_STANDARDS “Visible failure”)
+describe('an absurd input', () => {
+  it('is refused by every action under a code of the catalogue, never as JSON', async () => {
+    const { actions } = await detectPostings();
+    const refusalList: { name: string; code: unknown; message: string }[] = [];
+
+    for (const [name, action] of Object.entries(actions)) {
+      for (const input of ABSURD_INPUT_LIST) {
+        try {
+          await action(input);
+        } catch (error) {
+          refusalList.push({
+            name,
+            code: error instanceof Error && 'code' in error ? error.code : undefined,
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    }
+
+    expect(refusalList.length).toBeGreaterThan(Object.keys(actions).length);
+    expect(refusalList.filter(({ code }) => typeof code !== 'string' || !Object.hasOwn(ERROR_CATALOGUE, code))).toEqual(
+      [],
+    );
+    expect(
+      refusalList.filter(({ message }) => message.trimStart().startsWith('[') || message.includes('"code":')),
+    ).toEqual([]);
+  });
+
+  it('names the input to correct, in French', async () => {
+    const { actions } = await detectPostings();
+
+    await expect(
+      actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: 'vx' }),
+    ).rejects.toMatchObject({
+      code: 'invalid_input',
+      message:
+        'Saisie invalide :\n« number » : Entrée invalide : nombre attendu, NaN reçu\nLa corriger, puis réessayer.',
+    });
   });
 });
 
