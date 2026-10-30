@@ -20,6 +20,14 @@ const CV_PDF = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
 const LETTER_INSTRUCTIONS = 'Une lettre courte.';
 const BRIEF_INSTRUCTIONS = '# À réviser\n';
 const DRAFT = '# Brouillon\n';
+const PAST_LETTER = '# Lettre au TJ de Lille\n';
+// The entries of her live data/ the tool does not know: macOS's, her own files, a backup
+const UNKNOWN_ENTRY_BY_PATH = {
+  '.DS_Store': 'finder',
+  'job_finder.before-pr64.sqlite': 'backup',
+  'candidats/lea/.DS_Store': 'finder',
+  'candidats/lea/_data/Renseignements sur moi': 'Née à Lille',
+};
 const RESEARCH = '# Recherche 2\n';
 const RECIPIENTS = JSON.stringify({
   to: null,
@@ -91,6 +99,12 @@ function writeFrenchDataDirectory(): string {
   mkdirSync(path.join(postingDirectory, 'fiche_entretien', 'v1'), { recursive: true });
   writeFile(path.join(letterDirectory, 'destinataires.json'), RECIPIENTS);
   writeFile(path.join(leaDirectory, 'offres', '2026-3-greffier', 'fiche-de-poste.md'), '# Greffier, encore\n');
+  writeFile(path.join(leaDirectory, 'profil', 'lettre-tj-lille-2025.md'), PAST_LETTER);
+  // A Candidate folder whose Profile is still empty, as Léa's live one
+  mkdirSync(path.join(dataDirectory, 'candidats', 'jean', 'profil'), { recursive: true });
+  for (const [entryPath, content] of Object.entries(UNKNOWN_ENTRY_BY_PATH)) {
+    writeFile(path.join(dataDirectory, entryPath), content);
+  }
   writeFile(path.join(dataDirectory, 'config.json'), FRENCH_CONFIG);
   return dataDirectory;
 }
@@ -121,6 +135,7 @@ describe('the French data folder', () => {
     expect(await actions.listProfileFiles({ candidateId: 'lea' })).toEqual([
       { fileName: 'cv.md', markdown: CV },
       { fileName: 'facts.md', markdown: FACTS },
+      { fileName: 'letter-tj-lille-2025.md', markdown: PAST_LETTER },
     ]);
     expect(await actions.readFacts({ candidateId: 'lea' })).toContainEqual(
       expect.objectContaining({ title: 'Mobilité', entryList: ['- Lille et alentours'] }),
@@ -138,8 +153,34 @@ describe('the French data folder', () => {
       { id: 'lea-1', candidateId: 'lea', source: 'pep', parameters: WATCH_PARAMETERS, detectedAt: DETECTED_AT },
     ]);
     expect(await actions.readDefaultDeadlinePeriod()).toEqual({ months: 6 });
-    expect(listSorted(dataDirectory)).toEqual(['candidates', 'config.json', 'job_finder.sqlite']);
-    expect(listSorted(path.join(dataDirectory, 'candidates', 'lea'))).toEqual(['instructions', 'postings', 'profile']);
+    expect(listSorted(dataDirectory)).toEqual([
+      '.DS_Store',
+      'candidates',
+      'config.json',
+      'job_finder.before-pr64.sqlite',
+      'job_finder.sqlite',
+    ]);
+    expect(listSorted(path.join(dataDirectory, 'candidates', 'lea'))).toEqual([
+      '_data',
+      '.DS_Store',
+      'instructions',
+      'postings',
+      'profile',
+    ]);
+  });
+
+  // What the tool does not know stays where it is, as it was; an empty Profile moves all the same
+  it('leaves the entries it does not know untouched', async () => {
+    const dataDirectory = writeFrenchDataDirectory();
+
+    await createActions({ dataDirectory });
+
+    for (const [entryPath, content] of Object.entries(UNKNOWN_ENTRY_BY_PATH)) {
+      const englishPath = entryPath.replace(/^candidats\//, 'candidates/');
+      expect(readFileSync(path.join(dataDirectory, englishPath), 'utf8')).toBe(content);
+    }
+    expect(listSorted(path.join(dataDirectory, 'candidates', 'jean'))).toEqual(['profile']);
+    expect(listSorted(path.join(dataDirectory, 'candidates', 'jean', 'profile'))).toEqual([]);
   });
 
   // Léa's Postings keep their Status, Deadline and Repost links, each Job Description its folder

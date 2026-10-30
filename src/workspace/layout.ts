@@ -11,12 +11,14 @@ interface ILayoutStep {
 }
 
 // Each entry of the French layout and its English name, in order: a step names the English parent an
-// earlier one moved. `*` stands for every entry of its folder, such as each Candidate. An entry with
-// an extension is a file, any other a folder. The step can go once every data/ is migrated (#65).
+// earlier one moved. `*` stands for any part of a name, kept as is: a whole `*` for every entry of
+// its folder, such as each Candidate. An entry with an extension is a file, any other a folder. The step can go once every data/ is migrated (#65).
 const LAYOUT_STEP_LIST: ILayoutStep[] = [
   { from: 'candidats', to: 'candidates' },
   { from: 'candidates/*/profil', to: 'candidates/*/profile' },
   { from: 'candidates/*/profile/faits.md', to: 'candidates/*/profile/facts.md' },
+  // Her past letters, which the conversion names in English now
+  { from: 'candidates/*/profile/lettre-*.md', to: 'candidates/*/profile/letter-*.md' },
   { from: 'candidates/*/profile/pieces', to: 'candidates/*/profile/uploads' },
   { from: 'candidates/*/consignes', to: 'candidates/*/instructions' },
   { from: 'candidates/*/offres', to: 'candidates/*/postings' },
@@ -47,15 +49,26 @@ const LAYOUT_STEP_LIST: ILayoutStep[] = [
   },
 ];
 
-// The concrete entries of a step, `*` replaced by each entry found
+// The names of a folder a segment of a step matches, each with what its `*` stands for
+function matchSegment(directory: string, segment: string): { name: string; wildcard: string }[] {
+  if (!segment.includes('*')) {
+    return [{ name: segment, wildcard: '' }];
+  }
+  const [prefix = '', suffix = ''] = segment.split('*', 2);
+  return listEntries(directory)
+    .filter((name) => name.length > prefix.length + suffix.length && name.startsWith(prefix) && name.endsWith(suffix))
+    .map((name) => ({ name, wildcard: name.slice(prefix.length, name.length - suffix.length) }));
+}
+
+// The concrete entries of a step, each `*` replaced by what it matched
 function expandStep(dataDirectory: string, { from, to }: ILayoutStep): ILayoutStep[] {
   const toSegmentList = to.split('/');
   let pairList: ILayoutStep[] = [{ from: '', to: '' }];
   for (const [index, segment] of from.split('/').entries()) {
     pairList = pairList.flatMap((pair) =>
-      (segment === '*' ? listEntries(path.join(dataDirectory, pair.from)) : [segment]).map((name) => ({
+      matchSegment(path.join(dataDirectory, pair.from), segment).map(({ name, wildcard }) => ({
         from: path.join(pair.from, name),
-        to: path.join(pair.to, segment === '*' ? name : (toSegmentList[index] ?? '')),
+        to: path.join(pair.to, (toSegmentList[index] ?? '').replace('*', () => wildcard)),
       })),
     );
   }
