@@ -118,6 +118,9 @@ export const ERROR_FR: typeof ERROR_EN = {
   parameterUndeclared:
     "Le Paramètre {{parameterName}} du module {{moduleName}} n'est pas déclaré avec parameter() : l'y déclarer ainsi dans le module.",
 
+  postingFolderNotMoved:
+    "Le dossier de l'Offre {{reference}} n'a pas pu suivre son nouveau titre, vers {{to}} : {{reason}}. L'Offre garde son titre : libérer cet emplacement, puis relancer l'extraction.",
+
   apiGeoUnreachable: 'API Géo est injoignable ({{url}}) : {{reason}}. Vérifier la connexion, puis relancer.',
   apiGeoStatus: 'API Géo a répondu HTTP {{status}} pour {{url}}. Relancer plus tard.',
 };

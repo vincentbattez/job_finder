@@ -158,6 +158,8 @@ export const ERROR_CATALOGUE = {
   interactive_session_failed: 'error:interactiveSessionFailed',
   // The session converting an Upload failed
   conversion_session_failed: 'error:conversionSessionFailed',
+  // The folder of a Posting cannot take the name of its new title: the Posting keeps its title
+  posting_folder_not_moved: 'error:postingFolderNotMoved',
   // The session reading the fields of a Job Description failed
   extraction_session_failed: 'error:extractionSessionFailed',
   // The fields read in a Job Description are not valid

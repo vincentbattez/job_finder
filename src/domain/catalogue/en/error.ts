@@ -132,6 +132,10 @@ export const ERROR_EN = {
   parameterUndeclared:
     'The {{parameterName}} Parameter of the {{moduleName}} module is not declared with parameter(): declare it so in the module.',
 
+  // The folder of a Posting kept its name while the extraction read a new title
+  postingFolderNotMoved:
+    'The folder of Posting {{reference}} could not follow its new title, toward {{to}}: {{reason}}. The Posting keeps its title: free this location, then run the extraction again.',
+
   // API Géo, which places the Postings on the map
   apiGeoUnreachable: 'API Géo is unreachable ({{url}}): {{reason}}. Check the connection, then run again.',
   apiGeoStatus: 'API Géo answered HTTP {{status}} for {{url}}. Run again later.',
