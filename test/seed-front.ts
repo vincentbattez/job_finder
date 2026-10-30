@@ -16,8 +16,9 @@ import { createRecordedFetch } from './recorded-http.ts';
 // Postulée, Archivée and À traiter; Camille has no Veille, hence no Offre. The tests
 // that change data work on Offres of their own: Bastia 2026-2426147 (a Recherche and a Lettre to
 // correct), Versailles 2026-2409178 (two Recherches), Rennes 2026-2420931 (a Recherche, ready for
-// its Lettre) and Narbonne 2026-2412591 (a Recherche en échec). Sacha, without Veille either, has
-// a Profil and is the one whose Profil and Consignes the e2e tests change. Léa's Offre
+// its Lettre) and Narbonne 2026-2412591 (a Recherche en échec). Sacha, Noé, Inès and Malo, without
+// Veille either, each have their Profil changed by one e2e test only, which writes it first; Sacha
+// also has the Consignes the e2e tests change. Léa's Offre
 // 2026-2409247 has a Recherche made with the default Consignes, then one made with hers.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 // The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
@@ -52,6 +53,9 @@ const CONFIG = {
     },
     { id: 'camille', name: 'Camille', notification: notificationTo('mobile_app_pixel_de_camille'), veilleList: [] },
     { id: 'sacha', name: 'Sacha', notification: notificationTo('mobile_app_iphone_de_sacha'), veilleList: [] },
+    { id: 'noe', name: 'Noé', veilleList: [] },
+    { id: 'ines', name: 'Inès', veilleList: [] },
+    { id: 'malo', name: 'Malo', veilleList: [] },
   ],
 };
 
@@ -138,11 +142,6 @@ await actions.runQueuedJobs();
 await actions.runModule({ module: 'recherche', reference: RENNES_REFERENCE });
 await actions.runModule({ module: 'recherche', reference: NARBONNE_REFERENCE });
 await actions.runQueuedJobs();
-
-// What jf profil would have written in Sacha's Profil
-const sachaProfilDirectory = path.join(dataDirectory, 'candidats/sacha/profil');
-writeFileSync(path.join(sachaProfilDirectory, 'cv.md'), '# CV de Sacha\n\n## Formation\n\n- Master 2 droit public\n');
-writeFileSync(path.join(sachaProfilDirectory, 'faits.md'), '# Faits\n\n## Mobilité\n\n- Lille et alentours\n');
 
 // One Recherche with the default Consignes, one with Léa's, which she then deletes
 await actions.runModule({ module: 'recherche', reference: CONSIGNES_REFERENCE });

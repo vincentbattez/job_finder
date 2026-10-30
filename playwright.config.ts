@@ -35,9 +35,12 @@ const ENV = {
 export default defineConfig({
   testDir: 'e2e',
   forbidOnly: process.env.CI !== undefined,
+  // Even the tests of one file run side by side: one that reads what another left fails here first
+  fullyParallel: true,
   use: { baseURL: BASE_URL },
-  // How a test reaches the fake Home Assistant, to read the notifications it received
-  metadata: { homeAssistantUrl: HOME_ASSISTANT_URL },
+  // How a test reaches the fake Home Assistant, to read the notifications it received, and the data
+  // folder, to put back the Profil it changes (e2e/profil.test.ts)
+  metadata: { homeAssistantUrl: HOME_ASSISTANT_URL, dataDirectory: DATA_DIRECTORY },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {

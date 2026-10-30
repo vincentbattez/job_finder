@@ -45,6 +45,7 @@ Les règles génériques du code. Le pourquoi d'une décision est dans son ADR (
 - Un test passe par les actions et vérifie ce qui s'observe : les Offres en base, les Artefacts sur disque, les jobs en file, les notifications envoyées.
 - Seule une règle qui a beaucoup de cas a aussi des tests unitaires, à côté de son code : le statut (`src/statut/`), la Republication (`src/republication/`), le titre d'une Veille (`src/modules/source-pep/title.ts`), la ville d’un lieu d’affectation (`src/geo/city.ts`) et les rubriques des Faits dans `faits.md` (`src/profil/faits.ts`).
 - Seules les frontières externes sont simulées : le HTTP des Sources (avec des réponses enregistrées), le lancement de Claude et le canal de notification. Home Assistant, derrière ce canal, est simulé par un faux serveur HTTP (`test/fake-home-assistant.ts`) qui répond comme sa REST API : les tests de la Connexion Home Assistant et les e2e passent par lui plutôt que par un `fetch` remplacé.
+- Un test e2e qui change des données change les siennes, que lui seul touche (son Offre, son Candidat), et les remet en place au début, pas à la fin : il passe seul, répété (`--repeat-each` avec `--workers=1`) ou à côté des autres. `fullyParallel` fait échouer celui qui lit ce qu'un autre a laissé. **(CI)**
 - Chaque règle d'architecture a un projet fixture qui la viole, pour prouver qu'elle attrape bien quelque chose.
 
 ## Git

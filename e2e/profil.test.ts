@@ -1,18 +1,29 @@
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+import { z } from 'zod/v4';
 
-// test/seed-front.ts gives Sacha a Profil of two files; only these tests change it, and leave it as found
+// Each test changes the Profil of a Candidat of its own (test/seed-front.ts), which it puts back
+// first, as jf profil would have written it: a test that failed halfway leaves nothing behind
+async function openFreshProfilOf(page: Page, { id, name }: Readonly<{ id: string; name: string }>) {
+  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
+  const profilDirectory = path.join(dataDirectory, 'candidats', id, 'profil');
+  rmSync(profilDirectory, { recursive: true, force: true });
+  mkdirSync(profilDirectory, { recursive: true });
+  writeFileSync(path.join(profilDirectory, 'cv.md'), `# CV de ${name}\n\n## Formation\n\n- Master 2 droit public\n`);
+  writeFileSync(path.join(profilDirectory, 'faits.md'), '# Faits\n\n## Mobilité\n\n- Lille et alentours\n');
+  await page.goto('/');
+  await page.getByRole('combobox', { name: 'Candidat' }).selectOption(name);
+  await page.getByRole('button', { name: 'Choisir' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Offres de ${name}`);
+  await page.getByRole('link', { name: 'Profil', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Profil de ${name}`);
+}
+
 test.describe('Profil of a Candidat', () => {
   test('shows the files of the Profil and saves the one modified', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Sacha');
-    await page.getByRole('button', { name: 'Choisir' }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Sacha');
-
-    await page.getByRole('link', { name: 'Profil', exact: true }).click();
-
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Profil de Sacha');
+    await openFreshProfilOf(page, { id: 'sacha', name: 'Sacha' });
     await expect(page.getByRole('heading', { level: 2 })).toHaveText([
       'Faits',
       'Pièces',
@@ -36,11 +47,7 @@ test.describe('Profil of a Candidat', () => {
   });
 
   test('creates a file of the Profil, edits it, then deletes it', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Sacha');
-    await page.getByRole('button', { name: 'Choisir' }).click();
-    await page.getByRole('link', { name: 'Profil', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Profil de Sacha');
+    await openFreshProfilOf(page, { id: 'noe', name: 'Noé' });
 
     const creation = page.getByRole('region', { name: 'Nouveau fichier' });
     await creation.getByRole('textbox', { name: 'Nom du fichier' }).fill('../faits.md');
@@ -75,45 +82,33 @@ test.describe('Profil of a Candidat', () => {
   });
 
   test('shows in faits.md what the form of the Faits saves, and in the form what faits.md says', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Sacha');
-    await page.getByRole('button', { name: 'Choisir' }).click();
-    await page.getByRole('link', { name: 'Profil', exact: true }).click();
+    await openFreshProfilOf(page, { id: 'ines', name: 'Inès' });
 
     const faitsMarkdown = page.getByRole('region', { name: 'faits.md' }).getByRole('textbox');
-    const foundMarkdown = await faitsMarkdown.inputValue();
     const faitsForm = page.getByRole('region', { name: 'Faits', exact: true });
-    await faitsForm.getByRole('textbox', { name: 'Identité' }).fill('Sacha Morel');
+    await faitsForm.getByRole('textbox', { name: 'Identité' }).fill('Inès Morel');
     const experiences = faitsForm.getByRole('group', { name: 'Expériences' });
     await experiences.getByRole('button', { name: 'Ajouter' }).click();
     await experiences.getByRole('textbox', { name: 'Entrée 1' }).fill('Juriste, Mairie de Lens, 2026');
     await faitsForm.getByRole('button', { name: 'Enregistrer les Faits' }).click();
 
-    await expect(faitsMarkdown).toHaveValue(/## Identité\n\nSacha Morel\n/);
+    await expect(faitsMarkdown).toHaveValue(/## Identité\n\nInès Morel\n/);
     await expect(faitsMarkdown).toHaveValue(/## Expériences\n\n- Juriste, Mairie de Lens, 2026\n/);
     await expect(faitsMarkdown).toHaveValue(/## Mobilité\n/);
 
     const markdown = await faitsMarkdown.inputValue();
     await faitsMarkdown.fill(
-      `${markdown.replace('Sacha Morel', 'Sacha Morel-Durand')}\n## Compétences\n\nDroit public\n`,
+      `${markdown.replace('Inès Morel', 'Inès Morel-Durand')}\n## Compétences\n\nDroit public\n`,
     );
     await page.getByRole('region', { name: 'faits.md' }).getByRole('button', { name: 'Enregistrer' }).click();
 
-    await expect(faitsForm.getByRole('textbox', { name: 'Identité' })).toHaveValue('Sacha Morel-Durand');
+    await expect(faitsForm.getByRole('textbox', { name: 'Identité' })).toHaveValue('Inès Morel-Durand');
     await expect(faitsForm.getByRole('textbox', { name: 'Compétences' })).toHaveValue('Droit public');
     await expect(experiences.getByRole('textbox', { name: 'Entrée 1' })).toHaveValue('Juriste, Mairie de Lens, 2026');
-
-    await faitsMarkdown.fill(foundMarkdown);
-    await page.getByRole('region', { name: 'faits.md' }).getByRole('button', { name: 'Enregistrer' }).click();
-    await expect(faitsForm.getByRole('textbox', { name: 'Identité' })).toHaveValue('');
   });
 
   test('keeps a dropped PDF as a Pièce, refuses a file that is not one, then deletes it', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Sacha');
-    await page.getByRole('button', { name: 'Choisir' }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Sacha');
-    await page.getByRole('link', { name: 'Profil', exact: true }).click();
+    await openFreshProfilOf(page, { id: 'malo', name: 'Malo' });
     const pieces = page.getByRole('region', { name: 'Pièces' });
     await expect(pieces.getByText('Aucune Pièce pour l’instant.')).toBeVisible();
     // Disabled until React hydrates: a file chosen before would go nowhere
