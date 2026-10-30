@@ -2,7 +2,8 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { ARTIFACT_SCHEMA, type Artifact, type Posting, type Version } from '#/domain/index.ts';
+import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { ARTIFACT_SCHEMA, type Artifact, type Locale, type Posting, type Version } from '#/domain/index.ts';
 import { composeEditPrompt } from '#/edit/prompt.ts';
 import { DRAFT_FILE_NAME } from '#/modules/letter/index.ts';
 
@@ -18,18 +19,16 @@ export function assertArtifactModifiable(
   posting: Posting,
   artifact: Artifact,
   version: Version | undefined,
+  locale: Locale,
 ): asserts version is Version {
   const { reference } = posting;
+  const { error } = catalogueOf({ locale });
   if (artifact === 'visualization') {
-    throw new Error(
-      `La Visualisation ne se modifie pas à la main : elle reprend la Fiche d'entretien retenue. Corrigez celle-ci, puis relancez la Visualisation de l'Offre ${reference}.`,
-    );
+    throw new Error(error.visualizationNotEditable(reference));
   }
-  assertNotFrozen(posting, artifact);
+  assertNotFrozen(posting, artifact, locale);
   if (version?.isChosen !== true) {
-    throw new Error(
-      `L'Offre ${reference} n'a pas de Version retenue de ${artifact} à modifier : « jf run ${artifact} ${reference} » en produit une.`,
-    );
+    throw new Error(error.noChosenVersionToEdit(reference, artifact));
   }
 }
 
@@ -40,13 +39,11 @@ export function assertDocumentModifiable(
   artifact: Artifact,
   version: Version | undefined,
   fileName: string,
+  locale: Locale,
 ): asserts version is Version {
-  const { reference } = posting;
-  assertArtifactModifiable(posting, artifact, version);
+  assertArtifactModifiable(posting, artifact, version, locale);
   if (fileName === DRAFT_FILE_NAME) {
-    throw new Error(
-      `Le Brouillon ne se modifie jamais : il garde ce que l'IA a écrit. Corrigez la Lettre de l'Offre ${reference}.`,
-    );
+    throw new Error(catalogueOf({ locale }).error.draftNotEditable(posting.reference));
   }
 }
 
@@ -56,21 +53,18 @@ export function assertChoosable(
   artifact: Artifact,
   version: Version | undefined,
   number: number,
+  locale: Locale,
 ): asserts version is Version {
   const { reference } = posting;
-  assertNotFrozen(posting, artifact);
+  const { error } = catalogueOf({ locale });
+  assertNotFrozen(posting, artifact, locale);
   if (version === undefined) {
-    throw new Error(
-      `Version inconnue : ${artifact} v${String(number)} de l'Offre ${reference}. « jf versions ${reference} ${artifact} » liste ses Versions.`,
-    );
+    throw new Error(error.unknownVersion(reference, artifact, number));
   }
   if (version.state === 'ready') {
     return;
   }
-  const state = version.state === 'failed' ? 'en échec' : 'en cours';
-  throw new Error(
-    `La Version ${artifact} v${String(number)} de l'Offre ${reference} est ${state} : seule une Version prête peut être retenue.`,
-  );
+  throw new Error(error.versionNotReady(reference, artifact, number, version.state === 'failed'));
 }
 
 // The front shows a control only where its action accepts it: the same check, read as a flag
@@ -83,18 +77,19 @@ export function isAccepted(check: () => void): boolean {
   }
 }
 
-export function createEditionActions({ workspace, aiSession, findCandidate, findPosting }: ActionContext) {
+export function createEditionActions({ workspace, aiSession, findCandidate, findPosting, findLocale }: ActionContext) {
   return {
     // The Chosen Versions jf edit offers, those it accepts
     async listChosenVersions(rawInput: unknown): Promise<Version[]> {
       const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
+      const locale = await findLocale(posting.candidateId);
       const versionList = await Promise.all(
         ARTIFACT_SCHEMA.options.map((artifact) => workspace.listVersions(posting, artifact)),
       );
       return versionList.flat().filter((version) =>
         isAccepted(() => {
-          assertArtifactModifiable(posting, version.artifact, version);
+          assertArtifactModifiable(posting, version.artifact, version, locale);
         }),
       );
     },
@@ -102,11 +97,11 @@ export function createEditionActions({ workspace, aiSession, findCandidate, find
     // The Draft stays read-only, so that the tool learns from the Candidate's corrections
     async openArtifact(rawInput: unknown): Promise<void> {
       const { reference, ...input } = ARTIFACT_INPUT_SCHEMA.parse(rawInput);
-      const artifact = parseArtifact(input.artifact);
       const posting = await findPosting(reference);
-      const version = await findChosenVersion(workspace, posting, artifact);
-      assertArtifactModifiable(posting, artifact, version);
       const candidate = await findCandidate({ candidateId: posting.candidateId });
+      const artifact = parseArtifact(input.artifact, candidate.locale);
+      const version = await findChosenVersion(workspace, posting, artifact);
+      assertArtifactModifiable(posting, artifact, version, candidate.locale);
       const postingDirectory = workspace.postingDirectoryOf(posting);
       const versionPath = path.relative(postingDirectory, workspace.versionDirectoryOf(posting, version));
       aiSession.openInteractive({
@@ -118,26 +113,26 @@ export function createEditionActions({ workspace, aiSession, findCandidate, find
 
     async saveDocument(rawInput: unknown): Promise<void> {
       const { reference, fileName, markdown, ...input } = DOCUMENT_INPUT_SCHEMA.parse(rawInput);
-      const artifact = parseArtifact(input.artifact);
       const posting = await findPosting(reference);
+      const locale = await findLocale(posting.candidateId);
+      const artifact = parseArtifact(input.artifact, locale);
       const version = await findChosenVersion(workspace, posting, artifact);
-      assertDocumentModifiable(posting, artifact, version, fileName);
+      assertDocumentModifiable(posting, artifact, version, fileName, locale);
       // The front sends the name back: nothing else than a file of the Version may be written
       if (workspace.readVersionDocuments(posting, version).every((document) => document.fileName !== fileName)) {
-        throw new Error(
-          `« ${fileName} » n'est pas un fichier de la Version retenue de ${artifact} de l'Offre ${reference}.`,
-        );
+        throw new Error(catalogueOf({ locale }).error.notAVersionFile(fileName, artifact, reference));
       }
       workspace.writeVersionDocument(posting, version, fileName, markdown);
     },
 
     async chooseVersion(rawInput: unknown): Promise<void> {
       const { reference, number, ...input } = VERSION_INPUT_SCHEMA.parse(rawInput);
-      const artifact = parseArtifact(input.artifact);
       const posting = await findPosting(reference);
+      const locale = await findLocale(posting.candidateId);
+      const artifact = parseArtifact(input.artifact, locale);
       const versionList = await workspace.listVersions(posting, artifact);
       const version = versionList.find((entry) => entry.number === number);
-      assertChoosable(posting, artifact, version, number);
+      assertChoosable(posting, artifact, version, number, locale);
       await workspace.chooseVersion(posting, version);
     },
   };

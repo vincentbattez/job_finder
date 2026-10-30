@@ -1,11 +1,12 @@
 import { z } from 'zod/v4';
 
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { LOCATION_SCHEMA, type Candidate, type Location, type Posting } from '#/domain/index.ts';
+import { catalogueOf, localeOf } from '#/domain/catalogue/index.ts';
+import { LOCATION_SCHEMA, type Candidate, type Locale, type Location, type Posting } from '#/domain/index.ts';
 import { createApiGeo } from '#/geo/acl/api-geo.ts';
 import { createUploadConversion } from '#/modules/conversion/index.ts';
 import { createImportSource } from '#/modules/source-import/index.ts';
-import type { INotification, INotificationChannel } from '#/notification/index.ts';
+import type { INotificationChannel, NotificationComposer } from '#/notification/index.ts';
 import type { ISource, SourceFactory } from '#/source/index.ts';
 import { messageOf } from '#/text/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
@@ -50,21 +51,26 @@ export async function openContext({
     const candidateList = await workspace.listCandidates();
     const candidate = candidateList.find(({ id }) => id === candidateId);
     if (candidate === undefined) {
-      throw new Error(`Candidat inconnu : ${candidateId}. « jf candidates » liste les Candidats.`);
+      throw new Error(catalogueOf(null).error.unknownCandidate(candidateId));
     }
     return candidate;
   }
 
+  // The locale of the Candidate an action acts for, in which its messages speak (spec #65)
+  async function findLocale(candidateId: string): Promise<Locale> {
+    const candidateList = await workspace.listCandidates();
+    return localeOf(candidateList.find(({ id }) => id === candidateId));
+  }
+
+  // Before the Posting is found, no Candidate tells the locale: the default one
   async function findPosting(reference: string): Promise<Posting> {
     const [posting, ...otherPostingList] = await workspace.findPostings(reference);
     if (posting === undefined) {
-      throw new Error(`Offre inconnue : ${reference}. « jf list <candidat> » liste les Offres.`);
+      throw new Error(catalogueOf(null).error.unknownPosting(reference));
     }
     // Two Candidates may follow the same Source: a reference alone then names several Postings
     if (otherPostingList.length > 0) {
-      throw new Error(
-        `Plusieurs Offres ont la référence ${reference}, chez des Candidats différents : leurs Veilles suivent la même Source, et l'outil ne sait pas encore choisir entre elles. Le signaler pour qu'il les distingue.`,
-      );
+      throw new Error(catalogueOf(null).error.ambiguousPosting(reference));
     }
     return posting;
   }
@@ -81,48 +87,44 @@ export async function openContext({
   }
 
   // The module of the Candidate's Notification Channel, as saved or as they picked it, null until chosen
-  function findNotificationChannelModule(moduleId: string | null, candidateName: string): INotificationChannel {
+  function findNotificationChannelModule(moduleId: string | null, candidate: Candidate): INotificationChannel {
+    const copy = catalogueOf(candidate).notification;
     if (moduleId === null) {
-      throw new Error(
-        `Aucun Canal de notification pour ${candidateName} : en choisir un dans la section Notifications de son Profil.`,
-      );
+      throw new Error(copy.noChannel(candidate.name));
     }
     const module = notificationChannelModuleOf(moduleId);
     if (module === undefined) {
-      throw new Error(
-        `Canal de notification inconnu : ${moduleId}. En choisir un autre dans la section Notifications du Profil.`,
-      );
+      throw new Error(copy.unknownChannel(moduleId));
     }
     return module;
   }
 
   // A Source by its identifier, as the Candidate picked it, or as the Watch named saved it (ADR-0010)
-  function findSource(sourceId: string, watchId?: string): ISource {
+  function findSource(sourceId: string, locale: Locale, watchId?: string): ISource {
     const source = sourceList.find(({ description: { id } }) => id === sourceId);
     if (source === undefined) {
       const knownList = sourceList.map(({ description: { id } }) => id).join(', ');
-      const ofWatch = watchId === undefined ? '' : ` pour la Veille ${watchId}`;
-      throw new Error(
-        `Source inconnue${ofWatch} : ${sourceId}. En choisir une parmi ${knownList} dans les Veilles du Profil.`,
-      );
+      throw new Error(catalogueOf({ locale }).error.unknownSource(sourceId, knownList, watchId));
     }
     return source;
   }
 
-  // Through the Channel the Candidate saved, with its saved Parameters
-  async function sendNotification(candidateId: string, notification: INotification): Promise<void> {
-    const { candidateName, module, parameters } = await workspace.findNotificationChannel(candidateId);
-    await findNotificationChannelModule(module, candidateName).send(parameters, notification);
+  // Through the Channel the Candidate saved, with its saved Parameters, in the Candidate's locale
+  async function sendNotification(candidateId: string, composeNotification: NotificationComposer): Promise<void> {
+    const { candidate, module, parameters } = await workspace.findNotificationChannel(candidateId);
+    const { locale } = candidate;
+    await findNotificationChannelModule(module, candidate).send(parameters, composeNotification(locale), locale);
   }
 
   // A notification not sent undoes and skips nothing: it comes back as the failure to report
-  async function notify(posting: Posting, notification: INotification): Promise<string | undefined> {
+  async function notify(posting: Posting, composeNotification: NotificationComposer): Promise<string | undefined> {
     try {
-      await sendNotification(posting.candidateId, notification);
+      await sendNotification(posting.candidateId, composeNotification);
       return undefined;
     } catch (error) {
-      const reason = messageOf(error);
-      return `Notification « ${notification.title} » de l'Offre ${posting.reference} non envoyée : ${reason}`;
+      const locale = await findLocale(posting.candidateId);
+      const { title } = composeNotification(locale);
+      return catalogueOf({ locale }).notification.notSent(title, posting.reference, messageOf(error));
     }
   }
 
@@ -139,6 +141,7 @@ export async function openContext({
     findNotificationChannelModule,
     sendNotification,
     findCandidate,
+    findLocale,
     findPosting,
     locate,
     notify,

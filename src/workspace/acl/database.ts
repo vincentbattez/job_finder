@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { z } from 'zod/v4';
 
+import { localeOf } from '#/domain/catalogue/index.ts';
 import {
   CANDIDATE_SCHEMA,
   DEFAULT_DEADLINE_PERIOD_SCHEMA,
@@ -152,12 +153,12 @@ export function openDatabase(databasePath: string) {
 
     // Secret Parameters included, for the actions to reduce or send, never to return (ADR-0006)
     async findNotificationChannel(candidateId: string): Promise<SavedNotificationChannel> {
-      const { name, notificationChannel } = await prisma.candidate.findUniqueOrThrow({
+      const { notificationChannel, ...candidate } = await prisma.candidate.findUniqueOrThrow({
         where: { id: candidateId },
         include: { notificationChannel: true },
       });
       return SAVED_NOTIFICATION_CHANNEL_SCHEMA.parse({
-        candidateName: name,
+        candidate,
         module: notificationChannel?.module ?? null,
         parameters: notificationChannel?.parameters ?? {},
       });
@@ -376,12 +377,21 @@ export function openDatabase(databasePath: string) {
     },
 
     // Fails the running jobs and their Versions, keeping the reason in the job's log
-    async failRunningJobs(log: string): Promise<QueuedJob[]> {
-      const runningList = await prisma.job.findMany({ where: { state: 'running' }, select: { id: true } });
+    // The log of each job in the locale of its Candidate, that of its Posting or of its Upload
+    async failRunningJobs(composeLog: (locale: Locale) => string): Promise<QueuedJob[]> {
+      const runningList = await prisma.job.findMany({
+        where: { state: 'running' },
+        select: { id: true, candidate: true, posting: { select: { candidate: true } } },
+      });
       const idList = runningList.map(({ id }) => id);
       await prisma.$transaction([
         prisma.version.updateMany({ where: { jobId: { in: idList } }, data: { state: 'failed' } }),
-        prisma.job.updateMany({ where: { id: { in: idList } }, data: { state: 'failed', log } }),
+        ...runningList.map(({ id, candidate, posting }) =>
+          prisma.job.update({
+            where: { id },
+            data: { state: 'failed', log: composeLog(localeOf(candidate ?? posting?.candidate)) },
+          }),
+        ),
       ]);
       return z
         .array(QUEUED_JOB_SCHEMA)

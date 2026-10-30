@@ -2,8 +2,9 @@ import { setTimeout } from 'node:timers/promises';
 
 import { z } from 'zod/v4';
 
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 import type { Job, QueuedJob } from '#/domain/index.ts';
-import { composeResearchPreteNotification } from '#/notification/index.ts';
+import { composeResearchReadyNotification } from '#/notification/index.ts';
 import { messageOf } from '#/text/index.ts';
 
 import type { ActionContext } from './context.ts';
@@ -18,25 +19,23 @@ const JOB_INPUT_SCHEMA = z.object({ jobId: z.coerce.number().int() });
 const FOLLOW_INTERVAL_MS = 1000;
 
 export function createJobActions(context: ActionContext) {
-  const { workspace, runJob, findPosting, notify } = context;
+  const { workspace, runJob, findPosting, findLocale, notify } = context;
   return {
     // Only queues the job: the worker runs it, so restarting the front never stops a session
     // (ADR-0003)
     async runModule(rawInput: unknown): Promise<Job> {
       const { module, reference } = MODULE_INPUT_SCHEMA.parse(rawInput);
+      const posting = await findPosting(reference);
+      const locale = await findLocale(posting.candidateId);
       // The extraction of an imported Posting runs again after a failure
       if (module === 'extraction') {
-        const posting = await findPosting(reference);
         if (posting.source !== 'import') {
-          throw new Error(
-            `L'Offre ${reference} n'a pas été importée : ses champs viennent de sa Source, sans extraction.`,
-          );
+          throw new Error(catalogueOf({ locale }).error.notImported(reference));
         }
         return workspace.createJob(posting, 'extraction');
       }
-      const artifact = parseModule(module);
-      const posting = await findPosting(reference);
-      await findInputs(workspace, posting, artifact);
+      const artifact = parseModule(module, locale);
+      await findInputs(workspace, posting, artifact, locale);
       return workspace.createJob(posting, artifact);
     },
 
@@ -44,10 +43,9 @@ export function createJobActions(context: ActionContext) {
       const { jobId } = JOB_INPUT_SCHEMA.parse(rawInput);
       for (;;) {
         const job = await workspace.findJob(jobId);
+        // Before the job is found, no Candidate tells the locale: the default one
         if (job === null) {
-          throw new Error(
-            `Job inconnu : ${String(jobId)}. Son numéro est celui que « jf run » ou « jf import » a affiché.`,
-          );
+          throw new Error(catalogueOf(null).error.unknownJob(jobId));
         }
         if (job.state === 'done' || job.state === 'failed') {
           return job;
@@ -58,9 +56,7 @@ export function createJobActions(context: ActionContext) {
 
     // At the worker's start, a running job was cut off by its stop: failing it frees the queue
     async failInterruptedJobs(): Promise<QueuedJob[]> {
-      return workspace.failRunningJobs(
-        "Interrompu : le worker s'est arrêté pendant ce job. Relancer le module en crée une nouvelle Version.",
-      );
+      return workspace.failRunningJobs((locale) => catalogueOf({ locale }).error.interruptedJob);
     },
 
     // One job at a time, a single Claude session (ADR-0003)
@@ -74,10 +70,12 @@ export function createJobActions(context: ActionContext) {
           }
           const { module } = job;
           const { job: finishedJob } =
-            module === 'extraction' ? await runExtraction(context, job) : await runJob({ ...job, module });
+            module === 'extraction'
+              ? await runExtraction(context, job)
+              : await runJob({ ...job, module }, await findLocale(job.posting.candidateId));
           jobList.push(finishedJob);
           if (finishedJob.module === 'research' && finishedJob.state === 'done') {
-            const failure = await notify(finishedJob.posting, composeResearchPreteNotification(finishedJob.posting));
+            const failure = await notify(finishedJob.posting, composeResearchReadyNotification(finishedJob.posting));
             // Logged, in lpm logs worker: lpm never restarts a stopped worker, and the job is done
             if (failure !== undefined) {
               process.stderr.write(`${failure}\n`);
@@ -85,7 +83,7 @@ export function createJobActions(context: ActionContext) {
           }
         } catch (error) {
           // An error fails this job only, the one running, and the worker goes on with the queue
-          jobList.push(...(await workspace.failRunningJobs(messageOf(error))));
+          jobList.push(...(await workspace.failRunningJobs(() => messageOf(error))));
         }
       }
       return jobList;

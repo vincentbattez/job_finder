@@ -66,26 +66,26 @@ describe('Expired', () => {
 describe('Chosen Letter of a Posting', () => {
   it('is frozen once the Posting is Applied', () => {
     expect(() => {
-      assertLetterModifiable({ reference: '2026-2445600', status: 'applied', appliedAt: new Date() });
+      assertLetterModifiable({ reference: '2026-2445600', status: 'applied', appliedAt: new Date() }, 'fr');
     }).toThrow(/L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/);
   });
 
   it('stays frozen once the Applied Posting is Archived', () => {
     expect(() => {
-      assertLetterModifiable({ reference: '2026-2445600', status: 'archived', appliedAt: new Date() });
+      assertLetterModifiable({ reference: '2026-2445600', status: 'archived', appliedAt: new Date() }, 'fr');
     }).toThrow(/a été Postulée/);
   });
 
   // Applied before the tool kept the date
   it('is frozen for an Applied Posting without a date', () => {
     expect(() => {
-      assertLetterModifiable({ reference: '2026-2445600', status: 'applied', appliedAt: null });
+      assertLetterModifiable({ reference: '2026-2445600', status: 'applied', appliedAt: null }, 'fr');
     }).toThrow(/a été Postulée/);
   });
 
   it.each(['to_apply', 'archived'] as const)('can still change while the Posting, never Applied, is %s', (status) => {
     expect(() => {
-      assertLetterModifiable({ reference: '2026-2445600', status, appliedAt: null });
+      assertLetterModifiable({ reference: '2026-2445600', status, appliedAt: null }, 'fr');
     }).not.toThrow();
   });
 });

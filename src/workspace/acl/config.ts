@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { DEFAULT_LOCALE } from '#/domain/catalogue/index.ts';
+import { catalogueOf, DEFAULT_LOCALE } from '#/domain/catalogue/index.ts';
 import { ERROR } from '#/domain/error.ts';
 import { LOCALE_SCHEMA, PARAMETERS_SCHEMA } from '#/domain/index.ts';
 
@@ -56,9 +56,8 @@ export function readObsoleteConfig(dataDirectory: string): Config | null {
   }
   const result = CONFIG_SCHEMA.safeParse(JSON.parse(readFileSync(configPath, 'utf8')));
   if (!result.success) {
-    throw new Error(
-      `Config invalide : ${configPath}\n${z.prettifyError(result.error)}\nLa corriger pour qu'elle soit importée en base, ou la supprimer : les Candidats et leurs Veilles se règlent désormais dans le front.`,
-    );
+    // Read as the workspace opens, before any Candidate is known: in the default locale
+    throw new Error(catalogueOf(null).error.invalidConfig(configPath, z.prettifyError(result.error)));
   }
   return result.data;
 }

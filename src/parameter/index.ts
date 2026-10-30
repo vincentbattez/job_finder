@@ -1,6 +1,5 @@
 import { z } from 'zod/v4';
 
-import { DEFAULT_LOCALE } from '#/domain/catalogue/index.ts';
 import {
   PARAMETER_SCHEMA,
   PARAMETERS_SCHEMA,
@@ -44,7 +43,8 @@ function describeParameters(
   return Object.entries(parameterSchema.shape).map(([parameterName, schema]) => {
     const meta = PARAMETER_REGISTRY.get(schema);
     if (meta === undefined) {
-      throw new Error(`Le Paramètre ${parameterName} du module ${moduleName} n'est pas déclaré par parameter().`);
+      // A mistake of the module's author, never of the Candidate: in English, as the code
+      throw new Error(`The ${parameterName} Parameter of the ${moduleName} module is not declared with parameter().`);
     }
     return PARAMETER_SCHEMA.parse({
       name: parameterName,
@@ -67,36 +67,42 @@ export function declareParameters<TShape extends ParameterShape>(
   choiceNameList: readonly string[] = [],
 ) {
   const parameterList = describeParameters(moduleName, parameterSchema, choiceNameList);
-  // The error a module gives when some Parameters are missing or wrong, given their labels
-  type MessageComposer = (labelList: string) => string;
+  // The error a module gives when some Parameters are missing or wrong, given their labels in the
+  // Candidate's locale
+  type MessageComposer = (labelList: string[]) => string;
 
-  function parseWith<T extends z.ZodType>(schema: T, rawParameters: unknown, composeMessage: MessageComposer) {
+  function parseWith<T extends z.ZodType>(
+    schema: T,
+    rawParameters: unknown,
+    locale: Locale,
+    composeMessage: MessageComposer,
+  ) {
     const result = schema.safeParse(rawParameters);
     if (!result.success) {
-      const labelList = result.error.issues.map((issue) => labelOf(parameterList, issue.path[0]));
-      throw new Error(composeMessage([...new Set(labelList)].map((label) => `« ${label} »`).join(', ')));
+      const labelList = result.error.issues.map((issue) => labelOf(parameterList, issue.path[0], locale));
+      throw new Error(composeMessage([...new Set(labelList)]));
     }
     return result.data;
   }
 
   return {
     parameterList,
-    parse: (rawParameters: unknown, composeMessage: MessageComposer) =>
-      parseWith(parameterSchema, rawParameters, composeMessage),
+    parse: (rawParameters: unknown, locale: Locale, composeMessage: MessageComposer) =>
+      parseWith(parameterSchema, rawParameters, locale, composeMessage),
     // What the Candidate typed, to try it: each Parameter may be missing
-    parseTrial: (rawParameters: unknown, composeMessage: MessageComposer) =>
-      parseWith(parameterSchema.partial(), rawParameters, composeMessage),
+    parseTrial: (rawParameters: unknown, locale: Locale, composeMessage: MessageComposer) =>
+      parseWith(parameterSchema.partial(), rawParameters, locale, composeMessage),
     // As the database keeps them
-    parseToSave: (rawParameters: unknown, composeMessage: MessageComposer): Parameters =>
-      PARAMETERS_SCHEMA.parse(parseWith(parameterSchema, rawParameters, composeMessage)),
+    parseToSave: (rawParameters: unknown, locale: Locale, composeMessage: MessageComposer): Parameters =>
+      PARAMETERS_SCHEMA.parse(parseWith(parameterSchema, rawParameters, locale, composeMessage)),
   };
 }
 
-// French by default, as the error messages that name a Parameter are until they take the Candidate's locale
+// In the locale of the Candidate the error message that names it is for
 export function labelOf(
   parameterList: readonly Parameter[],
   parameterName: PropertyKey | undefined,
-  locale: Locale = DEFAULT_LOCALE,
+  locale: Locale,
 ): string {
   return parameterList.find(({ name }) => name === parameterName)?.label[locale] ?? String(parameterName);
 }

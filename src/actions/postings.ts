@@ -2,11 +2,13 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 import {
   ARTIFACT_SCHEMA,
   POSTING_DETAIL_SCHEMA,
   VISUALIZATION_SCHEMA,
   type Candidate,
+  type Locale,
   type Posting,
   type PostingDetail,
   type Recipients,
@@ -26,25 +28,25 @@ const VISUALIZATION_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({ number: z.coe
 const STATE_BY_VERSION_STATE = { running: 'in_progress', ready: 'ready', failed: 'failed' } as const;
 const STATE_BY_JOB_STATE = { queued: 'in_progress', running: 'in_progress', done: 'ready', failed: 'failed' } as const;
 
-export function createPostingActions({ workspace, findCandidate, findPosting }: ActionContext) {
+export function createPostingActions({ workspace, findCandidate, findPosting, findLocale }: ActionContext) {
   async function findRecipients(posting: Posting): Promise<Recipients | null> {
     const version = await findChosenVersion(workspace, posting, 'letter');
     return version === undefined ? null : LETTER_MODULE.readRecipients(workspace.versionDirectoryOf(posting, version));
   }
 
-  function readDetailVersion(posting: Posting, version: Version) {
+  function readDetailVersion(posting: Posting, version: Version, locale: Locale) {
     const { artifact, number, isChosen } = version;
     return {
       version,
       isChoosable:
         !isChosen &&
         isAccepted(() => {
-          assertChoosable(posting, artifact, version, number);
+          assertChoosable(posting, artifact, version, number, locale);
         }),
       documentList: workspace.readVersionDocuments(posting, version).map((document) => ({
         ...document,
         isModifiable: isAccepted(() => {
-          assertDocumentModifiable(posting, artifact, version, document.fileName);
+          assertDocumentModifiable(posting, artifact, version, document.fileName, locale);
         }),
       })),
     };
@@ -55,6 +57,13 @@ export function createPostingActions({ workspace, findCandidate, findPosting }: 
       return workspace.listCandidates();
     },
 
+    // The Candidate a Posting belongs to: jf speaks their locale for a command on one of their Postings
+    async readPostingCandidate(rawInput: unknown): Promise<Candidate> {
+      const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
+      const posting = await findPosting(reference);
+      return findCandidate({ candidateId: posting.candidateId });
+    },
+
     async listPostings(rawInput: unknown): Promise<Posting[]> {
       const candidate = await findCandidate(rawInput);
       return workspace.listPostings(candidate.id);
@@ -63,6 +72,7 @@ export function createPostingActions({ workspace, findCandidate, findPosting }: 
     async readPosting(rawInput: unknown): Promise<PostingDetail> {
       const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
+      const locale = await findLocale(posting.candidateId);
       const jobList = await workspace.listJobs(posting);
       const extractionJob = jobList.findLast(({ module }) => module === 'extraction');
       const artifactList = await Promise.all(
@@ -78,18 +88,18 @@ export function createPostingActions({ workspace, findCandidate, findPosting }: 
           return {
             artifact,
             state: state === undefined ? 'absent' : STATE_BY_VERSION_STATE[state],
-            module: await describeModule(workspace, posting, artifact),
+            module: await describeModule(workspace, posting, artifact, locale),
             isEditable: isAccepted(() => {
-              assertArtifactModifiable(posting, artifact, chosenVersion);
+              assertArtifactModifiable(posting, artifact, chosenVersion, locale);
             }),
-            versionList: versionList.map((version) => readDetailVersion(posting, version)),
+            versionList: versionList.map((version) => readDetailVersion(posting, version, locale)),
           };
         }),
       );
       return POSTING_DETAIL_SCHEMA.parse({
         posting,
         nextStatusList: listNextStatuses(posting),
-        jobDescription: workspace.readJobDescription(posting),
+        jobDescription: workspace.readJobDescription(posting, locale),
         artifactList,
         recipients: await findRecipients(posting),
         extraction:
@@ -101,35 +111,35 @@ export function createPostingActions({ workspace, findCandidate, findPosting }: 
 
     async listVersions(rawInput: unknown): Promise<Version[]> {
       const { reference, artifact } = ARTIFACT_INPUT_SCHEMA.parse(rawInput);
-      return workspace.listVersions(await findPosting(reference), parseArtifact(artifact));
+      const posting = await findPosting(reference);
+      return workspace.listVersions(posting, parseArtifact(artifact, await findLocale(posting.candidateId)));
     },
 
     async readVisualization(rawInput: unknown): Promise<Visualization> {
       const { reference, number } = VISUALIZATION_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
+      const { error } = catalogueOf({ locale: await findLocale(posting.candidateId) });
       const versionList = await workspace.listVersions(posting, 'visualization');
       const version = versionList.find((entry) => entry.number === number);
       if (version === undefined) {
-        throw new Error(
-          `Version inconnue : visualization v${String(number)} de l'Offre ${reference}. « jf versions ${reference} visualization » liste ses Versions.`,
-        );
+        throw new Error(error.unknownVersion(reference, 'visualization', number));
       }
       const html = workspace.readTextFile(
         path.join(workspace.versionDirectoryOf(posting, version), VISUALIZATION_MODULE.fileName),
       );
       if (html === null) {
-        throw new Error(
-          `La Visualisation v${String(number)} de l'Offre ${reference} n'a pas de page : relancez la Visualisation.`,
-        );
+        throw new Error(error.visualizationWithoutPage(reference, number));
       }
       return VISUALIZATION_SCHEMA.parse({ html });
     },
 
     async readRecipients(rawInput: unknown): Promise<Recipients> {
       const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
-      const recipients = await findRecipients(await findPosting(reference));
+      const posting = await findPosting(reference);
+      const recipients = await findRecipients(posting);
       if (recipients === null) {
-        throw new Error(`L'Offre ${reference} n'a pas de Lettre retenue. La produire : jf run letter ${reference}.`);
+        const { error } = catalogueOf({ locale: await findLocale(posting.candidateId) });
+        throw new Error(error.noChosenLetter(reference));
       }
       return recipients;
     },

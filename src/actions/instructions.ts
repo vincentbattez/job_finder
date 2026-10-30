@@ -33,20 +33,20 @@ export function createInstructionsActions({ workspace, findCandidate }: ActionCo
     async readInstructions(rawInput: unknown): Promise<ModuleInstructions> {
       const candidate = await findCandidate(rawInput);
       const { module } = INSTRUCTIONS_MODULE_INPUT_SCHEMA.parse(rawInput);
-      return readModuleInstructions(candidate, parseModule(module));
+      return readModuleInstructions(candidate, parseModule(module, candidate.locale));
     },
 
     // The fixed part of the prompt stays, so the Candidate's Instructions cannot lift its rules (ADR-0003)
     async saveInstructions(rawInput: unknown): Promise<void> {
       const candidate = await findCandidate(rawInput);
       const { module, instructions } = INSTRUCTIONS_INPUT_SCHEMA.parse(rawInput);
-      workspace.saveInstructions(candidate.id, parseModule(module), instructions);
+      workspace.saveInstructions(candidate.id, parseModule(module, candidate.locale), instructions);
     },
 
     async deleteInstructions(rawInput: unknown): Promise<void> {
       const candidate = await findCandidate(rawInput);
       const { module } = INSTRUCTIONS_MODULE_INPUT_SCHEMA.parse(rawInput);
-      workspace.deleteInstructions(candidate.id, parseModule(module));
+      workspace.deleteInstructions(candidate.id, parseModule(module, candidate.locale));
     },
   };
 }

@@ -1,9 +1,11 @@
 import type { z } from 'zod/v4';
 
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 import {
   SOURCE_MODULE_SCHEMA,
   type JobDescription,
   type ListedPosting,
+  type Locale,
   type Parameters,
   type SourceModule,
   type Watch,
@@ -46,9 +48,9 @@ interface ISourceDefinition<TShape extends ParameterShape> {
 // a Watch saves only the Parameters its Source accepts.
 export interface ISource {
   description: SourceModule;
-  parseParameters(rawParameters: unknown): Parameters;
-  search(watch: Watch): Promise<ISearchResult>;
-  readJobDescription(reference: string, watch: Watch): Promise<ISourceReadResult>;
+  parseParameters(rawParameters: unknown, locale: Locale): Parameters;
+  search(watch: Watch, locale: Locale): Promise<ISearchResult>;
+  readJobDescription(reference: string, watch: Watch, locale: Locale): Promise<ISourceReadResult>;
 }
 
 // What a module of the family exports: it creates the Source, bound to the fetch it reads the site with
@@ -65,22 +67,20 @@ export function defineSource<TShape extends ParameterShape>({
   const description = SOURCE_MODULE_SCHEMA.parse({ id, name, parameterList: parameters.parameterList });
 
   // The front writes the Watches, in the Profile of their Candidate (ADR-0011)
-  function parseParametersOf(watch: Watch): ParametersOf<TShape> {
-    return parameters.parse(
-      watch.parameters,
-      (labelList) =>
-        `La Veille ${watch.id} ne donne pas à la Source ${name} les Paramètres qu'elle attend : corriger ${labelList} dans le Profil de son Candidat.`,
+  function parseParametersOf(watch: Watch, locale: Locale): ParametersOf<TShape> {
+    return parameters.parse(watch.parameters, locale, (labelList) =>
+      catalogueOf({ locale }).error.watchParameters(watch.id, name, labelList),
     );
   }
 
   return (httpFetch) => ({
     description,
-    parseParameters: (rawParameters) =>
-      parameters.parseToSave(
-        rawParameters,
-        (labelList) => `La Source ${name} attend d'autres Paramètres : renseigner ${labelList}.`,
+    parseParameters: (rawParameters, locale) =>
+      parameters.parseToSave(rawParameters, locale, (labelList) =>
+        catalogueOf({ locale }).error.sourceParameters(name, labelList),
       ),
-    search: (watch) => search(parseParametersOf(watch), httpFetch),
-    readJobDescription: (reference, watch) => readJobDescription(reference, parseParametersOf(watch), httpFetch),
+    search: (watch, locale) => search(parseParametersOf(watch, locale), httpFetch),
+    readJobDescription: (reference, watch, locale) =>
+      readJobDescription(reference, parseParametersOf(watch, locale), httpFetch),
   });
 }

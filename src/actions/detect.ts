@@ -13,7 +13,7 @@ import {
   composeNewPostingNotification,
   composeRepostAppliedNotification,
   composeRepostNotification,
-  type INotification,
+  type NotificationComposer,
 } from '#/notification/index.ts';
 import { findRepostedPosting } from '#/repost/index.ts';
 import type { ISourceReadResult } from '#/source/index.ts';
@@ -23,7 +23,7 @@ import type { ActionContext } from './context.ts';
 
 interface INotifiedPosting {
   posting: Posting;
-  notification: INotification;
+  notification: NotificationComposer;
 }
 
 // What a Detection found for one Watch, and the notifications to send once every Watch is done
@@ -43,9 +43,9 @@ interface IWatchRun {
 
 // The Detection, in the actions rather than a module: it reads the Source modules, which no module
 // may import (ADR-0003). It knows them only through their family (ADR-0010).
-export function createDetectActions({ workspace, sourceList, findSource, locate, notify }: ActionContext) {
+export function createDetectActions({ workspace, sourceList, findSource, findLocale, locate, notify }: ActionContext) {
   // In the Zone, a Posting gets its Research (ADR-0003)
-  async function startInZone(posting: Posting, repostOf: Posting | undefined): Promise<INotification> {
+  async function startInZone(posting: Posting, repostOf: Posting | undefined): Promise<NotificationComposer> {
     await workspace.createJob(posting, 'research');
     return repostOf === undefined
       ? composeNewPostingNotification(posting)
@@ -58,7 +58,7 @@ export function createDetectActions({ workspace, sourceList, findSource, locate,
     { watch: { candidateId, source }, isFirstLaunch, postingList }: IWatchRun,
     listedPosting: ListedPosting,
     { jobDescription, isInZone }: ISourceReadResult,
-  ): Promise<{ posting: Posting; notification: INotification | undefined }> {
+  ): Promise<{ posting: Posting; notification: NotificationComposer | undefined }> {
     const repostOf = findRepostedPosting({ ...listedPosting, ...jobDescription }, postingList);
     const location = await locate(readCity(jobDescription.workplace));
     const posting = await workspace.savePosting({
@@ -98,8 +98,9 @@ export function createDetectActions({ workspace, sourceList, findSource, locate,
   async function detectWatch(watch: Watch): Promise<IFoundPostings> {
     const { candidateId, source } = watch;
     const outOfZonePostingList = await workspace.listOutOfZonePostingsSince(watch);
-    const sourceModule = findSource(source, watch.id);
-    const { matchingList, nearMissList } = await sourceModule.search(watch);
+    const locale = await findLocale(candidateId);
+    const sourceModule = findSource(source, locale, watch.id);
+    const { matchingList, nearMissList } = await sourceModule.search(watch, locale);
     const run = {
       watch,
       isFirstLaunch: watch.detectedAt === null,
@@ -116,7 +117,7 @@ export function createDetectActions({ workspace, sourceList, findSource, locate,
       if (outOfZonePosting === undefined && run.postingList.some((posting) => isSame(posting))) {
         continue;
       }
-      const readResult = await sourceModule.readJobDescription(listedPosting.reference, watch);
+      const readResult = await sourceModule.readJobDescription(listedPosting.reference, watch, locale);
       if (outOfZonePosting === undefined) {
         const { posting, notification } = await saveNewPosting(run, listedPosting, readResult);
         newPostingList.push(posting);

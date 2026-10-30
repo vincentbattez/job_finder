@@ -1,7 +1,9 @@
 import type { z } from 'zod/v4';
 
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 import {
   NOTIFICATION_CHANNEL_MODULE_SCHEMA,
+  type Locale,
   type NotificationChannelModule,
   type ParameterChoice,
   type Parameters,
@@ -18,21 +20,28 @@ export interface INotification {
   message: string;
 }
 
+// A notification written once the locale of the Candidate it goes to is known
+export type NotificationComposer = (locale: Locale) => INotification;
+
 // What the Candidate typed, each Parameter perhaps missing
 type TrialOf<TShape extends ParameterShape> = z.output<
   z.ZodObject<{ -readonly [TName in keyof TShape]: z.ZodOptional<TShape[TName]> }>
 >;
 
-type ChoiceLister<TShape extends ParameterShape> = (parameters: TrialOf<TShape>) => Promise<ParameterChoice[]>;
+type ChoiceLister<TShape extends ParameterShape> = (
+  parameters: TrialOf<TShape>,
+  locale: Locale,
+) => Promise<ParameterChoice[]>;
 
 // What a module of the family exports, through defineNotificationChannel. Testing the Channel and
 // listing the choices of a Parameter try what the Candidate typed, so each Parameter may be missing.
+// Each operation gets the locale of the Candidate, in which its failures speak.
 interface INotificationChannelDefinition<TShape extends ParameterShape> {
   id: string;
   name: string;
   parameterSchema: z.ZodObject<TShape>;
-  send: (parameters: ParametersOf<TShape>, notification: INotification) => Promise<void>;
-  check?: (parameters: TrialOf<TShape>) => Promise<void>;
+  send: (parameters: ParametersOf<TShape>, notification: INotification, locale: Locale) => Promise<void>;
+  check?: (parameters: TrialOf<TShape>, locale: Locale) => Promise<void>;
   listChoicesByParameter?: Partial<Record<keyof TShape, ChoiceLister<TShape>>>;
 }
 
@@ -40,10 +49,14 @@ interface INotificationChannelDefinition<TShape extends ParameterShape> {
 // module's own schema, since the database keeps them as JSON (ADR-0010)
 export interface INotificationChannel {
   description: NotificationChannelModule;
-  parseParameters(rawParameters: unknown): Parameters;
-  send(rawParameters: unknown, notification: INotification): Promise<void>;
-  check(rawParameters: unknown): Promise<void>;
-  listChoices(parameterName: string, rawParameters: unknown): Promise<ParameterChoice[]>;
+  parseParameters(rawParameters: unknown, locale: Locale): Parameters;
+  send(rawParameters: unknown, notification: INotification, locale: Locale): Promise<void>;
+  check(rawParameters: unknown, locale: Locale): Promise<void>;
+  listChoices(parameterName: string, rawParameters: unknown, locale: Locale): Promise<ParameterChoice[]>;
+}
+
+function copyOf(locale: Locale) {
+  return catalogueOf({ locale }).notification;
 }
 
 export function defineNotificationChannel<TShape extends ParameterShape>(
@@ -57,84 +70,90 @@ export function defineNotificationChannel<TShape extends ParameterShape>(
     parameterList: parameters.parameterList,
     isTestable: check !== undefined,
   });
-  const composeMessage = (labelList: string) =>
-    `Le Canal de notification ${name} est incomplet : renseigner ${labelList} dans la section Notifications du Profil.`;
+  const composeMessage = (locale: Locale) => (labelList: string[]) => copyOf(locale).incompleteChannel(name, labelList);
 
   return {
     description,
-    parseParameters: (rawParameters) => parameters.parseToSave(rawParameters, composeMessage),
-    send: (rawParameters, notification) => send(parameters.parse(rawParameters, composeMessage), notification),
-    async check(rawParameters) {
+    parseParameters: (rawParameters, locale) => parameters.parseToSave(rawParameters, locale, composeMessage(locale)),
+    send: (rawParameters, notification, locale) =>
+      send(parameters.parse(rawParameters, locale, composeMessage(locale)), notification, locale),
+    async check(rawParameters, locale) {
       if (check === undefined) {
-        throw new Error(`Le Canal de notification ${name} ne se teste pas : envoyer une notification de test.`);
+        throw new Error(copyOf(locale).untestableChannel(name));
       }
-      await check(parameters.parseTrial(rawParameters, composeMessage));
+      await check(parameters.parseTrial(rawParameters, locale, composeMessage(locale)), locale);
     },
-    async listChoices(parameterName, rawParameters) {
+    async listChoices(parameterName, rawParameters, locale) {
       const listChoices = Object.entries<ChoiceLister<TShape> | undefined>(listChoicesByParameter).find(
         ([key]) => key === parameterName,
       )?.[1];
       if (listChoices === undefined) {
-        throw new Error(
-          `Le Paramètre ${labelOf(description.parameterList, parameterName)} du Canal ${name} n'a pas de choix à lister.`,
-        );
+        throw new Error(copyOf(locale).noChoices(labelOf(description.parameterList, parameterName, locale), name));
       }
-      return listChoices(parameters.parseTrial(rawParameters, composeMessage));
+      return listChoices(parameters.parseTrial(rawParameters, locale, composeMessage(locale)), locale);
     },
   };
 }
 
-// The Source gives the Deadline as a day, at midnight UTC
-const DEADLINE_FORMAT = new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC' });
-
 // The jurisdiction of a Posting is its workplace, such as « Tribunal Judiciaire de Béthune »
-function jurisdictionOf({ workplace }: Posting): string {
-  return workplace ?? 'Juridiction non précisée';
-}
-
-function deadlineOf({ deadline }: Posting): string {
-  return `Date limite : ${deadline === null ? 'non précisée' : DEADLINE_FORMAT.format(deadline)}`;
+function jurisdictionOf({ workplace }: Posting, locale: Locale): string {
+  return workplace ?? catalogueOf({ locale }).notification.missingJurisdiction;
 }
 
 // One composer per notified event, whatever the Channel
-export function composeNewPostingNotification(posting: Posting): INotification {
-  return {
-    title: 'Nouvelle Offre dans la Zone',
-    message: [posting.title, jurisdictionOf(posting), deadlineOf(posting)].join('\n'),
+export function composeNewPostingNotification(posting: Posting): NotificationComposer {
+  return (locale) => {
+    const copy = catalogueOf({ locale }).notification;
+    return {
+      title: copy.newPostingTitle,
+      message: [posting.title, jurisdictionOf(posting, locale), copy.deadline(posting.deadline)].join('\n'),
+    };
   };
 }
 
 // A Repost in the Zone, whose Research starts from that of the Posting it publishes again
-export function composeRepostNotification(posting: Posting, repostedPosting: Posting): INotification {
-  return {
-    title: 'Republication dans la Zone',
-    message: [
-      posting.title,
-      jurisdictionOf(posting),
-      `Republication de l'Offre ${repostedPosting.reference} : sa Recherche part de celle de cette Offre`,
-      deadlineOf(posting),
-    ].join('\n'),
+export function composeRepostNotification(posting: Posting, repostedPosting: Posting): NotificationComposer {
+  return (locale) => {
+    const copy = catalogueOf({ locale }).notification;
+    return {
+      title: copy.repostTitle,
+      message: [
+        posting.title,
+        jurisdictionOf(posting, locale),
+        copy.repostLine(repostedPosting.reference),
+        copy.deadline(posting.deadline),
+      ].join('\n'),
+    };
   };
 }
 
 // The Candidate already applied to the Posting published again: they decide whether to apply again
-export function composeRepostAppliedNotification(posting: Posting, repostedPosting: Posting): INotification {
-  return {
-    title: "Republication d'une Offre Postulée",
-    message: [
-      posting.title,
-      jurisdictionOf(posting),
-      `Republication de l'Offre ${repostedPosting.reference}, Postulée : aucune Recherche lancée`,
-      deadlineOf(posting),
-    ].join('\n'),
+export function composeRepostAppliedNotification(posting: Posting, repostedPosting: Posting): NotificationComposer {
+  return (locale) => {
+    const copy = catalogueOf({ locale }).notification;
+    return {
+      title: copy.repostAppliedTitle,
+      message: [
+        posting.title,
+        jurisdictionOf(posting, locale),
+        copy.repostAppliedLine(repostedPosting.reference),
+        copy.deadline(posting.deadline),
+      ].join('\n'),
+    };
   };
 }
 
 // What the Candidate receives when they try their Notification Channel
-export function composeTestNotification(candidateName: string): INotification {
-  return { title: 'Notification de test', message: `Le Canal de notification de ${candidateName} fonctionne.` };
+export function composeTestNotification(candidateName: string): NotificationComposer {
+  return (locale) => {
+    const copy = catalogueOf({ locale }).notification;
+    return { title: copy.testTitle, message: copy.testMessage(candidateName) };
+  };
 }
 
-export function composeResearchPreteNotification(posting: Posting): INotification {
-  return { title: 'Recherche prête', message: [posting.title, jurisdictionOf(posting)].join('\n') };
+export function composeResearchReadyNotification(posting: Posting): NotificationComposer {
+  return (locale) => ({
+    title: catalogueOf({ locale }).notification.researchReadyTitle,
+    message: [posting.title, jurisdictionOf(posting, locale)].join('\n'),
+  });
 }

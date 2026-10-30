@@ -396,7 +396,7 @@ export type NotificationChannel = z.infer<typeof NOTIFICATION_CHANNEL_SCHEMA>;
 // A Candidate's Notification Channel as saved, secret Parameters included. Its own brand keeps it out
 // of the values an action may return (src/actions/index.ts, ADR-0006).
 export const SAVED_NOTIFICATION_CHANNEL_SCHEMA = z
-  .object({ candidateName: z.string(), module: z.string().nullable(), parameters: PARAMETERS_SCHEMA })
+  .object({ candidate: CANDIDATE_SCHEMA, module: z.string().nullable(), parameters: PARAMETERS_SCHEMA })
   .brand<'Secret'>();
 
 export type SavedNotificationChannel = z.infer<typeof SAVED_NOTIFICATION_CHANNEL_SCHEMA>;

@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { z } from 'zod/v4';
 
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 import type { Candidate, Watch } from '#/domain/index.ts';
 
 import { PARAMETERS_INPUT_SCHEMA, type ActionContext } from './context.ts';
@@ -29,7 +30,7 @@ export function createWatchActions({ workspace, findCandidate, findSource }: Act
     const watchList = await workspace.listWatches(candidate.id);
     const watch = watchList.find(({ id }) => id === watchId);
     if (watch === undefined) {
-      throw new Error(`${candidate.name} n'a pas de Veille ${watchId} : recharger la page de son Profil.`);
+      throw new Error(catalogueOf(candidate).error.unknownWatch(candidate.name, watchId));
     }
     return watch;
   }
@@ -56,8 +57,8 @@ export function createWatchActions({ workspace, findCandidate, findSource }: Act
     async saveWatch(rawInput: unknown): Promise<void> {
       const candidate = await findCandidate(rawInput);
       const input = SAVE_INPUT_SCHEMA.parse(rawInput);
-      const source = findSource(input.source);
-      const parameters = source.parseParameters(input.parameters);
+      const source = findSource(input.source, candidate.locale);
+      const parameters = source.parseParameters(input.parameters, candidate.locale);
       if (input.watchId === undefined) {
         const id = await newWatchId(candidate);
         await workspace.createWatch({ id, candidateId: candidate.id, source: input.source, parameters });
