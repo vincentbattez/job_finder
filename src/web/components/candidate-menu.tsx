@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Form } from 'react-router';
 
+import './candidate-menu.css';
+
 interface ICandidate {
   id: string;
   name: string;

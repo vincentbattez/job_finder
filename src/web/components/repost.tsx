@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
+import './repost.css';
+
 interface ILinkedPosting {
   reference: string;
 }
@@ -23,7 +25,7 @@ export function RepostFacts({ posting }: Readonly<{ posting: IRepost }>) {
   return factList.map(({ term, reference }) => (
     <div key={reference}>
       <dt>{term}</dt>
-      <dd className="reference">
+      <dd className="repost__reference">
         <Link to={`/postings/${reference}`}>{reference}</Link>
       </dd>
     </div>

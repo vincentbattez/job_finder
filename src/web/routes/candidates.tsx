@@ -83,18 +83,18 @@ export default function Candidates() {
           <p role="note">{t('candidates.obsoleteConfig', { path: obsoleteConfig.path })}</p>
         )}
       </div>
-      <section className="settings" aria-labelledby={listHeadingId}>
+      <section className="form-section" aria-labelledby={listHeadingId}>
         <h2 id={listHeadingId}>{t('candidates.renameHeading')}</h2>
         {candidateList.length === 0 && <p>{t('candidates.noCandidate')}</p>}
         {candidateList.map(({ id, name }) => (
           <Form key={`${id}:${name}`} method="post">
             <input type="hidden" name="intent" value="rename" />
             <input type="hidden" name="candidateId" value={id} />
-            <label className="settings__field">
+            <label className="field">
               {t('candidates.nameOf', { candidateId: id })}
               <input name="name" required defaultValue={name} placeholder={t('candidates.fullNamePlaceholder')} />
             </label>
-            <div className="settings__step">
+            <div className="form-step">
               <button className="button" type="submit" aria-label={t('candidates.renameOf', { candidateId: id })}>
                 {t('candidates.rename')}
               </button>
@@ -103,20 +103,20 @@ export default function Candidates() {
           </Form>
         ))}
       </section>
-      <section className="settings" aria-labelledby={creationHeadingId}>
+      <section className="form-section" aria-labelledby={creationHeadingId}>
         <h2 id={creationHeadingId}>{t('candidates.creationHeading')}</h2>
         {/* Remounted once a Candidate is created, so the form starts blank again */}
         <Form key={candidateList.length} method="post">
           <input type="hidden" name="intent" value="create" />
-          <label className="settings__field">
+          <label className="field">
             {t('candidates.name')}
             <input name="name" required placeholder={t('candidates.namePlaceholder')} />
           </label>
-          <label className="settings__field">
+          <label className="field">
             {t('candidates.id')}
             <input name="id" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder={t('candidates.idPlaceholder')} />
           </label>
-          <div className="settings__step">
+          <div className="form-step">
             <button type="submit" className="button button--primary">
               {t('candidates.create')}
             </button>
@@ -124,12 +124,12 @@ export default function Candidates() {
           </div>
         </Form>
       </section>
-      <section className="settings" aria-labelledby={delayHeadingId}>
+      <section className="form-section" aria-labelledby={delayHeadingId}>
         <h2 id={delayHeadingId}>{t('candidates.defaultDeadlinePeriodHeading')}</h2>
         <p>{t('candidates.defaultDeadlinePeriodHint')}</p>
         <Form key={defaultDeadlinePeriod.months} method="post">
           <input type="hidden" name="intent" value="default-deadline-period" />
-          <label className="settings__field">
+          <label className="field">
             {t('candidates.defaultDeadlinePeriodMonths')}
             <input
               name="months"
@@ -141,7 +141,7 @@ export default function Candidates() {
               placeholder="6"
             />
           </label>
-          <div className="settings__step">
+          <div className="form-step">
             <button type="submit" className="button button--primary">
               {t('candidates.saveDefaultDeadlinePeriod')}
             </button>

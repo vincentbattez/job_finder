@@ -54,7 +54,7 @@ function Step({
 }>) {
   const isIdle = fetcher.state === 'idle';
   return (
-    <div className="channel__step">
+    <div className="form-step">
       <button {...buttonProperties} className={className} aria-label={accessibleName} disabled={!isHydrated || !isIdle}>
         {children}
       </button>
@@ -81,7 +81,7 @@ function ChoiceField({
   const valueList = fetcher.data?.choiceList?.map(({ value }) => value) ?? (savedValue === '' ? [] : [savedValue]);
   return (
     <>
-      <label className="channel__field">
+      <label className="field">
         {label}
         <select name={`${PARAMETER_FIELD_PREFIX}${name}`} defaultValue={savedValue}>
           {/* A hint, never a choice: a Parameter left out keeps the one saved */}
@@ -145,7 +145,7 @@ export function NotificationChannelForm({
   }
 
   return (
-    <section className="channel" aria-labelledby={headingId}>
+    <section className="form-section" aria-labelledby={headingId}>
       <h2 id={headingId}>{t('notificationChannel.heading')}</h2>
       <p>{t('notificationChannel.intro')}</p>
       <form
@@ -157,7 +157,7 @@ export function NotificationChannelForm({
           send(formReference, saveFetcher, 'save');
         }}
       >
-        <label className="channel__field">
+        <label className="field">
           {t('notificationChannel.channel')}
           <select
             name="channel"
@@ -188,7 +188,6 @@ export function NotificationChannelForm({
               key={`${moduleId}:${parameter.name}`}
               parameter={parameter}
               savedValue={savedValueOf(parameter.name)}
-              className="channel__field"
               isConfigured={isSavedModule && channel.configuredSecretList.includes(parameter.name)}
               secretReference={(input) => {
                 if (input !== null) {

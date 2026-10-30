@@ -3,6 +3,8 @@ import { Link, useFetcher } from 'react-router';
 
 import { useIsHydrated } from './use-is-hydrated.ts';
 
+import './detection.css';
+
 // The shape of the detect action, per Watch
 interface IDetection {
   watchId: string;

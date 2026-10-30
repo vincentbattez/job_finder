@@ -1,0 +1,7 @@
+@layer components {
+  /* Write-only, the token never shows again: only whether one is saved (ADR-0006) */
+  .parameter-field__configured {
+    color: var(--color-success);
+    font-weight: 600;
+  }
+}

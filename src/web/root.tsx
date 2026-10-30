@@ -1,3 +1,7 @@
+// First of all: app.css declares the order of the cascade layers, which the first @layer to appear
+// sets, and the components imported below bring their own CSS
+import './app.css';
+
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -21,7 +25,6 @@ import { LocaleSwitcher } from './components/locale-switcher.tsx';
 import { LocaleProvider, useLocale } from './i18n.tsx';
 import { englishUrlOf } from './redirects.ts';
 
-import './app.css';
 import './legacy-components.css';
 
 // An English route reached with the French query of an older link moves for good to the English one.

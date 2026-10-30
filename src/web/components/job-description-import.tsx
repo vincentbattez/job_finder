@@ -3,6 +3,8 @@ import { Link, useFetcher } from 'react-router';
 
 import { DropZone } from './drop-zone.tsx';
 
+import './job-description-import.css';
+
 // The shape of the import action: the job of the extraction, with its Posting
 interface IImport {
   job: { posting: { reference: string; title: string } } | null;
@@ -34,7 +36,9 @@ export function JobDescriptionImport() {
           {t('importedPostingNext')}
         </p>
       )}
-      {!isImporting && fetcher.data?.error != null && <p className="drop-zone__error">{fetcher.data.error}</p>}
+      {!isImporting && fetcher.data?.error != null && (
+        <p className="job-description-import__error">{fetcher.data.error}</p>
+      )}
     </DropZone>
   );
 }

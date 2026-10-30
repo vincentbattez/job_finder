@@ -7,6 +7,8 @@ import { MarkdownEditor } from './markdown-editor.tsx';
 import { Markdown } from './markdown.tsx';
 import type { IArtifactVersions } from './posting-detail.tsx';
 
+import './module-instructions.css';
+
 // The shape of the listInstructions action, so the route passes its result as is
 export interface IModuleInstructions {
   module: IArtifactVersions['artifact'];
@@ -18,7 +20,7 @@ export interface IModuleInstructions {
 export function InstructionsOrigin({ hasCandidateInstructions }: Readonly<{ hasCandidateInstructions: boolean }>) {
   const { t } = useTranslation('settings');
   return (
-    <span className="instructions-origin">
+    <span className="module-instructions__origin">
       {hasCandidateInstructions ? t('instructions.candidateOrigin') : t('instructions.defaultOrigin')}
     </span>
   );
@@ -36,8 +38,8 @@ export function ModuleInstructions({
   const hasCandidateInstructions = candidateInstructions !== null;
   const [editedInstructions, setEditedInstructions] = useState(candidateInstructions ?? defaultInstructions);
   return (
-    <section className="artifact instructions" data-artifact={module} aria-labelledby={headingId}>
-      <div className="instructions__head">
+    <section className="module-instructions" data-artifact={module} aria-labelledby={headingId}>
+      <div className="module-instructions__head">
         <h2 id={headingId}>{t(`artifactLabelByArtifact.${module}`, { ns: 'common' })}</h2>
         <Badge data-instructions={hasCandidateInstructions ? 'candidate' : 'default'}>
           {hasCandidateInstructions ? t('instructions.candidateBadge') : t('instructions.defaultOrigin')}
@@ -52,7 +54,7 @@ export function ModuleInstructions({
           placeholder={t('instructions.placeholder')}
           onChange={setEditedInstructions}
         />
-        <div className="edition">
+        <div className="module-instructions__actions">
           <button type="submit" name="intent" value="save" className="button button--primary">
             {t('instructions.save')}
           </button>
@@ -67,7 +69,7 @@ export function ModuleInstructions({
         </div>
       </Form>
       {hasCandidateInstructions && (
-        <details className="instructions__default">
+        <details className="module-instructions__default">
           <summary>{t('instructions.showDefault')}</summary>
           <Markdown markdown={defaultInstructions} />
         </details>
