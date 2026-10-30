@@ -1,8 +1,6 @@
 import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useCatalogue } from '#/web/catalogue.ts';
-
 import { StateBadge, StatusBadge, type State } from './badge.tsx';
 import { DateText } from './date.tsx';
 import { Markdown } from './markdown.tsx';
@@ -68,9 +66,8 @@ export function PostingDetail({
   const { posting, jobDescription, artifactList, recipients } = detail;
   const TITLE_TAG = isPage ? 'h1' : 'h3';
   const PART_TAG = isPage ? 'h2' : 'h4';
-  const { t } = useTranslation();
-  const { posting: copy } = useCatalogue();
-  const missingContact = <span className="missing">{copy.missingContact}</span>;
+  const { t } = useTranslation('posting');
+  const missingContact = <span className="missing">{t('missingContact')}</span>;
   const artifactsId = useId();
   const contactsId = useId();
   const recipientsId = useId();
@@ -86,19 +83,19 @@ export function PostingDetail({
           <p>{[posting.workplace, posting.employer].filter(Boolean).join(', ')}</p>
           <dl className="posting-detail__facts">
             <div>
-              <dt>{copy.referenceTerm}</dt>
+              <dt>{t('referenceTerm')}</dt>
               <dd className="reference">
                 {posting.url === null ? posting.reference : <a href={posting.url}>{posting.reference}</a>}
               </dd>
             </div>
             <div>
-              <dt>{copy.publishedAtTerm}</dt>
+              <dt>{t('publishedAtTerm')}</dt>
               <dd className="date">
                 <DateText date={posting.publishedAt} />
               </dd>
             </div>
             <div>
-              <dt>{copy.deadlineTerm}</dt>
+              <dt>{t('deadlineTerm')}</dt>
               <dd className="date">
                 <DateText date={posting.deadline} />
               </dd>
@@ -108,11 +105,11 @@ export function PostingDetail({
           {children}
         </header>
         <section className="posting-detail__part" aria-labelledby={artifactsId}>
-          <PART_TAG id={artifactsId}>{copy.artifactsHeading}</PART_TAG>
+          <PART_TAG id={artifactsId}>{t('artifactsHeading')}</PART_TAG>
           <ul className="artifact-list">
             {artifactList.map(({ artifact, state }) => (
               <li key={artifact} data-artifact={artifact}>
-                <a href={`#${artifact}`}>{t(`artifactLabelByArtifact.${artifact}`)}</a>
+                <a href={`#${artifact}`}>{t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' })}</a>
                 <StateBadge state={state} />
               </li>
             ))}
@@ -121,10 +118,10 @@ export function PostingDetail({
       </div>
       <div className="posting-detail__column">
         <section className="posting-detail__part" aria-labelledby={contactsId}>
-          <PART_TAG id={contactsId}>{copy.contactsHeading}</PART_TAG>
+          <PART_TAG id={contactsId}>{t('contactsHeading')}</PART_TAG>
           <dl className="posting-detail__contacts">
             <div>
-              <dt>{copy.contactLabelByField.applicationEmail}</dt>
+              <dt>{t('contactLabelByField.applicationEmail')}</dt>
               <dd>
                 {posting.applicationEmail !== null && EMAIL_PATTERN.test(posting.applicationEmail) ? (
                   <a href={`mailto:${posting.applicationEmail}`}>{posting.applicationEmail}</a>
@@ -134,27 +131,27 @@ export function PostingDetail({
               </dd>
             </div>
             <div>
-              <dt>{copy.contactLabelByField.contact1}</dt>
+              <dt>{t('contactLabelByField.contact1')}</dt>
               <dd>{posting.contact1 ?? missingContact}</dd>
             </div>
             <div>
-              <dt>{copy.contactLabelByField.contact2}</dt>
+              <dt>{t('contactLabelByField.contact2')}</dt>
               <dd>{posting.contact2 ?? missingContact}</dd>
             </div>
           </dl>
         </section>
         <section className="posting-detail__part" aria-labelledby={recipientsId}>
-          <PART_TAG id={recipientsId}>{copy.recipientsHeading}</PART_TAG>
+          <PART_TAG id={recipientsId}>{t('recipientsHeading')}</PART_TAG>
           {recipients === null ? (
-            <p className="missing">{copy.noRecipients}</p>
+            <p className="missing">{t('noRecipients')}</p>
           ) : (
             <Recipients recipients={recipients} />
           )}
         </section>
         <section className="posting-detail__part" aria-labelledby={jobDescriptionId}>
-          <PART_TAG id={jobDescriptionId}>{copy.jobDescriptionHeading}</PART_TAG>
+          <PART_TAG id={jobDescriptionId}>{t('jobDescriptionHeading')}</PART_TAG>
           <details className="posting-detail__job-description">
-            <summary>{copy.readJobDescription}</summary>
+            <summary>{t('readJobDescription')}</summary>
             <Markdown markdown={jobDescription} />
           </details>
         </section>

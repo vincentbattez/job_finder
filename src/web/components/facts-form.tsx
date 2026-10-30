@@ -1,8 +1,8 @@
 import { useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Form } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
-import { useCatalogue } from '#/web/catalogue.ts';
 
 import { useIsHydrated } from './use-is-hydrated.ts';
 
@@ -13,25 +13,25 @@ type Section = Awaited<ReturnType<Actions['readFacts']>>[number];
 function ListSection({ title, example, entryList }: Readonly<Section>) {
   const [entryItemList, setEntryItemList] = useState(() => entryList.map((entry, key) => ({ key, entry })));
   const isHydrated = useIsHydrated();
-  const { facts } = useCatalogue().settings;
+  const { t } = useTranslation('settings');
   return (
     <fieldset className="facts__section">
       <legend>{title}</legend>
       {entryItemList.map(({ key, entry }, index) => (
         <div key={key} className="facts__entry">
           <label>
-            {facts.entry(index + 1)}
+            {t('facts.entry', { number: index + 1 })}
             <textarea name={title} defaultValue={entry} rows={2} placeholder={example} />
           </label>
           <button
             type="button"
             disabled={!isHydrated}
-            aria-label={facts.deleteEntry(index + 1)}
+            aria-label={t('facts.deleteEntry', { number: index + 1 })}
             onClick={() => {
               setEntryItemList(entryItemList.filter((entryItem) => entryItem.key !== key));
             }}
           >
-            {facts.delete}
+            {t('facts.delete')}
           </button>
         </div>
       ))}
@@ -43,7 +43,7 @@ function ListSection({ title, example, entryList }: Readonly<Section>) {
           setEntryItemList([...entryItemList, { key, entry: '' }]);
         }}
       >
-        {facts.add}
+        {t('facts.add')}
       </button>
     </fieldset>
   );
@@ -53,11 +53,11 @@ function ListSection({ title, example, entryList }: Readonly<Section>) {
 // written
 export function FactsForm({ sectionList }: Readonly<{ sectionList: Section[] }>) {
   const headingId = useId();
-  const { facts } = useCatalogue().settings;
+  const { t } = useTranslation('settings');
   return (
     <section className="facts" aria-labelledby={headingId}>
-      <h2 id={headingId}>{facts.heading}</h2>
-      <p>{facts.intro}</p>
+      <h2 id={headingId}>{t('facts.heading')}</h2>
+      <p>{t('facts.intro')}</p>
       <Form method="post" preventScrollReset>
         <input type="hidden" name="intent" value="facts" />
         {sectionList.map((section) =>
@@ -77,7 +77,7 @@ export function FactsForm({ sectionList }: Readonly<{ sectionList: Section[] }>)
         )}
         <div className="edition">
           <button type="submit" className="button--primary">
-            {facts.save}
+            {t('facts.save')}
           </button>
         </div>
       </Form>

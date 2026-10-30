@@ -1,7 +1,6 @@
 import { Fragment, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Form } from 'react-router';
-
-import { useCatalogue } from '#/web/catalogue.ts';
 
 import type { Status } from './badge.tsx';
 import { CopyMarkdown } from './copy-command.tsx';
@@ -31,7 +30,7 @@ export function ArtifactDocument({
   isModifiable,
 }: Readonly<IArtifactDocument>) {
   const [editedMarkdown, setEditedMarkdown] = useState(markdown);
-  const { posting: copy } = useCatalogue();
+  const { t } = useTranslation('posting');
   return (
     <figure className="document">
       <figcaption className="reference">{fileName}</figcaption>
@@ -39,18 +38,18 @@ export function ArtifactDocument({
         <Form method="post" action={`/postings/${reference}/${artifact}/document`} preventScrollReset>
           <input type="hidden" name="fileName" value={fileName} />
           <MarkdownEditor
-            label={copy.documentLabel}
+            label={t('documentLabel')}
             name="markdown"
             defaultValue={markdown}
-            placeholder={copy.documentPlaceholder}
+            placeholder={t('documentPlaceholder')}
             onChange={setEditedMarkdown}
           />
           <div className="edition">
             <button type="submit" className="button--primary">
-              {copy.save}
+              {t('save')}
             </button>
             <CopyMarkdown markdown={editedMarkdown} />
-            {editedMarkdown !== markdown && <p role="status">{copy.unsavedChanges}</p>}
+            {editedMarkdown !== markdown && <p role="status">{t('unsavedChanges')}</p>}
           </div>
         </Form>
       ) : (
@@ -70,11 +69,11 @@ export function ChooseButton({
   artifact,
   number,
 }: Readonly<{ reference: string; artifact: string; number: number }>) {
-  const { posting: copy } = useCatalogue();
+  const { t } = useTranslation('posting');
   return (
     <Form method="post" action={`/postings/${reference}/${artifact}/chosen`} preventScrollReset className="edition">
       <input type="hidden" name="number" value={number} />
-      <button type="submit">{copy.chooseVersion}</button>
+      <button type="submit">{t('chooseVersion')}</button>
     </Form>
   );
 }
@@ -86,7 +85,7 @@ export function StatusButtons({
   nextStatusList,
 }: Readonly<{ reference: string; nextStatusList: Status[] }>) {
   const [isConfirming, setIsConfirming] = useState(false);
-  const { posting: copy } = useCatalogue();
+  const { t } = useTranslation('posting');
   const isHydrated = useIsHydrated();
   return (
     <Form method="post" action={`/postings/${reference}/status`} preventScrollReset className="edition">
@@ -94,14 +93,14 @@ export function StatusButtons({
         if (status !== 'applied') {
           return (
             <button key={status} type="submit" name="status" value={status}>
-              {copy.statusButtonLabelByStatus[status]}
+              {t(`statusButtonLabelByStatus.${status}`)}
             </button>
           );
         }
         return isConfirming ? (
           <Fragment key={status}>
             <button type="submit" name="status" value={status} className="button--primary">
-              {copy.confirmApplied}
+              {t('confirmApplied')}
             </button>
             <button
               type="button"
@@ -109,7 +108,7 @@ export function StatusButtons({
                 setIsConfirming(false);
               }}
             >
-              {copy.cancel}
+              {t('cancel')}
             </button>
           </Fragment>
         ) : (
@@ -122,11 +121,11 @@ export function StatusButtons({
               setIsConfirming(true);
             }}
           >
-            {copy.statusButtonLabelByStatus[status]}
+            {t(`statusButtonLabelByStatus.${status}`)}
           </button>
         );
       })}
-      {nextStatusList.includes('applied') && <p>{copy.appliedFreezesLetter}</p>}
+      {nextStatusList.includes('applied') && <p>{t('appliedFreezesLetter')}</p>}
     </Form>
   );
 }

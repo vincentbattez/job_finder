@@ -1,7 +1,6 @@
 import { useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
-
-import { useCatalogue } from '#/web/catalogue.ts';
 
 import { StateBadge, type State } from './badge.tsx';
 import { DateText } from './date.tsx';
@@ -26,7 +25,7 @@ function UploadConversion({ fileName, conversion }: Readonly<{ fileName: string;
   const isHydrated = useIsHydrated();
   const labelId = useId();
   const { state, log } = conversion;
-  const { uploads } = useCatalogue().settings;
+  const { t } = useTranslation('settings');
   return (
     <fetcher.Form
       method="post"
@@ -36,16 +35,16 @@ function UploadConversion({ fileName, conversion }: Readonly<{ fileName: string;
     >
       <input type="hidden" name="fileName" value={fileName} />
       <span id={labelId}>
-        {uploads.conversion}
-        <span className="visually-hidden">{uploads.ofFile(fileName)}</span>
+        {t('uploads.conversion')}
+        <span className="visually-hidden">{t('uploads.ofFile', { fileName })}</span>
       </span>
       <span role="status">
         <StateBadge state={state} />
       </span>
       {(state === 'absent' || state === 'failed') && (
         <button type="submit" name="intent" value="convertUpload" disabled={!isHydrated || fetcher.state !== 'idle'}>
-          {state === 'absent' ? uploads.convert : uploads.convertAgain}
-          <span className="visually-hidden">{uploads.ofFile(fileName)}</span>
+          {state === 'absent' ? t('uploads.convert') : t('uploads.convertAgain')}
+          <span className="visually-hidden">{t('uploads.ofFile', { fileName })}</span>
         </button>
       )}
       {state === 'failed' && <p className="module-launch__refusal">{log}</p>}
@@ -61,7 +60,7 @@ export function Uploads({
   const headingId = useId();
   const fetcher = useFetcher<IUploadRefusal>();
   const isSending = fetcher.state !== 'idle';
-  const { uploads } = useCatalogue().settings;
+  const { t } = useTranslation('settings');
   useRevalidateWhile(uploadList.some(({ conversion }) => conversion.state === 'in_progress'));
 
   // Multipart, so the PDF reaches the action byte for byte, unlike the text of a Job Description
@@ -74,28 +73,28 @@ export function Uploads({
 
   return (
     <section className="uploads" aria-labelledby={headingId}>
-      <h2 id={headingId}>{uploads.heading}</h2>
+      <h2 id={headingId}>{t('uploads.heading')}</h2>
       {uploadList.length === 0 ? (
-        <p className="uploads__empty">{uploads.noUpload}</p>
+        <p className="uploads__empty">{t('uploads.noUpload')}</p>
       ) : (
         <ul className="uploads__list">
           {uploadList.map(({ fileName, savedAt, conversion }) => (
             <li key={fileName} className="uploads__item">
               <span className="reference">{fileName}</span>
               <span className="uploads__date">
-                {uploads.savedOn} <DateText date={savedAt} />
+                {t('uploads.savedOn')} <DateText date={savedAt} />
               </span>
               {/* Folded, so a deletion always takes a second, deliberate click */}
               <details className="profile-file__delete">
                 {/* The name is read aloud only: the row already shows it */}
                 <summary>
-                  {uploads.delete}
+                  {t('uploads.delete')}
                   <span className="visually-hidden"> {fileName}</span>…
                 </summary>
                 <fetcher.Form method="post" action="/profile" className="edition">
                   <input type="hidden" name="fileName" value={fileName} />
                   <button type="submit" name="intent" value="deleteUpload" className="button--danger">
-                    {uploads.deleteForGood}
+                    {t('uploads.deleteForGood')}
                     <span className="visually-hidden"> {fileName}</span>
                   </button>
                 </fetcher.Form>
@@ -106,9 +105,9 @@ export function Uploads({
         </ul>
       )}
       <DropZone
-        intro={uploads.dropIntro}
+        intro={t('uploads.dropIntro')}
         accept=".pdf,application/pdf"
-        label={uploads.drop}
+        label={t('uploads.drop')}
         isBusy={isSending}
         onFile={(file) => void saveUpload(file)}
       >

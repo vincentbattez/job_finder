@@ -1,9 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import type { LoaderFunctionArgs, MetaArgs } from 'react-router';
 
-import { catalogueOf } from '#/actions/catalogue.ts';
+import { localeOf, tFor } from '#/actions/i18n.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
-import { useCatalogue } from '#/web/catalogue.ts';
 import { STATE_LIST, StateBadge, StatusBadge, type Status } from '#/web/components/badge.tsx';
 import { MarkdownEditor } from '#/web/components/markdown-editor.tsx';
 import { PostingDetail, type IPostingDetail } from '#/web/components/posting-detail.tsx';
@@ -159,22 +158,20 @@ export function loader({ request }: LoaderFunctionArgs) {
 }
 
 export function meta({ loaderData }: MetaArgs<typeof loader>) {
-  const { design } = catalogueOf(loaderData).settings;
-  return [{ title: design.pageTitle }, { name: 'description', content: design.description }];
+  const t = tFor(localeOf(loaderData), 'settings');
+  return [{ title: t('design.pageTitle') }, { name: 'description', content: t('design.description') }];
 }
 
 export default function Design() {
-  const { t } = useTranslation();
-  const { settings } = useCatalogue();
-  const { design } = settings;
+  const { t } = useTranslation('settings');
   return (
     <main className="container page">
       <div className="page__head">
-        <h1>{design.heading}</h1>
-        <p>{design.intro}</p>
+        <h1>{t('design.heading')}</h1>
+        <p>{t('design.intro')}</p>
       </div>
       <section aria-labelledby="statuses">
-        <h2 id="statuses">{design.statuses}</h2>
+        <h2 id="statuses">{t('design.statuses')}</h2>
         <ul className="badge-list">
           {STATUS_SAMPLE_LIST.map(({ status, isExpired }) => (
             <li key={`${status}-${String(isExpired)}`}>
@@ -184,7 +181,7 @@ export default function Design() {
         </ul>
       </section>
       <section aria-labelledby="states">
-        <h2 id="states">{design.states}</h2>
+        <h2 id="states">{t('design.states')}</h2>
         <ul className="badge-list">
           {STATE_LIST.map((state) => (
             <li key={state}>
@@ -194,21 +191,21 @@ export default function Design() {
         </ul>
       </section>
       <section aria-labelledby="postings">
-        <h2 id="postings">{design.postingList}</h2>
+        <h2 id="postings">{t('design.postingList')}</h2>
         <PostingList postingList={SAMPLE_POSTING_LIST} />
       </section>
       <section aria-labelledby="empty-list">
-        <h2 id="empty-list">{design.emptyList}</h2>
+        <h2 id="empty-list">{t('design.emptyList')}</h2>
         <PostingList postingList={[]} />
       </section>
       <section aria-labelledby="posting-detail">
-        <h2 id="posting-detail">{design.postingDetail}</h2>
+        <h2 id="posting-detail">{t('design.postingDetail')}</h2>
         <PostingDetail detail={SAMPLE_POSTING_DETAIL} />
       </section>
       <section aria-labelledby="editor">
-        <h2 id="editor">{design.editor}</h2>
+        <h2 id="editor">{t('design.editor')}</h2>
         <MarkdownEditor
-          label={t('artifactLabelByArtifact.letter')}
+          label={t('artifactLabelByArtifact.letter', { ns: 'common' })}
           defaultValue={SAMPLE_LETTER}
           placeholder="Madame, Monsieur,"
         />

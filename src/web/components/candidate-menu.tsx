@@ -1,6 +1,5 @@
+import { useTranslation } from 'react-i18next';
 import { Form } from 'react-router';
-
-import { useCatalogue } from '#/web/catalogue.ts';
 
 interface ICandidate {
   id: string;
@@ -12,14 +11,14 @@ export function CandidateMenu({
   candidateList,
   candidate,
 }: Readonly<{ candidateList: ICandidate[]; candidate: ICandidate | null }>) {
-  const { menu } = useCatalogue().settings;
+  const { t } = useTranslation('settings');
   return (
     <Form method="post" action="/candidate" className="candidate-menu">
-      <label htmlFor="candidate">{menu.candidateLabel}</label>
+      <label htmlFor="candidate">{t('menu.candidateLabel')}</label>
       <select id="candidate" name="candidateId" key={candidate?.id} defaultValue={candidate?.id ?? ''}>
         {candidate === null && (
           <option value="" disabled>
-            {menu.namePlaceholder}
+            {t('menu.namePlaceholder')}
           </option>
         )}
         {candidateList.map(({ id, name }) => (
@@ -28,7 +27,7 @@ export function CandidateMenu({
           </option>
         ))}
       </select>
-      <button type="submit">{menu.choose}</button>
+      <button type="submit">{t('menu.choose')}</button>
     </Form>
   );
 }

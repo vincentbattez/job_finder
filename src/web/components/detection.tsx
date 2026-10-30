@@ -1,6 +1,5 @@
+import { useTranslation } from 'react-i18next';
 import { Link, useFetcher } from 'react-router';
-
-import { useCatalogue } from '#/web/catalogue.ts';
 
 import { useIsHydrated } from './use-is-hydrated.ts';
 
@@ -18,17 +17,22 @@ export function Detection() {
   const fetcher = useFetcher<{ detectionList: IDetection[]; error: string | null }>();
   const isHydrated = useIsHydrated();
   const isRunning = fetcher.state !== 'idle';
-  const { posting: copy } = useCatalogue();
+  const { t } = useTranslation('posting');
   return (
     <fetcher.Form method="post" action="/detect" className="detection">
       <button type="submit" disabled={!isHydrated || isRunning}>
-        {isRunning ? copy.detectionRunning : copy.runDetection}
+        {isRunning ? t('detectionRunning') : t('runDetection')}
       </button>
       <div role="status">
         {fetcher.data?.error != null && <p className="detection__error">{fetcher.data.error}</p>}
         {fetcher.data?.detectionList.map((detection) => (
           <div key={detection.watchId}>
-            <p>{copy.detectionSummary(detection.watchId, detection.newPostingList.length, detection.isFirstLaunch)}</p>
+            <p>
+              {t(detection.isFirstLaunch ? 'firstLaunchDetectionSummary' : 'detectionSummary', {
+                watchId: detection.watchId,
+                count: detection.newPostingList.length,
+              })}
+            </p>
             {detection.newPostingList.length > 0 && (
               <ul>
                 {detection.newPostingList.map(({ reference, title }) => (

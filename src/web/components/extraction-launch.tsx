@@ -1,7 +1,6 @@
 import { useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
-
-import { useCatalogue } from '#/web/catalogue.ts';
 
 import { StateBadge, type State } from './badge.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
@@ -14,7 +13,7 @@ export function ExtractionLaunch({
   log,
 }: Readonly<{ reference: string; state: State; log: string }>) {
   const fetcher = useFetcher<{ error: string | null }>();
-  const { posting: copy } = useCatalogue();
+  const { t } = useTranslation('posting');
   const isHydrated = useIsHydrated();
   const labelId = useId();
   useRevalidateWhile(state === 'in_progress');
@@ -22,14 +21,14 @@ export function ExtractionLaunch({
     <fetcher.Form method="post" action="/run" className="module-launch" aria-labelledby={labelId}>
       <input type="hidden" name="reference" value={reference} />
       <input type="hidden" name="module" value="extraction" />
-      <span id={labelId}>{copy.extractionLabel}</span>
+      <span id={labelId}>{t('extractionLabel')}</span>
       <span role="status">
         <StateBadge state={state} />
       </span>
       {state === 'failed' && (
         <>
           <button type="submit" disabled={!isHydrated || fetcher.state !== 'idle'}>
-            {copy.relaunchExtraction}
+            {t('relaunchExtraction')}
           </button>
           <p className="module-launch__refusal">{log}</p>
         </>
