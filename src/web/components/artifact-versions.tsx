@@ -20,19 +20,20 @@ function VersionFiles({
   version,
   documentList,
 }: Readonly<Omit<VersionDocuments, 'isChoosable'> & { reference: string; artifact: IArtifactVersions['artifact'] }>) {
+  const { posting: copy } = useCatalogue();
   if (artifact === 'visualization' && version.state === 'ready') {
     return (
       <div className="visualization">
         <iframe
           src={`/postings/${reference}/visualization/${String(version.number)}`}
           sandbox=""
-          title={`Visualisation v${String(version.number)}`}
+          title={copy.visualizationFrameTitle(version.number)}
         />
       </div>
     );
   }
   if (documentList.length === 0) {
-    return <p className="missing">Aucun fichier dans cette Version.</p>;
+    return <p className="missing">{copy.noFile}</p>;
   }
   return (
     <>
@@ -53,7 +54,7 @@ export function ArtifactVersions({
   isEditable,
   versionList,
 }: Readonly<IArtifactVersions & { reference: string }>) {
-  const { common } = useCatalogue();
+  const { common, posting: copy } = useCatalogue();
   const headingId = useId();
   return (
     <section className="artifact" id={artifact} data-artifact={artifact} aria-labelledby={headingId}>
@@ -61,18 +62,18 @@ export function ArtifactVersions({
       <ModuleLaunch reference={reference} artifact={artifact} state={state} module={module} />
       {isEditable && <CopyCommand command={`jf edit ${reference} ${artifact}`} />}
       {versionList.length === 0 ? (
-        <p className="missing">Aucune Version pour l’instant.</p>
+        <p className="missing">{copy.noVersion}</p>
       ) : (
         <ol className="version-list">
           {versionList.map(({ version, isChoosable, documentList }) => (
             <li key={version.number}>
               <details open={version.isChosen}>
                 <summary>
-                  <span className="reference">v{version.number}</span>
+                  <span className="reference">{copy.versionNumber(version.number)}</span>
                   <StateBadge state={STATE_BY_VERSION_STATE[version.state]} />
                   {version.isChosen && (
                     <span className="badge" data-chosen>
-                      Retenue
+                      {copy.chosenBadge}
                     </span>
                   )}
                   <InstructionsOrigin hasCandidateInstructions={version.hasCandidateInstructions} />
@@ -82,7 +83,7 @@ export function ArtifactVersions({
                 </summary>
                 {isChoosable && <ChooseButton reference={reference} artifact={artifact} number={version.number} />}
                 <details className="version-instructions">
-                  <summary>Consignes de cette Version</summary>
+                  <summary>{copy.versionInstructions}</summary>
                   <Markdown markdown={version.instructions} />
                 </details>
                 <VersionFiles reference={reference} artifact={artifact} version={version} documentList={documentList} />

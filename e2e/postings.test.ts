@@ -76,6 +76,12 @@ test.describe('Postings of a Candidate', () => {
     ).toBeVisible();
   });
 
+  test('names the Posting page after its Posting', async ({ page }) => {
+    await page.goto('/postings/2026-2445600');
+
+    await expect(page).toHaveTitle(`${BETHUNE_TITLE} · Job Finder`);
+  });
+
   test('shows the recipients the Letter recommends, each with the field it comes from', async ({ page }) => {
     await page.goto('/postings/2026-2445600');
 

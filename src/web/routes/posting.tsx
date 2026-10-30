@@ -1,21 +1,28 @@
-import { useLoaderData, type LoaderFunctionArgs } from 'react-router';
+import { useLoaderData, type LoaderFunctionArgs, type MetaArgs } from 'react-router';
 
+import { catalogueOf } from '#/actions/catalogue.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
+import { readCandidate } from '#/web/candidate.server.ts';
 import { ArtifactVersions } from '#/web/components/artifact-versions.tsx';
 import { StatusButtons } from '#/web/components/edition.tsx';
 import { ExtractionLaunch } from '#/web/components/extraction-launch.tsx';
 import { PostingDetail } from '#/web/components/posting-detail.tsx';
 
-export function loader({ params }: LoaderFunctionArgs) {
-  return ACTIONS.readPosting({ reference: params.reference });
+export async function loader({ params, request }: LoaderFunctionArgs) {
+  const [{ candidate }, detail] = await Promise.all([
+    readCandidate(request),
+    ACTIONS.readPosting({ reference: params.reference }),
+  ]);
+  return { candidate, detail };
 }
 
-export function meta({ data }: { data: Awaited<ReturnType<typeof loader>> | undefined }) {
-  return [{ title: `${data?.posting.title ?? 'Offre'} · Job Finder` }];
+export function meta({ loaderData }: MetaArgs<typeof loader>) {
+  const { posting: copy } = catalogueOf(loaderData?.candidate);
+  return [{ title: copy.pageTitle(loaderData?.detail.posting.title ?? copy.unreadPosting) }];
 }
 
 export default function Posting() {
-  const detail = useLoaderData<typeof loader>();
+  const { detail } = useLoaderData<typeof loader>();
   return (
     <main className="container page">
       <PostingDetail detail={detail} isPage>

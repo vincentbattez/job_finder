@@ -24,17 +24,11 @@ export const STATE_LIST = ['absent', 'in_progress', 'ready', 'failed'] as const;
 
 export type State = (typeof STATE_LIST)[number];
 
-const STATE_LABEL_BY_STATE: Record<State, string> = {
-  absent: 'Absent',
-  in_progress: 'En cours',
-  ready: 'Prêt',
-  failed: 'En échec',
-};
-
 export function StateBadge({ state }: Readonly<{ state: State }>) {
+  const { posting } = useCatalogue();
   return (
     <span className="badge" data-state={state}>
-      {STATE_LABEL_BY_STATE[state]}
+      {posting.stateLabelByState[state]}
     </span>
   );
 }
