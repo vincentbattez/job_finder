@@ -10,22 +10,37 @@ datasource db {
 }
 
 // Candidats and Veilles are copied from data/config.json at every launch: the config is
-// their source of truth, never edit these rows.
+// their source of truth, never edit these rows, except Veille.detectedAt, which only jf writes.
 model Candidat {
-  id         String   @id
-  name       String
-  veilleList Veille[]
-  offreList  Offre[]
+  id                     String                  @id
+  name                   String
+  veilleList             Veille[]
+  offreList              Offre[]
+  connexionHomeAssistant ConnexionHomeAssistant?
+  jobList                Job[]
+}
+
+// Apart from Candidat, which only data/config.json writes: the Candidat saves it from the front. Its
+// token is write-only, no action returns it (ADR-0006). A field left null falls back on .env.
+model ConnexionHomeAssistant {
+  candidat   Candidat @relation(fields: [candidatId], references: [id], onDelete: Cascade)
+  candidatId String   @id
+  url        String?
+  token      String?
+  service    String?
 }
 
 model Veille {
-  id         String   @id
-  candidat   Candidat @relation(fields: [candidatId], references: [id])
+  id         String    @id
+  candidat   Candidat  @relation(fields: [candidatId], references: [id])
   candidatId String
   source     String
   // Shaped by the Source
   criteria   Json
   zone       Json
+  // When a Détection of this Veille last went through; null during its first launch, which may take
+  // several Détections when one is cut off
+  detectedAt DateTime?
 }
 
 model Offre {
@@ -41,12 +56,16 @@ model Offre {
   employer          String?
   workplace         String?
   city              String?
+  region            String?
   latitude          Float?
   longitude         Float?
   applicationEmail  String?
   contact1          String?
   contact2          String?
-  status            OffreStatus @default(a_traiter)
+  statut            OffreStatut @default(a_traiter) @map("status")
+  // When the Offre was first marked Postulée: its Lettre retenue, the one sent, stays frozen even
+  // once it is Archivée
+  postuleeAt        DateTime?
   republicationOf   Offre?      @relation("Republication", fields: [republicationOfId], references: [id])
   republicationOfId Int?
   republicationList Offre[]     @relation("Republication")
@@ -58,7 +77,7 @@ model Offre {
   @@unique([candidatId, source, reference])
 }
 
-enum OffreStatus {
+enum OffreStatut {
   a_traiter
   postulee
   archivee
@@ -66,18 +85,23 @@ enum OffreStatus {
 
 // A Version of the lettre Artefact holds a pair: the Brouillon, never changed, and the Lettre.
 model Version {
-  id         Int          @id @default(autoincrement())
-  offre      Offre        @relation(fields: [offreId], references: [id])
-  offreId    Int
-  artefact   Artefact
-  number     Int
-  isRetenue  Boolean      @default(false)
-  state      VersionState
-  consignes  String
+  id                   Int          @id @default(autoincrement())
+  offre                Offre        @relation(fields: [offreId], references: [id])
+  offreId              Int
+  artefact             Artefact
+  number               Int
+  isRetenue            Boolean      @default(false)
+  state                VersionState
+  consignes            String
+  // Whether those Consignes are the Candidat's own rather than the module's default ones
+  hasCandidatConsignes Boolean      @default(false)
   // The Versions this one read as input
-  inputList  Version[]    @relation("Input")
-  readByList Version[]    @relation("Input")
-  createdAt  DateTime     @default(now())
+  inputList            Version[]    @relation("Input")
+  readByList           Version[]    @relation("Input")
+  createdAt            DateTime     @default(now())
+  // The job that produced this Version, so a job can be followed to its Version
+  job                  Job?         @relation(fields: [jobId], references: [id])
+  jobId                Int?         @unique
 
   @@unique([offreId, artefact, number])
 }
@@ -95,14 +119,19 @@ enum VersionState {
   failed
 }
 
+// A job works on an Offre, or on the Profil of a Candidat: the conversion of one of its Pièces
 model Job {
-  id        Int      @id @default(autoincrement())
-  module    String
-  offre     Offre    @relation(fields: [offreId], references: [id])
-  offreId   Int
-  state     JobState @default(queued)
-  log       String   @default("")
-  sessionId String?
+  id         Int       @id @default(autoincrement())
+  module     String
+  offre      Offre?    @relation(fields: [offreId], references: [id], onDelete: Restrict)
+  offreId    Int?
+  candidat   Candidat? @relation(fields: [candidatId], references: [id], onDelete: Cascade)
+  candidatId String?
+  piece      String?
+  state      JobState  @default(queued)
+  log        String    @default("")
+  sessionId  String?
+  version    Version?
 }
 
 enum JobState {

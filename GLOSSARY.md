@@ -12,6 +12,18 @@ _Avoid_: utilisateur, user, compte
 Ce que l'outil sait d'un Candidat pour écrire à sa place : son CV, les faits qu'il a validés et ses lettres passées.
 _Avoid_: dossier, CV
 
+**Faits**:
+Partie du Profil qui recense, par rubrique, ce que le Candidat a validé sur lui-même : identité, coordonnées, diplômes, expériences, compétences, motivations, mobilité.
+_Avoid_: renseignements, informations, fiche
+
+**Pièce**:
+Document d'origine, comme un CV ou une lettre passée en PDF, que le Candidat dépose dans son Profil ; il est gardé tel quel, et le Profil en contient la conversion en Markdown.
+_Avoid_: upload, pièce jointe, fichier source
+
+**Connexion Home Assistant**:
+Accès d'un Candidat à son Home Assistant (adresse, jeton et service de notification) par lequel l'outil le prévient sur son téléphone.
+_Avoid_: intégration, compte Home Assistant, canal
+
 **Veille**:
 Recherche permanente d'un Candidat sur une Source, définie par ses critères et sa Zone.
 _Avoid_: alerte, abonnement, recherche sauvegardée
@@ -44,10 +56,18 @@ _Avoid_: scan, crawl, alerte
 
 **Zone**:
 Territoire d'une Veille où une Offre détectée lance automatiquement sa Recherche ; une Offre hors Zone est conservée mais pas traitée.
-_Avoid_: région, périmètre
+_Avoid_: périmètre, secteur
+
+**Ville**:
+Commune du lieu d'affectation d'une Offre, qui la place sur la carte.
+_Avoid_: localité, lieu
+
+**Région**:
+Région administrative de la Ville d'une Offre, par laquelle le Candidat filtre ses Offres ; elle n'a rien à voir avec la Zone.
+_Avoid_: zone, territoire
 
 **Date limite**:
-Dernier jour pour postuler à une Offre ; quand l'Offre n'en donne pas, sa date de publication plus un délai par défaut.
+Dernier jour pour postuler à une Offre ; quand l'Offre n'en donne pas, sa date de publication plus un délai par défaut, une Fiche de poste importée étant publiée le jour de son import.
 _Avoid_: date de fin, échéance
 
 ## Statut d'une Offre
@@ -57,21 +77,53 @@ Statut d'une Offre à laquelle le Candidat n'a pas encore postulé.
 _Avoid_: nouvelle, en attente
 
 **Postulée**:
-Statut d'une Offre à laquelle le Candidat a envoyé sa candidature ; sa Lettre ne change plus.
+Statut d'une Offre dont le Candidat a envoyé la candidature et qui attend son issue ; sa Candidature commence là, et sa Lettre ne change plus ensuite.
 _Avoid_: envoyée, candidatée, postulé
 
+**Candidature**:
+Process de recrutement d'une Offre, de l'envoi de la candidature jusqu'à son issue ; une Offre a une Candidature dès qu'elle a été Postulée, même Archivée ensuite.
+_Avoid_: process, suivi, offre en cours
+
+**Convoquée**:
+Se dit d'une Candidature sans issue qui a un Entretien à venir.
+_Avoid_: entretien prévu, invitée
+
+**Entretien**:
+Rendez-vous que l'employeur fixe au Candidat pour une Candidature, avec son début, sa durée et son lieu ; une Candidature peut en compter plusieurs, un par tour.
+_Avoid_: rendez-vous, convocation, tour
+
+**Interlocuteurs**:
+Personnes que le Candidat rencontre à un Entretien, décrites par lui en texte libre (nom, rôle, tout ce qu'il sait).
+_Avoid_: jury, recruteurs, contacts
+
+**Entretien passé**:
+Se dit d'une Candidature sans issue dont tous les Entretiens ont eu lieu.
+_Avoid_: en attente, résultat attendu
+
+**Obtenue**:
+Issue d'une Candidature où le Candidat a le poste.
+_Avoid_: retenue, acceptée, embauché
+
+**Refusée**:
+Issue d'une Candidature où l'employeur n'a pas retenu le Candidat.
+_Avoid_: rejetée, échec, non retenue
+
 **Archivée**:
-Statut d'une Offre que le Candidat a décidé de ne plus suivre.
+Se dit d'une Offre que le Candidat a décidé de ne plus suivre, quel que soit son statut, qu'elle garde ; la désarchiver la rend telle qu'elle était.
 _Avoid_: supprimée, ignorée
 
 **Expirée**:
 Se dit d'une Offre dont la Date limite est passée, quel que soit son statut.
 _Avoid_: fermée, close, périmée
 
+**Notes**:
+Texte libre que le Candidat tient sur une Offre, quel que soit son statut, et qu'il réécrit à volonté.
+_Avoid_: journal, commentaires, suivi
+
 ## Artefacts
 
 **Artefact**:
-Document produit pour une Offre et rattaché à elle : Recherche, Brouillon, Lettre, Fiche d'entretien, Visualisation.
+Document produit pour une Offre, ou pour l'un de ses Entretiens, et rattaché à lui : Recherche, Brouillon, Lettre, Portrait, Fiche d'entretien, Visualisation.
 _Avoid_: livrable, output, fichier
 
 **Version**:
@@ -98,8 +150,12 @@ _Avoid_: draft, première version
 Lettre de motivation corrigée par l'humain à partir du Brouillon ; c'est elle qui est envoyée.
 _Avoid_: lettre finale, LM
 
+**Portrait**:
+Artefact d'un Entretien qui établit, sources à l'appui, ce que l'on sait publiquement du parcours et des positions professionnelles de ses Interlocuteurs.
+_Avoid_: recherche, profil, fiche
+
 **Fiche d'entretien**:
-Artefact qui prépare l'entretien d'une Offre précise : ce qu'il faut réviser et comment s'entraîner.
+Artefact qui prépare un Entretien précis en croisant l'Offre et ses Interlocuteurs : le discours à leur tenir, ce qu'il faut réviser et comment s'entraîner.
 _Avoid_: fiche de révision, fiche de compréhension, fiche mnémotechnique
 
 **Visualisation**:

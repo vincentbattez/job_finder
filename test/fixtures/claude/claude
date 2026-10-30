@@ -1,0 +1,12 @@
+#!/bin/sh
+# Stands in for the claude CLI in test/claude-code.test.ts: records how it was launched, then
+# answers as `claude -p --output-format json` would. An interactive session reads and prints
+# nothing, since the test runner holds the terminal.
+printf '%s\0' "$@" > "$FAKE_CLAUDE_RECORD/arguments"
+env > "$FAKE_CLAUDE_RECORD/environment"
+pwd -P > "$FAKE_CLAUDE_RECORD/directory"
+if [ "$1" = "-p" ]; then
+  cat > "$FAKE_CLAUDE_RECORD/message"
+  printf '%s' "$FAKE_CLAUDE_OUTPUT"
+fi
+exit "${FAKE_CLAUDE_EXIT_CODE:-0}"

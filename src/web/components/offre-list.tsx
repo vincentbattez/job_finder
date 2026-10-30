@@ -1,11 +1,14 @@
+import { Link } from 'react-router';
+
 import { StatutBadge, type Statut } from './badge.tsx';
 import { DateText } from './date.tsx';
 
+// The fields of an Offre that the list shows, named as the actions name them
 export interface IOffreRow {
   reference: string;
   title: string;
-  url: string;
-  workplace: string;
+  url: string | null;
+  workplace: string | null;
   statut: Statut;
   isExpiree: boolean;
   publishedAt: Date | null;
@@ -35,11 +38,17 @@ export function OffreList({ offreList }: Readonly<{ offreList: IOffreRow[] }>) {
           <tr key={offre.reference}>
             <td>
               <div className="offre-list__offre">
-                <span className="offre-list__title">{offre.title}</span>
-                <span className="offre-list__workplace">{offre.workplace}</span>
-                <a className="reference" href={offre.url}>
-                  {offre.reference}
-                </a>
+                <Link className="offre-list__title" to={`/offres/${offre.reference}`}>
+                  {offre.title}
+                </Link>
+                {offre.workplace !== null && <span className="offre-list__workplace">{offre.workplace}</span>}
+                {offre.url === null ? (
+                  <span className="reference">{offre.reference}</span>
+                ) : (
+                  <a className="reference" href={offre.url}>
+                    {offre.reference}
+                  </a>
+                )}
               </div>
             </td>
             <td>

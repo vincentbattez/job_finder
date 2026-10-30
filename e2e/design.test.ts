@@ -24,7 +24,11 @@ test.describe('design system page', () => {
     const firstRow = table.getByRole('row').nth(1);
 
     await expect(table.getByRole('columnheader')).toHaveText(['Offre', 'Statut', 'Publiée le', 'Date limite']);
-    await expect(firstRow.getByRole('link')).toHaveAttribute('href', /^https:\/\//);
+    await expect(firstRow.getByRole('link', { name: '2026-0000101' })).toHaveAttribute('href', /^https:\/\//);
+    await expect(firstRow.getByRole('link', { name: /Attaché de justice/ })).toHaveAttribute(
+      'href',
+      '/offres/2026-0000101',
+    );
     await expect(firstRow.getByRole('cell')).toHaveText([/Attaché de justice/, 'À traiter', DATE, DATE]);
   });
 
@@ -39,7 +43,7 @@ test.describe('design system page', () => {
 
     await expect(fiche.getByRole('heading', { level: 3 })).toHaveText(/Attaché de justice/);
     await expect(fiche.getByRole('term')).toContainText(['Mail de candidature', 'Contact 1', 'Contact 2']);
-    await expect(fiche.getByRole('list', { name: 'Artefacts' }).getByRole('listitem')).toHaveText([
+    await expect(fiche.getByRole('region', { name: 'Artefacts' }).getByRole('listitem')).toHaveText([
       /^Recherche.*(Absent|En cours|Prêt|En échec)$/,
       /^Lettre.*(Absent|En cours|Prêt|En échec)$/,
       /^Fiche d’entretien.*(Absent|En cours|Prêt|En échec)$/,
@@ -49,13 +53,9 @@ test.describe('design system page', () => {
 
   test('previews the Markdown as it is typed', async ({ page }) => {
     const editor = page.getByRole('region', { name: 'Éditeur Markdown' });
+    await editor.getByRole('textbox', { name: 'Lettre' }).fill('# Objet de la lettre\n\nMadame, Monsieur,');
 
-    // Text typed before React hydrates the server-rendered page never reaches the preview: on a
-    // cold dev server, type again until it does
-    await expect(async () => {
-      await editor.getByRole('textbox', { name: 'Lettre' }).fill('# Objet de la lettre\n\nMadame, Monsieur,');
-      await expect(editor.getByRole('heading', { name: 'Objet de la lettre' })).toBeVisible({ timeout: 1000 });
-    }).toPass();
+    await expect(editor.getByRole('heading', { name: 'Objet de la lettre' })).toBeVisible();
   });
 
   // Léa reads the front on her phone through the VPN (ADR-0002). overflow-x: clip hides a horizontal
@@ -72,5 +72,20 @@ test.describe('design system page', () => {
       );
 
     expect(overflowingList).toEqual([]);
+  });
+});
+
+// The server's page shows the editor before React runs it. Text typed there would be overwritten by
+// React taking over the field, and on Chromium the text typed meanwhile lands at its start: the
+// editor waits for React instead.
+test.describe('design system page before React runs', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('takes no text in the Markdown editor', async ({ page }) => {
+    await page.goto('/design');
+
+    await expect(
+      page.getByRole('region', { name: 'Éditeur Markdown' }).getByRole('textbox', { name: 'Lettre' }),
+    ).not.toBeEditable();
   });
 });

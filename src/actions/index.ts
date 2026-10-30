@@ -1,19 +1,38 @@
-import type { Candidat, DomainValue } from '#/domain/index.ts';
-import { openWorkspace } from '#/workspace/index.ts';
+import type { DomainValue } from '#/domain/index.ts';
+
+import { createConnexionHomeAssistantActions } from './connexion-home-assistant.ts';
+import { createConsignesActions } from './consignes.ts';
+import { openContext, type IActionsOption } from './context.ts';
+import { createDetectActions } from './detect.ts';
+import { createEditionActions } from './edition.ts';
+import { createFaitsActions } from './faits.ts';
+import { createImportActions } from './import-fiche-de-poste.ts';
+import { createJobActions } from './jobs.ts';
+import { createOffreActions } from './offres.ts';
+import { createPieceActions } from './pieces.ts';
+import { createProfilActions } from './profil.ts';
+import { createStatutActions } from './statut.ts';
 
 export type Actions = Awaited<ReturnType<typeof createActions>>;
 
-// The single entry point of every feature: the CLI and the front only call these actions,
-// so no business rule lives in either of them (ADR-0003). `satisfies` holds them to the
-// anti-corruption layer (ADR-0005): the input is whatever a user typed, so each action takes it
-// as unknown and parses it with Zod, and the output is nothing or domain values, so no raw data
-// reaches the CLI or the front.
-export async function createActions({ dataDirectory }: { dataDirectory: string }) {
-  const workspace = await openWorkspace(dataDirectory);
+// The CLI, the front and the worker reach nothing but the actions (ADR-0003)
+export { messageOf } from '#/text/index.ts';
 
+// The single entry point of every feature, so no business rule lives in the CLI or the front
+// (ADR-0003); `satisfies` holds each action to unknown input and domain output (ADR-0005)
+export async function createActions(option: IActionsOption) {
+  const context = await openContext(option);
   return {
-    listCandidats(): Promise<Candidat[]> {
-      return workspace.listCandidats();
-    },
+    ...createOffreActions(context),
+    ...createDetectActions(context),
+    ...createImportActions(context),
+    ...createStatutActions(context),
+    ...createProfilActions(context),
+    ...createPieceActions(context),
+    ...createConnexionHomeAssistantActions(context),
+    ...createFaitsActions(context),
+    ...createConsignesActions(context),
+    ...createEditionActions(context),
+    ...createJobActions(context),
   } satisfies Record<string, (rawInput: unknown) => Promise<void> | Promise<DomainValue | DomainValue[]>>;
 }

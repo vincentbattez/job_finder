@@ -4,11 +4,15 @@
 
 Before writing or reviewing code, read `CODING_STANDARDS.md`.
 
+### Coding when no spec
+
+When I ask for a code change outside `/implement-spec`, keep that workflow's discipline, scaled to the change: load the `domain-modeling` and `tdd` skills to start; when finished, run `code-review` with my request as the spec, fix what it raises, then `commit`.
+
 ## Agent skills
 
 ### Issue tracker
 
-Issues live in GitHub Issues (`vincentbattez/job_finder`, via `gh`), with no labels at all. New work is also mirrored as a Things 3 task via the `things3` skill — the root of a work item only, never its children. Read `docs/agents/issue-tracker.md` before creating any issue.
+Issues live in GitHub Issues (`vincentbattez/job_finder`, via `gh`), with no labels at all. Read `docs/agents/issue-tracker.md` before creating any issue.
 
 ### Triage labels
 

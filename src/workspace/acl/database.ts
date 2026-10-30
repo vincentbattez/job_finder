@@ -1,51 +1,426 @@
 import { execFileSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { z } from 'zod/v4';
 
-import { CANDIDAT_SCHEMA, type Candidat } from '#/domain/index.ts';
+import {
+  CANDIDAT_SCHEMA,
+  CONNEXION_HOME_ASSISTANT_SCHEMA,
+  HOME_ASSISTANT_ACCESS_SCHEMA,
+  JOB_SCHEMA,
+  OFFRE_SCHEMA,
+  PROFIL_JOB_SCHEMA,
+  QUEUED_JOB_SCHEMA,
+  VEILLE_SCHEMA,
+  VERSION_SCHEMA,
+  type Artefact,
+  type Candidat,
+  type ConnexionHomeAssistant,
+  type FicheDePoste,
+  type HomeAssistantAccess,
+  type Job,
+  type Lieu,
+  type ListedOffre,
+  type Module,
+  type Offre,
+  type PieceFileName,
+  type ProfilJob,
+  type QueuedJob,
+  type Source,
+  type Statut,
+  type Veille,
+  type Version,
+} from '#/domain/index.ts';
+import { findPostuleeAt, isExpiree } from '#/statut/index.ts';
 import { PrismaClient } from '#/workspace/generated/client.ts';
 
 import type { Config } from './config.ts';
 
 const ROOT_DIRECTORY = path.join(import.meta.dirname, '..', '..', '..');
 const PRISMA_CLI_PATH = fileURLToPath(import.meta.resolve('prisma/build/index.js'));
+const MIGRATIONS_DIRECTORY = path.join(ROOT_DIRECTORY, 'prisma', 'migrations');
+const APPLIED_MIGRATION_LIST_SCHEMA = z.array(z.object({ migration_name: z.string() }));
 
-export type Database = ReturnType<typeof openDatabase>;
+const VERSION_INCLUDE = {
+  inputList: { select: { artefact: true, number: true, offre: { select: { reference: true } } } },
+};
+const LINKED_OFFRE_SELECT = { select: { reference: true } };
+const OFFRE_INCLUDE = {
+  republicationOf: LINKED_OFFRE_SELECT,
+  republicationList: { ...LINKED_OFFRE_SELECT, orderBy: { reference: 'asc' } },
+} as const;
+const JOB_INCLUDE = { offre: { include: OFFRE_INCLUDE }, version: { include: VERSION_INCLUDE } };
 
-// Applies the pending migrations of prisma/migrations first, so the schema exists from the
-// first launch and follows every upgrade. Prisma never leaves this file: every row read is
-// parsed into a domain type (ADR-0005).
-export function openDatabase(databasePath: string) {
+export interface INewOffre {
+  candidatId: string;
+  source: Source;
+  listedOffre: ListedOffre;
+  ficheDePoste: FicheDePoste;
+  isInZone: boolean;
+  republicationOf: Offre | undefined;
+  lieu: Lieu;
+}
+
+// Read where Prisma records the migrations it applied (ADR-0004): a database it has not created
+// yet, or one it cannot read, has them all pending
+function hasPendingMigration(databasePath: string): boolean {
+  const migrationList = readdirSync(MIGRATIONS_DIRECTORY, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map(({ name }) => name);
+  try {
+    const database = new DatabaseSync(databasePath, { readOnly: true });
+    try {
+      const rowList = database
+        .prepare(
+          'SELECT "migration_name" FROM "_prisma_migrations" WHERE "finished_at" IS NOT NULL AND "rolled_back_at" IS NULL',
+        )
+        .all();
+      const appliedSet = new Set(APPLIED_MIGRATION_LIST_SCHEMA.parse(rowList).map(({ migration_name: name }) => name));
+      return migrationList.some((name) => !appliedSet.has(name));
+    } finally {
+      database.close();
+    }
+  } catch {
+    return true;
+  }
+}
+
+// Migrates first, but only when a migration is pending: the Prisma CLI takes 0.3 s to start
+// (ADR-0004). Prisma never leaves this file (ADR-0005).
+export function openDatabase(databasePath: string, defaultDelayMonths: number) {
   const url = `file:${databasePath}`;
-  execFileSync(process.execPath, [PRISMA_CLI_PATH, 'migrate', 'deploy'], {
-    cwd: ROOT_DIRECTORY,
-    env: { ...process.env, DATABASE_URL: url, CHECKPOINT_DISABLE: '1' },
-    stdio: 'pipe',
+  if (hasPendingMigration(databasePath)) {
+    execFileSync(process.execPath, [PRISMA_CLI_PATH, 'migrate', 'deploy'], {
+      cwd: ROOT_DIRECTORY,
+      env: { ...process.env, DATABASE_URL: url, CHECKPOINT_DISABLE: '1' },
+      stdio: 'pipe',
+    });
+  }
+  // Expirée depends on the day, so every Offre read computes it rather than storing it
+  const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url }) }).$extends({
+    result: {
+      offre: {
+        isExpiree: {
+          needs: { dateLimite: true, publishedAt: true },
+          compute: (offre) => isExpiree(offre, new Date(), defaultDelayMonths),
+        },
+      },
+    },
   });
-  const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url }) });
+
+  // A single Version retenue per Artefact of an Offre
+  function retenirStatementList({
+    offreId,
+    artefact,
+    number,
+  }: {
+    offreId: number;
+    artefact: Artefact;
+    number: number;
+  }) {
+    return [
+      prisma.version.updateMany({ where: { offreId, artefact, number: { not: number } }, data: { isRetenue: false } }),
+      prisma.version.updateMany({ where: { offreId, artefact, number }, data: { isRetenue: true } }),
+    ];
+  }
 
   return {
     async listCandidats(): Promise<Candidat[]> {
       return z.array(CANDIDAT_SCHEMA).parse(await prisma.candidat.findMany({ orderBy: { name: 'asc' } }));
     },
 
-    // The config is the source of truth, so its Candidats and Veilles replace the copied rows.
-    // Removing from the config a Candidat who still has Offres makes the launch fail, through the
-    // foreign key, instead of leaving them orphaned.
+    // Never the token: what an action may return (ADR-0006)
+    async readConnexionHomeAssistant({ id }: Candidat): Promise<ConnexionHomeAssistant> {
+      const connexion = await prisma.connexionHomeAssistant.findUnique({ where: { candidatId: id } });
+      return CONNEXION_HOME_ASSISTANT_SCHEMA.parse({
+        url: connexion?.url ?? null,
+        service: connexion?.service ?? null,
+        isTokenConfigured: (connexion?.token ?? null) !== null,
+      });
+    },
+
+    // The token included, for the notification channel only, never for an action to return (ADR-0006)
+    async findHomeAssistantAccess(candidatId: string): Promise<HomeAssistantAccess> {
+      const candidat = await prisma.candidat.findUniqueOrThrow({
+        where: { id: candidatId },
+        include: { connexionHomeAssistant: true },
+      });
+      const { url = null, token = null, service = null } = candidat.connexionHomeAssistant ?? {};
+      return HOME_ASSISTANT_ACCESS_SCHEMA.parse({ candidatName: candidat.name, url, token, service });
+    },
+
+    // A field left undefined keeps its saved value: the front never gets the token back to resend it
+    async saveConnexionHomeAssistant(
+      { id }: Candidat,
+      { url, token, service }: { url: string; token: string | undefined; service: string | undefined },
+    ): Promise<void> {
+      const data = { url, ...(token !== undefined && { token }), ...(service !== undefined && { service }) };
+      await prisma.connexionHomeAssistant.upsert({
+        where: { candidatId: id },
+        create: { candidatId: id, ...data },
+        update: data,
+      });
+    },
+
+    async listVeilles(): Promise<Veille[]> {
+      return z.array(VEILLE_SCHEMA).parse(await prisma.veille.findMany({ orderBy: { id: 'asc' } }));
+    },
+
+    async listOffres(candidatId: string): Promise<Offre[]> {
+      return z.array(OFFRE_SCHEMA).parse(
+        await prisma.offre.findMany({
+          where: { candidatId },
+          orderBy: { reference: 'desc' },
+          include: OFFRE_INCLUDE,
+        }),
+      );
+    },
+
+    async createJob(offre: Offre, module: Module): Promise<Job> {
+      return JOB_SCHEMA.parse(await prisma.job.create({ data: { module, offreId: offre.id }, include: JOB_INCLUDE }));
+    },
+
+    // The job runs and its Version is created, numbered after the last Version of its Artefact,
+    // with the Versions it reads
+    async startJob(
+      { id, module, offre }: Job & { module: Artefact },
+      {
+        consignes,
+        hasCandidatConsignes,
+        inputList,
+      }: { consignes: string; hasCandidatConsignes: boolean; inputList: { offre: Offre; version: Version }[] },
+    ): Promise<Version> {
+      const { _max: max } = await prisma.version.aggregate({
+        where: { offreId: offre.id, artefact: module },
+        _max: { number: true },
+      });
+      const [, version] = await prisma.$transaction([
+        prisma.job.update({ where: { id }, data: { state: 'running' } }),
+        prisma.version.create({
+          data: {
+            offreId: offre.id,
+            artefact: module,
+            number: (max.number ?? 0) + 1,
+            state: 'running',
+            consignes,
+            hasCandidatConsignes,
+            jobId: id,
+            inputList: {
+              connect: inputList.map(({ offre: { id: offreId }, version: { artefact, number } }) => ({
+                offreId_artefact_number: { offreId, artefact, number },
+              })),
+            },
+          },
+          include: VERSION_INCLUDE,
+        }),
+      ]);
+      return VERSION_SCHEMA.parse(version);
+    },
+
+    // A ready Version becomes the Version retenue: by default, the latest one is retained
+    async finishJob(
+      { job, version }: { job: Job; version: Version },
+      { isReady, log, sessionId }: { isReady: boolean; log: string; sessionId: string | null },
+    ): Promise<{ job: Job; version: Version }> {
+      const versionWhere = { offreId: job.offre.id, artefact: version.artefact, number: version.number };
+      await prisma.$transaction([
+        prisma.version.updateMany({ where: versionWhere, data: { state: isReady ? 'ready' : 'failed' } }),
+        prisma.job.update({ where: { id: job.id }, data: { state: isReady ? 'done' : 'failed', log, sessionId } }),
+        ...(isReady ? retenirStatementList(versionWhere) : []),
+      ]);
+      return {
+        job: JOB_SCHEMA.parse(await prisma.job.findUniqueOrThrow({ where: { id: job.id }, include: JOB_INCLUDE })),
+        version: VERSION_SCHEMA.parse(
+          await prisma.version.findUniqueOrThrow({
+            where: { offreId_artefact_number: versionWhere },
+            include: VERSION_INCLUDE,
+          }),
+        ),
+      };
+    },
+
+    // A job that ran without a Version, such as an extraction, is done
+    async finishJobWithoutVersion({ id }: Job, { log, sessionId }: { log: string; sessionId: string | null }) {
+      return JOB_SCHEMA.parse(
+        await prisma.job.update({ where: { id }, data: { state: 'done', log, sessionId }, include: JOB_INCLUDE }),
+      );
+    },
+
+    async listJobs(offre: Offre): Promise<Job[]> {
+      return z
+        .array(JOB_SCHEMA)
+        .parse(
+          await prisma.job.findMany({ where: { offreId: offre.id }, include: JOB_INCLUDE, orderBy: { id: 'asc' } }),
+        );
+    },
+
+    // A job of an Offre: those of a Profil are followed on its page
+    async findJob(id: number): Promise<Job | null> {
+      const job = await prisma.job.findUnique({ where: { id, offreId: { not: null } }, include: JOB_INCLUDE });
+      return job === null ? null : JOB_SCHEMA.parse(job);
+    },
+
+    // The oldest queued job, now running, unless a job is already running: a single Claude session
+    // at a time (ADR-0003). One statement, so SQLite claims it atomically, even for two workers.
+    async claimNextJob(): Promise<QueuedJob | null> {
+      const claimedList = z.array(z.object({ id: z.int() })).parse(
+        await prisma.$queryRaw`
+          UPDATE "Job" SET "state" = 'running'
+          WHERE "id" = (SELECT "id" FROM "Job" WHERE "state" = 'queued' ORDER BY "id" LIMIT 1)
+            AND NOT EXISTS (SELECT 1 FROM "Job" WHERE "state" = 'running')
+          RETURNING "id"`,
+      );
+      const [claimed] = claimedList;
+      return claimed === undefined
+        ? null
+        : QUEUED_JOB_SCHEMA.parse(
+            await prisma.job.findUniqueOrThrow({ where: { id: claimed.id }, include: JOB_INCLUDE }),
+          );
+    },
+
+    // Fails the running jobs and their Versions, keeping the reason in the job's log
+    async failRunningJobs(log: string): Promise<QueuedJob[]> {
+      const runningList = await prisma.job.findMany({ where: { state: 'running' }, select: { id: true } });
+      const idList = runningList.map(({ id }) => id);
+      await prisma.$transaction([
+        prisma.version.updateMany({ where: { jobId: { in: idList } }, data: { state: 'failed' } }),
+        prisma.job.updateMany({ where: { id: { in: idList } }, data: { state: 'failed', log } }),
+      ]);
+      return z
+        .array(QUEUED_JOB_SCHEMA)
+        .parse(
+          await prisma.job.findMany({ where: { id: { in: idList } }, include: JOB_INCLUDE, orderBy: { id: 'asc' } }),
+        );
+    },
+
+    async createProfilJob(candidatId: string, piece: PieceFileName): Promise<ProfilJob> {
+      return PROFIL_JOB_SCHEMA.parse(await prisma.job.create({ data: { module: 'conversion', candidatId, piece } }));
+    },
+
+    async listProfilJobs(candidatId: string): Promise<ProfilJob[]> {
+      return z
+        .array(PROFIL_JOB_SCHEMA)
+        .parse(await prisma.job.findMany({ where: { candidatId }, orderBy: { id: 'asc' } }));
+    },
+
+    async finishProfilJob({ id }: ProfilJob, { log, sessionId }: { log: string; sessionId: string | null }) {
+      return PROFIL_JOB_SCHEMA.parse(
+        await prisma.job.update({ where: { id }, data: { state: 'done', log, sessionId } }),
+      );
+    },
+
+    async listVersions(offre: Offre, artefact: Artefact): Promise<Version[]> {
+      return z.array(VERSION_SCHEMA).parse(
+        await prisma.version.findMany({
+          where: { offreId: offre.id, artefact },
+          orderBy: { number: 'asc' },
+          include: VERSION_INCLUDE,
+        }),
+      );
+    },
+
+    async retenirVersion(offre: Offre, { artefact, number }: Version): Promise<void> {
+      await prisma.$transaction(retenirStatementList({ offreId: offre.id, artefact, number }));
+    },
+
+    async setDetected({ id }: Veille): Promise<void> {
+      await prisma.veille.update({ where: { id }, data: { detectedAt: new Date() } });
+    },
+
+    async listReferences(candidatId: string, source: Source): Promise<string[]> {
+      const offreList = await prisma.offre.findMany({ where: { candidatId, source }, select: { reference: true } });
+      return z.array(z.string()).parse(offreList.map(({ reference }) => reference));
+    },
+
+    async findOffres(reference: string): Promise<Offre[]> {
+      return z.array(OFFRE_SCHEMA).parse(await prisma.offre.findMany({ where: { reference }, include: OFFRE_INCLUDE }));
+    },
+
+    async listUnlocatedOffres(): Promise<Offre[]> {
+      return z
+        .array(OFFRE_SCHEMA)
+        .parse(await prisma.offre.findMany({ where: { latitude: null }, include: OFFRE_INCLUDE }));
+    },
+
+    async setLieu({ id }: Offre, lieu: Lieu): Promise<void> {
+      await prisma.offre.update({ where: { id }, data: lieu });
+    },
+
+    // The fields read in its Fiche de poste replace those of the Offre, its title included
+    async fillOffre(
+      { id }: Offre,
+      { title, ficheDePoste, lieu }: { title: string; ficheDePoste: FicheDePoste; lieu: Lieu },
+    ) {
+      const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = ficheDePoste;
+      const data = { title, dateLimite, employer, workplace, applicationEmail, contact1, contact2, ...lieu };
+      return OFFRE_SCHEMA.parse(await prisma.offre.update({ where: { id }, data, include: OFFRE_INCLUDE }));
+    },
+
+    async setStatut(offre: Offre, statut: Statut): Promise<void> {
+      const postuleeAt = findPostuleeAt(offre, statut, new Date());
+      await prisma.offre.update({ where: { id: offre.id }, data: { statut, postuleeAt } });
+    },
+
+    async createOffre({
+      candidatId,
+      source,
+      listedOffre,
+      ficheDePoste,
+      isInZone,
+      republicationOf,
+      lieu,
+    }: INewOffre): Promise<Offre> {
+      const { reference, title, url, publishedAt } = listedOffre;
+      const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = ficheDePoste;
+      const data = { candidatId, source, reference, title, url, publishedAt, dateLimite, employer, workplace };
+      return OFFRE_SCHEMA.parse(
+        await prisma.offre.create({
+          data: {
+            ...data,
+            ...lieu,
+            applicationEmail,
+            contact1,
+            contact2,
+            isInZone,
+            republicationOfId: republicationOf?.id ?? null,
+          },
+          include: OFFRE_INCLUDE,
+        }),
+      );
+    },
+
+    // The config is the source of truth, except when a Veille's Détection last went through; a
+    // Candidat removed with Offres left fails the launch on the foreign key rather than orphan them
     async copyConfig(config: Config): Promise<void> {
       const veilleList = config.candidatList.flatMap((candidat) =>
         candidat.veilleList.map((veille) => ({ ...veille, candidatId: candidat.id })),
       );
       await prisma.$transaction([
-        prisma.veille.deleteMany(),
+        prisma.veille.deleteMany({ where: { id: { notIn: veilleList.map(({ id }) => id) } } }),
         prisma.candidat.deleteMany({ where: { id: { notIn: config.candidatList.map((candidat) => candidat.id) } } }),
         ...config.candidatList.map(({ id, name }) =>
           prisma.candidat.upsert({ where: { id }, create: { id, name }, update: { name } }),
         ),
-        prisma.veille.createMany({ data: veilleList }),
+        ...veilleList.map((veille) =>
+          prisma.veille.upsert({ where: { id: veille.id }, create: veille, update: veille }),
+        ),
+        // The notify service the config used to hold seeds a Candidat's first Connexion, then the
+        // database wins (ADR-0006)
+        ...config.candidatList.flatMap(({ id, notification }) =>
+          notification === undefined
+            ? []
+            : [
+                prisma.connexionHomeAssistant.upsert({
+                  where: { candidatId: id },
+                  create: { candidatId: id, service: notification.service },
+                  update: {},
+                }),
+              ],
+        ),
       ]);
     },
   };

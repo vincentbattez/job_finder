@@ -16,10 +16,13 @@ const VEILLE_SCHEMA = z.strictObject({
 const CANDIDAT_SCHEMA = z.strictObject({
   id: SLUG_SCHEMA,
   name: z.string().min(1),
-  notification: z.strictObject({
-    channel: z.literal('home-assistant'),
-    service: z.string().startsWith('notify.'),
-  }),
+  // Before the Connexion Home Assistant moved to the database, which it seeds (ADR-0006)
+  notification: z
+    .strictObject({
+      channel: z.literal('home-assistant'),
+      service: z.string().startsWith('notify.'),
+    })
+    .optional(),
   veilleList: z.array(VEILLE_SCHEMA),
 });
 

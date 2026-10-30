@@ -34,9 +34,31 @@ run = "prisma db seed"
 description = "Recreate the dev-data/ database from the migrations, then seed it"
 run = ["mkdir -p dev-data && prisma migrate reset --force", "mise run db:seed"]
 
+[tasks."db:generate"]
+description = "Generate the Prisma client of prisma/schema.prisma into src/workspace/generated (out of git)"
+run = "prisma generate"
+
 [tasks.web]
-description = "Start the front in development mode, open to the local network (ADR-0002)"
-run = "react-router dev --host"
+# Regenerate first: a client older than the schema crashes at the first query
+depends = ["db:generate"]
+description = "Serve the front of data/ on port 5180, open to the LAN and WireGuard: the lpm service web (ADR-0002)"
+# .env holds the Home Assistant fallback of the notifications, which the Détection button sends (ADR-0006)
+run = "node --env-file-if-exists=.env node_modules/@react-router/dev/bin.cjs dev --host --port 5180 --strictPort"
+
+[tasks."web:dev"]
+# Regenerate first: a client older than the schema crashes at the first query
+depends = ["db:generate"]
+description = "Serve the front of dev-data/, the fake Offres of development, on port 5181 of this machine only"
+# Never .env: a Détection from dev-data/ sends no notification to a real phone
+env = { JF_DATA_DIRECTORY = "dev-data" }
+run = "node node_modules/@react-router/dev/bin.cjs dev --port 5181 --strictPort"
+
+[tasks.worker]
+# Regenerate first: a client older than the schema crashes at the first query
+depends = ["db:generate"]
+description = "Run the queued jobs of data/, one Claude session at a time: the lpm service worker (ADR-0003)"
+# .env holds the Home Assistant fallback of the notifications (ADR-0006)
+run = "node --env-file-if-exists=.env src/worker/worker.ts"
 
 [tasks."lint:ts"]
 description = "Lint with ESLint"

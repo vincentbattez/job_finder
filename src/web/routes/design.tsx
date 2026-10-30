@@ -4,7 +4,7 @@ import { OffreFiche, type IOffreFiche } from '#/web/components/offre-fiche.tsx';
 import { OffreList, type IOffreRow } from '#/web/components/offre-list.tsx';
 
 // Sample values that read as samples: the real Offres reach the front through the actions (ADR-0003)
-const SAMPLE_OFFRE: IOffreFiche = {
+const SAMPLE_OFFRE = {
   reference: '2026-0000101',
   title: 'Attaché de justice (F/H), pôle civil',
   url: 'https://example.org/offres/2026-0000101',
@@ -17,17 +17,76 @@ const SAMPLE_OFFRE: IOffreFiche = {
   applicationEmail: 'recrutement@example.org',
   contact1: 'Greffe du pôle civil, 03 00 00 00 00',
   contact2: null,
-  fichePoste: [
-    '## Missions',
-    '',
-    'L’attaché de justice assiste les magistrats du pôle civil : recherches juridiques, notes de synthèse et projets de décision.',
-    '',
-    '## Profil recherché',
-    '',
-    '- Master 2 en droit privé',
-    '- Goût du travail en équipe',
-  ].join('\n'),
-  etatByArtefact: { recherche: 'pret', lettre: 'en_cours', fiche_entretien: 'en_echec', visualisation: 'absent' },
+  republicationOf: { reference: '2026-0000042' },
+  republicationList: [],
+} satisfies IOffreFiche['offre'];
+
+const SAMPLE_FICHE_DE_POSTE = [
+  '## Missions',
+  '',
+  'L’attaché de justice assiste les magistrats du pôle civil : recherches juridiques, notes de synthèse et projets de décision.',
+  '',
+  '## Profil recherché',
+  '',
+  '- Master 2 en droit privé',
+  '- Goût du travail en équipe',
+].join('\n');
+
+function sampleVersion(number: number, state: 'running' | 'ready' | 'failed') {
+  return {
+    version: {
+      number,
+      state,
+      isRetenue: number === 1,
+      hasCandidatConsignes: number === 2,
+      consignes: 'Établis ce que les recruteurs attendent pour cette Offre.',
+      createdAt: new Date('2026-10-21'),
+    },
+    isRetenable: false,
+    documentList: [],
+  };
+}
+
+// One Artefact in each état, that of its latest Version
+const SAMPLE_FICHE: IOffreFiche = {
+  offre: SAMPLE_OFFRE,
+  ficheDePoste: SAMPLE_FICHE_DE_POSTE,
+  artefactList: [
+    {
+      artefact: 'recherche',
+      etat: 'pret',
+      module: { refusal: null },
+      isEditable: true,
+      versionList: [sampleVersion(1, 'ready')],
+    },
+    {
+      artefact: 'lettre',
+      etat: 'en_cours',
+      module: { refusal: null },
+      isEditable: true,
+      versionList: [sampleVersion(1, 'ready'), sampleVersion(2, 'running')],
+    },
+    {
+      artefact: 'fiche_entretien',
+      etat: 'en_echec',
+      module: { refusal: null },
+      isEditable: false,
+      versionList: [sampleVersion(1, 'failed')],
+    },
+    {
+      artefact: 'visualisation',
+      etat: 'absent',
+      module: { refusal: 'Il faut d’abord une Fiche d’entretien retenue.' },
+      isEditable: false,
+      versionList: [],
+    },
+  ],
+  recipients: {
+    to: { email: 'recrutement@example.org', source: 'applicationEmail' },
+    ccList: [],
+    salutation: { text: 'Madame, Monsieur,', source: null },
+    justification: 'Le mail de candidature est la seule adresse publiée ; aucun contact ne donne de nom.',
+  },
 };
 
 const SAMPLE_LETTRE = [
@@ -127,11 +186,11 @@ export default function Design() {
       </section>
       <section aria-labelledby="fiche">
         <h2 id="fiche">Fiche d’une Offre</h2>
-        <OffreFiche offre={SAMPLE_OFFRE} />
+        <OffreFiche fiche={SAMPLE_FICHE} />
       </section>
       <section aria-labelledby="editeur">
         <h2 id="editeur">Éditeur Markdown</h2>
-        <MarkdownEditor label="Lettre" defaultValue={SAMPLE_LETTRE} />
+        <MarkdownEditor label="Lettre" defaultValue={SAMPLE_LETTRE} placeholder="Madame, Monsieur," />
       </section>
     </main>
   );

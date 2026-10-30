@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { fakerFR as faker } from '@faker-js/faker';
@@ -29,12 +29,13 @@ function fakeOffre(candidatId: string): Prisma.OffreUncheckedCreateInput {
     employer: `Cour d'appel de ${faker.helpers.arrayElement(COURT_OF_APPEAL_LIST)}`,
     workplace: `Tribunal judiciaire de ${city}`,
     city,
+    region: faker.location.state(),
     latitude: faker.location.latitude({ min: 42.5, max: 51 }),
     longitude: faker.location.longitude({ min: -4.5, max: 7.5 }),
     applicationEmail: faker.internet.email({ provider: 'example.org' }),
     contact1: `${faker.person.fullName()}, ${faker.phone.number()}`,
     contact2: faker.helpers.maybe(() => faker.person.fullName()) ?? null,
-    status: faker.helpers.arrayElement(['a_traiter', 'postulee', 'archivee'] as const),
+    statut: faker.helpers.arrayElement(['a_traiter', 'postulee', 'archivee'] as const),
     isInZone: faker.datatype.boolean(),
     versionList: {
       create: hasRecherche
@@ -60,12 +61,16 @@ const database = new PrismaClient({
   adapter: new PrismaBetterSqlite3({ url: `file:${path.join(DEVELOPMENT_DATA_DIRECTORY, 'job_finder.sqlite')}` }),
 });
 faker.seed(1);
-await database.$transaction([
-  database.job.deleteMany(),
-  database.version.deleteMany(),
-  database.offre.deleteMany(),
-  ...candidatList.flatMap(({ id }) =>
+await database.$transaction([database.job.deleteMany(), database.version.deleteMany(), database.offre.deleteMany()]);
+const offreList = await database.$transaction(
+  candidatList.flatMap(({ id }) =>
     Array.from({ length: OFFRE_COUNT_PER_CANDIDAT }, () => database.offre.create({ data: fakeOffre(id) })),
   ),
-]);
+);
+// Every Offre has its Fiche de poste in its folder, as the Détection saves it
+for (const offre of offreList) {
+  const offreDirectory = workspace.offreDirectoryOf(offre);
+  mkdirSync(offreDirectory, { recursive: true });
+  writeFileSync(path.join(offreDirectory, 'fiche-de-poste.md'), `## Missions\n\n${faker.lorem.paragraphs(3)}\n`);
+}
 process.stdout.write(`${String(candidatList.length * OFFRE_COUNT_PER_CANDIDAT)} Offres factices dans dev-data/\n`);

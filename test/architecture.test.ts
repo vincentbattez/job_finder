@@ -14,21 +14,32 @@ const RAW_DATA_ACCESS_LIST = [
   {
     name: 'the Prisma client',
     pattern: /['"](?:@prisma\/|[^'"]*\/generated\/)/,
-    example: "import { PrismaClient } from '#/workspace/generated/client.ts';",
+    exampleList: ["import { PrismaClient } from '#/workspace/generated/client.ts';"],
   },
-  { name: 'HTTP', pattern: /\bfetch\(/, example: "await fetch('https://example.org');" },
+  { name: 'SQLite', pattern: /['"]node:sqlite['"]/, exampleList: ["import { DatabaseSync } from 'node:sqlite';"] },
+  { name: 'HTTP', pattern: /\bfetch\(/, exampleList: ["await fetch('https://example.org');"] },
+  // Any use of the file system, read or write, goes through its module: matching the module rather
+  // than each function also catches the one nobody listed
   {
-    name: 'a file read',
-    pattern: /\b(?:readFile(?:Sync)?|createReadStream)\b/,
-    example: "import { readFileSync } from 'node:fs';",
+    name: 'the file system',
+    pattern: /['"](?:node:)?fs(?:\/promises)?['"]/,
+    exampleList: [
+      "import { readFileSync } from 'node:fs';",
+      "import { rmSync } from 'node:fs';",
+      "import { unlink } from 'node:fs/promises';",
+      "import fs from 'fs';\nfs.writeFileSync('a', 'b');",
+      "import * as fs from 'fs/promises';",
+      "const fs = await import('node:fs');",
+      "const fs = process.getBuiltinModule('node:fs');",
+    ],
   },
-  { name: 'JSON parsing', pattern: /\bJSON\.parse\b/, example: "JSON.parse('{}');" },
+  { name: 'JSON parsing', pattern: /\bJSON\.parse\b/, exampleList: ["JSON.parse('{}');"] },
   {
     name: 'a child process',
     pattern: /['"]node:child_process['"]/,
-    example: "import { execFileSync } from 'node:child_process';",
+    exampleList: ["import { execFileSync } from 'node:child_process';"],
   },
-  { name: 'the environment', pattern: /\bprocess\.env\b/, example: 'process.env.TOKEN;' },
+  { name: 'the environment', pattern: /\bprocess\.env\b/, exampleList: ['process.env.TOKEN;'] },
 ];
 
 // Each folder of src/modules is a module. A diagram without any arrow turns every dependency
@@ -41,10 +52,12 @@ function findCrossModuleImports(tsconfigPath: string) {
     .check();
 }
 
-// The CLI and the front only relay to the actions, so no business rule lives in either (ADR-0003)
+// The CLI, the front and the worker only relay to the actions, so no business rule lives in them
+// (ADR-0003)
 const RELAY_LIST = [
   { folder: 'cli', filePath: 'src/cli/jf.ts' },
   { folder: 'web', filePath: 'src/web/routes/offres.tsx' },
+  { folder: 'worker', filePath: 'src/worker/worker.ts' },
 ];
 
 function findActionsBypassedBy(folder: string, tsconfigPath: string) {
@@ -70,6 +83,18 @@ function findRawDataOutsideAcl(projectDirectory: string): string[] {
       ({ name }) => `${filePath} uses ${name}`,
     );
   });
+}
+
+// Only the worker runs jobs, in its own process: run by the front, a session would stop at each
+// restart of the front, and fail the worker's running job at its start (ADR-0003)
+function findJobsRunOutsideWorker(projectDirectory: string): string[] {
+  const filePathList = globSync('src/**/*.{ts,tsx}', {
+    cwd: projectDirectory,
+    exclude: ['src/actions/**', 'src/worker/**', '**/*.test.{ts,tsx}'],
+  });
+  return filePathList.filter((filePath) =>
+    /\b(?:runQueuedJobs|failInterruptedJobs)\b/.test(readFileSync(path.join(projectDirectory, filePath), 'utf8')),
+  );
 }
 
 function createProject(fileContentByPath: Record<string, string>): string {
@@ -112,8 +137,11 @@ describe('architecture', () => {
   });
 
   it('catches raw data used outside an anti-corruption layer', () => {
+    const exampleList = RAW_DATA_ACCESS_LIST.flatMap(({ name, exampleList: accessExampleList }) =>
+      accessExampleList.map((example) => ({ name, example })),
+    );
     const fileContentByPath = Object.fromEntries(
-      RAW_DATA_ACCESS_LIST.flatMap(({ example }, index) => [
+      exampleList.flatMap(({ example }, index) => [
         [`src/offres/raw-${String(index)}.ts`, example],
         [`src/offres/acl/raw-${String(index)}.ts`, example],
       ]),
@@ -121,12 +149,24 @@ describe('architecture', () => {
     const projectDirectory = path.dirname(createProject(fileContentByPath));
 
     expect(new Set(findRawDataOutsideAcl(projectDirectory))).toEqual(
-      new Set(RAW_DATA_ACCESS_LIST.map(({ name }, index) => `src/offres/raw-${String(index)}.ts uses ${name}`)),
+      new Set(exampleList.map(({ name }, index) => `src/offres/raw-${String(index)}.ts uses ${name}`)),
     );
   });
 
   it('uses raw data only in an anti-corruption layer', () => {
     expect(findRawDataOutsideAcl(ROOT_DIRECTORY)).toEqual([]);
+  });
+
+  it('catches the front running the queued jobs', () => {
+    const projectDirectory = path.dirname(
+      createProject({ 'src/web/routes/offres.tsx': 'export const run = (actions) => actions.runQueuedJobs();\n' }),
+    );
+
+    expect(findJobsRunOutsideWorker(projectDirectory)).toEqual(['src/web/routes/offres.tsx']);
+  });
+
+  it('runs the queued jobs only in the worker', () => {
+    expect(findJobsRunOutsideWorker(ROOT_DIRECTORY)).toEqual([]);
   });
 
   // The client generated by Prisma has cycles of its own, out of our hands
