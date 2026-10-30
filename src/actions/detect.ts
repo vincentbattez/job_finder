@@ -1,6 +1,6 @@
 import type { z } from 'zod/v4';
 
-import { DETECTION_SCHEMA, type Detection, type Offre } from '#/domain/index.ts';
+import { DETECTION_SCHEMA, type Detection, type Offre, type SourceModule, type Veille } from '#/domain/index.ts';
 import { readCity } from '#/geo/city.ts';
 import {
   composeNouvelleOffreNotification,
@@ -9,6 +9,7 @@ import {
   type INotification,
 } from '#/notification/index.ts';
 import { findRepublishedOffre } from '#/republication/index.ts';
+import type { ISource } from '#/source/index.ts';
 import { hasBeenPostulee } from '#/statut/index.ts';
 
 import type { ActionContext } from './context.ts';
@@ -20,8 +21,19 @@ interface IFoundOffres {
 }
 
 // The Détection, in the actions rather than a module: it reads the Source modules, which no module
-// may import (ADR-0003)
-export function createDetectActions({ workspace, pepSource, locate, notify }: ActionContext) {
+// may import (ADR-0003). It knows them only through their family (ADR-0010).
+export function createDetectActions({ workspace, sourceList, httpFetch, locate, notify }: ActionContext) {
+  function findSource({ id, source }: Veille): ISource {
+    const found = sourceList.find(({ description }) => description.id === source);
+    if (found === undefined) {
+      const knownList = sourceList.map(({ description }) => description.id).join(', ');
+      throw new Error(
+        `La Veille ${id} suit une Source inconnue : ${source}. En choisir une parmi ${knownList} dans data/config.json.`,
+      );
+    }
+    return found;
+  }
+
   // In the Zone, a new Offre gets its Recherche (ADR-0003). The Republication of an Offre once
   // Postulée gets none whatever the Zone: the Candidat, who applied already, decides.
   async function startNewOffre(offre: Offre, republicationOf: Offre | undefined): Promise<INotification | undefined> {
@@ -38,6 +50,11 @@ export function createDetectActions({ workspace, pepSource, locate, notify }: Ac
   }
 
   return {
+    // The form of a Veille asks for the Paramètres of the Source it follows
+    listSources(): Promise<SourceModule[]> {
+      return Promise.resolve(sourceList.map(({ description }) => description));
+    },
+
     // An Offre is known by its reference, never by its publication date, which the site changes
     // (ADR-0001)
     async detect(): Promise<Detection[]> {
@@ -53,7 +70,8 @@ export function createDetectActions({ workspace, pepSource, locate, notify }: Ac
         const knownReferenceList = await workspace.listReferences(candidatId, source);
         // A first launch cut off goes on at the next Détection, still triggering nothing
         const isFirstLaunch = veille.detectedAt === null;
-        const { matchingList, nearMissList } = await pepSource.search(veille.criteria);
+        const sourceModule = findSource(veille);
+        const { matchingList, nearMissList } = await sourceModule.search(veille, httpFetch);
         const offreList = await workspace.listOffres(candidatId);
         const newOffreList: Offre[] = [];
         const notificationList: { offre: Offre; notification: INotification }[] = [];
@@ -64,7 +82,11 @@ export function createDetectActions({ workspace, pepSource, locate, notify }: Ac
           if (knownReferenceList.includes(listedOffre.reference)) {
             continue;
           }
-          const { ficheDePoste, isInZone } = await pepSource.readFicheDePoste(listedOffre.reference, veille.zone);
+          const { ficheDePoste, isInZone } = await sourceModule.readFicheDePoste(
+            listedOffre.reference,
+            veille,
+            httpFetch,
+          );
           const republicationOf = findRepublishedOffre({ ...listedOffre, ...ficheDePoste }, offreList);
           const lieu = await locate(readCity(ficheDePoste.workplace));
           const offre = await workspace.saveOffre({

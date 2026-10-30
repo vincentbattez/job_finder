@@ -26,7 +26,6 @@ export function createImportSource(aiSession: IAiSession) {
           applicationEmail: null,
           contact1: null,
           contact2: null,
-          courtOfAppeal: null,
           markdown,
         }),
       };

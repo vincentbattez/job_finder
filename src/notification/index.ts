@@ -1,4 +1,4 @@
-import { z } from 'zod/v4';
+import type { z } from 'zod/v4';
 
 import {
   CANAL_NOTIFICATION_MODULE_SCHEMA,
@@ -8,6 +8,13 @@ import {
   type ParametreChoice,
   type Parametres,
 } from '#/domain/index.ts';
+import {
+  describeParametres,
+  labelOf,
+  parseParametres,
+  type ParametreShape,
+  type ParametresOf,
+} from '#/parametre/index.ts';
 
 // The contract of the family of the Canaux de notification: what each module of
 // src/modules/notification-<nom>/ declares, and what the rest of the application knows of them (ADR-0010)
@@ -17,26 +24,6 @@ export interface INotification {
   title: string;
   message: string;
 }
-
-// How the front shows a Paramètre. A secret one is write-only: no action returns it (ADR-0006).
-interface IParametreMeta {
-  label: string;
-  placeholder?: string;
-  type?: 'text' | 'url';
-  isSecret?: boolean;
-}
-
-const PARAMETRE_REGISTRY = z.registry<IParametreMeta>();
-
-// Declares a Paramètre of a module: its schema, optional or not, and how the front shows it
-export function parametre<T extends z.ZodType>(schema: T, meta: IParametreMeta): T {
-  PARAMETRE_REGISTRY.add(schema, meta);
-  return schema;
-}
-
-type ParametreShape = Record<string, z.ZodType>;
-
-type ParametresOf<TShape extends ParametreShape> = z.output<z.ZodObject<TShape>>;
 
 // What the Candidat typed, each Paramètre perhaps missing
 type TrialOf<TShape extends ParametreShape> = z.output<
@@ -66,50 +53,26 @@ export interface ICanalNotification {
   listChoices(parametreName: string, rawParametres: unknown): Promise<ParametreChoice[]>;
 }
 
-function describe<TShape extends ParametreShape>({
-  id,
-  name,
-  parametreSchema,
-  check,
-  listChoicesByParametre = {},
-}: ICanalNotificationDefinition<TShape>): CanalNotificationModule {
-  const parametreList = Object.entries(parametreSchema.shape).map(([parametreName, schema]) => {
-    const meta = PARAMETRE_REGISTRY.get(schema);
-    if (meta === undefined) {
-      throw new Error(`Le Paramètre ${parametreName} du Canal ${name} n'est pas déclaré par parametre().`);
-    }
-    return {
-      name: parametreName,
-      label: meta.label,
-      placeholder: meta.placeholder ?? null,
-      type: meta.type ?? 'text',
-      isRequired: !schema.safeParse(undefined).success,
-      isSecret: meta.isSecret ?? false,
-      hasChoices: Object.hasOwn(listChoicesByParametre, parametreName),
-    };
-  });
-  return CANAL_NOTIFICATION_MODULE_SCHEMA.parse({ id, name, parametreList, isTestable: check !== undefined });
-}
-
 export function defineCanalNotification<TShape extends ParametreShape>(
   definition: ICanalNotificationDefinition<TShape>,
 ): ICanalNotification {
-  const description = describe(definition);
-  const { name, parametreSchema, send, check, listChoicesByParametre = {} } = definition;
-  const labelOf = (parametreName: PropertyKey | undefined) =>
-    description.parametreList.find(({ name: candidate }) => candidate === parametreName)?.label ??
-    String(parametreName);
+  const { id, name, parametreSchema, send, check, listChoicesByParametre = {} } = definition;
+  const description = CANAL_NOTIFICATION_MODULE_SCHEMA.parse({
+    id,
+    name,
+    parametreList: describeParametres(name, parametreSchema, Object.keys(listChoicesByParametre)),
+    isTestable: check !== undefined,
+  });
 
   // The Paramètres missing or wrong, in the words of the form
   function parseWith<T extends z.ZodType>(schema: T, rawParametres: unknown): z.infer<T> {
-    const result = schema.safeParse(rawParametres);
-    if (!result.success) {
-      const labelList = [...new Set(result.error.issues.map((issue) => `« ${labelOf(issue.path[0])} »`))];
-      throw new Error(
-        `Le Canal de notification ${name} est incomplet : renseigner ${labelList.join(', ')} dans la section Notifications du Profil.`,
-      );
-    }
-    return result.data;
+    return parseParametres(
+      schema,
+      rawParametres,
+      description.parametreList,
+      (labelList) =>
+        `Le Canal de notification ${name} est incomplet : renseigner ${labelList} dans la section Notifications du Profil.`,
+    );
   }
 
   return {
@@ -127,7 +90,9 @@ export function defineCanalNotification<TShape extends ParametreShape>(
         ([candidate]) => candidate === parametreName,
       )?.[1];
       if (listChoices === undefined) {
-        throw new Error(`Le Paramètre ${labelOf(parametreName)} du Canal ${name} n'a pas de choix à lister.`);
+        throw new Error(
+          `Le Paramètre ${labelOf(description.parametreList, parametreName)} du Canal ${name} n'a pas de choix à lister.`,
+        );
       }
       return listChoices(parseWith(parametreSchema.partial(), rawParametres));
     },

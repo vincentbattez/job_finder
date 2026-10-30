@@ -6,7 +6,8 @@ import { z } from 'zod/v4';
 
 import { createActions, messageOf } from '#/actions/index.ts';
 import { CANAL_NOTIFICATION_LIST } from '#/actions/modules.ts';
-import { defineCanalNotification, parametre, type ICanalNotification } from '#/notification/index.ts';
+import { defineCanalNotification, type ICanalNotification } from '#/notification/index.ts';
+import { parametre } from '#/parametre/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';

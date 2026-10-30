@@ -102,8 +102,12 @@ function readField(html: string, id: string): string | null {
   return toText(value) === '' ? null : toText(value);
 }
 
-// The fields are read by their element ids, stable across offers (ADR-0001)
-export async function readFicheDePoste(reference: string, httpFetch: typeof fetch = fetch): Promise<FicheDePoste> {
+// The fields are read by their element ids, stable across offers (ADR-0001). The employing court of
+// appeal tells the Zone, a Paramètre of this Source only: it stays out of the Fiche de poste.
+export async function readFicheDePoste(
+  reference: string,
+  httpFetch: typeof fetch = fetch,
+): Promise<{ ficheDePoste: FicheDePoste; courtOfAppeal: string | null }> {
   const url = `${ORIGIN}/offre-de-emploi/emploi_${reference.slice('AAAA-'.length)}.aspx`;
   const html = await get(httpFetch, url);
   const content = /id="contenu-ficheoffre"[^>]*>([\s\S]*?)<div class="ts-offer-page__cta is-bottom/.exec(html)?.[1];
@@ -115,14 +119,14 @@ export async function readFicheDePoste(reference: string, httpFetch: typeof fetc
   const dateLimite = readField(content, 'fldoffer_date1');
   // The employing court of appeal is the offer's entity, such as « Direction des services judiciaires - CA DOUAI »
   const entity = toText(/_divEntityDesc"[^>]*>[\s\S]*?<\/h3>([\s\S]*?)<\/div>/.exec(content)?.[1] ?? '');
-  return FICHE_DE_POSTE_SCHEMA.parse({
+  const ficheDePoste = FICHE_DE_POSTE_SCHEMA.parse({
     dateLimite: dateLimite === null ? null : new Date(dateLimite.split('/').toReversed().join('-')),
     employer: readField(content, 'fldoffer_longtext2'),
     workplace: readField(content, 'fldlocation_shorttext1'),
     applicationEmail: readField(content, 'fldorigin_shorttext1'),
     contact1: readField(content, 'fldorigin_shorttext2'),
     contact2: readField(content, 'fldorigin_shorttext3'),
-    courtOfAppeal: / - CA (.+)$/.exec(entity)?.[1] ?? null,
     markdown: toMarkdown(content),
   });
+  return { ficheDePoste, courtOfAppeal: / - CA (.+)$/.exec(entity)?.[1] ?? null };
 }

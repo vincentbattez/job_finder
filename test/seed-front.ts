@@ -45,8 +45,7 @@ const CONFIG = {
         {
           id: 'attache-de-justice-hauts-de-france',
           source: 'pep',
-          criteria: { title: 'attaché de justice' },
-          zone: { courtOfAppealList: ['Douai', 'Amiens'] },
+          parametres: { title: 'attaché de justice', courtOfAppealList: ['Douai', 'Amiens'] },
         },
       ],
     },

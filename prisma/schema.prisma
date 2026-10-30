@@ -34,10 +34,10 @@ model Veille {
   id         String    @id
   candidat   Candidat  @relation(fields: [candidatId], references: [id])
   candidatId String
+  // The Source the Veille follows, and its Paramètres, its Zone among them: they are those of the
+  // Source, parsed by the Source's schema (ADR-0010)
   source     String
-  // Shaped by the Source
-  criteria   Json
-  zone       Json
+  parametres Json
   // When a Détection of this Veille last went through; null during its first launch, which may take
   // several Détections when one is cut off
   detectedAt DateTime?

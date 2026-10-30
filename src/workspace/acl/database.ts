@@ -29,7 +29,6 @@ import {
   type ProfilJob,
   type QueuedJob,
   type SavedCanalNotification,
-  type Source,
   type Statut,
   type Veille,
   type Version,
@@ -56,7 +55,7 @@ const JOB_INCLUDE = { offre: { include: OFFRE_INCLUDE }, version: { include: VER
 
 export interface INewOffre {
   candidatId: string;
-  source: Source;
+  source: string;
   listedOffre: ListedOffre;
   ficheDePoste: FicheDePoste;
   isInZone: boolean;
@@ -322,7 +321,7 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       await prisma.veille.update({ where: { id }, data: { detectedAt: new Date() } });
     },
 
-    async listReferences(candidatId: string, source: Source): Promise<string[]> {
+    async listReferences(candidatId: string, source: string): Promise<string[]> {
       const offreList = await prisma.offre.findMany({ where: { candidatId, source }, select: { reference: true } });
       return z.array(z.string()).parse(offreList.map(({ reference }) => reference));
     },

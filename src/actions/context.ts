@@ -5,12 +5,12 @@ import { LIEU_SCHEMA, type Candidat, type Lieu, type Offre } from '#/domain/inde
 import { createApiGeo } from '#/geo/acl/api-geo.ts';
 import { createPieceConversion } from '#/modules/conversion/index.ts';
 import { createImportSource } from '#/modules/source-import/index.ts';
-import { createPepSource } from '#/modules/source-pep/index.ts';
 import type { ICanalNotification, INotification } from '#/notification/index.ts';
+import type { ISource } from '#/source/index.ts';
 import { messageOf } from '#/text/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
-import { CANAL_NOTIFICATION_LIST } from './modules.ts';
+import { CANAL_NOTIFICATION_LIST, SOURCE_LIST } from './modules.ts';
 import { createJobRunner } from './run-job.ts';
 
 const CANDIDAT_INPUT_SCHEMA = z.object({ candidatId: z.string() });
@@ -25,6 +25,8 @@ export interface IActionsOption {
   fetch?: typeof globalThis.fetch;
   // The modules a Candidat chooses their Canal de notification from: the registry, or a fake one
   canalNotificationList?: readonly ICanalNotification[];
+  // The Sources a Veille follows: the registry, or a fake one
+  sourceList?: readonly ISource[];
 }
 
 // What the actions of every feature share: the data folder, the external boundaries, which the
@@ -34,6 +36,7 @@ export async function openContext({
   aiSession = CLAUDE_CODE,
   fetch,
   canalNotificationList = CANAL_NOTIFICATION_LIST,
+  sourceList = SOURCE_LIST,
 }: IActionsOption) {
   const workspace = await openWorkspace(dataDirectory);
   const apiGeo = createApiGeo(fetch);
@@ -104,7 +107,8 @@ export async function openContext({
   return {
     workspace,
     aiSession,
-    pepSource: createPepSource(fetch),
+    httpFetch: fetch,
+    sourceList,
     importSource: createImportSource(aiSession),
     pieceConversion: createPieceConversion(aiSession),
     runJob: createJobRunner(workspace, aiSession),

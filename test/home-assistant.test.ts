@@ -251,8 +251,7 @@ describe('the notification of a new Offre', () => {
         {
           id: `attache-de-justice-${id}`,
           source: 'pep',
-          criteria: { title: 'attaché de justice' },
-          zone: { courtOfAppealList: ['Douai', 'Amiens'] },
+          parametres: { title: 'attaché de justice', courtOfAppealList: ['Douai', 'Amiens'] },
         },
       ],
     }));

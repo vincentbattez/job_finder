@@ -1,6 +1,7 @@
 import { z } from 'zod/v4';
 
-import { defineCanalNotification, parametre } from '#/notification/index.ts';
+import { defineCanalNotification } from '#/notification/index.ts';
+import { parametre } from '#/parametre/index.ts';
 
 import { callNotifyService, checkConnexion, listNotifyServices } from './acl/home-assistant.ts';
 

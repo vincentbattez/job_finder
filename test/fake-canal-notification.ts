@@ -1,7 +1,8 @@
 import { z } from 'zod/v4';
 
 import type { Actions } from '#/actions/index.ts';
-import { defineCanalNotification, parametre, type INotification } from '#/notification/index.ts';
+import { defineCanalNotification, type INotification } from '#/notification/index.ts';
+import { parametre } from '#/parametre/index.ts';
 
 interface ISentNotification extends INotification {
   target: string;

@@ -6,17 +6,20 @@ export const CANDIDAT_SCHEMA = z.object({ id: z.string(), name: z.string() }).br
 
 export type Candidat = z.infer<typeof CANDIDAT_SCHEMA>;
 
-const ZONE_SCHEMA = z.object({ courtOfAppealList: z.array(z.string()) });
+// The Paramètres of a module of a family, as JSON: only the module's schema knows their shape (ADR-0010)
+export const PARAMETRES_SCHEMA = z.record(z.string(), z.json());
 
-// Criteria and Zone are shaped by the Source; PEP is the only one so far. detectedAt stays null
-// until a Détection of the Veille went through: until then, it is the first launch.
+export type Parametres = z.infer<typeof PARAMETRES_SCHEMA>;
+
+// A Veille follows one of the Sources, which alone knows its Paramètres, its Zone among them
+// (ADR-0010). detectedAt stays null until a Détection of the Veille went through: until then, it is
+// the first launch.
 export const VEILLE_SCHEMA = z
   .object({
     id: z.string(),
     candidatId: z.string(),
-    source: z.literal('pep'),
-    criteria: z.object({ title: z.string() }),
-    zone: ZONE_SCHEMA,
+    source: z.string(),
+    parametres: PARAMETRES_SCHEMA,
     detectedAt: z.date().nullable(),
   })
   .brand<'Domain'>();
@@ -40,7 +43,6 @@ export const FICHE_DE_POSTE_SCHEMA = z
     applicationEmail: z.string().nullable(),
     contact1: z.string().nullable(),
     contact2: z.string().nullable(),
-    courtOfAppeal: z.string().nullable(),
     markdown: z.string(),
   })
   .brand<'Domain'>();
@@ -63,11 +65,6 @@ export const LIEU_SCHEMA = z.object(LIEU_SHAPE).brand<'Domain'>();
 
 export type Lieu = z.infer<typeof LIEU_SCHEMA>;
 
-// Where an Offre comes from: a site a Veille reads, or a Fiche de poste the Candidat imported
-const SOURCE_SCHEMA = z.enum(['pep', 'import']);
-
-export type Source = z.infer<typeof SOURCE_SCHEMA>;
-
 export const STATUT_SCHEMA = z.enum(['a_traiter', 'postulee', 'archivee']);
 
 export type Statut = z.infer<typeof STATUT_SCHEMA>;
@@ -80,7 +77,8 @@ export const OFFRE_SCHEMA = z
     ...LIEU_SHAPE,
     id: z.int(),
     candidatId: z.string(),
-    source: SOURCE_SCHEMA,
+    // Where it comes from: the Source of the Veille that detected it, or the import of its Fiche de poste
+    source: z.string(),
     reference: z.string(),
     title: z.string(),
     url: z.string().nullable(),
@@ -328,23 +326,21 @@ export const VISUALISATION_SCHEMA = z.object({ html: z.string() }).brand<'Domain
 
 export type Visualisation = z.infer<typeof VISUALISATION_SCHEMA>;
 
-// The Paramètres of a module of a family, as JSON: only the module's schema knows their shape (ADR-0010)
-export const PARAMETRES_SCHEMA = z.record(z.string(), z.json());
-
-export type Parametres = z.infer<typeof PARAMETRES_SCHEMA>;
-
-// A Paramètre as the front builds its field: typed in, secret, or chosen among what the module lists
-const PARAMETRE_SCHEMA = z
+// A Paramètre as the front builds its field: typed in, a list of values, secret, or chosen among what
+// the module lists
+export const PARAMETRE_SCHEMA = z
   .object({
     name: z.string(),
     label: z.string(),
     placeholder: z.string().nullable(),
-    type: z.enum(['text', 'url']),
+    type: z.enum(['text', 'url', 'list']),
     isRequired: z.boolean(),
     isSecret: z.boolean(),
     hasChoices: z.boolean(),
   })
   .brand<'Domain'>();
+
+export type Parametre = z.infer<typeof PARAMETRE_SCHEMA>;
 
 // A module of the Canaux de notification, as its descriptor presents it to the Candidat (ADR-0010)
 export const CANAL_NOTIFICATION_MODULE_SCHEMA = z
@@ -352,6 +348,14 @@ export const CANAL_NOTIFICATION_MODULE_SCHEMA = z
   .brand<'Domain'>();
 
 export type CanalNotificationModule = z.infer<typeof CANAL_NOTIFICATION_MODULE_SCHEMA>;
+
+// A Source a Veille follows, as its descriptor presents it: the form of a Veille asks for its
+// Paramètres (ADR-0010)
+export const SOURCE_MODULE_SCHEMA = z
+  .object({ id: z.string(), name: z.string(), parametreList: z.array(PARAMETRE_SCHEMA) })
+  .brand<'Domain'>();
+
+export type SourceModule = z.infer<typeof SOURCE_MODULE_SCHEMA>;
 
 // A Candidat's Canal de notification as the actions return it: its module, null until chosen, and its
 // Paramètres, each secret one reduced to whether it is configured, since it is write-only (ADR-0006)

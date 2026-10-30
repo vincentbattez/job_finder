@@ -151,8 +151,7 @@ it('refuses a reference shared by the Offres of two Candidats', async () => {
   const dataDirectory = createMigratedDataDirectory();
   const veille = {
     source: 'pep',
-    criteria: { title: 'attaché de justice' },
-    zone: { courtOfAppealList: ['Douai'] },
+    parametres: { title: 'attaché de justice', courtOfAppealList: ['Douai'] },
   };
   const candidatList = ['lea', 'camille'].map((id) => ({
     id,

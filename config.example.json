@@ -8,10 +8,8 @@
         {
           "id": "attache-de-justice-hauts-de-france",
           "source": "pep",
-          "criteria": {
-            "title": "attaché de justice"
-          },
-          "zone": {
+          "parametres": {
+            "title": "attaché de justice",
             "courtOfAppealList": ["Douai", "Amiens"]
           }
         }

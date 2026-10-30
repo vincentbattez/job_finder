@@ -4,14 +4,17 @@ import { z } from 'zod/v4';
 
 const SLUG_SCHEMA = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
-const COURT_OF_APPEAL_LIST_SCHEMA = z.array(z.string().min(1)).min(1);
+// Only the Source a Veille follows knows its Paramètres: the Détection parses them (ADR-0010)
+const PARAMETRES_SCHEMA = z.record(z.string(), z.json());
 
-const VEILLE_SCHEMA = z.strictObject({
-  id: SLUG_SCHEMA,
-  source: z.literal('pep'),
-  criteria: z.strictObject({ title: z.string().min(1) }),
-  zone: z.strictObject({ courtOfAppealList: COURT_OF_APPEAL_LIST_SCHEMA }),
-});
+// A config written before the Sources became a family split the Paramètres into criteria and zone:
+// it still reads, so the real data/config.json needs no rewrite
+const VEILLE_SCHEMA = z.union([
+  z.strictObject({ id: SLUG_SCHEMA, source: z.string().min(1), parametres: PARAMETRES_SCHEMA }),
+  z
+    .strictObject({ id: SLUG_SCHEMA, source: z.string().min(1), criteria: PARAMETRES_SCHEMA, zone: PARAMETRES_SCHEMA })
+    .transform(({ criteria, zone, ...veille }) => ({ ...veille, parametres: { ...criteria, ...zone } })),
+]);
 
 const CANDIDAT_SCHEMA = z.strictObject({
   id: SLUG_SCHEMA,

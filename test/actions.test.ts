@@ -27,6 +27,9 @@ const FIRST_MIGRATION = '20261029133617_init';
 // The last migration before the Canaux de notification, which turned each Connexion Home Assistant
 // into one (ADR-0010)
 const CONNEXION_HOME_ASSISTANT_MIGRATION = '20261030090736_job_profil';
+// The last migration before the Sources became a family, which gathered the criteria and the Zone of
+// each Veille into its Paramètres (ADR-0010)
+const CANAL_NOTIFICATION_MIGRATION = '20261030110155_canal_notification';
 
 // The database an older jf left, migrated through a config that only knows the migrations up to the
 // given one
@@ -134,6 +137,33 @@ describe('actions', () => {
     ).toEqual({
       token: 'jeton-de-lea',
     });
+    migrated.close();
+  });
+
+  // The main checkout migrates the real data/: each Veille keeps its Paramètres and its first launch
+  // stays over, so the next Détection triggers as before
+  it('gathers the criteria and the Zone of each Veille into the Paramètres of its Source, without loss', () => {
+    const dataDirectory = createEmptyDataDirectory();
+    const databasePath = writeOlderDatabase(dataDirectory, CANAL_NOTIFICATION_MIGRATION);
+    const database = new DatabaseSync(databasePath);
+    database.exec(`INSERT INTO Candidat (id, name) VALUES ('lea', 'Léa');
+      INSERT INTO Veille (id, candidatId, source, criteria, zone, detectedAt)
+      VALUES ('attache-de-justice-hauts-de-france', 'lea', 'pep', '{"title":"attaché de justice"}',
+        '{"courtOfAppealList":["Douai","Amiens"]}', '2026-10-30T10:44:22.500+00:00');`);
+    database.close();
+
+    migrateDeploy(databasePath);
+
+    const migrated = new DatabaseSync(databasePath, { readOnly: true });
+    expect(migrated.prepare('SELECT id, candidatId, source, parametres, detectedAt FROM Veille').all()).toEqual([
+      {
+        id: 'attache-de-justice-hauts-de-france',
+        candidatId: 'lea',
+        source: 'pep',
+        parametres: '{"title":"attaché de justice","courtOfAppealList":["Douai","Amiens"]}',
+        detectedAt: '2026-10-30T10:44:22.500+00:00',
+      },
+    ]);
     migrated.close();
   });
 
