@@ -1,5 +1,7 @@
 import { Form, useSearchParams } from 'react-router';
 
+import { useCatalogue } from '#/web/catalogue.ts';
+
 import type { Status } from './badge.tsx';
 
 interface IFilteredPosting {
@@ -29,22 +31,23 @@ function listChoices(valueList: (string | null)[]): string[] {
 
 // A plain GET form: the filters live in the URL and work before React hydrates the page
 export function PostingFilters({ postingList }: Readonly<{ postingList: IFilteredPosting[] }>) {
+  const { posting: copy } = useCatalogue();
   const [searchParameters] = useSearchParams();
   return (
-    <Form role="search" aria-label="Filtres" className="filters" key={searchParameters.toString()}>
+    <Form role="search" aria-label={copy.filtersLabel} className="filters" key={searchParameters.toString()}>
       <label>
-        Ville
+        {copy.cityFilter}
         <select name="city" defaultValue={searchParameters.get('city') ?? ''}>
-          <option value="">Toutes</option>
+          <option value="">{copy.allChoices}</option>
           {listChoices(postingList.map(({ city }) => city)).map((city) => (
             <option key={city}>{city}</option>
           ))}
         </select>
       </label>
       <label>
-        Région
+        {copy.regionFilter}
         <select name="region" defaultValue={searchParameters.get('region') ?? ''}>
-          <option value="">Toutes</option>
+          <option value="">{copy.allChoices}</option>
           {listChoices(postingList.map(({ region }) => region)).map((region) => (
             <option key={region}>{region}</option>
           ))}
@@ -52,9 +55,9 @@ export function PostingFilters({ postingList }: Readonly<{ postingList: IFiltere
       </label>
       <label className="filters__check">
         <input type="checkbox" name="archived" defaultChecked={searchParameters.has('archived')} />
-        Afficher les Archivées
+        {copy.showArchived}
       </label>
-      <button type="submit">Filtrer</button>
+      <button type="submit">{copy.filter}</button>
     </Form>
   );
 }

@@ -16,9 +16,10 @@ export interface IModuleInstructions {
 
 // Which Instructions a Version was produced with, so two Versions can be compared
 export function InstructionsOrigin({ hasCandidateInstructions }: Readonly<{ hasCandidateInstructions: boolean }>) {
+  const { posting: copy } = useCatalogue();
   return (
     <span className="instructions-origin">
-      {hasCandidateInstructions ? 'Consignes du Candidat' : 'Consignes par défaut'}
+      {hasCandidateInstructions ? copy.candidateInstructions : copy.defaultInstructions}
     </span>
   );
 }
