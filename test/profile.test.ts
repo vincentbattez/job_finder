@@ -220,7 +220,21 @@ describe('profile', () => {
     await actions.openProfile({ candidateId: 'lea' });
 
     expect(aiSession.interactiveSessionList[0]?.prompt).toContain(
-      'rangés par rubrique : Identité, Coordonnées, Diplômes, Expériences, Compétences, Motivations, Mobilité.',
+      'sorted by section: Identité, Coordonnées, Diplômes, Expériences, Compétences, Motivations, Mobilité.',
     );
+  });
+
+  it("talks with each Candidate in their locale's language, and keeps the documents in theirs", async () => {
+    const aiSession = createFakeAiSession();
+    const actions = await createActions({ dataDirectory: createDataDirectory(), aiSession });
+    await actions.createCandidate({ id: 'emma', name: 'Emma', locale: 'en' });
+
+    await actions.openProfile({ candidateId: 'lea' });
+    await actions.openProfile({ candidateId: 'emma' });
+
+    const [leaPrompt, emmaPrompt] = aiSession.interactiveSessionList.map(({ prompt }) => prompt);
+    expect(leaPrompt).toContain('Talk with Léa in French.');
+    expect(emmaPrompt).toContain('Talk with Emma in English.');
+    expect(emmaPrompt).toContain('without rewriting or translating it');
   });
 });

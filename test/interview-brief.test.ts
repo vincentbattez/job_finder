@@ -4,10 +4,14 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
-import { INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS } from '#/modules/interview-brief/instructions.ts';
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+
+// Léa's, in French
+const { defaultInstructions } = catalogueOf({ locale: 'fr' });
+const INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS = defaultInstructions.interview_brief;
 
 // The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -142,7 +146,7 @@ describe('interview brief', () => {
     expect(state).toBe('done');
     const session = aiSession.headlessSessionList.at(-1);
     expect(session?.readDirectoryList).toEqual([path.join(dataDirectory, 'candidates/lea/profile')]);
-    expect(session?.fixedPrompt).toContain("Le Candidat n'a pas de Lettre pour cette Offre");
+    expect(session?.fixedPrompt).toContain('The Candidate has no Letter for this Posting');
     expect(session?.fixedPrompt).not.toContain('letter.md');
     expect(version?.inputList).toEqual([{ artifact: 'research', number: 1, posting: { reference: REFERENCE } }]);
   });
@@ -162,8 +166,8 @@ describe('the prompt of the Interview Brief', () => {
       expect(instructions).toContain(`## ${section}`);
       expect(fixedPrompt).not.toContain(`## ${section}`);
     }
-    expect(fixedPrompt).toContain('titre de niveau 1');
-    expect(fixedPrompt).toContain("N'invente jamais un fait sur le Candidat");
+    expect(fixedPrompt).toContain('level 1 heading');
+    expect(fixedPrompt).toContain('Never invent a fact about the Candidate');
     expect(fixedPrompt).toContain('`[à compléter : …]`');
     expect(instructions).toBe(INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS);
     expect(version?.instructions).toBe(INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS);
@@ -180,7 +184,7 @@ describe('the prompt of the Interview Brief', () => {
     const { version } = await runModule(actions, 'brief');
 
     expect(aiSession.headlessSessionList[1]?.instructions).toBe(instructions);
-    expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain("N'invente jamais un fait sur le Candidat");
+    expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain('Never invent a fact about the Candidate');
     expect(version?.instructions).toBe(instructions);
   });
 
@@ -248,7 +252,7 @@ describe('correcting the Interview Brief', () => {
 
     const [session] = aiSession.interactiveSessionList;
     expect(session?.directory).toBe(postingDirectory);
-    expect(session?.prompt).toContain("Tu aides Léa à modifier la Fiche d’entretien de l'Offre 2026-2445600");
+    expect(session?.prompt).toContain('You help Léa modify the Interview Brief of Posting 2026-2445600');
     expect(session?.prompt).toContain('`interview_brief/v1/`');
     expect(session?.prompt).not.toContain('interview_brief/v2');
   });

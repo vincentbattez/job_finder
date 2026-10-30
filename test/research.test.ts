@@ -4,10 +4,14 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
-import { RESEARCH_DEFAULT_INSTRUCTIONS } from '#/modules/research/instructions.ts';
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+
+// Léa's, in French
+const { defaultInstructions } = catalogueOf({ locale: 'fr' });
+const RESEARCH_DEFAULT_INSTRUCTIONS = defaultInstructions.research;
 
 // The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -98,7 +102,7 @@ describe('research', () => {
       directory: postingDirectory,
       outputDirectory: path.join(postingDirectory, 'research/v1'),
     });
-    expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain("N'invente jamais un fait.");
+    expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain('Never invent a fact.');
     expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain('`research/v1/research.md`');
     expect(version).toMatchObject({ instructions: RESEARCH_DEFAULT_INSTRUCTIONS, inputList: [] });
   });
@@ -113,7 +117,7 @@ describe('research', () => {
     const { version } = await runResearch(actions);
 
     expect(aiSession.headlessSessionList[0]?.instructions).toBe(instructions);
-    expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain("N'invente jamais un fait.");
+    expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain('Never invent a fact.');
     expect(version?.instructions).toBe(instructions);
   });
 });

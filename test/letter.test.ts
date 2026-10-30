@@ -4,10 +4,14 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
-import { LETTER_DEFAULT_INSTRUCTIONS } from '#/modules/letter/instructions.ts';
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+
+// Léa's, in French
+const { defaultInstructions } = catalogueOf({ locale: 'fr' });
+const LETTER_DEFAULT_INSTRUCTIONS = defaultInstructions.letter;
 
 // Béthune, tribunal pour enfants: mail p.tj-bethune@justice.fr, contact 1 the présidente, contact 2
 // « secrétariat en copie : sec.p.tj-bethune@justice.fr » (responses recorded on 2026-10-29)
@@ -161,7 +165,7 @@ describe('the prompt of the Letter', () => {
     const { version } = await runModule(actions, 'letter', REFERENCE);
 
     const { fixedPrompt, instructions } = aiSession.headlessSessionList[1] ?? {};
-    expect(fixedPrompt).toContain("N'invente jamais un fait sur le Candidat");
+    expect(fixedPrompt).toContain('Never invent a fact about the Candidate');
     expect(fixedPrompt).toContain('`[à compléter : …]`');
     expect(instructions).toBe(LETTER_DEFAULT_INSTRUCTIONS);
     expect(version?.instructions).toBe(LETTER_DEFAULT_INSTRUCTIONS);
@@ -178,7 +182,7 @@ describe('the prompt of the Letter', () => {
     const { version } = await runModule(actions, 'letter', REFERENCE);
 
     expect(aiSession.headlessSessionList[1]?.instructions).toBe(instructions);
-    expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain("N'invente jamais un fait sur le Candidat");
+    expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain('Never invent a fact about the Candidate');
     expect(version?.instructions).toBe(instructions);
   });
 });
@@ -191,7 +195,7 @@ describe('the recommended recipients', () => {
 
     const { version } = await runModule(actions, 'letter', AVESNES_REFERENCE);
 
-    expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain(`« ${AVESNES_APPLICATION_EMAIL} »`);
+    expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain(`"${AVESNES_APPLICATION_EMAIL}"`);
     expect(version?.state).toBe('ready');
     expect(await actions.readRecipients({ reference: AVESNES_REFERENCE })).toEqual(AVESNES_RECIPIENTS);
   });

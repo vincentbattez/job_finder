@@ -7,7 +7,6 @@ import type { Posting, Recipients } from '#/domain/index.ts';
 
 import { copyAsReadOnlyOriginal } from './acl/files.ts';
 import { parseRecipients, readRecipients, RECIPIENTS_FILE_NAME } from './acl/recipients.ts';
-import { LETTER_DEFAULT_INSTRUCTIONS } from './instructions.ts';
 import { composeLetterPrompt, DRAFT_FILE_NAME, LETTER_FILE_NAME } from './prompt.ts';
 
 export { DRAFT_FILE_NAME } from './prompt.ts';
@@ -36,7 +35,6 @@ function findRecipientsError(json: string, posting: Posting): string | undefined
 export const LETTER_MODULE = {
   fileName: LETTER_FILE_NAME,
   outputFileList: [{ name: DRAFT_FILE_NAME }, { name: RECIPIENTS_FILE_NAME, findFormatError: findRecipientsError }],
-  defaultInstructions: LETTER_DEFAULT_INSTRUCTIONS,
   composePrompt: composeLetterPrompt,
   // The Letter builds on the Chosen Research of its Posting, and learns from the Letters the
   // Candidate sent: the correction of each Draft shows their style

@@ -1,4 +1,10 @@
-import type { Artifact, Posting } from '#/domain/index.ts';
+import { JOB_DESCRIPTION_FILE_NAME, type Artifact, type Posting } from '#/domain/index.ts';
+
+// An Artifact is written for the employer: in the language of the Job Description, whatever the
+// Candidate's locale and the language of their Instructions (spec #65). Each fixed part states it.
+export function describeArtifactLanguage(artifactName: string): string {
+  return `Write the ${artifactName} in the language of the Job Description, \`${JOB_DESCRIPTION_FILE_NAME}\`, whatever the language of this prompt and of the Candidate's Instructions.`;
+}
 
 // The output folder is relative to the Posting's folder, where the session runs; what it reads is
 // named by absolute paths
@@ -24,7 +30,6 @@ export interface IAiModule {
   fileName: string;
   // The files the session writes in the folder of the Version
   outputFileList: IOutputFile[];
-  defaultInstructions: string;
   composePrompt(input: IPromptInput): string;
   // Runs once the files are valid, before the Version is ready
   completeVersion?(versionDirectory: string): void;

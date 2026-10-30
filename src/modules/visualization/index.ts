@@ -1,6 +1,5 @@
 import type { IAiModule } from '#/ai-module/index.ts';
 
-import { VISUALIZATION_DEFAULT_INSTRUCTIONS } from './instructions.ts';
 import { composeVisualizationPrompt, VISUALIZATION_FILE_NAME } from './prompt.ts';
 
 // A whole HTML page, without a script: the front's sandboxed frame runs none, so a diagram drawn by
@@ -17,7 +16,6 @@ function findFormatError(html: string): string | undefined {
 export const VISUALIZATION_MODULE = {
   fileName: VISUALIZATION_FILE_NAME,
   outputFileList: [{ name: VISUALIZATION_FILE_NAME, findFormatError }],
-  defaultInstructions: VISUALIZATION_DEFAULT_INSTRUCTIONS,
   composePrompt: composeVisualizationPrompt,
   requiredArtifactList: ['interview_brief'],
 } satisfies IAiModule;

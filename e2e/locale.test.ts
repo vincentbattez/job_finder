@@ -73,6 +73,8 @@ test('shows the Instructions and the Candidates in English to a Candidate with t
   await expect(page).toHaveTitle('Instructions · Job Finder');
   const letter = page.getByRole('region', { name: 'Letter' });
   await expect(letter.getByText('Default Instructions', { exact: true })).toBeVisible();
+  // The default Instructions of her locale; the Letter itself is written in the Job Description's
+  await expect(letter.getByRole('textbox')).toHaveValue(/^Write a one-page cover letter/);
   await expect(letter.getByRole('button', { name: 'Save my Instructions' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Candidates', exact: true }).click();

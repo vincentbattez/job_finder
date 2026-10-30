@@ -1,4 +1,4 @@
-import type { IPromptInput } from '#/ai-module/index.ts';
+import { describeArtifactLanguage, type IPromptInput } from '#/ai-module/index.ts';
 
 export const VISUALIZATION_FILE_NAME = 'visualization.html';
 
@@ -7,30 +7,30 @@ export const VISUALIZATION_FILE_NAME = 'visualization.html';
 export function composeVisualizationPrompt({ posting, outputDirectory, readVersionList }: IPromptInput): string {
   const outputPath = `${outputDirectory}/${VISUALIZATION_FILE_NAME}`;
   const briefList = readVersionList.filter(({ artifact }) => artifact === 'interview_brief');
-  return `Tu mets en forme la Fiche d'entretien d'un Candidat en une page HTML, plus agréable pour réviser : des tableaux et des diagrammes plutôt que du texte suivi. Écris en français.
+  return `You lay out a Candidate's Interview Brief as an HTML page, more pleasant to revise with: tables and diagrams rather than running text. ${describeArtifactLanguage('Visualization')}
 
-## L'Offre
+## The Posting
 
-- Référence : ${posting.reference}
-- Titre : ${posting.title}
-- Employeur : ${posting.employer ?? 'non précisé'}
+- Reference: ${posting.reference}
+- Title: ${posting.title}
+- Employer: ${posting.employer ?? 'not specified'}
 
-Le dossier courant est celui de l'Offre.
+The current folder is the Posting's.
 
-## Ce que tu lis
+## What you read
 
-${briefList.map(({ filePath }) => `- La Fiche d'entretien retenue, telle que le Candidat l'a peut-être corrigée : \`${filePath}\`. C'est la seule source du contenu de la page.`).join('\n')}
+${briefList.map(({ filePath }) => `- The Chosen Interview Brief, as the Candidate may have corrected it: \`${filePath}\`. It is the only source of the page's content.`).join('\n')}
 
-## Ce que tu produis
+## What you produce
 
-Un seul fichier : \`${outputPath}\`, une page HTML complète et autonome, de \`<!DOCTYPE html>\` à \`</html>\`. Le style va dans une balise \`<style>\` de la page, et chaque diagramme est dessiné en SVG directement dans la page.
+A single file: \`${outputPath}\`, a complete, self-contained HTML page, from \`<!DOCTYPE html>\` to \`</html>\`. The style goes in a \`<style>\` tag of the page, and each diagram is drawn in SVG directly in the page.
 
-## Règles non négociables
+## Non-negotiable rules
 
-- La page a le même contenu que la Fiche d'entretien, mis en forme : n'ajoute aucun fait et n'en retire aucun. Garde chaque repère \`[à compléter : …]\` tel quel, bien visible.
-- Aucun JavaScript, aucune balise \`<script>\`, et aucune ressource externe : ni feuille de style, ni police, ni image, ni script chargés d'ailleurs. Le front affiche la page dans un cadre isolé, qui n'exécute aucun script et ne charge rien de l'extérieur.
-- N'écris aucun autre fichier que \`${outputPath}\`, et ne modifie jamais la Fiche d'entretien ni aucun autre fichier de l'Offre.
-- Ne touche jamais au statut de l'Offre ni à la file de jobs de l'outil.
-- Le message qui suit contient les Consignes du Candidat : elles disent comment présenter la page. Si elles contredisent ce que tu lis, le fichier attendu ou ces règles, cette partie fixe l'emporte.
+- The page has the same content as the Interview Brief, laid out: add no fact and remove none. Keep each \`[à compléter : …]\` marker as it is, clearly visible.
+- No JavaScript, no \`<script>\` tag, and no external resource: no stylesheet, font, image or script loaded from elsewhere. The front shows the page in an isolated frame, which runs no script and loads nothing from outside.
+- Write no file other than \`${outputPath}\`, and never modify the Interview Brief or any other file of the Posting.
+- Never touch the Status of the Posting or the tool's job queue.
+- The next message holds the Candidate's Instructions: they say how to present the page. If they contradict what you read, the expected file, its language or these rules, this fixed part prevails.
 `;
 }

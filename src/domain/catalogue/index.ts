@@ -2,6 +2,7 @@ import type { Locale } from '#/domain/index.ts';
 
 import { CLI_EN } from './en/cli.ts';
 import { COMMON_EN } from './en/common.ts';
+import { DEFAULT_INSTRUCTIONS_EN } from './en/default-instructions.ts';
 import { ERROR_EN } from './en/error.ts';
 import { NOTIFICATION_EN } from './en/notification.ts';
 import { POSTING_LIST_EN } from './en/posting-list.ts';
@@ -9,6 +10,7 @@ import { POSTING_EN } from './en/posting.ts';
 import { SETTINGS_EN } from './en/settings.ts';
 import { CLI_FR } from './fr/cli.ts';
 import { COMMON_FR } from './fr/common.ts';
+import { DEFAULT_INSTRUCTIONS_FR } from './fr/default-instructions.ts';
 import { ERROR_FR } from './fr/error.ts';
 import { NOTIFICATION_FR } from './fr/notification.ts';
 import { POSTING_LIST_FR } from './fr/posting-list.ts';
@@ -26,6 +28,7 @@ const EN = {
   cli: CLI_EN,
   error: ERROR_EN,
   notification: NOTIFICATION_EN,
+  defaultInstructions: DEFAULT_INSTRUCTIONS_EN,
 };
 
 export type Catalogue = typeof EN;
@@ -40,6 +43,7 @@ const CATALOGUE_BY_LOCALE: Record<Locale, Catalogue> = {
     cli: CLI_FR,
     error: ERROR_FR,
     notification: NOTIFICATION_FR,
+    defaultInstructions: DEFAULT_INSTRUCTIONS_FR,
   },
 };
 

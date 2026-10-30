@@ -1,4 +1,4 @@
-import type { IPromptInput } from '#/ai-module/index.ts';
+import { describeArtifactLanguage, type IPromptInput } from '#/ai-module/index.ts';
 import { JOB_DESCRIPTION_FILE_NAME } from '#/domain/index.ts';
 
 import { RECIPIENTS_FILE_NAME } from './acl/recipients.ts';
@@ -8,16 +8,16 @@ export const DRAFT_FILE_NAME = 'draft.md';
 export const LETTER_FILE_NAME = 'letter.md';
 
 function quote(field: string | null): string {
-  return field === null ? 'non renseigné' : `« ${field.trim()} »`;
+  return field === null ? 'not given' : `"${field.trim()}"`;
 }
 
 // The pairs Draft/Letter the Candidate already sent, one folder per Applied Posting
 function describeSentLetters(sentList: IPromptInput['readVersionList']): string {
   if (sentList.length === 0) {
-    return "Le Candidat n'a encore envoyé aucune Lettre.";
+    return 'The Candidate has not sent any Letter yet.';
   }
-  const folderList = sentList.map(({ reference, directory }) => `- Offre ${reference} : \`${directory}\``);
-  return `Les Lettres que le Candidat a déjà envoyées, une par dossier. Chaque dossier contient le Brouillon que l'outil avait écrit (\`${DRAFT_FILE_NAME}\`) et la Lettre telle que le Candidat l'a corrigée puis envoyée (\`${LETTER_FILE_NAME}\`). Compare chaque paire : ses corrections montrent son style et ce qu'il refuse, applique-les.
+  const folderList = sentList.map(({ reference, directory }) => `- Posting ${reference}: \`${directory}\``);
+  return `The Letters the Candidate already sent, one per folder. Each folder holds the Draft the tool wrote (\`${DRAFT_FILE_NAME}\`) and the Letter as the Candidate corrected then sent it (\`${LETTER_FILE_NAME}\`). Compare each pair: their corrections show their style and what they reject, apply them.
 ${folderList.join('\n')}`;
 }
 
@@ -31,61 +31,61 @@ export function composeLetterPrompt({
 }: IPromptInput): string {
   const researchList = readVersionList.filter(({ artifact }) => artifact === 'research');
   const sentList = readVersionList.filter(({ artifact }) => artifact === 'letter');
-  return `Tu écris le Brouillon de la lettre de motivation d'un Candidat pour une Offre d'emploi, et tu recommandes à qui l'adresser. Écris en français.
+  return `You write the Draft of a Candidate's cover letter for a job Posting, and you recommend whom to send it to. ${describeArtifactLanguage('Draft')}
 
-## L'Offre
+## The Posting
 
-- Référence : ${posting.reference}
-- Titre : ${posting.title}
-- Employeur : ${posting.employer ?? 'non précisé'}
-- Lieu d'affectation : ${posting.workplace ?? 'non précisé'}
+- Reference: ${posting.reference}
+- Title: ${posting.title}
+- Employer: ${posting.employer ?? 'not specified'}
+- Place of work: ${posting.workplace ?? 'not specified'}
 
-Le dossier courant est celui de l'Offre.
+The current folder is the Posting's.
 
-## Ce que tu lis
+## What you read
 
-Lis tout avant d'écrire :
-- La Fiche de poste, telle qu'elle a été publiée : \`${JOB_DESCRIPTION_FILE_NAME}\`.
-${researchList.map(({ filePath }) => `- La Recherche retenue, qui établit ce que les recruteurs attendent et dans quel contexte : \`${filePath}\`.`).join('\n')}
-- Le Profil du Candidat, dans \`${profileDirectory}\` : les faits qu'il a validés, son CV et ses lettres passées, quand ils existent. Lis chacun de ses fichiers : c'est la seule source des faits sur le Candidat, et ses lettres passées donnent son style.
+Read everything before writing:
+- The Job Description, as it was published: \`${JOB_DESCRIPTION_FILE_NAME}\`.
+${researchList.map(({ filePath }) => `- The Chosen Research, which establishes what the recruiters expect and in what context: \`${filePath}\`.`).join('\n')}
+- The Candidate's Profile, in \`${profileDirectory}\`: the facts they validated, their CV and their past letters, when they exist. Read each of its files: it is the only source of facts about the Candidate, and their past letters show their style.
 - ${describeSentLetters(sentList)}
 
-## Les contacts de l'Offre, tels que publiés
+## The contacts of the Posting, as published
 
-- \`applicationEmail\`, le mail de candidature : ${quote(posting.applicationEmail)}
-- \`contact1\`, la première personne à contacter : ${quote(posting.contact1)}
-- \`contact2\`, la seconde personne à contacter : ${quote(posting.contact2)}
+- \`applicationEmail\`, the application email: ${quote(posting.applicationEmail)}
+- \`contact1\`, the first person to contact: ${quote(posting.contact1)}
+- \`contact2\`, the second person to contact: ${quote(posting.contact2)}
 
-Ce sont des champs en texte libre : une adresse peut y être mêlée à un nom, à une fonction, à un téléphone ou à une consigne (« secrétariat en copie »), et un champ peut ne donner aucune adresse. Interprète-les, et lève l'ambiguïté entre eux : à qui envoyer, qui mettre en copie, à qui s'adresse la lettre.
+These are free-text fields: an address may be mixed with a name, a function, a phone number or an instruction ("secretariat in copy"), and a field may give no address at all. Interpret them, and resolve the ambiguity between them: where to send, whom to copy, whom the letter is addressed to.
 
-## Ce que tu produis
+## What you produce
 
-1. \`${outputDirectory}/${DRAFT_FILE_NAME}\` : le Brouillon, la lettre complète en Markdown, de la formule d'appel à la signature, prête à être corrigée puis collée dans un mail.
-2. \`${outputDirectory}/${RECIPIENTS_FILE_NAME}\` : les destinataires recommandés, en JSON, exactement sous cette forme :
+1. \`${outputDirectory}/${DRAFT_FILE_NAME}\`: the Draft, the whole letter in Markdown, from the salutation to the signature, ready to be corrected then pasted into an email.
+2. \`${outputDirectory}/${RECIPIENTS_FILE_NAME}\`: the recommended recipients, as JSON, exactly in this shape:
 
 \`\`\`json
 {
-  "to": { "email": "adresse@exemple.fr", "source": "applicationEmail" },
-  "ccList": [{ "email": "copie@exemple.fr", "source": "contact2" }],
+  "to": { "email": "address@example.fr", "source": "applicationEmail" },
+  "ccList": [{ "email": "copy@example.fr", "source": "contact2" }],
   "salutation": { "text": "Madame la Présidente,", "source": "contact1" },
-  "justification": "Pourquoi ces choix, en quelques phrases."
+  "justification": "Why these choices, in a few sentences."
 }
 \`\`\`
 
-- \`to\` : l'adresse à laquelle envoyer la candidature, ou \`null\` si aucun champ n'en donne.
-- \`ccList\` : les adresses à mettre en copie, éventuellement aucune (\`[]\`).
-- \`salutation\` : la formule d'appel de la lettre, la même que celle du Brouillon.
-- \`source\` : le champ d'où vient l'information, \`applicationEmail\`, \`contact1\` ou \`contact2\`. Pour la formule d'appel, le champ qui nomme la personne ou la fonction à qui s'adresse la lettre, ou \`null\` pour une formule générique.
-- \`email\` : l'adresse seule, recopiée telle qu'elle figure dans le champ \`source\`, sans nom ni texte autour.
-- \`justification\` : pourquoi ce destinataire, ces copies et cette formule d'appel, en t'appuyant sur les champs.
+- \`to\`: the address to send the application to, or \`null\` if no field gives one.
+- \`ccList\`: the addresses to copy, possibly none (\`[]\`).
+- \`salutation\`: the salutation of the letter, the same as the Draft's.
+- \`source\`: the field the information comes from, \`applicationEmail\`, \`contact1\` or \`contact2\`. For the salutation, the field that names the person or the function the letter is addressed to, or \`null\` for a generic salutation.
+- \`email\`: the address alone, copied as it appears in the \`source\` field, with no name or text around it.
+- \`justification\`: why this recipient, these copies and this salutation, based on the fields.
 
-## Règles non négociables
+## Non-negotiable rules
 
-- N'invente jamais un fait sur le Candidat : diplômes, dates, stages, expériences, compétences, motivations, mobilité. Chaque fait vient de son Profil ou de ses Lettres déjà envoyées. Ne déduis rien qui n'y est pas écrit.
-- Partout où la lettre a besoin d'un fait que tu n'as pas, écris à sa place un repère \`[à compléter : …]\` qui dit précisément ce qui manque, par exemple \`[à compléter : intitulé et année du master]\`. Mieux vaut dix repères qu'un seul fait inventé.
-- N'invente aucun fait sur l'Offre ni sur l'employeur : appuie-toi sur la Fiche de poste et la Recherche retenue. N'invente aucune adresse : chacune figure dans le champ qu'elle cite.
-- N'écris aucun autre fichier que ces deux-là, et ne modifie jamais la Fiche de poste, la Recherche, le Profil ni les Lettres déjà envoyées.
-- Ne touche jamais au statut de l'Offre ni à la file de jobs de l'outil.
-- Le message qui suit contient les Consignes du Candidat : elles disent comment écrire la lettre. Si elles contredisent ce que tu lis, les fichiers attendus ou ces règles, cette partie fixe l'emporte.
+- Never invent a fact about the Candidate: degrees, dates, internships, experience, skills, motivations, mobility. Each fact comes from their Profile or from the Letters they already sent. Infer nothing that is not written there.
+- Wherever the letter needs a fact you do not have, write in its place a marker \`[à compléter : …]\` that says precisely what is missing, for example \`[à compléter : intitulé et année du master]\`. Keep the words \`à compléter\` as they are, whatever the language of the letter: the tool highlights them so that none is sent. Ten markers are better than a single invented fact.
+- Invent no fact about the Posting or the employer: rely on the Job Description and the Chosen Research. Invent no address: each one appears in the field it cites.
+- Write no file other than these two, and never modify the Job Description, the Research, the Profile or the Letters already sent.
+- Never touch the Status of the Posting or the tool's job queue.
+- The next message holds the Candidate's Instructions: they say how to write the letter. If they contradict what you read, the expected files, their language or these rules, this fixed part prevails.
 `;
 }

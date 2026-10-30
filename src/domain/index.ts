@@ -7,6 +7,9 @@ export const LOCALE_SCHEMA = z.enum(['fr', 'en']);
 
 export type Locale = z.infer<typeof LOCALE_SCHEMA>;
 
+// The language of a locale, in which the interactive sessions talk with the Candidate
+export const LANGUAGE_BY_LOCALE = { fr: 'French', en: 'English' } satisfies Record<Locale, string>;
+
 export const CANDIDATE_SCHEMA = z.object({ id: z.string(), name: z.string(), locale: LOCALE_SCHEMA }).brand<'Domain'>();
 
 export type Candidate = z.infer<typeof CANDIDATE_SCHEMA>;

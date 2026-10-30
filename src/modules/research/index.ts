@@ -1,6 +1,5 @@
 import type { IAiModule } from '#/ai-module/index.ts';
 
-import { RESEARCH_DEFAULT_INSTRUCTIONS } from './instructions.ts';
 import { composeResearchPrompt, RESEARCH_FILE_NAME } from './prompt.ts';
 
 // A Research starts with its title and ends with its sources, at least one link
@@ -17,7 +16,6 @@ function findFormatError(markdown: string): string | undefined {
 export const RESEARCH_MODULE = {
   fileName: RESEARCH_FILE_NAME,
   outputFileList: [{ name: RESEARCH_FILE_NAME, findFormatError }],
-  defaultInstructions: RESEARCH_DEFAULT_INSTRUCTIONS,
   composePrompt: composeResearchPrompt,
   // A Repost starts from the work done for the Posting it publishes again
   isReadingRepostedPosting: true,

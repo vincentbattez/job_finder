@@ -4,10 +4,14 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
-import { VISUALIZATION_DEFAULT_INSTRUCTIONS } from '#/modules/visualization/instructions.ts';
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+
+// Léa's, in French
+const { defaultInstructions } = catalogueOf({ locale: 'fr' });
+const VISUALIZATION_DEFAULT_INSTRUCTIONS = defaultInstructions.visualization;
 
 // The Béthune Posting of the tribunal pour enfants, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -108,8 +112,8 @@ describe('visualization', () => {
     const { actions } = await produceVisualization(aiSession);
 
     const { fixedPrompt, instructions } = aiSession.headlessSessionList.at(-1) ?? {};
-    expect(fixedPrompt).toContain("même contenu que la Fiche d'entretien, mis en forme : n'ajoute aucun fait");
-    expect(fixedPrompt).toContain('Aucun JavaScript');
+    expect(fixedPrompt).toContain('same content as the Interview Brief, laid out: add no fact');
+    expect(fixedPrompt).toContain('No JavaScript');
     expect(instructions).toBe(VISUALIZATION_DEFAULT_INSTRUCTIONS);
     const [version] = await actions.listVersions({ reference: REFERENCE, artifact: 'visualization' });
     expect(version?.instructions).toBe(VISUALIZATION_DEFAULT_INSTRUCTIONS);

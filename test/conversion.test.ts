@@ -47,8 +47,8 @@ describe('conversion of an Upload', () => {
     const [session] = aiSession.headlessSessionList;
     expect(session?.directory).toBe(profileDirectory);
     expect(session?.fixedPrompt).toContain('uploads/cv.pdf');
-    expect(session?.fixedPrompt).toContain('convertis-le fidèlement en Markdown, sans le réécrire');
-    expect(session?.fixedPrompt).toContain('lettre-<employeur>-<année>.md');
+    expect(session?.fixedPrompt).toContain('convert it faithfully into Markdown, without rewriting or translating it');
+    expect(session?.fixedPrompt).toContain('letter-<employer>-<year>.md');
     expect(await actions.listProfileFiles({ candidateId: 'lea' })).toEqual([
       { fileName: 'cv.md', markdown: CV_MARKDOWN },
       { fileName: 'facts.md', markdown: '# Faits\n' },
@@ -63,7 +63,7 @@ describe('conversion of an Upload', () => {
     await actions.openProfile({ candidateId: 'lea' });
 
     expect(aiSession.interactiveSessionList[0]?.prompt).toContain(
-      'convertis-le fidèlement en Markdown, sans le réécrire',
+      'convert it faithfully into Markdown, without rewriting or translating it',
     );
   });
 
@@ -105,6 +105,17 @@ describe('conversion of an Upload', () => {
     expect(await conversionOf(actions)).toMatchObject({ state: 'ready' });
   });
 
+  it('moves a past letter, named after its employer and year, into the Profile', async () => {
+    const letterRun = { fileByName: { 'letter-tj-lille-2025.md': '# Lettre au TJ de Lille\n' } };
+    const { actions } = await openProfile(createFakeAiSession(letterRun));
+    await actions.saveUpload({ candidateId: 'lea', fileName: 'lettre.pdf', content: CV_PDF });
+
+    await actions.runQueuedJobs();
+
+    expect(await conversionOf(actions)).toMatchObject({ state: 'ready' });
+    expect(await profileFileNameListOf(actions)).toEqual(['facts.md', 'letter-tj-lille-2025.md']);
+  });
+
   it('shows why a conversion failed, and runs it again when relaunched', async () => {
     const aiSession = createFakeAiSession({ isSuccess: false }, { fileByName: { 'notes.md': '# Notes\n' } }, CV_RUN);
     const { actions } = await openProfile(aiSession);
@@ -118,9 +129,7 @@ describe('conversion of an Upload', () => {
     await actions.runQueuedJobs();
     const nameFailure = await conversionOf(actions);
     expect(nameFailure?.state).toBe('failed');
-    expect(nameFailure?.log).toContain(
-      "« notes.md » n'est ni « cv.md » ni une lettre « lettre-<employeur>-<année>.md »",
-    );
+    expect(nameFailure?.log).toContain("« notes.md » n'est ni « cv.md » ni une lettre « letter-<employer>-<year>.md »");
     await actions.convertUpload({ candidateId: 'lea', fileName: 'cv.pdf' });
     await actions.runQueuedJobs();
 

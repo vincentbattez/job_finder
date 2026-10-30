@@ -1,5 +1,11 @@
 import { catalogueOf } from '#/domain/catalogue/index.ts';
-import { JOB_DESCRIPTION_FILE_NAME, type Artifact, type Candidate, type Posting } from '#/domain/index.ts';
+import {
+  JOB_DESCRIPTION_FILE_NAME,
+  LANGUAGE_BY_LOCALE,
+  type Artifact,
+  type Candidate,
+  type Posting,
+} from '#/domain/index.ts';
 import { DRAFT_FILE_NAME, LETTER_MODULE } from '#/modules/letter/index.ts';
 
 interface IEditedArtifact {
@@ -11,28 +17,30 @@ interface IEditedArtifact {
 }
 
 // Fixed, with no Instructions to replace it (ADR-0003); the session runs in the Posting folder, its
-// « dossier courant »
-export function composeEditPrompt({ candidate: { name }, posting, artifact, versionPath }: IEditedArtifact): string {
-  // Every Artifact is feminine; the prompt is French until #75 rewrites it
-  const artifactName = `la ${catalogueOf(null).common.artifactLabelByArtifact[artifact]}`;
+// "current folder". It talks in the Candidate's locale, the Artifact stays in its own language.
+export function composeEditPrompt({ candidate, posting, artifact, versionPath }: IEditedArtifact): string {
+  const { name } = candidate;
+  // The prompt is in English, as the rest of the code: the Artifact goes by its English name
+  const artifactName = catalogueOf({ locale: 'en' }).common.artifactLabelByArtifact[artifact];
   const letterFiles =
     artifact === 'letter'
-      ? ` La Lettre à corriger est \`${versionPath}/${LETTER_MODULE.fileName}\`, et \`${versionPath}/${DRAFT_FILE_NAME}\` est son Brouillon, ce que l'IA avait écrit.`
+      ? ` The Letter to correct is \`${versionPath}/${LETTER_MODULE.fileName}\`, and \`${versionPath}/${DRAFT_FILE_NAME}\` is its Draft, what the AI wrote.`
       : '';
-  return `Tu aides ${name} à modifier ${artifactName} de l'Offre ${posting.reference}, « ${posting.title} ». Parle en français.
+  return `You help ${name} modify the ${artifactName} of Posting ${posting.reference}, "${posting.title}". Talk with ${name} in ${LANGUAGE_BY_LOCALE[candidate.locale]}.
 
-Le dossier courant est celui de cette Offre : \`${JOB_DESCRIPTION_FILE_NAME}\` est sa Fiche de poste, et chaque Artefact y a un dossier par Version, numérotées \`v1\`, \`v2\`…
+The current folder is this Posting's: \`${JOB_DESCRIPTION_FILE_NAME}\` is its Job Description, and each Artifact has one folder per Version there, numbered \`v1\`, \`v2\`…
 
-Tu modifies la Version retenue de ${artifactName}, le dossier \`${versionPath}/\` : c'est sur elle que l'outil s'appuie ensuite.${letterFiles}
+You modify the Chosen Version of the ${artifactName}, the folder \`${versionPath}/\`: it is the one the tool relies on next.${letterFiles}
 
-Déroulé :
-1. Lis les fichiers de \`${versionPath}/\` et la Fiche de poste, puis demande à ${name} ce qu'il faut modifier.
-2. Modifie ces fichiers en place : ne crée jamais de nouvelle Version.
+Steps:
+1. Read the files of \`${versionPath}/\` and the Job Description, then ask ${name} what to modify.
+2. Modify these files in place: never create a new Version.
 
-Règles non négociables :
-- Ne modifie que les fichiers de \`${versionPath}/\` : ni les autres Versions, ni les autres Artefacts, ni la Fiche de poste.
-- Ne modifie jamais un Brouillon (\`${DRAFT_FILE_NAME}\`) : il reste tel que l'IA l'a écrit, pour que l'outil apprenne des corrections de ${name} en le comparant à la Lettre.
-- N'invente jamais un fait sur ${name}, l'employeur ou l'Offre. S'il manque une information, demande-la à ${name} ou laisse un repère \`[à compléter : …]\`.
-- Garde la structure des fichiers : leurs titres, leurs sections et les liens vers leurs sources.
+Non-negotiable rules:
+- Modify only the files of \`${versionPath}/\`: not the other Versions, the other Artifacts or the Job Description.
+- Never modify a Draft (\`${DRAFT_FILE_NAME}\`): it stays as the AI wrote it, so that the tool learns from ${name}'s corrections by comparing it with the Letter.
+- Keep the ${artifactName} in its own language, that of the Job Description, whatever the language you talk with ${name} in.
+- Never invent a fact about ${name}, the employer or the Posting. If a piece of information is missing, ask ${name} for it or leave a \`[à compléter : …]\` marker.
+- Keep the structure of the files: their headings, their sections and the links to their sources.
 `;
 }

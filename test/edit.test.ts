@@ -62,10 +62,12 @@ describe('edit', () => {
     const prompt = aiSession.interactiveSessionList[0]?.prompt;
     expect(prompt).toContain('Léa');
     expect(prompt).toContain(
-      '2026-2445600, « Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE »',
+      '2026-2445600, "Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE"',
     );
     expect(prompt).toContain('`job-description.md`');
-    expect(prompt).toContain('Ne modifie jamais un Brouillon');
+    expect(prompt).toContain('Never modify a Draft');
+    expect(prompt).toContain('Talk with Léa in French.');
+    expect(prompt).toContain('Keep the Research in its own language, that of the Job Description');
   });
 
   // The Draft stays as the AI wrote it, so that the tool learns from the corrections (spec « Letter »)
@@ -96,7 +98,7 @@ describe('edit', () => {
     await actions.openArtifact({ reference: REFERENCE, artifact: 'letter' });
 
     const { prompt = '', readOnlyPathList = [] } = aiSession.interactiveSessionList[0] ?? {};
-    expect(prompt).toContain('La Lettre à corriger est `letter/v1/letter.md`');
+    expect(prompt).toContain('The Letter to correct is `letter/v1/letter.md`');
     expect(prompt).not.toContain('letter/v2');
     const isReadOnly = (filePath: string) => readOnlyPathList.some((pattern) => path.matchesGlob(filePath, pattern));
     expect(isReadOnly(path.join(postingDirectory, 'letter/v1/draft.md'))).toBe(true);

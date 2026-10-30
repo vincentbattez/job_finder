@@ -1,4 +1,4 @@
-import type { IPromptInput } from '#/ai-module/index.ts';
+import { describeArtifactLanguage, type IPromptInput } from '#/ai-module/index.ts';
 import { JOB_DESCRIPTION_FILE_NAME } from '#/domain/index.ts';
 
 export const RESEARCH_FILE_NAME = 'research.md';
@@ -12,12 +12,12 @@ function describeRepostedPosting(readVersionList: IPromptInput['readVersionList'
   }
   const folderList = readVersionList.map(({ directory }) => `- \`${directory}\``);
   return `
-## L'Offre publiée auparavant
+## The Posting published before
 
-Cette Offre est la Republication de l'Offre ${firstVersion.reference} : le même Poste, publié à nouveau. Les Artefacts retenus de cette Offre précédente sont dans ces dossiers, à lire avant de chercher :
+This Posting is the Repost of Posting ${firstVersion.reference}: the same Position, published again. The Chosen Artifacts of that earlier Posting are in these folders, to read before searching:
 ${folderList.join('\n')}
 
-Ne refais pas ce travail : pars de sa Recherche, vérifie ce que la Fiche de poste de cette Offre et l'actualité changent, et reprends ce qui reste vrai avec ses sources.
+Do not do that work again: start from its Research, check what the Job Description of this Posting and the news change, and carry over what still holds, with its sources.
 `;
 }
 
@@ -25,40 +25,40 @@ Ne refais pas ce travail : pars de sa Recherche, vérifie ce que la Fiche de pos
 // reach it is left to the session and its Instructions
 export function composeResearchPrompt({ posting, outputDirectory, readVersionList }: IPromptInput): string {
   const outputPath = `${outputDirectory}/${RESEARCH_FILE_NAME}`;
-  return `Tu produis la Recherche d'une Offre d'emploi, pour le Candidat qui va y postuler. Écris en français.
+  return `You produce the Research of a job Posting, for the Candidate who is going to apply to it. ${describeArtifactLanguage('Research')}
 
-## Objectif
+## Objective
 
-Établir, sources à l'appui, ce que les recruteurs attendent pour cette Offre, et dans quel contexte : l'employeur, le service, le lieu. Le Candidat s'en servira pour écrire sa lettre de motivation et préparer son entretien. C'est à toi de décider ce qui mérite d'être creusé pour y parvenir.
+Establish, with sources, what the recruiters expect for this Posting, and in what context: the employer, the department, the place. The Candidate will use it to write their cover letter and prepare their interview. It is up to you to decide what deserves digging into to get there.
 
-## L'Offre
+## The Posting
 
-- Référence : ${posting.reference}
-- Titre : ${posting.title}
-- Employeur : ${posting.employer ?? 'non précisé'}
-- Lieu d'affectation : ${posting.workplace ?? 'non précisé'}
-- Annonce : ${posting.url ?? 'non précisée'}
+- Reference: ${posting.reference}
+- Title: ${posting.title}
+- Employer: ${posting.employer ?? 'not specified'}
+- Place of work: ${posting.workplace ?? 'not specified'}
+- Advert: ${posting.url ?? 'not specified'}
 
-Le dossier courant est celui de l'Offre. Sa Fiche de poste, telle qu'elle a été publiée, est dans \`${JOB_DESCRIPTION_FILE_NAME}\` : lis-la en premier.
+The current folder is the Posting's. Its Job Description, as it was published, is in \`${JOB_DESCRIPTION_FILE_NAME}\`: read it first.
 ${describeRepostedPosting(readVersionList)}
-## Ce que tu produis
+## What you produce
 
-Un seul fichier Markdown : \`${outputPath}\`.
-- Il commence par un titre de niveau 1 (\`# …\`).
-- Chaque affirmation est suivie de sa source : un lien Markdown vers la page qui l'établit.
-- Il se termine par une section \`## Sources\` qui liste chaque source citée, avec son URL.
+A single Markdown file: \`${outputPath}\`.
+- It starts with a level 1 heading (\`# …\`).
+- Each claim is followed by its source: a Markdown link to the page that establishes it.
+- It ends with a \`## Sources\` section listing each cited source, with its URL.
 
-## Discipline de recherche
+## Research discipline
 
-Mène la recherche toi-même, au premier plan, sans la confier à un agent en arrière-plan.
-- Appuie-toi sur des sources primaires : le site de l'employeur ou de la juridiction, les textes officiels, les rapports et communiqués des institutions, et pour l'actualité les articles qui la rapportent directement. Remonte chaque affirmation jusqu'à la source qui la détient, plutôt que de citer un résumé de seconde main.
-- Chaque affirmation est sourcée. Ce que tu ne peux pas sourcer, ne l'écris pas comme un fait : présente-le comme une hypothèse ou une question ouverte.
+Carry out the research yourself, in the foreground, without handing it to a background agent.
+- Rely on primary sources: the website of the employer or of the court, official texts, the reports and press releases of institutions, and for the news the articles that report it directly. Trace each claim back to the source that holds it, rather than citing a second-hand summary.
+- Each claim is sourced. What you cannot source, do not write as a fact: present it as a hypothesis or an open question.
 
-## Règles non négociables
+## Non-negotiable rules
 
-- N'invente jamais un fait.
-- N'écris aucun autre fichier que \`${outputPath}\`, et ne modifie jamais la Fiche de poste.
-- Ne touche jamais au statut de l'Offre ni à la file de jobs de l'outil.
-- Le message qui suit contient les Consignes du Candidat : elles disent comment mener et présenter la Recherche. Si elles contredisent l'objectif, le fichier attendu ou ces règles, cette partie fixe l'emporte.
+- Never invent a fact.
+- Write no file other than \`${outputPath}\`, and never modify the Job Description.
+- Never touch the Status of the Posting or the tool's job queue.
+- The next message holds the Candidate's Instructions: they say how to carry out and present the Research. If they contradict the objective, the expected file, its language or these rules, this fixed part prevails.
 `;
 }

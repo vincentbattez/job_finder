@@ -1,6 +1,5 @@
 import type { IAiModule } from '#/ai-module/index.ts';
 
-import { INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS } from './instructions.ts';
 import { composeInterviewBriefPrompt, INTERVIEW_BRIEF_FILE_NAME } from './prompt.ts';
 
 // An Interview Brief starts with its title; its plan is that of the Instructions, which the
@@ -15,7 +14,6 @@ export const INTERVIEW_BRIEF_MODULE = {
   alias: 'brief',
   fileName: INTERVIEW_BRIEF_FILE_NAME,
   outputFileList: [{ name: INTERVIEW_BRIEF_FILE_NAME, findFormatError }],
-  defaultInstructions: INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS,
   composePrompt: composeInterviewBriefPrompt,
   // The Interview Brief builds on the Chosen Research of its Posting, and on its Chosen Letter
   // once there is one, to prepare the questions on what the Candidate wrote

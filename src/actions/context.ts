@@ -133,7 +133,7 @@ export async function openContext({
     findSource,
     importSource: createImportSource(aiSession),
     uploadConversion: createUploadConversion(aiSession),
-    runJob: createJobRunner(workspace, aiSession),
+    runJob: createJobRunner(workspace, aiSession, findCandidate),
     notificationChannelList,
     notificationChannelModuleOf,
     findNotificationChannelModule,

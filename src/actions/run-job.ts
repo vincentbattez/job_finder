@@ -3,7 +3,14 @@ import path from 'node:path';
 import type { IAiModule } from '#/ai-module/index.ts';
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
 import { catalogueOf } from '#/domain/catalogue/index.ts';
-import { ARTIFACT_SCHEMA, type Artifact, type Job, type Posting, type Version } from '#/domain/index.ts';
+import {
+  ARTIFACT_SCHEMA,
+  type Artifact,
+  type Candidate,
+  type Job,
+  type Posting,
+  type Version,
+} from '#/domain/index.ts';
 import { INTERVIEW_BRIEF_MODULE } from '#/modules/interview-brief/index.ts';
 import { LETTER_MODULE } from '#/modules/letter/index.ts';
 import { RESEARCH_MODULE } from '#/modules/research/index.ts';
@@ -49,8 +56,10 @@ export function parseArtifact(name: string): Artifact {
   return parseArtifactName(name, 'Artefact');
 }
 
-export function findDefaultInstructions(module: Artifact): string {
-  return AI_MODULE_BY_ARTIFACT[module].defaultInstructions;
+// Those of the Candidate's locale, the ones they read and edit; the Artifact's language is set by the
+// fixed part of the prompt
+export function findDefaultInstructions(module: Artifact, candidate: Candidate): string {
+  return catalogueOf(candidate).defaultInstructions[module];
 }
 
 // A Repost starts from the work done for the Posting it publishes again
@@ -150,7 +159,11 @@ export async function describeModule(workspace: Workspace, posting: Posting, art
 
 // The worker runs each queued job with it (ADR-0003); the Version keeps the Instructions it was made
 // with, so that two Versions compare
-export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
+export function createJobRunner(
+  workspace: Workspace,
+  aiSession: IAiSession,
+  findCandidate: (rawInput: unknown) => Promise<Candidate>,
+) {
   // A Version is ready only once each of its files exists, is not empty and has the module's format
   function findOutputProblem(
     { name, findFormatError }: IAiModule['outputFileList'][number],
@@ -175,7 +188,8 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
     const aiModule = AI_MODULE_BY_ARTIFACT[module];
     const { versionList: inputList, directoryList } = await findInputs(workspace, posting, module);
     const candidateInstructions = workspace.readInstructions(posting.candidateId, module);
-    const instructions = candidateInstructions ?? aiModule.defaultInstructions;
+    const candidate = await findCandidate({ candidateId: posting.candidateId });
+    const instructions = candidateInstructions ?? findDefaultInstructions(module, candidate);
     const hasCandidateInstructions = candidateInstructions !== null;
     const version = await workspace.startJob(job, { instructions, hasCandidateInstructions, inputList });
     const postingDirectory = workspace.postingDirectoryOf(posting);

@@ -201,6 +201,17 @@ describe('import of a Job Description in Markdown', () => {
     }
   });
 
+  // The fields are those of a French Job Description: copied, never translated into the prompt's English
+  it('asks the session to copy each field in the language of the Job Description', async () => {
+    const aiSession = createFakeAiSession(extractionRun());
+    const actions = await openActions(aiSession);
+
+    await importThenRunWorker(actions);
+
+    const [session] = aiSession.headlessSessionList;
+    expect(session?.fixedPrompt).toContain('in the language of the Job Description, never translated');
+  });
+
   it('leaves empty each field Claude did not find, and keeps the name of the file without a title', async () => {
     const markdown = 'Le greffier assiste les magistrats du tribunal.\n';
     const actions = await openActions(createFakeAiSession(extractionRun(EMPTY_EXTRACTION)));

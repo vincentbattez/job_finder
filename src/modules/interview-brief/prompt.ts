@@ -1,4 +1,4 @@
-import type { IPromptInput } from '#/ai-module/index.ts';
+import { describeArtifactLanguage, type IPromptInput } from '#/ai-module/index.ts';
 import { JOB_DESCRIPTION_FILE_NAME } from '#/domain/index.ts';
 
 export const INTERVIEW_BRIEF_FILE_NAME = 'interview-brief.md';
@@ -7,8 +7,8 @@ export const INTERVIEW_BRIEF_FILE_NAME = 'interview-brief.md';
 function describeLetter(readVersionList: IPromptInput['readVersionList']): string {
   const letter = readVersionList.find(({ artifact }) => artifact === 'letter');
   return letter === undefined
-    ? "Le Candidat n'a pas de Lettre pour cette Offre : prépare l'entretien sans elle."
-    : `La Lettre retenue, celle que le Candidat a envoyée ou va envoyer : \`${letter.filePath}\`. Les recruteurs l'auront lue : prépare les questions qu'ils poseront sur ce qu'il y a écrit.`;
+    ? 'The Candidate has no Letter for this Posting: prepare the interview without it.'
+    : `The Chosen Letter, the one the Candidate sent or is about to send: \`${letter.filePath}\`. The recruiters will have read it: prepare the questions they will ask about what it says.`;
 }
 
 // The fixed part: its objective, inputs and output, and the rules no Instructions can lift (ADR-0003)
@@ -20,36 +20,36 @@ export function composeInterviewBriefPrompt({
 }: IPromptInput): string {
   const outputPath = `${outputDirectory}/${INTERVIEW_BRIEF_FILE_NAME}`;
   const researchList = readVersionList.filter(({ artifact }) => artifact === 'research');
-  return `Tu écris la Fiche d'entretien d'un Candidat pour une Offre d'emploi : ce qu'il doit réviser et comment s'entraîner avant l'entretien de recrutement. Écris en français.
+  return `You write a Candidate's Interview Brief for a job Posting: what they must revise and how to practise before the recruitment interview. ${describeArtifactLanguage('Interview Brief')}
 
-## L'Offre
+## The Posting
 
-- Référence : ${posting.reference}
-- Titre : ${posting.title}
-- Employeur : ${posting.employer ?? 'non précisé'}
-- Lieu d'affectation : ${posting.workplace ?? 'non précisé'}
+- Reference: ${posting.reference}
+- Title: ${posting.title}
+- Employer: ${posting.employer ?? 'not specified'}
+- Place of work: ${posting.workplace ?? 'not specified'}
 
-Le dossier courant est celui de l'Offre.
+The current folder is the Posting's.
 
-## Ce que tu lis
+## What you read
 
-Lis tout avant d'écrire :
-- La Fiche de poste, telle qu'elle a été publiée : \`${JOB_DESCRIPTION_FILE_NAME}\`.
-${researchList.map(({ filePath }) => `- La Recherche retenue, qui établit ce que les recruteurs attendent et dans quel contexte : \`${filePath}\`.`).join('\n')}
-- Le Profil du Candidat, dans \`${profileDirectory}\` : les faits qu'il a validés, son CV et ses lettres passées, quand ils existent. Lis chacun de ses fichiers : c'est la seule source des faits sur le Candidat.
+Read everything before writing:
+- The Job Description, as it was published: \`${JOB_DESCRIPTION_FILE_NAME}\`.
+${researchList.map(({ filePath }) => `- The Chosen Research, which establishes what the recruiters expect and in what context: \`${filePath}\`.`).join('\n')}
+- The Candidate's Profile, in \`${profileDirectory}\`: the facts they validated, their CV and their past letters, when they exist. Read each of its files: it is the only source of facts about the Candidate.
 - ${describeLetter(readVersionList)}
 
-## Ce que tu produis
+## What you produce
 
-Un seul fichier Markdown : \`${outputPath}\`, qui commence par un titre de niveau 1 (\`# …\`). Les Consignes du Candidat disent comment l'organiser.
+A single Markdown file: \`${outputPath}\`, which starts with a level 1 heading (\`# …\`). The Candidate's Instructions say how to organise it.
 
-## Règles non négociables
+## Non-negotiable rules
 
-- N'invente jamais un fait sur le Candidat : diplômes, dates, stages, expériences, compétences, motivations, mobilité. Chaque fait vient de son Profil ou de sa Lettre. Ne déduis rien qui n'y est pas écrit.
-- Partout où la Fiche d'entretien a besoin d'un fait que tu n'as pas, écris à sa place un repère \`[à compléter : …]\` qui dit précisément ce qui manque, par exemple \`[à compléter : sujet du mémoire de master]\`.
-- N'invente aucun fait sur l'Offre ni sur l'employeur : appuie-toi sur la Fiche de poste et la Recherche retenue.
-- N'écris aucun autre fichier que \`${outputPath}\`, et ne modifie jamais la Fiche de poste, la Recherche, le Profil ni la Lettre.
-- Ne touche jamais au statut de l'Offre ni à la file de jobs de l'outil.
-- Le message qui suit contient les Consignes du Candidat : elles disent comment préparer, organiser et présenter la Fiche d'entretien. Si elles contredisent ce que tu lis, le fichier attendu ou ces règles, cette partie fixe l'emporte.
+- Never invent a fact about the Candidate: degrees, dates, internships, experience, skills, motivations, mobility. Each fact comes from their Profile or their Letter. Infer nothing that is not written there.
+- Wherever the Interview Brief needs a fact you do not have, write in its place a marker \`[à compléter : …]\` that says precisely what is missing, for example \`[à compléter : sujet du mémoire de master]\`. Keep the words \`à compléter\` as they are, whatever the language of the Interview Brief: the tool highlights them.
+- Invent no fact about the Posting or the employer: rely on the Job Description and the Chosen Research.
+- Write no file other than \`${outputPath}\`, and never modify the Job Description, the Research, the Profile or the Letter.
+- Never touch the Status of the Posting or the tool's job queue.
+- The next message holds the Candidate's Instructions: they say how to prepare, organise and present the Interview Brief. If they contradict what you read, the expected file, its language or these rules, this fixed part prevails.
 `;
 }
