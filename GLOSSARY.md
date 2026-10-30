@@ -54,6 +54,10 @@ Standing search of a Candidate on a Source, defined by the Parameters that Sourc
 _Avoid_: alert, subscription, saved search
 _Formerly_: Veille
 
+**Error Code**:
+Name of one kind of failure, which always comes with a message in the Candidate's Locale saying what to do; a failed job keeps its Error Code.
+_Avoid_: error type, error number, status code
+
 ## Postings
 
 **Posting**:
