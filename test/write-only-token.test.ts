@@ -38,6 +38,7 @@ const INPUT_BY_ACTION: Record<string, object> = {
     ...PIECE,
     content: new Uint8Array(readFileSync(path.join(import.meta.dirname, 'fixtures/profil/cv.pdf'))),
   },
+  convertPiece: PIECE,
   deletePiece: PIECE,
 };
 

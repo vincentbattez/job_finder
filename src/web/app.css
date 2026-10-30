@@ -1052,6 +1052,9 @@ a:active {
 .pieces__item .profil-file__delete {
   margin-inline-start: auto;
 }
+.pieces__conversion {
+  flex-basis: 100%;
+}
 .pieces__item .profil-file__delete form {
   display: flex;
   margin-top: var(--space-xs);

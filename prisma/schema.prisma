@@ -17,6 +17,7 @@ model Candidat {
   veilleList             Veille[]
   offreList              Offre[]
   connexionHomeAssistant ConnexionHomeAssistant?
+  jobList                Job[]
 }
 
 // Apart from Candidat, which only data/config.json writes: the Candidat saves it from the front. Its
@@ -118,15 +119,19 @@ enum VersionState {
   failed
 }
 
+// A job works on an Offre, or on the Profil of a Candidat: the conversion of one of its Pièces
 model Job {
-  id        Int      @id @default(autoincrement())
-  module    String
-  offre     Offre    @relation(fields: [offreId], references: [id])
-  offreId   Int
-  state     JobState @default(queued)
-  log       String   @default("")
-  sessionId String?
-  version   Version?
+  id         Int       @id @default(autoincrement())
+  module     String
+  offre      Offre?    @relation(fields: [offreId], references: [id], onDelete: Restrict)
+  offreId    Int?
+  candidat   Candidat? @relation(fields: [candidatId], references: [id], onDelete: Cascade)
+  candidatId String?
+  piece      String?
+  state      JobState  @default(queued)
+  log        String    @default("")
+  sessionId  String?
+  version    Version?
 }
 
 enum JobState {

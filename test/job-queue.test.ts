@@ -54,10 +54,10 @@ describe('the job queue', () => {
       REFERENCE,
     ]);
     const ranJobList = [...jobList, ...otherJobList].toSorted((left, right) => left.id - right.id);
-    expect(ranJobList.map(({ id, state, version }) => ({ id, state, number: version?.number }))).toEqual([
-      { id: jobIdList[0], state: 'done', number: 1 },
-      { id: jobIdList[1], state: 'done', number: 1 },
-      { id: jobIdList[2], state: 'done', number: 2 },
+    expect(ranJobList).toMatchObject([
+      { id: jobIdList[0], state: 'done', version: { number: 1 } },
+      { id: jobIdList[1], state: 'done', version: { number: 1 } },
+      { id: jobIdList[2], state: 'done', version: { number: 2 } },
     ]);
   });
 
@@ -127,7 +127,7 @@ describe('the Recherche of a new Offre in the Zone', () => {
     await actions.detect();
 
     const jobList = await actions.runQueuedJobs();
-    const queuedList = jobList.map(({ module, offre }) => `${module} ${offre.reference}`);
+    const queuedList = jobList.map((job) => `${job.module} ${'offre' in job ? job.offre.reference : job.piece}`);
     expect(queuedList.toSorted((left, right) => left.localeCompare(right))).toEqual([
       `recherche ${REFERENCE}`,
       `recherche ${OTHER_REFERENCE}`,

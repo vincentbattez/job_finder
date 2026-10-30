@@ -48,6 +48,12 @@ export function createDirectory(directory: string): void {
   mkdirSync(directory, { recursive: true });
 }
 
+// A session's output folder: what an earlier run left never passes for what this one wrote
+export function emptyDirectory(directory: string): void {
+  rmSync(directory, { recursive: true, force: true });
+  mkdirSync(directory, { recursive: true });
+}
+
 // Its folder is created first, so a file is written wherever the workspace places it
 export function writeTextFile(filePath: string, text: string): void {
   mkdirSync(path.dirname(filePath), { recursive: true });

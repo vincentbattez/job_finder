@@ -143,10 +143,11 @@ describe('a notification that cannot be sent', () => {
       notificationChannel: createFakeNotificationChannel(),
     });
     const jobList = await worker.runQueuedJobs();
-    expect(jobList.map(({ module, offre, state }) => `${module} ${offre.reference} ${state}`)).toEqual([
-      `recherche ${REFERENCE} done`,
-      `recherche ${OTHER_REFERENCE} done`,
+    expect(jobList).toMatchObject([
+      { module: 'recherche', offre: { reference: REFERENCE }, state: 'done' },
+      { module: 'recherche', offre: { reference: OTHER_REFERENCE }, state: 'done' },
     ]);
+    expect(jobList).toHaveLength(2);
   });
 
   // lpm never restarts a stopped worker: the failure goes to its log, lpm logs worker

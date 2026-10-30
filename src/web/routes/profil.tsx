@@ -60,6 +60,10 @@ export async function action({ request }: ActionFunctionArgs) {
         await ACTIONS.deletePiece(formInput);
         break;
       }
+      case 'convertPiece': {
+        await ACTIONS.convertPiece(formInput);
+        break;
+      }
       case 'faits': {
         // Each field is named after its rubrique, one per entry of a list rubrique
         const titleList = [...new Set(formData.keys())].filter((name) => name !== 'intent');
@@ -74,7 +78,9 @@ export async function action({ request }: ActionFunctionArgs) {
     return { refusal: { isCreation: intent === 'create', fileName, message: messageOf(error) } };
   }
   // The Pièces are sent by a fetcher, which revalidates the page by itself and keeps what it receives
-  return intent === 'piece' || intent === 'deletePiece' ? { refusal: null } : redirect('/profil');
+  return intent === 'piece' || intent === 'deletePiece' || intent === 'convertPiece'
+    ? { refusal: null }
+    : redirect('/profil');
 }
 
 export function meta() {

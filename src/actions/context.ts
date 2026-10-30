@@ -3,6 +3,7 @@ import { z } from 'zod/v4';
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
 import { LIEU_SCHEMA, type Candidat, type Lieu, type Offre } from '#/domain/index.ts';
 import { createApiGeo } from '#/geo/acl/api-geo.ts';
+import { createPieceConversion } from '#/modules/conversion/index.ts';
 import { HOME_ASSISTANT, type INotification, type INotificationChannel } from '#/modules/notification/index.ts';
 import { createImportSource } from '#/modules/source-import/index.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
@@ -81,6 +82,7 @@ export async function openContext({
     aiSession,
     pepSource: createPepSource(fetch),
     importSource: createImportSource(aiSession),
+    pieceConversion: createPieceConversion(aiSession),
     runJob: createJobRunner(workspace, aiSession),
     notificationChannel,
     findCandidat,

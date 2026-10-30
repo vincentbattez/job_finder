@@ -2,6 +2,11 @@ import type { Candidat } from '#/domain/index.ts';
 
 import { RUBRIQUE_LIST } from './faits.ts';
 
+// How a CV or a past lettre becomes a file of the Profil, shared by jf profil and the conversion job
+// of a Pièce, so both convert alike
+export const CONVERSION_CONSIGNES =
+  "convertis-le fidèlement en Markdown, sans le réécrire : un CV dans `cv.md`, une lettre de motivation dans `lettre-<employeur>-<année>.md`, l'employeur en minuscules et sans accents, ses mots reliés par des tirets, par exemple `lettre-tj-lille-2025.md`";
+
 // Fixed, with no Consignes to replace it (ADR-0003); the session runs in the Profil folder, its
 // « dossier courant »
 export function composeProfilPrompt({ name }: Candidat): string {
@@ -24,6 +29,6 @@ Règles non négociables :
 - Complète les fichiers existants sans les écraser : ajoute ou corrige seulement ce que ${name} a validé, et garde le reste tel quel.
 - N'écris que dans le dossier courant, et seulement des fichiers Markdown.
 
-CV et lettres passées : si ${name} te donne son CV ou des lettres de motivation passées (un fichier PDF, Word ou texte, ou un texte collé), lis-les et convertis-les fidèlement en Markdown, sans les réécrire : le CV dans \`cv.md\`, chaque lettre dans \`lettre-<employeur>-<année>.md\`. Propose ensuite d'ajouter à \`faits.md\` les faits qu'ils contiennent, toujours après validation.
+CV et lettres passées : si ${name} te donne son CV ou des lettres de motivation passées (un fichier PDF, Word ou texte, ou un texte collé), lis chaque document et ${CONVERSION_CONSIGNES}. Propose ensuite d'ajouter à \`faits.md\` les faits qu'ils contiennent, toujours après validation.
 `;
 }

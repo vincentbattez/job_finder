@@ -2,12 +2,13 @@ import { setTimeout } from 'node:timers/promises';
 
 import { z } from 'zod/v4';
 
-import type { Job } from '#/domain/index.ts';
+import type { Job, QueuedJob } from '#/domain/index.ts';
 import { composeRecherchePreteNotification } from '#/modules/notification/index.ts';
 import { messageOf } from '#/text/index.ts';
 
 import type { ActionContext } from './context.ts';
 import { runExtraction } from './import-fiche-de-poste.ts';
+import { runConversion } from './pieces.ts';
 import { findInputs, parseModule } from './run-job.ts';
 
 const MODULE_INPUT_SCHEMA = z.object({ module: z.string(), reference: z.string() });
@@ -56,17 +57,21 @@ export function createJobActions(context: ActionContext) {
     },
 
     // At the worker's start, a running job was cut off by its stop: failing it frees the queue
-    async failInterruptedJobs(): Promise<Job[]> {
+    async failInterruptedJobs(): Promise<QueuedJob[]> {
       return workspace.failRunningJobs(
         "Interrompu : le worker s'est arrêté pendant ce job. Relancer le module en crée une nouvelle Version.",
       );
     },
 
     // One job at a time, a single Claude session (ADR-0003)
-    async runQueuedJobs(): Promise<Job[]> {
-      const jobList: Job[] = [];
+    async runQueuedJobs(): Promise<QueuedJob[]> {
+      const jobList: QueuedJob[] = [];
       for (let job = await workspace.claimNextJob(); job !== null; job = await workspace.claimNextJob()) {
         try {
+          if (job.module === 'conversion') {
+            jobList.push(await runConversion(context, job));
+            continue;
+          }
           const { module } = job;
           const { job: finishedJob } =
             module === 'extraction' ? await runExtraction(context, job) : await runJob({ ...job, module });

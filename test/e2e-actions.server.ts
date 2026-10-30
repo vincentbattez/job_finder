@@ -55,6 +55,8 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
       '## Questions probables\n\n- Pourquoi ce poste ?\n',
     ].join('\n\n'),
   },
+  // The CV that e2e/profil.test.ts drops, test/fixtures/profil/cv.pdf
+  conversion: { 'cv.md': '# CV converti\n\n## Formation\n\n- Master 2 droit public\n' },
   visualisation: {
     'visualisation.html': [
       '<!DOCTYPE html>',
@@ -70,10 +72,15 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
 const SESSION_DURATION_MS = 1000;
 
 // A session's module is the Artefact its Version folder belongs to: <offre>/<artefact>/v<n>. The
-// extraction of an imported Offre writes in a folder of its own: <offre>/extraction
-// (src/modules/source-import).
+// extraction of an imported Offre writes in a folder of its own, <offre>/extraction
+// (src/modules/source-import), and the conversion of a Pièce in profil/pieces/.conversion/<pièce>
+// (src/workspace).
 function moduleOf({ outputDirectory }: IHeadlessSession): string {
-  return path.basename(outputDirectory) === 'extraction' ? 'extraction' : path.basename(path.dirname(outputDirectory));
+  if (path.basename(outputDirectory) === 'extraction') {
+    return 'extraction';
+  }
+  const parentName = path.basename(path.dirname(outputDirectory));
+  return parentName === '.conversion' ? 'conversion' : parentName;
 }
 
 const aiSession = {

@@ -160,12 +160,14 @@ const MODULE_SCHEMA = z.enum([...ARTEFACT_SCHEMA.options, 'extraction']);
 
 export type Module = z.infer<typeof MODULE_SCHEMA>;
 
+const JOB_STATE_SCHEMA = z.enum(['queued', 'running', 'done', 'failed']);
+
 export const JOB_SCHEMA = z
   .object({
     id: z.int(),
     module: MODULE_SCHEMA,
     offre: OFFRE_SCHEMA,
-    state: z.enum(['queued', 'running', 'done', 'failed']),
+    state: JOB_STATE_SCHEMA,
     log: z.string(),
     sessionId: z.string().nullable(),
     version: VERSION_SCHEMA.nullable(),
@@ -273,6 +275,38 @@ export const OFFRE_FICHE_SCHEMA = z
   .brand<'Domain'>();
 
 export type OffreFiche = z.infer<typeof OFFRE_FICHE_SCHEMA>;
+
+// A job of the Profil of a Candidat rather than of an Offre: the conversion of a Pièce into Markdown
+export const PROFIL_JOB_SCHEMA = z
+  .object({
+    id: z.int(),
+    module: z.literal('conversion'),
+    candidatId: z.string(),
+    piece: PIECE_FILE_NAME_SCHEMA,
+    state: JOB_STATE_SCHEMA,
+    log: z.string(),
+    sessionId: z.string().nullable(),
+  })
+  .brand<'Domain'>();
+
+export type ProfilJob = z.infer<typeof PROFIL_JOB_SCHEMA>;
+
+// What the worker runs: a job of an Offre or of a Profil, a single queue for both (ADR-0003)
+export const QUEUED_JOB_SCHEMA = z.union([JOB_SCHEMA, PROFIL_JOB_SCHEMA]);
+
+export type QueuedJob = z.infer<typeof QUEUED_JOB_SCHEMA>;
+
+// A Pièce and its conversion: the état of its latest conversion job, absent before any, and its log,
+// which says why it failed
+export const PIECE_CONVERSION_SCHEMA = z
+  .object({
+    fileName: PIECE_FILE_NAME_SCHEMA,
+    savedAt: z.date(),
+    conversion: z.object({ etat: ETAT_SCHEMA, log: z.string() }),
+  })
+  .brand<'Domain'>();
+
+export type PieceConversion = z.infer<typeof PIECE_CONVERSION_SCHEMA>;
 
 // How a headless AI session ended: its id, to resume it, and what it said, kept as the job's log
 export const SESSION_RESULT_SCHEMA = z

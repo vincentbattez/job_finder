@@ -16,7 +16,7 @@ import { createRecordedFetch } from './recorded-http.ts';
 // Postulée, Archivée and À traiter; Camille has no Veille, hence no Offre. The tests
 // that change data work on Offres of their own: Bastia 2026-2426147 (a Recherche and a Lettre to
 // correct), Versailles 2026-2409178 (two Recherches), Rennes 2026-2420931 (a Recherche, ready for
-// its Lettre) and Narbonne 2026-2412591 (a Recherche en échec). Sacha, Noé, Inès and Malo, without
+// its Lettre) and Narbonne 2026-2412591 (a Recherche en échec). Sacha, Noé, Inès, Malo and Rose, without
 // Veille either, each have their Profil changed by one e2e test only, which writes it first; Sacha
 // also has the Consignes the e2e tests change. Yanis and Zoé each have their Connexion Home Assistant
 // changed by one e2e test only. Léa's Offre
@@ -59,6 +59,7 @@ const CONFIG = {
     { id: 'malo', name: 'Malo', veilleList: [] },
     { id: 'yanis', name: 'Yanis', veilleList: [] },
     { id: 'zoe', name: 'Zoé', veilleList: [] },
+    { id: 'rose', name: 'Rose', veilleList: [] },
   ],
 };
 

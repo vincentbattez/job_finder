@@ -11,9 +11,15 @@ const POLL_INTERVAL_MS = 2000;
 // Through the actions only: the worker never reaches the domain directly (ADR-0003)
 type Job = Awaited<ReturnType<Actions['runQueuedJobs']>>[number];
 
-function formatJob({ id, module, offre, state, version, log }: Job): string {
+function formatJob(job: Job): string {
+  const failure = `en échec : ${job.log.split('\n', 1)[0] ?? ''}`;
+  if (job.module === 'conversion') {
+    const outcome = job.state === 'done' ? 'rangée dans le Profil' : failure;
+    return `job ${String(job.id)}, conversion de la Pièce ${job.piece} de ${job.candidatId} : ${outcome}\n`;
+  }
+  const { id, module, offre, state, version } = job;
   const artefact = version === null ? module : `${module} v${String(version.number)}`;
-  const outcome = state === 'done' ? 'prête et retenue' : `en échec : ${log.split('\n', 1)[0] ?? ''}`;
+  const outcome = state === 'done' ? 'prête et retenue' : failure;
   return `job ${String(id)}, ${artefact} de l'Offre ${offre.reference} : ${outcome}\n`;
 }
 

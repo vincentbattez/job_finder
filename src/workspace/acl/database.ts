@@ -11,6 +11,8 @@ import {
   HOME_ASSISTANT_ACCESS_SCHEMA,
   JOB_SCHEMA,
   OFFRE_SCHEMA,
+  PROFIL_JOB_SCHEMA,
+  QUEUED_JOB_SCHEMA,
   VEILLE_SCHEMA,
   VERSION_SCHEMA,
   type Artefact,
@@ -23,6 +25,9 @@ import {
   type ListedOffre,
   type Module,
   type Offre,
+  type PieceFileName,
+  type ProfilJob,
+  type QueuedJob,
   type Source,
   type Statut,
   type Veille,
@@ -223,14 +228,15 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
         );
     },
 
+    // A job of an Offre: those of a Profil are followed on its page
     async findJob(id: number): Promise<Job | null> {
-      const job = await prisma.job.findUnique({ where: { id }, include: JOB_INCLUDE });
+      const job = await prisma.job.findUnique({ where: { id, offreId: { not: null } }, include: JOB_INCLUDE });
       return job === null ? null : JOB_SCHEMA.parse(job);
     },
 
     // The oldest queued job, now running, unless a job is already running: a single Claude session
     // at a time (ADR-0003). One statement, so SQLite claims it atomically, even for two workers.
-    async claimNextJob(): Promise<Job | null> {
+    async claimNextJob(): Promise<QueuedJob | null> {
       const claimedList = z.array(z.object({ id: z.int() })).parse(
         await prisma.$queryRaw`
           UPDATE "Job" SET "state" = 'running'
@@ -241,11 +247,13 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       const [claimed] = claimedList;
       return claimed === undefined
         ? null
-        : JOB_SCHEMA.parse(await prisma.job.findUniqueOrThrow({ where: { id: claimed.id }, include: JOB_INCLUDE }));
+        : QUEUED_JOB_SCHEMA.parse(
+            await prisma.job.findUniqueOrThrow({ where: { id: claimed.id }, include: JOB_INCLUDE }),
+          );
     },
 
     // Fails the running jobs and their Versions, keeping the reason in the job's log
-    async failRunningJobs(log: string): Promise<Job[]> {
+    async failRunningJobs(log: string): Promise<QueuedJob[]> {
       const runningList = await prisma.job.findMany({ where: { state: 'running' }, select: { id: true } });
       const idList = runningList.map(({ id }) => id);
       await prisma.$transaction([
@@ -253,10 +261,26 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
         prisma.job.updateMany({ where: { id: { in: idList } }, data: { state: 'failed', log } }),
       ]);
       return z
-        .array(JOB_SCHEMA)
+        .array(QUEUED_JOB_SCHEMA)
         .parse(
           await prisma.job.findMany({ where: { id: { in: idList } }, include: JOB_INCLUDE, orderBy: { id: 'asc' } }),
         );
+    },
+
+    async createProfilJob(candidatId: string, piece: PieceFileName): Promise<ProfilJob> {
+      return PROFIL_JOB_SCHEMA.parse(await prisma.job.create({ data: { module: 'conversion', candidatId, piece } }));
+    },
+
+    async listProfilJobs(candidatId: string): Promise<ProfilJob[]> {
+      return z
+        .array(PROFIL_JOB_SCHEMA)
+        .parse(await prisma.job.findMany({ where: { candidatId }, orderBy: { id: 'asc' } }));
+    },
+
+    async finishProfilJob({ id }: ProfilJob, { log, sessionId }: { log: string; sessionId: string | null }) {
+      return PROFIL_JOB_SCHEMA.parse(
+        await prisma.job.update({ where: { id }, data: { state: 'done', log, sessionId } }),
+      );
     },
 
     async listVersions(offre: Offre, artefact: Artefact): Promise<Version[]> {

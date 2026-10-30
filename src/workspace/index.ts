@@ -17,6 +17,7 @@ import { openDatabase, type INewOffre } from './acl/database.ts';
 import {
   createDirectory,
   deleteFile,
+  emptyDirectory,
   moveDirectory,
   readMarkdownFiles,
   readPieces,
@@ -24,6 +25,10 @@ import {
   writePiece,
   writeTextFile,
 } from './acl/files.ts';
+
+const PIECES_FOLDER = 'pieces';
+// Among the Pièces, but not one: neither a PDF nor a Markdown file of the Profil
+const CONVERSION_FOLDER = '.conversion';
 
 function slugify(text: string): string {
   return wordListOf(text).join('-');
@@ -37,7 +42,7 @@ export async function openWorkspace(dataDirectory: string) {
   const candidatDirectoryOf = (candidatId: string): string => path.join(dataDirectory, 'candidats', candidatId);
   const profilDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'profil');
   // Its own subfolder, which the Markdown files of the Profil leave out
-  const piecesDirectoryOf = (candidatId: string): string => path.join(profilDirectoryOf(candidatId), 'pieces');
+  const piecesDirectoryOf = (candidatId: string): string => path.join(profilDirectoryOf(candidatId), PIECES_FOLDER);
   const consignesDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'consignes');
   for (const candidat of config.candidatList) {
     createDirectory(profilDirectoryOf(candidat.id));
@@ -91,6 +96,22 @@ export async function openWorkspace(dataDirectory: string) {
 
     deletePiece(candidatId: string, fileName: PieceFileName): void {
       deleteFile(path.join(piecesDirectoryOf(candidatId), fileName));
+    },
+
+    // The session converting a Pièce runs in the Profil, where it reads the Pièce, and writes in a
+    // folder of its own, emptied first: the job moves its files into the Profil, never overwriting one
+    startConversion(candidatId: string, piece: PieceFileName) {
+      const outputDirectory = path.join(piecesDirectoryOf(candidatId), CONVERSION_FOLDER, piece);
+      emptyDirectory(outputDirectory);
+      return {
+        profilDirectory: profilDirectoryOf(candidatId),
+        piecePath: path.join(PIECES_FOLDER, piece),
+        outputDirectory,
+      };
+    },
+
+    readConversionFiles(outputDirectory: string) {
+      return readMarkdownFiles(outputDirectory);
     },
 
     // The Markdown files of a Version, such as the Brouillon and the Lettre of a Lettre Version

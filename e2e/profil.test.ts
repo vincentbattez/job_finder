@@ -6,12 +6,18 @@ import { z } from 'zod/v4';
 
 // Each test changes the Profil of a Candidat of its own (test/seed-front.ts), which it puts back
 // first, as jf profil would have written it: a test that failed halfway leaves nothing behind
-async function openFreshProfilOf(page: Page, { id, name }: Readonly<{ id: string; name: string }>) {
+async function openFreshProfilOf(
+  page: Page,
+  { id, name }: Readonly<{ id: string; name: string }>,
+  { hasCv = true }: Readonly<{ hasCv?: boolean }> = {},
+) {
   const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
   const profilDirectory = path.join(dataDirectory, 'candidats', id, 'profil');
   rmSync(profilDirectory, { recursive: true, force: true });
   mkdirSync(profilDirectory, { recursive: true });
-  writeFileSync(path.join(profilDirectory, 'cv.md'), `# CV de ${name}\n\n## Formation\n\n- Master 2 droit public\n`);
+  if (hasCv) {
+    writeFileSync(path.join(profilDirectory, 'cv.md'), `# CV de ${name}\n\n## Formation\n\n- Master 2 droit public\n`);
+  }
   writeFileSync(path.join(profilDirectory, 'faits.md'), '# Faits\n\n## Mobilité\n\n- Lille et alentours\n');
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption(name);
@@ -142,6 +148,41 @@ test.describe('Profil of a Candidat', () => {
     await pieces.getByText('Supprimer cv.pdf…').click();
     await pieces.getByRole('button', { name: 'Supprimer définitivement cv.pdf' }).click();
     await expect(pieces.getByText('Aucune Pièce pour l’instant.')).toBeVisible();
+  });
+
+  test('converts a dropped Pièce into cv.md, then says why it will not overwrite it and runs again', async ({
+    page,
+  }) => {
+    await openFreshProfilOf(page, { id: 'rose', name: 'Rose' }, { hasCv: false });
+    const pieces = page.getByRole('region', { name: 'Pièces' });
+    await expect(pieces.getByLabel('Déposer une Pièce')).toBeEnabled();
+    const cvPdfPath = path.join(import.meta.dirname, '../test/fixtures/profil/cv.pdf');
+
+    await pieces.getByLabel('Déposer une Pièce').setInputFiles(cvPdfPath);
+
+    const conversion = pieces.getByRole('form', { name: 'Conversion en Markdown de cv.pdf' });
+    await expect(conversion.getByRole('status')).toHaveText('En cours');
+    await expect(conversion.getByRole('status')).toHaveText('Prêt');
+    const cv = page.getByRole('region', { name: 'cv.md' });
+    await expect(cv.getByRole('textbox')).toHaveValue('# CV converti\n\n## Formation\n\n- Master 2 droit public\n');
+    await cv.getByRole('textbox').fill('# CV de Rose\n\n## Formation\n\n- Master 2 droit public, Lille\n');
+    await cv.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(cv.getByText('Modifications non enregistrées')).toBeHidden();
+
+    // Dropped again, the CV would replace the corrected cv.md: the conversion refuses and says so
+    await pieces.getByLabel('Déposer une Pièce').setInputFiles(cvPdfPath);
+    await expect(conversion.getByRole('status')).toHaveText('En échec');
+    await expect(conversion).toContainText("que le Profil a déjà : il n'est pas écrasé");
+    await expect(cv.getByRole('textbox')).toHaveValue(
+      '# CV de Rose\n\n## Formation\n\n- Master 2 droit public, Lille\n',
+    );
+
+    await cv.getByText('Supprimer cv.md…').click();
+    await cv.getByRole('button', { name: 'Supprimer définitivement cv.md' }).click();
+    await expect(cv).toHaveCount(0);
+    await conversion.getByRole('button', { name: 'Relancer la conversion de cv.pdf' }).click();
+    await expect(conversion.getByRole('status')).toHaveText('Prêt');
+    await expect(cv.getByRole('textbox')).toHaveValue('# CV converti\n\n## Formation\n\n- Master 2 droit public\n');
   });
 
   test('says how to fill an empty Profil', async ({ page }) => {
