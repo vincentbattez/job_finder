@@ -10,10 +10,12 @@ export const ERROR_EN = {
     `The data folder mixes the old layout and the new one: ${quote(frenchPath)} and ${quote(englishPath)} both exist. Merge the first into the second by hand, delete it, then start again.`,
   dataLayoutUnexpected: (frenchPath: string) =>
     `The data folder has an unexpected entry: ${quote(frenchPath)} is not of the kind the tool knows. Move it out of the data folder, then start again.`,
+  configInvalid: (configPath: string, problem: string) =>
+    `Invalid config: ${configPath}\n${problem}\nFix it so that it is imported into the database, or delete it: Candidates and their Watches are now set in the front.`,
+  configKeysMixed: (configPath: string, frenchKey: string, englishKey: string) =>
+    `The config ${configPath} holds both the old key ${quote(frenchKey)} and its new name ${quote(englishKey)}. Keep only ${quote(englishKey)}, merging into it what ${quote(frenchKey)} holds, then start again.`,
 
   // The data folder
-  invalidConfig: (configPath: string, problem: string) =>
-    `Invalid config: ${configPath}\n${problem}\nFix it so that it is imported into the database, or delete it: Candidates and their Watches are now set in the front.`,
   missingJobDescription: (reference: string, filePath: string) =>
     `Job Description not found for Posting ${reference}: ${filePath}. Put it back there, where the tool reads it.`,
 

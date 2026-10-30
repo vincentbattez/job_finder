@@ -7,9 +7,11 @@ export const ERROR_FR: typeof ERROR_EN = {
     `Le dossier de données mélange l'ancienne et la nouvelle disposition : ${quote(frenchPath)} et ${quote(englishPath)} existent tous deux. Fusionner le premier dans le second à la main, le supprimer, puis relancer.`,
   dataLayoutUnexpected: (frenchPath) =>
     `Le dossier de données a une entrée inattendue : ${quote(frenchPath)} n'est pas du type que l'outil connaît. La déplacer hors du dossier de données, puis relancer.`,
-
-  invalidConfig: (configPath, problem) =>
+  configInvalid: (configPath, problem) =>
     `Config invalide : ${configPath}\n${problem}\nLa corriger pour qu'elle soit importée en base, ou la supprimer : les Candidats et leurs Veilles se règlent désormais dans le front.`,
+  configKeysMixed: (configPath, frenchKey, englishKey) =>
+    `La config ${configPath} contient à la fois l'ancienne clé ${quote(frenchKey)} et son nouveau nom ${quote(englishKey)}. Ne garder que ${quote(englishKey)}, en y fusionnant ce que contient ${quote(frenchKey)}, puis relancer.`,
+
   missingJobDescription: (reference, filePath) =>
     `Fiche de poste introuvable pour l'Offre ${reference} : ${filePath}. La remettre à cet emplacement, d'où l'outil la lit.`,
 

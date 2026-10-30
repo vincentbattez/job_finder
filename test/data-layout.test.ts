@@ -337,7 +337,17 @@ describe('the French data folder', () => {
       JSON.stringify({ defaultDelayMonths: 6, candidatList: [], candidateList: [] }),
     );
 
-    await expect(createActions({ dataDirectory })).rejects.toMatchObject({ code: 'data_layout_mixed' });
+    await expect(createActions({ dataDirectory })).rejects.toMatchObject({ code: 'config_keys_mixed' });
+    // cspell:disable-next-line
+    await expect(createActions({ dataDirectory })).rejects.toThrow(/candidatList.*candidateList/);
+  });
+
+  it('refuses a config it cannot read, saying where', async () => {
+    const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+    writeFile(path.join(dataDirectory, 'config.json'), JSON.stringify({ defaultDelayMonths: 0, candidateList: [] }));
+
+    await expect(createActions({ dataDirectory })).rejects.toMatchObject({ code: 'config_invalid' });
+    await expect(createActions({ dataDirectory })).rejects.toThrow(/config\.json/);
   });
 
   it('refuses a known entry of an unexpected kind rather than guess', async () => {

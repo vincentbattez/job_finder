@@ -1,9 +1,9 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { catalogueOf, DEFAULT_LOCALE } from '#/domain/catalogue/index.ts';
+import { DEFAULT_LOCALE } from '#/domain/catalogue/index.ts';
 import { ERROR } from '#/domain/error.ts';
 import { LOCALE_SCHEMA, PARAMETERS_SCHEMA } from '#/domain/index.ts';
 
@@ -56,8 +56,7 @@ export function readObsoleteConfig(dataDirectory: string): Config | null {
   }
   const result = CONFIG_SCHEMA.safeParse(JSON.parse(readFileSync(configPath, 'utf8')));
   if (!result.success) {
-    // Read as the workspace opens, before any Candidate is known: in the default locale
-    throw new Error(catalogueOf(null).error.invalidConfig(configPath, z.prettifyError(result.error)));
+    throw ERROR.configInvalid(configPath, z.prettifyError(result.error));
   }
   return result.data;
 }
@@ -79,7 +78,7 @@ function renameKeys(value: unknown, configPath: string): unknown {
   const entryList = Object.entries(value);
   for (const { from, to } of CONFIG_KEY_RENAME_LIST) {
     if (entryList.some(([key]) => key === from) && entryList.some(([key]) => key === to)) {
-      throw ERROR.dataLayoutMixed(`${configPath} → ${from}`, `${configPath} → ${to}`);
+      throw ERROR.configKeysMixed(configPath, from, to);
     }
   }
   return Object.fromEntries(
@@ -99,7 +98,12 @@ export function migrateObsoleteConfig(dataDirectory: string): void {
   }
   const config: unknown = JSON.parse(readFileSync(configPath, 'utf8'));
   const migratedConfig = renameKeys(config, configPath);
-  if (JSON.stringify(migratedConfig) !== JSON.stringify(config)) {
-    writeFileSync(configPath, `${JSON.stringify(migratedConfig, null, 2)}\n`);
+  if (JSON.stringify(migratedConfig) === JSON.stringify(config)) {
+    return;
   }
+  // Written beside it then renamed over it: another process opening the workspace at the same time
+  // reads the old file or the new one, never half of it
+  const temporaryPath = `${configPath}.${String(process.pid)}.tmp`;
+  writeFileSync(temporaryPath, `${JSON.stringify(migratedConfig, null, 2)}\n`);
+  renameSync(temporaryPath, configPath);
 }
