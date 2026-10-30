@@ -37,7 +37,7 @@ function entryListByTitle(markdown: string) {
 
 describe('rubriques of faits.md', () => {
   it('reads each rubrique of the form, in the order of the form, a list as its entries', () => {
-    expect(readRubriques(FAITS)).toEqual([
+    expect(readRubriques(FAITS)).toMatchObject([
       { title: 'Identité', isList: false, entryList: ['Léa Martin, née le 3 mars 2001'] },
       { title: 'Coordonnées', isList: false, entryList: [''] },
       {

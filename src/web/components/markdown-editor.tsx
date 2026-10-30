@@ -9,8 +9,16 @@ export function MarkdownEditor({
   label,
   name,
   defaultValue,
+  placeholder,
   onChange,
-}: Readonly<{ label: string; name?: string; defaultValue: string; onChange?: (markdown: string) => void }>) {
+}: Readonly<{
+  label: string;
+  name?: string;
+  defaultValue: string;
+  // Shown while the file is empty: what such a file holds, in Markdown
+  placeholder: string;
+  onChange?: (markdown: string) => void;
+}>) {
   const [markdown, setMarkdown] = useState(defaultValue);
   const textareaId = useId();
   const previewId = useId();
@@ -24,6 +32,7 @@ export function MarkdownEditor({
           name={name}
           value={markdown}
           readOnly={!isHydrated}
+          placeholder={placeholder}
           spellCheck
           onChange={(event) => {
             setMarkdown(event.target.value);

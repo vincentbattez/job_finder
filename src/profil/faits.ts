@@ -60,20 +60,34 @@ const LIST_FORMAT: IFormat = {
 };
 
 // The rubriques of faits.md, in their order. jf profil's prompt and the form of the Faits share them:
-// what Claude writes, the form reads.
+// what Claude writes, the form reads. Each has an example of what it holds, which its empty field
+// shows: a whole rubrique for a text one, a single item for a list one.
 export const RUBRIQUE_LIST = [
-  { title: 'Identité', format: TEXT_FORMAT },
-  { title: 'Coordonnées', format: TEXT_FORMAT },
-  { title: 'Diplômes', format: LIST_FORMAT },
-  { title: 'Expériences', format: LIST_FORMAT },
-  { title: 'Compétences', format: TEXT_FORMAT },
-  { title: 'Motivations', format: TEXT_FORMAT },
-  { title: 'Mobilité', format: TEXT_FORMAT },
+  { title: 'Identité', format: TEXT_FORMAT, example: 'Léa Durand, née le 4 mars 1999, de nationalité française' },
+  {
+    title: 'Coordonnées',
+    format: TEXT_FORMAT,
+    example: '12 rue Nationale, 59000 Lille\n06 12 34 56 78 · lea.durand@example.fr',
+  },
+  { title: 'Diplômes', format: LIST_FORMAT, example: 'Master 2 Droit public, Université de Lille, 2023' },
+  {
+    title: 'Expériences',
+    format: LIST_FORMAT,
+    example: 'Assistante de justice, Tribunal judiciaire de Lille, 2023-2025\n- Rédaction de projets de jugements',
+  },
+  { title: 'Compétences', format: TEXT_FORMAT, example: '- Rédaction juridique\n- Procédure civile\n- Word et Excel' },
+  {
+    title: 'Motivations',
+    format: TEXT_FORMAT,
+    example: 'Appuyer les magistrats au plus près des justiciables, dans une juridiction du Nord',
+  },
+  { title: 'Mobilité', format: TEXT_FORMAT, example: '- Lille et alentours\n- Béthune, Arras, Boulogne-sur-Mer' },
 ] as const;
 
 interface IRubrique {
   title: string;
   isList: boolean;
+  example: string;
   // A list rubrique has one entry per item, a text rubrique a single one
   entryList: string[];
 }
@@ -114,9 +128,14 @@ function writeSection(title: string, content: string): string {
 
 export function readRubriques(markdown: string): IRubrique[] {
   const sectionList = splitSections(markdown);
-  return RUBRIQUE_LIST.map(({ title, format }) => {
+  return RUBRIQUE_LIST.map(({ title, format, example }) => {
     const section = findSection(sectionList, title);
-    return { title, isList: format.isList, entryList: format.read(section === undefined ? '' : bodyOf(section)) };
+    return {
+      title,
+      isList: format.isList,
+      example,
+      entryList: format.read(section === undefined ? '' : bodyOf(section)),
+    };
   });
 }
 

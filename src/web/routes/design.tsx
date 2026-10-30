@@ -190,7 +190,7 @@ export default function Design() {
       </section>
       <section aria-labelledby="editeur">
         <h2 id="editeur">Éditeur Markdown</h2>
-        <MarkdownEditor label="Lettre" defaultValue={SAMPLE_LETTRE} />
+        <MarkdownEditor label="Lettre" defaultValue={SAMPLE_LETTRE} placeholder="Madame, Monsieur," />
       </section>
     </main>
   );

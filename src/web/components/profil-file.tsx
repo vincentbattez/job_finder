@@ -22,6 +22,7 @@ export function ProfilFile({
           name="markdown"
           label={`Contenu de ${fileName}`}
           defaultValue={markdown}
+          placeholder={'# Titre\n\n## Rubrique\n\n- Un fait par ligne, en Markdown'}
           onChange={setEditedMarkdown}
         />
         <div className="edition">
@@ -66,12 +67,19 @@ export function ProfilFileCreation({ error }: Readonly<{ error: string | null }>
             type="text"
             name="fileName"
             required
-            placeholder="lettre-tj-lille-2025.md"
+            placeholder="lettre-mairie-bethune-2025.md"
             autoComplete="off"
             spellCheck={false}
           />
         </div>
-        <MarkdownEditor name="markdown" label="Contenu, à remplir plus tard si besoin" defaultValue="" />
+        <MarkdownEditor
+          name="markdown"
+          label="Contenu, à remplir plus tard si besoin"
+          defaultValue=""
+          placeholder={
+            '# Lettre de motivation, Mairie de Béthune, 2025\n\nMadame, Monsieur,\n\nTitulaire d’un master de droit public, je vous propose ma candidature…'
+          }
+        />
         <div className="edition">
           <button type="submit" name="intent" value="create" className="button--primary">
             Créer le fichier

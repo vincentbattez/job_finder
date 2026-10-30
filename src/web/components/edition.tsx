@@ -35,7 +35,13 @@ export function ArtefactDocument({
       {isModifiable ? (
         <Form method="post" action={`/offres/${reference}/${artefact}/document`} preventScrollReset>
           <input type="hidden" name="fileName" value={fileName} />
-          <MarkdownEditor label="Markdown" name="markdown" defaultValue={markdown} onChange={setEditedMarkdown} />
+          <MarkdownEditor
+            label="Markdown"
+            name="markdown"
+            defaultValue={markdown}
+            placeholder={'# Titre\n\nLe texte du document, en Markdown'}
+            onChange={setEditedMarkdown}
+          />
           <div className="edition">
             <button type="submit" className="button--primary">
               Enregistrer

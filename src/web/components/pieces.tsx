@@ -94,7 +94,7 @@ export function Pieces({
         </ul>
       )}
       <DropZone
-        intro="Glissez ici votre CV ou une lettre passée, en PDF de 10 Mo au plus. Une Pièce du même nom est remplacée."
+        intro="Glissez ici votre CV ou une lettre passée, par exemple cv-2026.pdf, en PDF de 10 Mo au plus. Une Pièce du même nom est remplacée."
         accept=".pdf,application/pdf"
         label="Déposer une Pièce"
         isBusy={isSending}

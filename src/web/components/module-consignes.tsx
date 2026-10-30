@@ -45,6 +45,7 @@ export function ModuleConsignes({ module, defaultConsignes, candidatConsignes }:
               : 'Les Consignes par défaut, à modifier pour en faire les vôtres'
           }
           defaultValue={candidatConsignes ?? defaultConsignes}
+          placeholder={'- Un ton sobre et direct\n- Une page au plus'}
           onChange={setEditedConsignes}
         />
         <div className="edition">

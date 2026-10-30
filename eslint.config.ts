@@ -93,6 +93,31 @@ export default defineConfig(
     rules: { 'sonarjs/deprecation': 'off', '@typescript-eslint/no-deprecated': 'off' },
   },
   {
+    // The example address of the Connexion Home Assistant is a Home Assistant on the LAN, which
+    // serves plain http by default (ADR-0002); no request goes to it
+    files: ['src/web/components/connexion-home-assistant.tsx'],
+    rules: { 'sonarjs/no-clear-text-protocols': 'off' },
+  },
+  {
+    // A field typed into shows an example of what goes in it, so the Candidat knows what to write. A
+    // select is left out: its first option is a choice of its own, such as « Toutes », or a hint.
+    files: ['src/web/**/*.tsx'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "JSXOpeningElement[name.name='textarea']:not(:has(JSXAttribute[name.name='placeholder']))",
+          message: 'Give this textarea a placeholder: an example of what to write in it.',
+        },
+        {
+          selector:
+            "JSXOpeningElement[name.name='input']:not(:has(JSXAttribute[name.name='type'][value.value=/^(hidden|file|checkbox|radio|submit|button|reset|range|color|image)$/])):not(:has(JSXAttribute[name.name='placeholder']))",
+          message: 'Give this field a placeholder: an example of what to type in it.',
+        },
+      ],
+    },
+  },
+  {
     // React Router loads the route config and each route module through a default export
     files: ['src/web/root.tsx', 'src/web/routes.ts', 'src/web/routes/*.{ts,tsx}'],
     rules: { 'no-restricted-exports': 'off' },

@@ -226,9 +226,9 @@ export const PIECE_SCHEMA = z.object({ fileName: PIECE_FILE_NAME_SCHEMA, savedAt
 export type Piece = z.infer<typeof PIECE_SCHEMA>;
 
 // A rubrique of the Faits, such as Diplômes, as the form edits it: a list rubrique has one entry per
-// item of faits.md, a text rubrique a single one
+// item of faits.md, a text rubrique a single one. Its example shows in an empty field what to write.
 export const RUBRIQUE_SCHEMA = z
-  .object({ title: z.string(), isList: z.boolean(), entryList: z.array(z.string()) })
+  .object({ title: z.string(), isList: z.boolean(), example: z.string(), entryList: z.array(z.string()) })
   .brand<'Domain'>();
 
 export type Rubrique = z.infer<typeof RUBRIQUE_SCHEMA>;

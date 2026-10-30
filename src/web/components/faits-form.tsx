@@ -9,7 +9,7 @@ type Rubrique = Awaited<ReturnType<Actions['readFaits']>>[number];
 
 // A list rubrique, such as Diplômes: each entry is a field the Candidat adds or removes. Its key
 // keeps each field with its text when an entry above it goes.
-function ListRubrique({ title, entryList }: Readonly<Rubrique>) {
+function ListRubrique({ title, example, entryList }: Readonly<Rubrique>) {
   const [entryItemList, setEntryItemList] = useState(() => entryList.map((entry, key) => ({ key, entry })));
   const isHydrated = useIsHydrated();
   return (
@@ -19,7 +19,7 @@ function ListRubrique({ title, entryList }: Readonly<Rubrique>) {
         <div key={key} className="faits__entry">
           <label>
             Entrée {index + 1}
-            <textarea name={title} defaultValue={entry} rows={2} />
+            <textarea name={title} defaultValue={entry} rows={2} placeholder={example} />
           </label>
           <button
             type="button"
@@ -63,7 +63,12 @@ export function FaitsForm({ rubriqueList }: Readonly<{ rubriqueList: Rubrique[] 
           ) : (
             <label key={rubrique.title} className="faits__rubrique">
               {rubrique.title}
-              <textarea name={rubrique.title} defaultValue={rubrique.entryList.join('\n\n')} rows={2} />
+              <textarea
+                name={rubrique.title}
+                defaultValue={rubrique.entryList.join('\n\n')}
+                rows={2}
+                placeholder={rubrique.example}
+              />
             </label>
           ),
         )}

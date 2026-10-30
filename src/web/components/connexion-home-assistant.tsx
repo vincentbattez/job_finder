@@ -94,7 +94,13 @@ export function ConnexionHomeAssistantForm({ connexion }: Readonly<{ connexion: 
       >
         <label className="connexion__field">
           Adresse de Home Assistant
-          <input type="url" name="url" required defaultValue={connexion.url ?? ''} />
+          <input
+            type="url"
+            name="url"
+            required
+            defaultValue={connexion.url ?? ''}
+            placeholder="http://homeassistant.local:8123"
+          />
         </label>
         <label className="connexion__field">
           <span>
@@ -106,7 +112,11 @@ export function ConnexionHomeAssistantForm({ connexion }: Readonly<{ connexion: 
             type="password"
             name="token"
             autoComplete="off"
-            placeholder={connexion.isTokenConfigured ? 'Laisser vide pour garder le jeton enregistré' : ''}
+            placeholder={
+              connexion.isTokenConfigured
+                ? 'Laisser vide pour garder le jeton enregistré'
+                : 'Home Assistant → Profil → Sécurité'
+            }
           />
         </label>
         <Step
@@ -122,7 +132,8 @@ export function ConnexionHomeAssistantForm({ connexion }: Readonly<{ connexion: 
         <label className="connexion__field">
           Service de notification
           <select name="service" defaultValue={connexion.service ?? ''}>
-            <option value="">
+            {/* A hint, never a choice: a service left out keeps the one saved */}
+            <option value="" disabled>
               {serviceList.length === 0 ? 'Rechargez la liste des services' : 'Choisir un service'}
             </option>
             {serviceList.map((service) => (
