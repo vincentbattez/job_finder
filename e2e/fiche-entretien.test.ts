@@ -9,7 +9,7 @@ const REFERENCE = '2026-2416437';
 // every two seconds
 const READY_TIMEOUT_MS = 15_000;
 
-// The Fiche the fake Claude writes, its « [à compléter : …] » filled in by the Candidat
+// The Fiche the fake Claude writes, its « [à compléter : …] » filled in by the Candidate
 const CORRECTED_FICHE = `# Fiche d’entretien factice
 
 ## À réviser

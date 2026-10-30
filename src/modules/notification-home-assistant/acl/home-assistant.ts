@@ -4,7 +4,7 @@ import { PARAMETRE_CHOICE_SCHEMA, type ParametreChoice } from '#/domain/index.ts
 import type { INotification } from '#/notification/index.ts';
 import { messageOf } from '#/text/index.ts';
 
-// What reaching a Home Assistant takes. A test or a list of services tries what the Candidat typed,
+// What reaching a Home Assistant takes. A test or a list of services tries what the Candidate typed,
 // so either may be missing there.
 interface IAccess {
   url?: string | undefined;
@@ -46,7 +46,7 @@ async function request({ url, token }: IAccess, pathname: string, body?: unknown
   return response;
 }
 
-// Before the Candidat relies on it: a wrong address or token fails here rather than on a new Offre
+// Before the Candidate relies on it: a wrong address or token fails here rather than on a new Offre
 export async function checkConnexion(access: IAccess): Promise<void> {
   const response = await request(access, '/api/');
   if (!response.ok) {

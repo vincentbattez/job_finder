@@ -7,7 +7,7 @@ import { MarkdownEditor } from './markdown-editor.tsx';
 import { Markdown } from './markdown.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 
-// What the Candidat changes from the fiche of an Offre. Each form posts to a route that relays to
+// What the Candidate changes from the fiche of an Offre. Each form posts to a route that relays to
 // an action, then comes back to the fiche where it was (ADR-0003).
 
 interface IArtefactDocument {
@@ -19,7 +19,7 @@ interface IArtefactDocument {
   isModifiable: boolean;
 }
 
-// A file of a Version: the editor when the Candidat may correct it, saved in place in the Version
+// A file of a Version: the editor when the Candidate may correct it, saved in place in the Version
 // retenue, else the text as written. Either copies as Markdown, the way it goes into a mail.
 export function ArtefactDocument({
   reference,

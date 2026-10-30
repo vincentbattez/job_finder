@@ -23,7 +23,7 @@ type Fetcher = FetcherWithComponents<IOutcome>;
 // The intents /canal-notification relays, one per button
 type Intent = 'save' | 'test' | 'choices' | 'notify';
 
-// Every button sends the whole form, so a test or a list tries what the Candidat typed, unsaved
+// Every button sends the whole form, so a test or a list tries what the Candidate typed, unsaved
 function send(form: RefObject<HTMLFormElement | null>, fetcher: Fetcher, intent: Intent, parametre?: string): void {
   const formData = new FormData(form.current ?? undefined);
   formData.set('intent', intent);
@@ -107,7 +107,7 @@ function ChoiceField({
   );
 }
 
-// The Candidat's Canal de notification, which pushes each new Offre to their phone: a module of the
+// The Candidate's Canal de notification, which pushes each new Offre to their phone: a module of the
 // family, and the form its descriptor describes (ADR-0010)
 export function CanalNotificationForm({
   canal,

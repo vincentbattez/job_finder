@@ -5,7 +5,7 @@ import { z } from 'zod/v4';
 
 import { PARAMETRES_SCHEMA } from '#/domain/index.ts';
 
-// The file where an older jf read the Candidats, their Veilles and the Délai par défaut. The database
+// The file where an older jf read the Candidates, their Veilles and the Délai par défaut. The database
 // holds them now, written by the front: the file is imported once, at the first launch of a database
 // that has no settings yet, then never read again (ADR-0011). The only file of src/ that names it
 // (test/architecture.test.ts).
@@ -25,7 +25,7 @@ const VEILLE_SCHEMA = z.union([
     })),
 ]);
 
-const CANDIDAT_SCHEMA = z.strictObject({
+const CANDIDATE_SCHEMA = z.strictObject({
   id: SLUG_SCHEMA,
   name: z.string().min(1),
   veilleList: z.array(VEILLE_SCHEMA),
@@ -33,7 +33,7 @@ const CANDIDAT_SCHEMA = z.strictObject({
 
 const CONFIG_SCHEMA = z.strictObject({
   defaultDelayMonths: z.int().positive(),
-  candidatList: z.array(CANDIDAT_SCHEMA),
+  candidateList: z.array(CANDIDATE_SCHEMA),
 });
 
 export type Config = z.infer<typeof CONFIG_SCHEMA>;

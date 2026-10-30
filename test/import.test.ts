@@ -66,7 +66,7 @@ async function openActions(aiSession: ReturnType<typeof createFakeAiSession>) {
 
 // Imports the Fiche de poste, then lets the worker run the queued jobs: its extraction first
 async function importThenRunWorker(actions: Actions, markdown = FICHE_DE_POSTE) {
-  const { offre } = await actions.importFicheDePoste({ candidatId: 'lea', fileName: FILE_NAME, markdown });
+  const { offre } = await actions.importFicheDePoste({ candidateId: 'lea', fileName: FILE_NAME, markdown });
   const [extractionJob] = await actions.runQueuedJobs();
   return { extractionJob, fiche: await actions.readOffre({ reference: offre.reference }) };
 }
@@ -78,12 +78,12 @@ describe('import of a Fiche de poste in Markdown', () => {
     const aiSession = createFakeAiSession(extractionRun());
     const actions = await openActions(aiSession);
 
-    const job = await actions.importFicheDePoste({ candidatId: 'lea', fileName: FILE_NAME, markdown: FICHE_DE_POSTE });
+    const job = await actions.importFicheDePoste({ candidateId: 'lea', fileName: FILE_NAME, markdown: FICHE_DE_POSTE });
 
     expect(job).toMatchObject({ module: 'extraction', state: 'queued' });
-    expect(await actions.listOffres({ candidatId: 'lea' })).toEqual([job.offre]);
+    expect(await actions.listOffres({ candidateId: 'lea' })).toEqual([job.offre]);
     expect(job.offre).toMatchObject({
-      candidatId: 'lea',
+      candidateId: 'lea',
       title: FILE_NAME,
       employer: null,
       url: null,
@@ -102,7 +102,7 @@ describe('import of a Fiche de poste in Markdown', () => {
     const aiSession = createFakeAiSession(extractionRun(), { fileByName: { 'recherche.md': RECHERCHE } });
     const actions = await openActions(aiSession);
     const { offre: importedOffre } = await actions.importFicheDePoste({
-      candidatId: 'lea',
+      candidateId: 'lea',
       fileName: FILE_NAME,
       markdown: FICHE_DE_POSTE,
     });
@@ -135,7 +135,7 @@ describe('import of a Fiche de poste in Markdown', () => {
   it('fails the extraction visibly when the session fails, leaving the Offre as imported, and runs it again', async () => {
     const actions = await openActions(createFakeAiSession({ isSuccess: false }, extractionRun()));
     const { offre } = await actions.importFicheDePoste({
-      candidatId: 'lea',
+      candidateId: 'lea',
       fileName: FILE_NAME,
       markdown: FICHE_DE_POSTE,
     });
@@ -170,7 +170,7 @@ describe('import of a Fiche de poste in Markdown', () => {
   it('imports the same Fiche de poste once: importing it again gives back its extraction, without another job', async () => {
     const aiSession = createFakeAiSession(extractionRun(), { fileByName: { 'recherche.md': RECHERCHE } });
     const actions = await openActions(aiSession);
-    const input = { candidatId: 'lea', fileName: FILE_NAME, markdown: FICHE_DE_POSTE };
+    const input = { candidateId: 'lea', fileName: FILE_NAME, markdown: FICHE_DE_POSTE };
     const job = await actions.importFicheDePoste(input);
     expect(await actions.importFicheDePoste({ ...input, fileName: 'copie.md' })).toEqual(job);
     await actions.runQueuedJobs();
@@ -178,7 +178,7 @@ describe('import of a Fiche de poste in Markdown', () => {
     const importedAgainJob = await actions.importFicheDePoste(input);
 
     expect(importedAgainJob).toMatchObject({ id: job.id, state: 'done' });
-    expect(await actions.listOffres({ candidatId: 'lea' })).toHaveLength(1);
+    expect(await actions.listOffres({ candidateId: 'lea' })).toHaveLength(1);
     // One extraction, then one Recherche
     expect(aiSession.headlessSessionList).toHaveLength(2);
     expect(await actions.runQueuedJobs()).toEqual([]);
@@ -216,7 +216,7 @@ describe('import of a Fiche de poste in Markdown', () => {
 
       vi.setSystemTime(new Date('2027-05-01T12:00:00Z'));
 
-      expect(await actions.listOffres({ candidatId: 'lea' })).toMatchObject([{ isExpiree: true }]);
+      expect(await actions.listOffres({ candidateId: 'lea' })).toMatchObject([{ isExpiree: true }]);
     } finally {
       vi.useRealTimers();
     }
@@ -268,11 +268,11 @@ describe('import of a Fiche de poste in Markdown', () => {
     expect(fiche.offre).toMatchObject({ title: FILE_NAME, employer: null });
   });
 
-  it('refuses an unknown Candidat, saving nothing', async () => {
+  it('refuses an unknown Candidate, saving nothing', async () => {
     const actions = await openActions(createFakeAiSession());
 
     await expect(
-      actions.importFicheDePoste({ candidatId: 'camille', fileName: FILE_NAME, markdown: FICHE_DE_POSTE }),
+      actions.importFicheDePoste({ candidateId: 'camille', fileName: FILE_NAME, markdown: FICHE_DE_POSTE }),
     ).rejects.toThrow('Candidat inconnu : camille.');
     expect(await actions.runQueuedJobs()).toEqual([]);
   });

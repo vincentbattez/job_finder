@@ -51,7 +51,7 @@ describe('edit', () => {
     expect(aiSession.interactiveSessionList[0]?.prompt).not.toContain('recherche/v2');
   });
 
-  it('tells the session the Candidat, the Offre, its files and the rules', async () => {
+  it('tells the session the Candidate, the Offre, its files and the rules', async () => {
     const aiSession = createFakeAiSession(RECHERCHE);
     const { actions } = await detectOffres(aiSession);
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
@@ -82,7 +82,7 @@ describe('edit', () => {
     ]);
   });
 
-  // The Candidat corrects the Lettre, never its Brouillon (spec « Versions »)
+  // The Candidate corrects the Lettre, never its Brouillon (spec « Versions »)
   it('opens the Lettre retenue of a Version from the Lettre module, never its Brouillon', async () => {
     const aiSession = createFakeAiSession(RECHERCHE, LETTRE, LETTRE);
     const { actions, offreDirectory } = await detectOffres(aiSession);

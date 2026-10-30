@@ -15,7 +15,7 @@ CHECKPOINT_DISABLE = "1"
 postinstall = "npm install && lefthook install"
 
 [tasks.init]
-description = "Seed dev-data/; the Candidats of data/ are created from the front"
+description = "Seed dev-data/; the Candidates of data/ are created from the front"
 run = "mise run db:seed"
 
 # The db: tasks work on dev-data/, fake data for development. The app migrates data/ itself at launch.

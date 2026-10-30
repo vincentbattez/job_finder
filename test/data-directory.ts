@@ -11,7 +11,7 @@ import { createFakeCanalNotification } from './fake-canal-notification.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 // Where the folder of each of Léa's Offres lives, in a data folder
-export const LEA_OFFRES_PATH = 'candidats/lea/offres';
+export const LEA_OFFRES_PATH = 'candidates/lea/offres';
 
 function copyDatabase(databasePath: string): string {
   const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
@@ -19,7 +19,7 @@ function copyDatabase(databasePath: string): string {
   return dataDirectory;
 }
 
-// A temporary data folder, never data/, whose database is already migrated and has no Candidat yet
+// A temporary data folder, never data/, whose database is already migrated and has no Candidate yet
 // (test/global-setup.ts)
 export function createMigratedDataDirectory(): string {
   return copyDatabase(inject('migratedDatabasePath'));

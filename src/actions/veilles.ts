@@ -2,7 +2,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { z } from 'zod/v4';
 
-import type { Candidat, Veille } from '#/domain/index.ts';
+import type { Candidate, Veille } from '#/domain/index.ts';
 
 import { PARAMETRES_INPUT_SCHEMA, type ActionContext } from './context.ts';
 
@@ -21,58 +21,58 @@ const SAVE_INPUT_SCHEMA = z.object({
   ),
 });
 
-// Each Candidat sets their Veilles in their Profil: the Source they follow and the Paramètres it asks
+// Each Candidate sets their Veilles in their Profile: the Source they follow and the Paramètres it asks
 // for, the form built from its descriptor (ADR-0010, ADR-0011)
-export function createVeilleActions({ workspace, findCandidat, findSource }: ActionContext) {
-  async function findVeille(candidat: Candidat, rawInput: unknown): Promise<Veille> {
+export function createVeilleActions({ workspace, findCandidate, findSource }: ActionContext) {
+  async function findVeille(candidate: Candidate, rawInput: unknown): Promise<Veille> {
     const { veilleId } = VEILLE_INPUT_SCHEMA.parse(rawInput);
-    const veilleList = await workspace.listVeilles(candidat.id);
+    const veilleList = await workspace.listVeilles(candidate.id);
     const veille = veilleList.find(({ id }) => id === veilleId);
     if (veille === undefined) {
-      throw new Error(`${candidat.name} n'a pas de Veille ${veilleId} : recharger la page de son Profil.`);
+      throw new Error(`${candidate.name} n'a pas de Veille ${veilleId} : recharger la page de son Profil.`);
     }
     return veille;
   }
 
-  // Named after its Candidat and numbered, since its Paramètres may change
-  async function newVeilleId(candidat: Candidat): Promise<string> {
+  // Named after its Candidate and numbered, since its Paramètres may change
+  async function newVeilleId(candidate: Candidate): Promise<string> {
     const allVeilleList = await workspace.listVeilles();
     const idSet = new Set(allVeilleList.map(({ id }) => id));
-    let number = allVeilleList.filter(({ candidatId }) => candidatId === candidat.id).length + 1;
-    while (idSet.has(`${candidat.id}-${String(number)}`)) {
+    let number = allVeilleList.filter(({ candidateId }) => candidateId === candidate.id).length + 1;
+    while (idSet.has(`${candidate.id}-${String(number)}`)) {
       number += 1;
     }
-    return `${candidat.id}-${String(number)}`;
+    return `${candidate.id}-${String(number)}`;
   }
 
   return {
     async listVeilles(rawInput: unknown): Promise<Veille[]> {
-      const candidat = await findCandidat(rawInput);
-      return workspace.listVeilles(candidat.id);
+      const candidate = await findCandidate(rawInput);
+      return workspace.listVeilles(candidate.id);
     },
 
     // Creates a Veille, or changes the one named: it starts its first launch again once its Source or
     // its Paramètres change, so the Offres already online trigger nothing (ADR-0011)
     async saveVeille(rawInput: unknown): Promise<void> {
-      const candidat = await findCandidat(rawInput);
+      const candidate = await findCandidate(rawInput);
       const input = SAVE_INPUT_SCHEMA.parse(rawInput);
       const source = findSource(input.source);
       const parametres = source.parseParametres(input.parametres);
       if (input.veilleId === undefined) {
-        const id = await newVeilleId(candidat);
-        await workspace.createVeille({ id, candidatId: candidat.id, source: input.source, parametres });
+        const id = await newVeilleId(candidate);
+        await workspace.createVeille({ id, candidateId: candidate.id, source: input.source, parametres });
         return;
       }
-      const veille = await findVeille(candidat, rawInput);
+      const veille = await findVeille(candidate, rawInput);
       if (veille.source !== input.source || !isDeepStrictEqual(veille.parametres, parametres)) {
         await workspace.updateVeille(veille, { source: input.source, parametres });
       }
     },
 
-    // Its Offres stay with the Candidat
+    // Its Offres stay with the Candidate
     async deleteVeille(rawInput: unknown): Promise<void> {
-      const candidat = await findCandidat(rawInput);
-      await workspace.deleteVeille(await findVeille(candidat, rawInput));
+      const candidate = await findCandidate(rawInput);
+      await workspace.deleteVeille(await findVeille(candidate, rawInput));
     },
   };
 }

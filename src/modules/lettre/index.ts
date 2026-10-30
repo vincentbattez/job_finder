@@ -7,7 +7,7 @@ import type { Offre, Recipients } from '#/domain/index.ts';
 
 import { copyAsReadOnlyOriginal } from './acl/files.ts';
 import { parseRecipients, readRecipients, RECIPIENTS_FILE_NAME } from './acl/recipients.ts';
-import { LETTRE_DEFAULT_CONSIGNES } from './consignes.ts';
+import { LETTRE_DEFAULT_INSTRUCTIONS } from './instructions.ts';
 import { BROUILLON_FILE_NAME, composeLettrePrompt, LETTRE_FILE_NAME } from './prompt.ts';
 
 export { BROUILLON_FILE_NAME } from './prompt.ts';
@@ -36,12 +36,12 @@ function findRecipientsError(json: string, offre: Offre): string | undefined {
 export const LETTRE_MODULE = {
   fileName: LETTRE_FILE_NAME,
   outputFileList: [{ name: BROUILLON_FILE_NAME }, { name: RECIPIENTS_FILE_NAME, findFormatError: findRecipientsError }],
-  defaultConsignes: LETTRE_DEFAULT_CONSIGNES,
+  defaultInstructions: LETTRE_DEFAULT_INSTRUCTIONS,
   composePrompt: composeLettrePrompt,
   // The Lettre builds on the Recherche retenue of its Offre, and learns from the Lettres the
-  // Candidat sent: the correction of each Brouillon shows their style
+  // Candidate sent: the correction of each Brouillon shows their style
   requiredArtefactList: ['recherche'],
-  isReadingProfil: true,
+  isReadingProfile: true,
   isReadingSentVersions: true,
   isFrozenOncePostulee: true,
 

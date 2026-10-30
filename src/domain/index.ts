@@ -2,11 +2,11 @@ import { z } from 'zod/v4';
 
 // The brand marks a value parsed by a domain schema, so that a raw row cannot pass for one
 // (ADR-0005); an enum stays unbranded, so that its literals can be written in the code
-export const CANDIDAT_SCHEMA = z.object({ id: z.string(), name: z.string() }).brand<'Domain'>();
+export const CANDIDATE_SCHEMA = z.object({ id: z.string(), name: z.string() }).brand<'Domain'>();
 
-export type Candidat = z.infer<typeof CANDIDAT_SCHEMA>;
+export type Candidate = z.infer<typeof CANDIDATE_SCHEMA>;
 
-// The Délai par défaut every Candidat shares, in months
+// The Délai par défaut every Candidate shares, in months
 export const DELAI_PAR_DEFAUT_SCHEMA = z.object({ months: z.int().positive() }).brand<'Domain'>();
 
 export type DelaiParDefaut = z.infer<typeof DELAI_PAR_DEFAUT_SCHEMA>;
@@ -28,7 +28,7 @@ export type Parametres = z.infer<typeof PARAMETRES_SCHEMA>;
 export const VEILLE_SCHEMA = z
   .object({
     id: z.string(),
-    candidatId: z.string(),
+    candidateId: z.string(),
     source: z.string(),
     parametres: PARAMETRES_SCHEMA,
     detectedAt: z.date().nullable(),
@@ -80,14 +80,14 @@ export const STATUT_SCHEMA = z.enum(['a_traiter', 'postulee', 'archivee']);
 
 export type Statut = z.infer<typeof STATUT_SCHEMA>;
 
-// Another Offre of the Candidat, named by its reference
+// Another Offre of the Candidate, named by its reference
 const LINKED_OFFRE_SCHEMA = z.object({ reference: z.string() });
 
 export const OFFRE_SCHEMA = z
   .object({
     ...LIEU_SHAPE,
     id: z.int(),
-    candidatId: z.string(),
+    candidateId: z.string(),
     // Where it comes from: the Source of the Veille that detected it, or the import of its Fiche de poste
     source: z.string(),
     reference: z.string(),
@@ -118,7 +118,7 @@ export type Offre = z.infer<typeof OFFRE_SCHEMA>;
 export const DETECTION_SCHEMA = z
   .object({
     veilleId: z.string(),
-    candidatId: z.string(),
+    candidateId: z.string(),
     isFirstLaunch: z.boolean(),
     newOffreList: z.array(OFFRE_SCHEMA),
     nearMissList: z.array(LISTED_OFFRE_SCHEMA),
@@ -132,12 +132,12 @@ export const ARTEFACT_SCHEMA = z.enum(['recherche', 'lettre', 'fiche_entretien',
 
 export type Artefact = z.infer<typeof ARTEFACT_SCHEMA>;
 
-// The fixed part of the prompt is not among the Consignes: no one changes it (ADR-0003)
-export const MODULE_CONSIGNES_SCHEMA = z
-  .object({ module: ARTEFACT_SCHEMA, defaultConsignes: z.string(), candidatConsignes: z.string().nullable() })
+// The fixed part of the prompt is not among the Instructions: no one changes it (ADR-0003)
+export const MODULE_INSTRUCTIONS_SCHEMA = z
+  .object({ module: ARTEFACT_SCHEMA, defaultInstructions: z.string(), candidateInstructions: z.string().nullable() })
   .brand<'Domain'>();
 
-export type ModuleConsignes = z.infer<typeof MODULE_CONSIGNES_SCHEMA>;
+export type ModuleInstructions = z.infer<typeof MODULE_INSTRUCTIONS_SCHEMA>;
 
 // A Version that another Version read as input, of its own Offre or of another one
 const READ_VERSION_SCHEMA = z.object({
@@ -146,7 +146,7 @@ const READ_VERSION_SCHEMA = z.object({
   offre: z.object({ reference: z.string() }),
 });
 
-// Each launch of a module creates a new Version, which keeps the Consignes it was produced with
+// Each launch of a module creates a new Version, which keeps the Instructions it was produced with
 // and the Versions it read
 export const VERSION_SCHEMA = z
   .object({
@@ -154,8 +154,8 @@ export const VERSION_SCHEMA = z
     number: z.int(),
     isRetenue: z.boolean(),
     state: z.enum(['running', 'ready', 'failed']),
-    consignes: z.string(),
-    hasCandidatConsignes: z.boolean(),
+    instructions: z.string(),
+    hasCandidateInstructions: z.boolean(),
     inputList: z.array(READ_VERSION_SCHEMA),
     createdAt: z.date(),
   })
@@ -204,7 +204,7 @@ export const RECIPIENTS_SCHEMA = z
 
 export type Recipients = z.infer<typeof RECIPIENTS_SCHEMA>;
 
-// A Markdown file of the data folder: of the Profil of a Candidat, such as faits.md or cv.md, or of a
+// A Markdown file of the data folder: of the Profile of a Candidate, such as facts.md or cv.md, or of a
 // Version, such as the Brouillon or the Lettre of a Lettre Version
 const MARKDOWN_FILE_SHAPE = { fileName: z.string(), markdown: z.string() };
 
@@ -212,40 +212,40 @@ export const MARKDOWN_FILE_SCHEMA = z.object(MARKDOWN_FILE_SHAPE).brand<'Domain'
 
 export type MarkdownFile = z.infer<typeof MARKDOWN_FILE_SCHEMA>;
 
-// The name of a file of the Profil, which the front chooses: a single segment of safe characters
-// ending in .md, so no name leads out of the Profil folder
-export const PROFIL_FILE_NAME_SCHEMA = z
+// The name of a file of the Profile, which the front chooses: a single segment of safe characters
+// ending in .md, so no name leads out of the Profile folder
+export const PROFILE_FILE_NAME_SCHEMA = z
   .string()
   .regex(/^[\p{L}\p{N}][\p{L}\p{N}_.-]*\.md$/u)
   .brand<'Domain'>();
 
-export type ProfilFileName = z.infer<typeof PROFIL_FILE_NAME_SCHEMA>;
+export type ProfileFileName = z.infer<typeof PROFILE_FILE_NAME_SCHEMA>;
 
-// The name of a Pièce, under the same guard as a file of the Profil, ending in .pdf
-export const PIECE_FILE_NAME_SCHEMA = z
+// The name of an Upload, under the same guard as a file of the Profile, ending in .pdf
+export const UPLOAD_FILE_NAME_SCHEMA = z
   .string()
   .regex(/^[\p{L}\p{N}][\p{L}\p{N}_.-]*\.pdf$/iu)
   .brand<'Domain'>();
 
-export type PieceFileName = z.infer<typeof PIECE_FILE_NAME_SCHEMA>;
+export type UploadFileName = z.infer<typeof UPLOAD_FILE_NAME_SCHEMA>;
 
-// A PDF the Candidat dropped into their Profil, such as a CV or a past lettre, kept as is
-export const PIECE_SCHEMA = z.object({ fileName: PIECE_FILE_NAME_SCHEMA, savedAt: z.date() }).brand<'Domain'>();
+// A PDF the Candidate dropped into their Profile, such as a CV or a past lettre, kept as is
+export const UPLOAD_SCHEMA = z.object({ fileName: UPLOAD_FILE_NAME_SCHEMA, savedAt: z.date() }).brand<'Domain'>();
 
-export type Piece = z.infer<typeof PIECE_SCHEMA>;
+export type Upload = z.infer<typeof UPLOAD_SCHEMA>;
 
-// A rubrique of the Faits, such as Diplômes, as the form edits it: a list rubrique has one entry per
-// item of faits.md, a text rubrique a single one. Its example shows in an empty field what to write.
-export const RUBRIQUE_SCHEMA = z
+// A section of the Facts, such as Diplômes, as the form edits it: a list section has one entry per
+// item of facts.md, a text section a single one. Its example shows in an empty field what to write.
+export const SECTION_SCHEMA = z
   .object({ title: z.string(), isList: z.boolean(), example: z.string(), entryList: z.array(z.string()) })
   .brand<'Domain'>();
 
-export type Rubrique = z.infer<typeof RUBRIQUE_SCHEMA>;
+export type Section = z.infer<typeof SECTION_SCHEMA>;
 
-// A Markdown file of a Version, and whether the Candidat may correct it by hand
+// A Markdown file of a Version, and whether the Candidate may correct it by hand
 const DOCUMENT_SCHEMA = z.object({ ...MARKDOWN_FILE_SHAPE, isModifiable: z.boolean() });
 
-// isRetenable: whether the Candidat may make it the Version retenue
+// isRetenable: whether the Candidate may make it the Version retenue
 const VERSION_DOCUMENTS_SCHEMA = z.object({
   version: VERSION_SCHEMA,
   isRetenable: z.boolean(),
@@ -285,37 +285,37 @@ export const OFFRE_FICHE_SCHEMA = z
 
 export type OffreFiche = z.infer<typeof OFFRE_FICHE_SCHEMA>;
 
-// A job of the Profil of a Candidat rather than of an Offre: the conversion of a Pièce into Markdown
-export const PROFIL_JOB_SCHEMA = z
+// A job of the Profile of a Candidate rather than of an Offre: the conversion of an Upload into Markdown
+export const PROFILE_JOB_SCHEMA = z
   .object({
     id: z.int(),
     module: z.literal('conversion'),
-    candidatId: z.string(),
-    piece: PIECE_FILE_NAME_SCHEMA,
+    candidateId: z.string(),
+    upload: UPLOAD_FILE_NAME_SCHEMA,
     state: JOB_STATE_SCHEMA,
     log: z.string(),
     sessionId: z.string().nullable(),
   })
   .brand<'Domain'>();
 
-export type ProfilJob = z.infer<typeof PROFIL_JOB_SCHEMA>;
+export type ProfileJob = z.infer<typeof PROFILE_JOB_SCHEMA>;
 
-// What the worker runs: a job of an Offre or of a Profil, a single queue for both (ADR-0003)
-export const QUEUED_JOB_SCHEMA = z.union([JOB_SCHEMA, PROFIL_JOB_SCHEMA]);
+// What the worker runs: a job of an Offre or of a Profile, a single queue for both (ADR-0003)
+export const QUEUED_JOB_SCHEMA = z.union([JOB_SCHEMA, PROFILE_JOB_SCHEMA]);
 
 export type QueuedJob = z.infer<typeof QUEUED_JOB_SCHEMA>;
 
-// A Pièce and its conversion: the état of its latest conversion job, absent before any, and its log,
+// An Upload and its conversion: the état of its latest conversion job, absent before any, and its log,
 // which says why it failed
-export const PIECE_CONVERSION_SCHEMA = z
+export const UPLOAD_CONVERSION_SCHEMA = z
   .object({
-    fileName: PIECE_FILE_NAME_SCHEMA,
+    fileName: UPLOAD_FILE_NAME_SCHEMA,
     savedAt: z.date(),
     conversion: z.object({ etat: ETAT_SCHEMA, log: z.string() }),
   })
   .brand<'Domain'>();
 
-export type PieceConversion = z.infer<typeof PIECE_CONVERSION_SCHEMA>;
+export type UploadConversion = z.infer<typeof UPLOAD_CONVERSION_SCHEMA>;
 
 // How a headless AI session ended: its id, to resume it, and what it said, kept as the job's log
 export const SESSION_RESULT_SCHEMA = z
@@ -353,7 +353,7 @@ export const PARAMETRE_SCHEMA = z
 
 export type Parametre = z.infer<typeof PARAMETRE_SCHEMA>;
 
-// A module of a family of interchangeable modules, as its descriptor presents it to the Candidat: the
+// A module of a family of interchangeable modules, as its descriptor presents it to the Candidate: the
 // form asks for its Paramètres (ADR-0010)
 const MODULE_DESCRIPTION_SHAPE = { id: z.string(), name: z.string(), parametreList: z.array(PARAMETRE_SCHEMA) };
 
@@ -369,7 +369,7 @@ export const SOURCE_MODULE_SCHEMA = z.object(MODULE_DESCRIPTION_SHAPE).brand<'Do
 
 export type SourceModule = z.infer<typeof SOURCE_MODULE_SCHEMA>;
 
-// A Candidat's Canal de notification as the actions return it: its module, null until chosen, and its
+// A Candidate's Canal de notification as the actions return it: its module, null until chosen, and its
 // Paramètres, each secret one reduced to whether it is configured, since it is write-only (ADR-0006)
 export const CANAL_NOTIFICATION_SCHEMA = z
   .object({ module: z.string().nullable(), parametres: PARAMETRES_SCHEMA, configuredSecretList: z.array(z.string()) })
@@ -377,15 +377,15 @@ export const CANAL_NOTIFICATION_SCHEMA = z
 
 export type CanalNotification = z.infer<typeof CANAL_NOTIFICATION_SCHEMA>;
 
-// A Candidat's Canal de notification as saved, secret Paramètres included. Its own brand keeps it out
+// A Candidate's Canal de notification as saved, secret Paramètres included. Its own brand keeps it out
 // of the values an action may return (src/actions/index.ts, ADR-0006).
 export const SAVED_CANAL_NOTIFICATION_SCHEMA = z
-  .object({ candidatName: z.string(), module: z.string().nullable(), parametres: PARAMETRES_SCHEMA })
+  .object({ candidateName: z.string(), module: z.string().nullable(), parametres: PARAMETRES_SCHEMA })
   .brand<'Secret'>();
 
 export type SavedCanalNotification = z.infer<typeof SAVED_CANAL_NOTIFICATION_SCHEMA>;
 
-// One of the values a module offers for a Paramètre, with what the Candidat reads
+// One of the values a module offers for a Paramètre, with what the Candidate reads
 export const PARAMETRE_CHOICE_SCHEMA = z.object({ value: z.string(), label: z.string() }).brand<'Domain'>();
 
 export type ParametreChoice = z.infer<typeof PARAMETRE_CHOICE_SCHEMA>;

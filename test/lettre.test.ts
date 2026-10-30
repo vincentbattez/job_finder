@@ -4,7 +4,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
-import { LETTRE_DEFAULT_CONSIGNES } from '#/modules/lettre/consignes.ts';
+import { LETTRE_DEFAULT_INSTRUCTIONS } from '#/modules/lettre/instructions.ts';
 
 import { detectOffres as detectRecordedOffres, LEA_OFFRES_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
@@ -106,7 +106,7 @@ describe('lettre', () => {
     }
   });
 
-  it('reads the Fiche de poste, the Recherche retenue, the Profil and the pairs of the Offres already Postulées', async () => {
+  it('reads the Fiche de poste, the Recherche retenue, the Profile and the pairs of the Offres already Postulées', async () => {
     const aiSession = createFakeAiSession(
       RECHERCHE_RUN,
       lettreRun(),
@@ -128,14 +128,14 @@ describe('lettre', () => {
 
     const { version } = await runModule(actions, 'lettre', REFERENCE);
 
-    const profilDirectory = path.join(dataDirectory, 'candidats/lea/profil');
-    const sentDirectory = path.join(dataDirectory, 'candidats/lea/offres', SENT_DIRECTORY_NAME, 'lettre/v1');
+    const profileDirectory = path.join(dataDirectory, 'candidates/lea/profile');
+    const sentDirectory = path.join(dataDirectory, 'candidates/lea/offres', SENT_DIRECTORY_NAME, 'lettre/v1');
     const session = aiSession.headlessSessionList.at(-1);
     // The folder of the Offre is the session's own: only the folders outside it are added
-    expect(session?.readDirectoryList).toEqual([profilDirectory, sentDirectory]);
+    expect(session?.readDirectoryList).toEqual([profileDirectory, sentDirectory]);
     expect(session?.fixedPrompt).toContain('`fiche-de-poste.md`');
     expect(session?.fixedPrompt).toContain(`\`${path.join(offreDirectory, 'recherche/v1/recherche.md')}\``);
-    expect(session?.fixedPrompt).toContain(`\`${profilDirectory}\``);
+    expect(session?.fixedPrompt).toContain(`\`${profileDirectory}\``);
     expect(session?.fixedPrompt).toContain(`\`${sentDirectory}\``);
     expect(session?.fixedPrompt).not.toContain(UNSENT_REFERENCE);
     expect(version?.inputList).toHaveLength(2);
@@ -149,33 +149,33 @@ describe('lettre', () => {
 });
 
 describe('the prompt of the Lettre', () => {
-  it('forbids inventing a fact on the Candidat and marks each missing one « [à compléter : …] »', async () => {
+  it('forbids inventing a fact on the Candidate and marks each missing one « [à compléter : …] »', async () => {
     const aiSession = createFakeAiSession(RECHERCHE_RUN, lettreRun());
     const { actions } = await detectOffres(aiSession);
     await runModule(actions, 'recherche', REFERENCE);
 
     const { version } = await runModule(actions, 'lettre', REFERENCE);
 
-    const { fixedPrompt, consignes } = aiSession.headlessSessionList[1] ?? {};
+    const { fixedPrompt, instructions } = aiSession.headlessSessionList[1] ?? {};
     expect(fixedPrompt).toContain("N'invente jamais un fait sur le Candidat");
     expect(fixedPrompt).toContain('`[à compléter : …]`');
-    expect(consignes).toBe(LETTRE_DEFAULT_CONSIGNES);
-    expect(version?.consignes).toBe(LETTRE_DEFAULT_CONSIGNES);
+    expect(instructions).toBe(LETTRE_DEFAULT_INSTRUCTIONS);
+    expect(version?.instructions).toBe(LETTRE_DEFAULT_INSTRUCTIONS);
   });
 
-  it("replaces the default Consignes with the Candidat's own, keeping the fixed part", async () => {
-    const consignes = 'Une lettre courte, trois paragraphes au plus.\n';
+  it("replaces the default Instructions with the Candidate's own, keeping the fixed part", async () => {
+    const instructions = 'Une lettre courte, trois paragraphes au plus.\n';
     const aiSession = createFakeAiSession(RECHERCHE_RUN, lettreRun());
     const { actions, dataDirectory } = await detectOffres(aiSession);
-    mkdirSync(path.join(dataDirectory, 'candidats/lea/consignes'));
-    writeFileSync(path.join(dataDirectory, 'candidats/lea/consignes/lettre.md'), consignes);
+    mkdirSync(path.join(dataDirectory, 'candidates/lea/instructions'));
+    writeFileSync(path.join(dataDirectory, 'candidates/lea/instructions/lettre.md'), instructions);
     await runModule(actions, 'recherche', REFERENCE);
 
     const { version } = await runModule(actions, 'lettre', REFERENCE);
 
-    expect(aiSession.headlessSessionList[1]?.consignes).toBe(consignes);
+    expect(aiSession.headlessSessionList[1]?.instructions).toBe(instructions);
     expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain("N'invente jamais un fait sur le Candidat");
-    expect(version?.consignes).toBe(consignes);
+    expect(version?.instructions).toBe(instructions);
   });
 });
 

@@ -6,8 +6,8 @@ import {
   type FicheDePoste,
   type Lieu,
   type Offre,
-  type PieceFileName,
-  type ProfilFileName,
+  type ProfileFileName,
+  type UploadFileName,
   type Version,
 } from '#/domain/index.ts';
 import { wordListOf } from '#/text/index.ts';
@@ -20,14 +20,14 @@ import {
   emptyDirectory,
   moveDirectory,
   readMarkdownFiles,
-  readPieces,
   readTextFile,
-  writePiece,
+  readUploads,
   writeTextFile,
+  writeUpload,
 } from './acl/files.ts';
 
-const PIECES_FOLDER = 'pieces';
-// Among the Pièces, but not one: neither a PDF nor a Markdown file of the Profil
+const UPLOADS_FOLDER = 'uploads';
+// Among the Uploads, but not one: neither a PDF nor a Markdown file of the Profile
 const CONVERSION_FOLDER = '.conversion';
 
 function slugify(text: string): string {
@@ -35,7 +35,7 @@ function slugify(text: string): string {
 }
 
 // Safe to call on every launch; the database and the files are only read in acl/ (ADR-0005). The
-// database holds the Candidats, their Veilles and the Délai par défaut: the config an older jf left
+// database holds the Candidates, their Veilles and the Délai par défaut: the config an older jf left
 // is imported at the first launch of a database without a Délai par défaut, then never read again
 // (ADR-0011).
 export async function openWorkspace(dataDirectory: string) {
@@ -44,20 +44,22 @@ export async function openWorkspace(dataDirectory: string) {
     await database.createDelaiParDefaut(readObsoleteConfig(dataDirectory));
   }
   await database.readDelaiParDefaut();
-  const candidatDirectoryOf = (candidatId: string): string => path.join(dataDirectory, 'candidats', candidatId);
-  const profilDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'profil');
-  // Its own subfolder, which the Markdown files of the Profil leave out
-  const piecesDirectoryOf = (candidatId: string): string => path.join(profilDirectoryOf(candidatId), PIECES_FOLDER);
-  const consignesDirectoryOf = (candidatId: string): string => path.join(candidatDirectoryOf(candidatId), 'consignes');
-  const candidatList = await database.listCandidats();
-  for (const candidat of candidatList) {
-    createDirectory(profilDirectoryOf(candidat.id));
+  const candidateDirectoryOf = (candidateId: string): string => path.join(dataDirectory, 'candidates', candidateId);
+  const profileDirectoryOf = (candidateId: string): string => path.join(candidateDirectoryOf(candidateId), 'profile');
+  // Its own subfolder, which the Markdown files of the Profile leave out
+  const uploadsDirectoryOf = (candidateId: string): string =>
+    path.join(profileDirectoryOf(candidateId), UPLOADS_FOLDER);
+  const instructionsDirectoryOf = (candidateId: string): string =>
+    path.join(candidateDirectoryOf(candidateId), 'instructions');
+  const candidateList = await database.listCandidates();
+  for (const candidate of candidateList) {
+    createDirectory(profileDirectoryOf(candidate.id));
   }
 
   // Each Offre has a folder named by its reference and title, for its Fiche de poste and its
   // Artefacts
-  function offreDirectoryOf({ candidatId, reference, title }: Pick<Offre, 'candidatId' | 'reference' | 'title'>) {
-    return path.join(candidatDirectoryOf(candidatId), 'offres', `${reference}-${slugify(title)}`);
+  function offreDirectoryOf({ candidateId, reference, title }: Pick<Offre, 'candidateId' | 'reference' | 'title'>) {
+    return path.join(candidateDirectoryOf(candidateId), 'offres', `${reference}-${slugify(title)}`);
   }
 
   // Each Version of an Artefact has its own folder, so a new launch never overwrites the others
@@ -67,12 +69,12 @@ export async function openWorkspace(dataDirectory: string) {
 
   return {
     ...database,
-    profilDirectoryOf,
+    profileDirectoryOf,
 
-    // A Candidat gets their Profil folder as soon as they exist, as at launch
-    async createCandidat(candidat: { id: string; name: string }): Promise<void> {
-      await database.createCandidat(candidat);
-      createDirectory(profilDirectoryOf(candidat.id));
+    // A Candidate gets their Profile folder as soon as they exist, as at launch
+    async createCandidate(candidate: { id: string; name: string }): Promise<void> {
+      await database.createCandidate(candidate);
+      createDirectory(profileDirectoryOf(candidate.id));
     },
 
     // The config left behind once imported, which jf says is no longer read until it is deleted
@@ -88,39 +90,39 @@ export async function openWorkspace(dataDirectory: string) {
       return directory;
     },
 
-    // The Profil is a flat folder of Markdown files
-    readProfilFiles(candidatId: string) {
-      return readMarkdownFiles(profilDirectoryOf(candidatId));
+    // The Profile is a flat folder of Markdown files
+    readProfileFiles(candidateId: string) {
+      return readMarkdownFiles(profileDirectoryOf(candidateId));
     },
 
-    saveProfilFile(candidatId: string, fileName: ProfilFileName, markdown: string): void {
-      writeTextFile(path.join(profilDirectoryOf(candidatId), fileName), markdown);
+    saveProfileFile(candidateId: string, fileName: ProfileFileName, markdown: string): void {
+      writeTextFile(path.join(profileDirectoryOf(candidateId), fileName), markdown);
     },
 
-    deleteProfilFile(candidatId: string, fileName: ProfilFileName): void {
-      deleteFile(path.join(profilDirectoryOf(candidatId), fileName));
+    deleteProfileFile(candidateId: string, fileName: ProfileFileName): void {
+      deleteFile(path.join(profileDirectoryOf(candidateId), fileName));
     },
 
-    readPieces(candidatId: string) {
-      return readPieces(piecesDirectoryOf(candidatId));
+    readUploads(candidateId: string) {
+      return readUploads(uploadsDirectoryOf(candidateId));
     },
 
-    savePiece(candidatId: string, fileName: PieceFileName, content: Uint8Array): void {
-      writePiece(piecesDirectoryOf(candidatId), fileName, content);
+    saveUpload(candidateId: string, fileName: UploadFileName, content: Uint8Array): void {
+      writeUpload(uploadsDirectoryOf(candidateId), fileName, content);
     },
 
-    deletePiece(candidatId: string, fileName: PieceFileName): void {
-      deleteFile(path.join(piecesDirectoryOf(candidatId), fileName));
+    deleteUpload(candidateId: string, fileName: UploadFileName): void {
+      deleteFile(path.join(uploadsDirectoryOf(candidateId), fileName));
     },
 
-    // The session converting a Pièce runs in the Profil, where it reads the Pièce, and writes in a
-    // folder of its own, emptied first: the job moves its files into the Profil, never overwriting one
-    startConversion(candidatId: string, piece: PieceFileName) {
-      const outputDirectory = path.join(piecesDirectoryOf(candidatId), CONVERSION_FOLDER, piece);
+    // The session converting an Upload runs in the Profile, where it reads the Upload, and writes in a
+    // folder of its own, emptied first: the job moves its files into the Profile, never overwriting one
+    startConversion(candidateId: string, upload: UploadFileName) {
+      const outputDirectory = path.join(uploadsDirectoryOf(candidateId), CONVERSION_FOLDER, upload);
       emptyDirectory(outputDirectory);
       return {
-        profilDirectory: profilDirectoryOf(candidatId),
-        piecePath: path.join(PIECES_FOLDER, piece),
+        profileDirectory: profileDirectoryOf(candidateId),
+        uploadPath: path.join(UPLOADS_FOLDER, upload),
         outputDirectory,
       };
     },
@@ -134,27 +136,27 @@ export async function openWorkspace(dataDirectory: string) {
       return readMarkdownFiles(versionDirectoryOf(offre, version));
     },
 
-    // A correction by the Candidat changes the Version in place, without creating another one
+    // A correction by the Candidate changes the Version in place, without creating another one
     writeVersionDocument(offre: Offre, version: Version, fileName: string, markdown: string): void {
       writeTextFile(path.join(versionDirectoryOf(offre, version), fileName), markdown);
     },
 
-    // The Consignes with which a Candidat replaced the default ones of an Artefact, if any
-    readConsignes(candidatId: string, artefact: Artefact): string | null {
-      return readTextFile(path.join(consignesDirectoryOf(candidatId), `${artefact}.md`));
+    // The Instructions with which a Candidate replaced the default ones of an Artefact, if any
+    readInstructions(candidateId: string, artefact: Artefact): string | null {
+      return readTextFile(path.join(instructionsDirectoryOf(candidateId), `${artefact}.md`));
     },
 
-    saveConsignes(candidatId: string, artefact: Artefact, consignes: string): void {
-      writeTextFile(path.join(consignesDirectoryOf(candidatId), `${artefact}.md`), consignes);
+    saveInstructions(candidateId: string, artefact: Artefact, instructions: string): void {
+      writeTextFile(path.join(instructionsDirectoryOf(candidateId), `${artefact}.md`), instructions);
     },
 
-    deleteConsignes(candidatId: string, artefact: Artefact): void {
-      deleteFile(path.join(consignesDirectoryOf(candidatId), `${artefact}.md`), { isMissingAllowed: true });
+    deleteInstructions(candidateId: string, artefact: Artefact): void {
+      deleteFile(path.join(instructionsDirectoryOf(candidateId), `${artefact}.md`), { isMissingAllowed: true });
     },
 
     // The Fiche de poste is written first, so an Offre in the database always has it
     async saveOffre(newOffre: INewOffre): Promise<Offre> {
-      const offreDirectory = offreDirectoryOf({ candidatId: newOffre.candidatId, ...newOffre.listedOffre });
+      const offreDirectory = offreDirectoryOf({ candidateId: newOffre.candidateId, ...newOffre.listedOffre });
       writeTextFile(path.join(offreDirectory, FICHE_DE_POSTE_FILE_NAME), newOffre.ficheDePoste.markdown);
       return database.createOffre(newOffre);
     },

@@ -3,8 +3,8 @@ import { Form } from 'react-router';
 
 import { MarkdownEditor } from './markdown-editor.tsx';
 
-// One Markdown file of the Profil, such as faits.md, edited in place
-export function ProfilFile({
+// One Markdown file of the Profile, such as facts.md, edited in place
+export function ProfileFile({
   fileName,
   markdown,
   error,
@@ -12,7 +12,7 @@ export function ProfilFile({
   const headingId = useId();
   const [editedMarkdown, setEditedMarkdown] = useState(markdown);
   return (
-    <section className="profil-file" aria-labelledby={headingId}>
+    <section className="profile-file" aria-labelledby={headingId}>
       <h2 id={headingId} className="reference">
         {fileName}
       </h2>
@@ -31,14 +31,14 @@ export function ProfilFile({
           </button>
           {editedMarkdown !== markdown && <p role="status">Modifications non enregistrées</p>}
           {error !== null && (
-            <p role="alert" className="profil-file__error">
+            <p role="alert" className="profile-file__error">
               {error}
             </p>
           )}
         </div>
       </Form>
       {/* Folded, so a deletion always takes a second, deliberate click, with or without JavaScript */}
-      <details className="profil-file__delete">
+      <details className="profile-file__delete">
         <summary>Supprimer {fileName}…</summary>
         <Form method="post" preventScrollReset className="edition">
           <input type="hidden" name="fileName" value={fileName} />
@@ -52,15 +52,15 @@ export function ProfilFile({
   );
 }
 
-// A new Markdown file of the Profil, empty or not; the action says why a name is refused
-export function ProfilFileCreation({ error }: Readonly<{ error: string | null }>) {
+// A new Markdown file of the Profile, empty or not; the action says why a name is refused
+export function ProfileFileCreation({ error }: Readonly<{ error: string | null }>) {
   const headingId = useId();
   const fileNameId = useId();
   return (
-    <section className="profil-file profil-file--new" aria-labelledby={headingId}>
+    <section className="profile-file profile-file--new" aria-labelledby={headingId}>
       <h2 id={headingId}>Nouveau fichier</h2>
       <Form method="post" preventScrollReset>
-        <div className="profil-file__name">
+        <div className="profile-file__name">
           <label htmlFor={fileNameId}>Nom du fichier</label>
           <input
             id={fileNameId}
@@ -85,7 +85,7 @@ export function ProfilFileCreation({ error }: Readonly<{ error: string | null }>
             Créer le fichier
           </button>
           {error !== null && (
-            <p role="alert" className="profil-file__error">
+            <p role="alert" className="profile-file__error">
               {error}
             </p>
           )}

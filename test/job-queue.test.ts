@@ -137,7 +137,7 @@ describe('the Recherche of a new Offre in the Zone', () => {
     await actions.detect();
 
     const jobList = await actions.runQueuedJobs();
-    const queuedList = jobList.map((job) => `${job.module} ${'offre' in job ? job.offre.reference : job.piece}`);
+    const queuedList = jobList.map((job) => `${job.module} ${'offre' in job ? job.offre.reference : job.upload}`);
     expect(queuedList.toSorted((left, right) => left.localeCompare(right))).toEqual([
       `recherche ${REFERENCE}`,
       `recherche ${OTHER_REFERENCE}`,

@@ -55,46 +55,46 @@ function writeOlderDatabase(dataDirectory: string, lastMigration = FIRST_MIGRATI
   return databasePath;
 }
 
-function listLeaProfilFiles(dataDirectory: string): string[] {
-  return readdirSync(path.join(dataDirectory, 'candidats', 'lea', 'profil'));
+function listLeaProfileFiles(dataDirectory: string): string[] {
+  return readdirSync(path.join(dataDirectory, 'candidates', 'lea', 'profile'));
 }
 
 describe('actions', () => {
-  it('lists the Candidats', async () => {
+  it('lists the Candidates', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
-    expect(await actions.listCandidats()).toEqual([{ id: 'lea', name: 'Léa' }]);
+    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa' }]);
   });
 
-  it('gives each Candidat an empty Profil folder on first launch', async () => {
+  it('gives each Candidate an empty Profile folder on first launch', async () => {
     const dataDirectory = createDataDirectory();
 
     await createActions({ dataDirectory });
 
-    expect(listLeaProfilFiles(dataDirectory)).toEqual([]);
+    expect(listLeaProfileFiles(dataDirectory)).toEqual([]);
   });
 
-  it('keeps the existing Profil and Candidats when launched again', async () => {
+  it('keeps the existing Profile and Candidates when launched again', async () => {
     const dataDirectory = createDataDirectory();
     await createActions({ dataDirectory });
-    writeFileSync(path.join(dataDirectory, 'candidats', 'lea', 'profil', 'faits.md'), '# Faits\n');
+    writeFileSync(path.join(dataDirectory, 'candidates', 'lea', 'profile', 'facts.md'), '# Faits\n');
 
     const actions = await createActions({ dataDirectory });
 
-    expect(listLeaProfilFiles(dataDirectory)).toEqual(['faits.md']);
-    expect(await actions.listCandidats()).toEqual([{ id: 'lea', name: 'Léa' }]);
+    expect(listLeaProfileFiles(dataDirectory)).toEqual(['facts.md']);
+    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa' }]);
   });
 
   // The real data/ comes with the config the older jf read: it is imported too (ADR-0011)
   it('brings the database an older jf left up to date', async () => {
     const dataDirectory = createEmptyDataDirectory();
-    writeConfig(dataDirectory, { defaultDelayMonths: 6, candidatList: [LEA_CONFIG] });
+    writeConfig(dataDirectory, { defaultDelayMonths: 6, candidateList: [LEA_CONFIG] });
     writeOlderDatabase(dataDirectory);
 
     const actions = await createActions({ dataDirectory });
 
     // The Canaux de notification came with a later migration
-    expect(await actions.readCanalNotification({ candidatId: 'lea' })).toEqual({
+    expect(await actions.readCanalNotification({ candidateId: 'lea' })).toEqual({
       module: null,
       parametres: {},
       configuredSecretList: [],
@@ -102,9 +102,9 @@ describe('actions', () => {
   });
 
   // The main checkout migrates the real data/: Léa keeps her Connexion, nothing to type again
-  it('turns the Connexion Home Assistant of each Candidat into their Canal de notification, without loss', async () => {
+  it('turns the Connexion Home Assistant of each Candidate into their Canal de notification, without loss', async () => {
     const dataDirectory = createEmptyDataDirectory();
-    writeConfig(dataDirectory, { defaultDelayMonths: 6, candidatList: [LEA_CONFIG] });
+    writeConfig(dataDirectory, { defaultDelayMonths: 6, candidateList: [LEA_CONFIG] });
     const database = new DatabaseSync(writeOlderDatabase(dataDirectory, CONNEXION_HOME_ASSISTANT_MIGRATION));
     database.exec(`INSERT INTO Candidat (id, name) VALUES ('lea', 'Léa');
       INSERT INTO ConnexionHomeAssistant (candidatId, url, token, service)
@@ -113,7 +113,7 @@ describe('actions', () => {
 
     const actions = await createActions({ dataDirectory });
 
-    expect(await actions.readCanalNotification({ candidatId: 'lea' })).toEqual({
+    expect(await actions.readCanalNotification({ candidateId: 'lea' })).toEqual({
       module: 'home-assistant',
       parametres: { url: 'https://domotique.example', service: 'notify.mobile_app_iphone_de_lea' },
       configuredSecretList: ['token'],
@@ -142,10 +142,10 @@ describe('actions', () => {
     migrateDeploy(databasePath);
 
     const migrated = new DatabaseSync(databasePath, { readOnly: true });
-    expect(migrated.prepare('SELECT id, candidatId, source, parametres, detectedAt FROM Veille').all()).toEqual([
+    expect(migrated.prepare('SELECT id, candidateId, source, parametres, detectedAt FROM Veille').all()).toEqual([
       {
         id: 'attache-de-justice-hauts-de-france',
-        candidatId: 'lea',
+        candidateId: 'lea',
         source: 'pep',
         parametres: '{"title":"attaché de justice","courtOfAppealList":["Douai","Amiens"]}',
         detectedAt: '2026-10-30T10:44:22.500+00:00',
@@ -161,23 +161,23 @@ describe('actions', () => {
     const database = new DatabaseSync(writeOlderDatabase(dataDirectory, SETTINGS_MIGRATION));
     database.exec(`INSERT INTO Settings (id, defaultDelayMonths) VALUES (1, 7);`);
     database.close();
-    writeConfig(dataDirectory, { defaultDelayMonths: 2, candidatList: [LEA_CONFIG] });
+    writeConfig(dataDirectory, { defaultDelayMonths: 2, candidateList: [LEA_CONFIG] });
 
     const actions = await createActions({ dataDirectory });
 
     expect(await actions.readDelaiParDefaut()).toEqual({ months: 7 });
-    expect(await actions.listCandidats()).toEqual([]);
+    expect(await actions.listCandidates()).toEqual([]);
   });
 
-  it('refuses to list the Offres of an unknown Candidat', async () => {
+  it('refuses to list the Offres of an unknown Candidate', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
-    await expect(actions.listOffres({ candidatId: 'inconnu' })).rejects.toThrow(/Candidat inconnu : inconnu/);
+    await expect(actions.listOffres({ candidateId: 'inconnu' })).rejects.toThrow(/Candidat inconnu : inconnu/);
   });
 
   it('starts in an empty data folder, creating its database, without any config', async () => {
     const actions = await createActions({ dataDirectory: createEmptyDataDirectory() });
 
-    expect(await actions.listCandidats()).toEqual([]);
+    expect(await actions.listCandidates()).toEqual([]);
   });
 });

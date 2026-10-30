@@ -13,13 +13,13 @@ import {
   type LoaderFunctionArgs,
 } from 'react-router';
 
-import { readCandidat } from './candidat.server.ts';
-import { CandidatMenu } from './components/candidat-menu.tsx';
+import { readCandidate } from './candidate.server.ts';
+import { CandidateMenu } from './components/candidate-menu.tsx';
 
 import './app.css';
 
 export function loader({ request }: LoaderFunctionArgs) {
-  return readCandidat(request);
+  return readCandidate(request);
 }
 
 export const links: LinksFunction = () => [
@@ -33,7 +33,7 @@ export const links: LinksFunction = () => [
 
 export function Layout({ children }: Readonly<{ children: ReactNode }>) {
   // Undefined when the root loader itself failed: the error page then shows without the menu
-  const candidatData = useRouteLoaderData<typeof loader>('root');
+  const candidateData = useRouteLoaderData<typeof loader>('root');
   return (
     <html lang="fr">
       <head>
@@ -52,11 +52,11 @@ export function Layout({ children }: Readonly<{ children: ReactNode }>) {
               <NavLink to="/" end>
                 Offres
               </NavLink>
-              <NavLink to="/profil">Profil</NavLink>
-              <NavLink to="/consignes">Consignes</NavLink>
-              <NavLink to="/candidats">Candidats</NavLink>
+              <NavLink to="/profile">Profil</NavLink>
+              <NavLink to="/instructions">Consignes</NavLink>
+              <NavLink to="/candidates">Candidats</NavLink>
             </nav>
-            {candidatData !== undefined && <CandidatMenu {...candidatData} />}
+            {candidateData !== undefined && <CandidateMenu {...candidateData} />}
           </div>
         </header>
         {children}

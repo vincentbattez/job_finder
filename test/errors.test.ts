@@ -55,7 +55,7 @@ describe('an error', () => {
     const { actions, dataDirectory } = await detectOffres();
     const offreDirectory = path.join(
       dataDirectory,
-      'candidats/lea/offres',
+      'candidates/lea/offres',
       '2026-2445600-attache-de-justice-affecte-aupres-des-magistrats-du-siege-tribunal-pour-enfants-tj-bethune',
     );
     rmSync(path.join(offreDirectory, 'fiche-de-poste.md'));

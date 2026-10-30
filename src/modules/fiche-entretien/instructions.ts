@@ -1,6 +1,6 @@
-// The plan is here, not in the fixed part, so that the Candidat's own Consignes may organise the
+// The plan is here, not in the fixed part, so that the Candidate's own Instructions may organise the
 // Fiche otherwise (ADR-0003)
-export const FICHE_ENTRETIEN_DEFAULT_CONSIGNES = `Prépare le Candidat à l'entretien de cette Offre précise, pas à un entretien en général. Il relira la Fiche d'entretien la veille et s'entraînera à voix haute avec elle : préfère les listes courtes et les faits précis aux longs paragraphes.
+export const FICHE_ENTRETIEN_DEFAULT_INSTRUCTIONS = `Prépare le Candidat à l'entretien de cette Offre précise, pas à un entretien en général. Il relira la Fiche d'entretien la veille et s'entraînera à voix haute avec elle : préfère les listes courtes et les faits précis aux longs paragraphes.
 
 Organise la Fiche d'entretien pour réviser puis s'entraîner, sous ces sections de niveau 2, avec ces titres exacts :
 

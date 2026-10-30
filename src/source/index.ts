@@ -64,7 +64,7 @@ export function defineSource<TShape extends ParametreShape>({
   const parametres = declareParametres(name, parametreSchema);
   const description = SOURCE_MODULE_SCHEMA.parse({ id, name, parametreList: parametres.parametreList });
 
-  // The front writes the Veilles, in the Profil of their Candidat (ADR-0011)
+  // The front writes the Veilles, in the Profile of their Candidate (ADR-0011)
   function parseParametresOf(veille: Veille): ParametresOf<TShape> {
     return parametres.parse(
       veille.parametres,

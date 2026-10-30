@@ -6,7 +6,7 @@ export interface IPromptInput {
   offre: Offre;
   outputDirectory: string;
   readVersionList: { reference: string; artefact: Artefact; directory: string; filePath: string }[];
-  profilDirectory: string;
+  profileDirectory: string;
 }
 
 interface IOutputFile {
@@ -20,11 +20,11 @@ interface IOutputFile {
 export interface IAiModule {
   // A shorter name than its Artefact, for jf run
   alias?: string;
-  // The file of the Version the Candidat reads
+  // The file of the Version the Candidate reads
   fileName: string;
   // The files the session writes in the folder of the Version
   outputFileList: IOutputFile[];
-  defaultConsignes: string;
+  defaultInstructions: string;
   composePrompt(input: IPromptInput): string;
   // Runs once the files are valid, before the Version is ready
   completeVersion?(versionDirectory: string): void;
@@ -32,12 +32,12 @@ export interface IAiModule {
   requiredArtefactList?: readonly Artefact[];
   // The Artefacts of the Offre the module also reads, when they have a Version retenue
   optionalArtefactList?: readonly Artefact[];
-  // Whether the module reads the Profil of the Candidat
-  isReadingProfil?: boolean;
+  // Whether the module reads the Profile of the Candidate
+  isReadingProfile?: boolean;
   // Whether it reads the Artefacts retenus of the Offre that a Republication publishes again
   isReadingRepublishedOffre?: boolean;
-  // Whether it reads its own Artefact retenu of each Offre once Postulée: what the Candidat sent
+  // Whether it reads its own Artefact retenu of each Offre once Postulée: what the Candidate sent
   isReadingSentVersions?: boolean;
-  // Whether its Version retenue is what the Candidat sends: frozen once the Offre is Postulée
+  // Whether its Version retenue is what the Candidate sends: frozen once the Offre is Postulée
   isFrozenOncePostulee?: boolean;
 }

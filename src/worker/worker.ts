@@ -15,7 +15,7 @@ function formatJob(job: Job): string {
   const failure = `en échec : ${job.log.split('\n', 1)[0] ?? ''}`;
   if (job.module === 'conversion') {
     const outcome = job.state === 'done' ? 'rangée dans le Profil' : failure;
-    return `job ${String(job.id)}, conversion de la Pièce ${job.piece} de ${job.candidatId} : ${outcome}\n`;
+    return `job ${String(job.id)}, conversion de la Pièce ${job.upload} de ${job.candidateId} : ${outcome}\n`;
   }
   const { id, module, offre, state, version } = job;
   const artefact = version === null ? module : `${module} v${String(version.number)}`;

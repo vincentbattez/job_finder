@@ -41,7 +41,7 @@ async function detectBefore(referenceList: string[]) {
 }
 
 describe('the notification of a new Offre in the Zone', () => {
-  it('tells the Candidat its title, its juridiction and its Date limite, for each new Offre in the Zone only', async () => {
+  it('tells the Candidate its title, its juridiction and its Date limite, for each new Offre in the Zone only', async () => {
     const { actions, notificationChannel } = await detectBefore([REFERENCE, OTHER_REFERENCE, OUT_OF_ZONE_REFERENCE]);
 
     await actions.detect();
@@ -85,7 +85,7 @@ describe('the notification of a new Offre in the Zone', () => {
 });
 
 describe('the notification of a Recherche ready', () => {
-  it('tells the Candidat which Offre has its Recherche ready, once the worker has produced it', async () => {
+  it('tells the Candidate which Offre has its Recherche ready, once the worker has produced it', async () => {
     const { actions, notificationChannel } = await detectOffres(createFakeAiSession(RECHERCHE));
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
 
@@ -141,7 +141,7 @@ describe('a notification that cannot be sent', () => {
       `Notification « Nouvelle Offre dans la Zone » de l'Offre ${REFERENCE} non envoyée : ${ERROR_MESSAGE}`,
       `Notification « Nouvelle Offre dans la Zone » de l'Offre ${OTHER_REFERENCE} non envoyée : ${ERROR_MESSAGE}`,
     ]);
-    const offreList = await actions.listOffres({ candidatId: 'lea' });
+    const offreList = await actions.listOffres({ candidateId: 'lea' });
     expect(offreList.map(({ reference }) => reference)).toEqual(expect.arrayContaining([REFERENCE, OTHER_REFERENCE]));
     // The worker, a process of its own, whose notifications go through
     const worker = await createActions({

@@ -6,28 +6,28 @@ import { ACTIONS } from '#/web/acl/actions.server.ts';
 
 export async function loader() {
   return {
-    candidatList: await ACTIONS.listCandidats(),
+    candidateList: await ACTIONS.listCandidates(),
     delaiParDefaut: await ACTIONS.readDelaiParDefaut(),
     obsoleteConfig: await ACTIONS.findObsoleteConfig(),
   };
 }
 
-// Any visitor of the front creates or renames a Candidat and sets the Délai par défaut; no Candidat is
+// Any visitor of the front creates or renames a Candidate and sets the Délai par défaut; no Candidate is
 // deleted (ADR-0002, ADR-0011). A refusal goes back to the form it concerns, in the words of the action.
 export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
-  const [intent, candidatId] = ['intent', 'candidatId'].map((name) => {
+  const [intent, candidateId] = ['intent', 'candidateId'].map((name) => {
     const value = formData.get(name);
     return typeof value === 'string' ? value : null;
   });
   try {
     switch (intent) {
       case 'create': {
-        await ACTIONS.createCandidat({ id: formData.get('id'), name: formData.get('name') });
+        await ACTIONS.createCandidate({ id: formData.get('id'), name: formData.get('name') });
         break;
       }
       case 'rename': {
-        await ACTIONS.renameCandidat({ candidatId, name: formData.get('name') });
+        await ACTIONS.renameCandidate({ candidateId, name: formData.get('name') });
         break;
       }
       case 'delai-par-defaut': {
@@ -36,9 +36,9 @@ export async function action({ request }: ActionFunctionArgs) {
       }
     }
   } catch (error) {
-    return { refusal: { intent, candidatId, message: messageOf(error) } };
+    return { refusal: { intent, candidateId, message: messageOf(error) } };
   }
-  return redirect('/candidats');
+  return redirect('/candidates');
 }
 
 export function meta() {
@@ -49,11 +49,11 @@ function Refusal({ message }: Readonly<{ message: string | undefined }>) {
   return message === undefined ? null : <p role="alert">{message}</p>;
 }
 
-export default function Candidats() {
-  const { candidatList, delaiParDefaut, obsoleteConfig } = useLoaderData<typeof loader>();
+export default function Candidates() {
+  const { candidateList, delaiParDefaut, obsoleteConfig } = useLoaderData<typeof loader>();
   const refusal = useActionData<typeof action>()?.refusal;
-  const refusalOf = (intent: string, candidatId?: string) =>
-    refusal?.intent === intent && (candidatId === undefined || refusal.candidatId === candidatId)
+  const refusalOf = (intent: string, candidateId?: string) =>
+    refusal?.intent === intent && (candidateId === undefined || refusal.candidateId === candidateId)
       ? refusal.message
       : undefined;
   const listHeadingId = useId();
@@ -75,11 +75,11 @@ export default function Candidats() {
       </div>
       <section className="settings" aria-labelledby={listHeadingId}>
         <h2 id={listHeadingId}>Renommer un Candidat</h2>
-        {candidatList.length === 0 && <p>Aucun Candidat pour l’instant : créez le premier plus bas.</p>}
-        {candidatList.map(({ id, name }) => (
+        {candidateList.length === 0 && <p>Aucun Candidat pour l’instant : créez le premier plus bas.</p>}
+        {candidateList.map(({ id, name }) => (
           <Form key={`${id}:${name}`} method="post">
             <input type="hidden" name="intent" value="rename" />
-            <input type="hidden" name="candidatId" value={id} />
+            <input type="hidden" name="candidateId" value={id} />
             <label className="settings__field">
               {`Nom de ${id}`}
               <input name="name" required defaultValue={name} placeholder="Léa Martin" />
@@ -95,8 +95,8 @@ export default function Candidats() {
       </section>
       <section className="settings" aria-labelledby={creationHeadingId}>
         <h2 id={creationHeadingId}>Nouveau Candidat</h2>
-        {/* Remounted once a Candidat is created, so the form starts blank again */}
-        <Form key={candidatList.length} method="post">
+        {/* Remounted once a Candidate is created, so the form starts blank again */}
+        <Form key={candidateList.length} method="post">
           <input type="hidden" name="intent" value="create" />
           <label className="settings__field">
             Nom

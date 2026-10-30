@@ -47,7 +47,7 @@ export default defineConfig({
   use: { baseURL: BASE_URL },
   // How a test reaches the fake Home Assistant, to read the notifications it received or save its
   // token in a Canal de notification (e2e/notifications.test.ts), and the data
-  // folder, to put back the Profil it changes (e2e/profil.test.ts)
+  // folder, to put back the Profile it changes (e2e/profile.test.ts)
   metadata: {
     homeAssistantUrl: FAKE_HOME_ASSISTANT_URL,
     homeAssistantToken: FAKE_HOME_ASSISTANT_TOKEN,

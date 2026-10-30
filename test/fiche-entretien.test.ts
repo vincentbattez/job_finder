@@ -4,7 +4,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
-import { FICHE_ENTRETIEN_DEFAULT_CONSIGNES } from '#/modules/fiche-entretien/consignes.ts';
+import { FICHE_ENTRETIEN_DEFAULT_INSTRUCTIONS } from '#/modules/fiche-entretien/instructions.ts';
 
 import { detectOffres as detectRecordedOffres, LEA_OFFRES_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
@@ -103,7 +103,7 @@ describe("fiche d'entretien", () => {
   });
 
   // The interview comes once the Lettre is sent: the Fiche d'entretien prepares the questions on it
-  it('reads the Fiche de poste, the Recherche retenue, the Profil and the Lettre retenue, the one sent', async () => {
+  it('reads the Fiche de poste, the Recherche retenue, the Profile and the Lettre retenue, the one sent', async () => {
     const aiSession = createFakeAiSession(RECHERCHE_RUN, RECHERCHE_RUN, LETTRE_RUN, ficheRun());
     const { actions, dataDirectory, offreDirectory } = await detectOffres(aiSession);
     await runModule(actions, 'recherche');
@@ -114,13 +114,13 @@ describe("fiche d'entretien", () => {
 
     const { version } = await runModule(actions, 'fiche');
 
-    const profilDirectory = path.join(dataDirectory, 'candidats/lea/profil');
+    const profileDirectory = path.join(dataDirectory, 'candidates/lea/profile');
     const session = aiSession.headlessSessionList.at(-1);
     // The folder of the Offre is the session's own: only the folders outside it are added
-    expect(session?.readDirectoryList).toEqual([profilDirectory]);
+    expect(session?.readDirectoryList).toEqual([profileDirectory]);
     expect(session?.fixedPrompt).toContain('`fiche-de-poste.md`');
     expect(session?.fixedPrompt).toContain(`\`${path.join(offreDirectory, 'recherche/v1/recherche.md')}\``);
-    expect(session?.fixedPrompt).toContain(`\`${profilDirectory}\``);
+    expect(session?.fixedPrompt).toContain(`\`${profileDirectory}\``);
     expect(session?.fixedPrompt).toContain(`\`${path.join(offreDirectory, 'lettre/v1/lettre.md')}\``);
     expect(version?.inputList).toEqual([
       { artefact: 'recherche', number: 1, offre: { reference: REFERENCE } },
@@ -137,7 +137,7 @@ describe("fiche d'entretien", () => {
 
     expect(state).toBe('done');
     const session = aiSession.headlessSessionList.at(-1);
-    expect(session?.readDirectoryList).toEqual([path.join(dataDirectory, 'candidats/lea/profil')]);
+    expect(session?.readDirectoryList).toEqual([path.join(dataDirectory, 'candidates/lea/profile')]);
     expect(session?.fixedPrompt).toContain("Le Candidat n'a pas de Lettre pour cette Offre");
     expect(session?.fixedPrompt).not.toContain('lettre.md');
     expect(version?.inputList).toEqual([{ artefact: 'recherche', number: 1, offre: { reference: REFERENCE } }]);
@@ -145,42 +145,42 @@ describe("fiche d'entretien", () => {
 });
 
 describe("the prompt of the Fiche d'entretien", () => {
-  it('asks for a Fiche organised to revise and train, without inventing a fact on the Candidat', async () => {
+  it('asks for a Fiche organised to revise and train, without inventing a fact on the Candidate', async () => {
     const aiSession = createFakeAiSession(RECHERCHE_RUN, ficheRun());
     const { actions } = await detectOffres(aiSession);
     await runModule(actions, 'recherche');
 
     const { version } = await runModule(actions, 'fiche');
 
-    const { fixedPrompt, consignes } = aiSession.headlessSessionList[1] ?? {};
-    // The plan is the default Consignes': the Candidat's own may organise the Fiche otherwise
+    const { fixedPrompt, instructions } = aiSession.headlessSessionList[1] ?? {};
+    // The plan is the default Instructions': the Candidate's own may organise the Fiche otherwise
     for (const section of ['À réviser', 'Moyens mnémotechniques', 'Présentez-vous', 'Questions probables']) {
-      expect(consignes).toContain(`## ${section}`);
+      expect(instructions).toContain(`## ${section}`);
       expect(fixedPrompt).not.toContain(`## ${section}`);
     }
     expect(fixedPrompt).toContain('titre de niveau 1');
     expect(fixedPrompt).toContain("N'invente jamais un fait sur le Candidat");
     expect(fixedPrompt).toContain('`[à compléter : …]`');
-    expect(consignes).toBe(FICHE_ENTRETIEN_DEFAULT_CONSIGNES);
-    expect(version?.consignes).toBe(FICHE_ENTRETIEN_DEFAULT_CONSIGNES);
+    expect(instructions).toBe(FICHE_ENTRETIEN_DEFAULT_INSTRUCTIONS);
+    expect(version?.instructions).toBe(FICHE_ENTRETIEN_DEFAULT_INSTRUCTIONS);
   });
 
-  it("replaces the default Consignes with the Candidat's own, keeping the fixed part", async () => {
-    const consignes = 'Dix questions au plus, sans moyens mnémotechniques en images.\n';
+  it("replaces the default Instructions with the Candidate's own, keeping the fixed part", async () => {
+    const instructions = 'Dix questions au plus, sans moyens mnémotechniques en images.\n';
     const aiSession = createFakeAiSession(RECHERCHE_RUN, ficheRun());
     const { actions, dataDirectory } = await detectOffres(aiSession);
-    mkdirSync(path.join(dataDirectory, 'candidats/lea/consignes'));
-    writeFileSync(path.join(dataDirectory, 'candidats/lea/consignes/fiche_entretien.md'), consignes);
+    mkdirSync(path.join(dataDirectory, 'candidates/lea/instructions'));
+    writeFileSync(path.join(dataDirectory, 'candidates/lea/instructions/fiche_entretien.md'), instructions);
     await runModule(actions, 'recherche');
 
     const { version } = await runModule(actions, 'fiche');
 
-    expect(aiSession.headlessSessionList[1]?.consignes).toBe(consignes);
+    expect(aiSession.headlessSessionList[1]?.instructions).toBe(instructions);
     expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain("N'invente jamais un fait sur le Candidat");
-    expect(version?.consignes).toBe(consignes);
+    expect(version?.instructions).toBe(instructions);
   });
 
-  it('accepts a Fiche organised otherwise, as Consignes of the Candidat may ask', async () => {
+  it('accepts a Fiche organised otherwise, as Instructions of the Candidate may ask', async () => {
     const tenQuestions = '# Fiche d’entretien\n\n## Dix questions\n\n- Pourquoi ce poste ?\n';
     const { actions } = await detectOffres(createFakeAiSession(RECHERCHE_RUN, ficheRun(tenQuestions)));
     await runModule(actions, 'recherche');

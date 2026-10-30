@@ -8,139 +8,139 @@ import { createActions, type Actions } from '#/actions/index.ts';
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
-const CV_PDF = new Uint8Array(readFileSync(path.join(import.meta.dirname, 'fixtures/profil/cv.pdf')));
+const CV_PDF = new Uint8Array(readFileSync(path.join(import.meta.dirname, 'fixtures/profile/cv.pdf')));
 
 const CV_MARKDOWN = '# CV de Léa\n\n## Formation\n\n- Master 2 droit public, Université de Lille, 2024\n';
 
 // What the session writes when it converts the CV
 const CV_RUN = { fileByName: { 'cv.md': CV_MARKDOWN } };
 
-// Léa's Profil, with the faits.md that jf profil wrote
-async function openProfil(aiSession: ReturnType<typeof createFakeAiSession>) {
+// Léa's Profile, with the facts.md that jf profile wrote
+async function openProfile(aiSession: ReturnType<typeof createFakeAiSession>) {
   const dataDirectory = createDataDirectory();
   const actions = await createActions({ dataDirectory, aiSession });
-  const profilDirectory = path.join(dataDirectory, 'candidats/lea/profil');
-  writeFileSync(path.join(profilDirectory, 'faits.md'), '# Faits\n');
-  return { actions, profilDirectory };
+  const profileDirectory = path.join(dataDirectory, 'candidates/lea/profile');
+  writeFileSync(path.join(profileDirectory, 'facts.md'), '# Faits\n');
+  return { actions, profileDirectory };
 }
 
-// That of Léa's CV, her only Pièce
+// That of Léa's CV, her only Upload
 async function conversionOf(actions: Actions) {
-  const [piece] = await actions.listPieces({ candidatId: 'lea' });
-  return piece?.conversion;
+  const [upload] = await actions.listUploads({ candidateId: 'lea' });
+  return upload?.conversion;
 }
 
-async function profilFileNameListOf(actions: Actions) {
-  const profilFileList = await actions.listProfilFiles({ candidatId: 'lea' });
-  return profilFileList.map(({ fileName }) => fileName);
+async function profileFileNameListOf(actions: Actions) {
+  const profileFileList = await actions.listProfileFiles({ candidateId: 'lea' });
+  return profileFileList.map(({ fileName }) => fileName);
 }
 
-describe('conversion of a Pièce', () => {
-  it('queues the conversion of a dropped Pièce, which the worker writes into the Profil', async () => {
+describe('conversion of an Upload', () => {
+  it('queues the conversion of a dropped Upload, which the worker writes into the Profile', async () => {
     const aiSession = createFakeAiSession(CV_RUN);
-    const { actions, profilDirectory } = await openProfil(aiSession);
+    const { actions, profileDirectory } = await openProfile(aiSession);
 
-    await actions.savePiece({ candidatId: 'lea', fileName: 'cv.pdf', content: CV_PDF });
+    await actions.saveUpload({ candidateId: 'lea', fileName: 'cv.pdf', content: CV_PDF });
 
     expect(await conversionOf(actions)).toEqual({ etat: 'en_cours', log: '' });
     await actions.runQueuedJobs();
     const [session] = aiSession.headlessSessionList;
-    expect(session?.directory).toBe(profilDirectory);
-    expect(session?.fixedPrompt).toContain('pieces/cv.pdf');
+    expect(session?.directory).toBe(profileDirectory);
+    expect(session?.fixedPrompt).toContain('uploads/cv.pdf');
     expect(session?.fixedPrompt).toContain('convertis-le fidèlement en Markdown, sans le réécrire');
     expect(session?.fixedPrompt).toContain('lettre-<employeur>-<année>.md');
-    expect(await actions.listProfilFiles({ candidatId: 'lea' })).toEqual([
+    expect(await actions.listProfileFiles({ candidateId: 'lea' })).toEqual([
       { fileName: 'cv.md', markdown: CV_MARKDOWN },
-      { fileName: 'faits.md', markdown: '# Faits\n' },
+      { fileName: 'facts.md', markdown: '# Faits\n' },
     ]);
     expect(await conversionOf(actions)).toMatchObject({ etat: 'pret' });
   });
 
-  it('shares its conversion rules with jf profil', async () => {
+  it('shares its conversion rules with jf profile', async () => {
     const aiSession = createFakeAiSession();
-    const { actions } = await openProfil(aiSession);
+    const { actions } = await openProfile(aiSession);
 
-    await actions.openProfil({ candidatId: 'lea' });
+    await actions.openProfile({ candidateId: 'lea' });
 
     expect(aiSession.interactiveSessionList[0]?.prompt).toContain(
       'convertis-le fidèlement en Markdown, sans le réécrire',
     );
   });
 
-  it('queues a single conversion of a Pièce however often it is relaunched', async () => {
+  it('queues a single conversion of an Upload however often it is relaunched', async () => {
     const aiSession = createFakeAiSession(CV_RUN, CV_RUN);
-    const { actions } = await openProfil(aiSession);
-    await actions.savePiece({ candidatId: 'lea', fileName: 'cv.pdf', content: CV_PDF });
+    const { actions } = await openProfile(aiSession);
+    await actions.saveUpload({ candidateId: 'lea', fileName: 'cv.pdf', content: CV_PDF });
 
-    await actions.convertPiece({ candidatId: 'lea', fileName: 'cv.pdf' });
+    await actions.convertUpload({ candidateId: 'lea', fileName: 'cv.pdf' });
     await actions.runQueuedJobs();
-    await actions.convertPiece({ candidatId: 'lea', fileName: 'cv.pdf' });
+    await actions.convertUpload({ candidateId: 'lea', fileName: 'cv.pdf' });
     await actions.runQueuedJobs();
 
     expect(aiSession.headlessSessionList).toHaveLength(2);
     expect(await conversionOf(actions)).toMatchObject({ etat: 'pret' });
-    expect(await profilFileNameListOf(actions)).toEqual(['cv.md', 'faits.md']);
+    expect(await profileFileNameListOf(actions)).toEqual(['cv.md', 'facts.md']);
   });
 
-  it('never overwrites a file of the Profil, and says so', async () => {
+  it('never overwrites a file of the Profile, and says so', async () => {
     const aiSession = createFakeAiSession(CV_RUN, CV_RUN);
-    const { actions, profilDirectory } = await openProfil(aiSession);
-    writeFileSync(path.join(profilDirectory, 'cv.md'), '# Mon CV corrigé à la main\n');
-    await actions.savePiece({ candidatId: 'lea', fileName: 'cv.pdf', content: CV_PDF });
+    const { actions, profileDirectory } = await openProfile(aiSession);
+    writeFileSync(path.join(profileDirectory, 'cv.md'), '# Mon CV corrigé à la main\n');
+    await actions.saveUpload({ candidateId: 'lea', fileName: 'cv.pdf', content: CV_PDF });
 
     await actions.runQueuedJobs();
 
-    expect(readFileSync(path.join(profilDirectory, 'cv.md'), 'utf8')).toBe('# Mon CV corrigé à la main\n');
+    expect(readFileSync(path.join(profileDirectory, 'cv.md'), 'utf8')).toBe('# Mon CV corrigé à la main\n');
     const failure = await conversionOf(actions);
     expect(failure?.etat).toBe('en_echec');
     expect(failure?.log).toContain(
       "« cv.pdf » se convertit en « cv.md », que le Profil a déjà : il n'est pas écrasé. Supprimer ou renommer « cv.md », puis relancer la conversion.",
     );
 
-    await actions.deleteProfilFile({ candidatId: 'lea', fileName: 'cv.md' });
-    await actions.convertPiece({ candidatId: 'lea', fileName: 'cv.pdf' });
+    await actions.deleteProfileFile({ candidateId: 'lea', fileName: 'cv.md' });
+    await actions.convertUpload({ candidateId: 'lea', fileName: 'cv.pdf' });
     await actions.runQueuedJobs();
 
-    expect(readFileSync(path.join(profilDirectory, 'cv.md'), 'utf8')).toBe(CV_MARKDOWN);
+    expect(readFileSync(path.join(profileDirectory, 'cv.md'), 'utf8')).toBe(CV_MARKDOWN);
     expect(await conversionOf(actions)).toMatchObject({ etat: 'pret' });
   });
 
   it('shows why a conversion failed, and runs it again when relaunched', async () => {
     const aiSession = createFakeAiSession({ isSuccess: false }, { fileByName: { 'notes.md': '# Notes\n' } }, CV_RUN);
-    const { actions } = await openProfil(aiSession);
-    await actions.savePiece({ candidatId: 'lea', fileName: 'cv.pdf', content: CV_PDF });
+    const { actions } = await openProfile(aiSession);
+    await actions.saveUpload({ candidateId: 'lea', fileName: 'cv.pdf', content: CV_PDF });
 
     await actions.runQueuedJobs();
     const sessionFailure = await conversionOf(actions);
     expect(sessionFailure?.etat).toBe('en_echec');
     expect(sessionFailure?.log).toContain('Claude Code a rencontré une erreur.');
-    await actions.convertPiece({ candidatId: 'lea', fileName: 'cv.pdf' });
+    await actions.convertUpload({ candidateId: 'lea', fileName: 'cv.pdf' });
     await actions.runQueuedJobs();
     const nameFailure = await conversionOf(actions);
     expect(nameFailure?.etat).toBe('en_echec');
     expect(nameFailure?.log).toContain(
       "« notes.md » n'est ni « cv.md » ni une lettre « lettre-<employeur>-<année>.md »",
     );
-    await actions.convertPiece({ candidatId: 'lea', fileName: 'cv.pdf' });
+    await actions.convertUpload({ candidateId: 'lea', fileName: 'cv.pdf' });
     await actions.runQueuedJobs();
 
     expect(await conversionOf(actions)).toMatchObject({ etat: 'pret' });
-    expect(await profilFileNameListOf(actions)).toEqual(['cv.md', 'faits.md']);
+    expect(await profileFileNameListOf(actions)).toEqual(['cv.md', 'facts.md']);
   });
 
-  it('refuses to convert a Pièce the Profil does not have', async () => {
-    const { actions } = await openProfil(createFakeAiSession());
+  it('refuses to convert an Upload the Profile does not have', async () => {
+    const { actions } = await openProfile(createFakeAiSession());
 
-    await expect(actions.convertPiece({ candidatId: 'lea', fileName: 'cv.pdf' })).rejects.toThrow(
+    await expect(actions.convertUpload({ candidateId: 'lea', fileName: 'cv.pdf' })).rejects.toThrow(
       "Le Profil de Léa n'a pas de Pièce « cv.pdf »",
     );
   });
 
-  it('fails the conversion of a Pièce deleted while it waited', async () => {
+  it('fails the conversion of an Upload deleted while it waited', async () => {
     const aiSession = createFakeAiSession(CV_RUN);
-    const { actions } = await openProfil(aiSession);
-    await actions.savePiece({ candidatId: 'lea', fileName: 'cv.pdf', content: CV_PDF });
-    await actions.deletePiece({ candidatId: 'lea', fileName: 'cv.pdf' });
+    const { actions } = await openProfile(aiSession);
+    await actions.saveUpload({ candidateId: 'lea', fileName: 'cv.pdf', content: CV_PDF });
+    await actions.deleteUpload({ candidateId: 'lea', fileName: 'cv.pdf' });
 
     const [job] = await actions.runQueuedJobs();
 

@@ -6,7 +6,7 @@ import { z } from 'zod/v4';
 // The only token the fake accepts, which playwright.config.ts hands to the front and the worker
 export const FAKE_HOME_ASSISTANT_TOKEN = 'jeton-du-faux-home-assistant';
 
-// The notify services of the Candidats of the tests, one phone each
+// The notify services of the Candidates of the tests, one phone each
 const NOTIFY_SERVICE_LIST = ['mobile_app_iphone_de_lea', 'mobile_app_pixel_de_camille', 'mobile_app_iphone_de_sacha'];
 
 // Home Assistant lists every domain, not only notify

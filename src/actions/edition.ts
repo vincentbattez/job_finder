@@ -83,7 +83,7 @@ export function isAccepted(check: () => void): boolean {
   }
 }
 
-export function createEditionActions({ workspace, aiSession, findCandidat, findOffre }: ActionContext) {
+export function createEditionActions({ workspace, aiSession, findCandidate, findOffre }: ActionContext) {
   return {
     // The Versions retenues jf edit offers, those it accepts
     async listVersionsRetenues(rawInput: unknown): Promise<Version[]> {
@@ -99,18 +99,18 @@ export function createEditionActions({ workspace, aiSession, findCandidat, findO
       );
     },
 
-    // The Brouillon stays read-only, so that the tool learns from the Candidat's corrections
+    // The Brouillon stays read-only, so that the tool learns from the Candidate's corrections
     async openArtefact(rawInput: unknown): Promise<void> {
       const { reference, ...input } = ARTEFACT_INPUT_SCHEMA.parse(rawInput);
       const artefact = parseArtefact(input.artefact);
       const offre = await findOffre(reference);
       const version = await findVersionRetenue(workspace, offre, artefact);
       assertArtefactModifiable(offre, artefact, version);
-      const candidat = await findCandidat({ candidatId: offre.candidatId });
+      const candidate = await findCandidate({ candidateId: offre.candidateId });
       const offreDirectory = workspace.offreDirectoryOf(offre);
       const versionPath = path.relative(offreDirectory, workspace.versionDirectoryOf(offre, version));
       aiSession.openInteractive({
-        prompt: composeEditPrompt({ candidat, offre, artefact, versionPath }),
+        prompt: composeEditPrompt({ candidate, offre, artefact, versionPath }),
         directory: offreDirectory,
         readOnlyPathList: [path.join(offreDirectory, '**', BROUILLON_FILE_NAME)],
       });
@@ -136,7 +136,7 @@ export function createEditionActions({ workspace, aiSession, findCandidat, findO
       const artefact = parseArtefact(input.artefact);
       const offre = await findOffre(reference);
       const versionList = await workspace.listVersions(offre, artefact);
-      const version = versionList.find((candidate) => candidate.number === number);
+      const version = versionList.find((entry) => entry.number === number);
       assertRetenable(offre, artefact, version, number);
       await workspace.retenirVersion(offre, version);
     },

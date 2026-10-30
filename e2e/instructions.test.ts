@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// Sacha's Consignes are the ones these tests change; test/seed-front.ts leaves them to the default
-// ones. Léa's Offre 2026-2409247 has a Recherche made with the default Consignes, then one with hers.
-async function openConsignesOfSacha(page: Page) {
+// Sacha's Instructions are the ones these tests change; test/seed-front.ts leaves them to the default
+// ones. Léa's Offre 2026-2409247 has a Recherche made with the default Instructions, then one with hers.
+async function openInstructionsOfSacha(page: Page) {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Sacha');
   await page.getByRole('button', { name: 'Choisir' }).click();
@@ -11,9 +11,9 @@ async function openConsignesOfSacha(page: Page) {
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Consignes de Sacha');
 }
 
-test.describe('Consignes of a Candidat', () => {
-  test('shows the default Consignes of each module, and never the fixed part as editable', async ({ page }) => {
-    await openConsignesOfSacha(page);
+test.describe('Instructions of a Candidate', () => {
+  test('shows the default Instructions of each module, and never the fixed part as editable', async ({ page }) => {
+    await openInstructionsOfSacha(page);
 
     await expect(page.getByRole('heading', { level: 2 })).toHaveText([
       'Recherche',
@@ -32,10 +32,10 @@ test.describe('Consignes of a Candidat', () => {
     }
   });
 
-  test('creates the Candidat’s own Consignes, modifies them, then deletes them for the default ones', async ({
+  test('creates the Candidate’s own Instructions, modifies them, then deletes them for the default ones', async ({
     page,
   }) => {
-    await openConsignesOfSacha(page);
+    await openInstructionsOfSacha(page);
     const lettre = page.getByRole('region', { name: 'Lettre' });
 
     await lettre.getByRole('textbox').fill('Une lettre courte, au ton direct.\n');
@@ -57,7 +57,7 @@ test.describe('Consignes of a Candidat', () => {
     await expect(lettre.getByRole('textbox')).toHaveValue(/^Écris une lettre de motivation d'une page/);
   });
 
-  test('tells which Consignes produced each Version, and shows them folded to compare', async ({ page }) => {
+  test('tells which Instructions produced each Version, and shows them folded to compare', async ({ page }) => {
     await page.goto('/offres/2026-2409247');
 
     const recherche = page.getByRole('region', { name: 'Recherche' });
@@ -65,7 +65,7 @@ test.describe('Consignes of a Candidat', () => {
       /^v1.*Consignes par défaut/,
       /^v2.*Consignes du Candidat/,
     ]);
-    // v2, the Version retenue, is open; its Consignes stay folded until asked
+    // v2, the Version retenue, is open; its Instructions stay folded until asked
     const v2 = recherche.locator('li').filter({ has: page.locator('summary', { hasText: /^v2/ }) });
     await expect(recherche.getByText('Creuse la ville.')).toBeHidden();
     await v2.getByText('Consignes de cette Version').click();

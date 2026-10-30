@@ -32,10 +32,10 @@ const AI_MODULE_BY_ARTEFACT: Record<Artefact, IAiModule> = {
 // An Artefact, or the module that produces it, named after it or by the module's alias
 function parseArtefactName(name: string, noun: 'Artefact' | 'Module'): Artefact {
   const artefact = ARTEFACT_SCHEMA.options.find(
-    (candidate) => name === candidate || name === AI_MODULE_BY_ARTEFACT[candidate].alias,
+    (option) => name === option || name === AI_MODULE_BY_ARTEFACT[option].alias,
   );
   if (artefact === undefined) {
-    const nameList = Object.entries(AI_MODULE_BY_ARTEFACT).map(([candidate, aiModule]) => aiModule.alias ?? candidate);
+    const nameList = Object.entries(AI_MODULE_BY_ARTEFACT).map(([option, aiModule]) => aiModule.alias ?? option);
     throw new Error(`${noun} inconnu : ${name}. ${noun}s : ${nameList.join(', ')}.`);
   }
   return artefact;
@@ -49,14 +49,14 @@ export function parseArtefact(name: string): Artefact {
   return parseArtefactName(name, 'Artefact');
 }
 
-export function findDefaultConsignes(module: Artefact): string {
-  return AI_MODULE_BY_ARTEFACT[module].defaultConsignes;
+export function findDefaultInstructions(module: Artefact): string {
+  return AI_MODULE_BY_ARTEFACT[module].defaultInstructions;
 }
 
 // A Republication starts from the work done for the Offre it publishes again
-async function findRepublishedVersions(workspace: Workspace, { republicationOf, candidatId }: Offre) {
+async function findRepublishedVersions(workspace: Workspace, { republicationOf, candidateId }: Offre) {
   const offreList = republicationOf === null ? [] : await workspace.findOffres(republicationOf.reference);
-  const republishedOffre = offreList.find((candidate) => candidate.candidatId === candidatId);
+  const republishedOffre = offreList.find((offre) => offre.candidateId === candidateId);
   return republishedOffre === undefined
     ? []
     : findVersionsRetenues(workspace, republishedOffre, ARTEFACT_SCHEMA.options);
@@ -71,9 +71,9 @@ async function findVersionsRetenues(
   return versionList.filter((version) => version !== undefined).map((version) => ({ offre, version }));
 }
 
-// Those of the Offres once Postulée: what the Candidat sent
-async function findSentVersions(workspace: Workspace, { candidatId }: Offre, artefact: Artefact) {
-  const offreList = await workspace.listOffres(candidatId);
+// Those of the Offres once Postulée: what the Candidate sent
+async function findSentVersions(workspace: Workspace, { candidateId }: Offre, artefact: Artefact) {
+  const offreList = await workspace.listOffres(candidateId);
   const sentList = await Promise.all(
     offreList
       .filter((offre) => hasBeenPostulee(offre))
@@ -115,7 +115,7 @@ function wordRefusal(refusal: Refusal, offre: Offre, module: Artefact, isForFron
     : `${reason}. La produire d'abord : jf run ${missingArtefact} ${offre.reference}.`;
 }
 
-// What the Candidat sends, the Lettre, is frozen once the Offre was Postulée
+// What the Candidate sends, the Lettre, is frozen once the Offre was Postulée
 export function assertNotFrozen(offre: Offre, artefact: Artefact): void {
   if (AI_MODULE_BY_ARTEFACT[artefact].isFrozenOncePostulee === true) {
     assertLettreModifiable(offre);
@@ -136,7 +136,7 @@ export async function findInputs(workspace: Workspace, offre: Offre, module: Art
     ...(aiModule.isReadingRepublishedOffre === true ? await findRepublishedVersions(workspace, offre) : []),
     ...(aiModule.isReadingSentVersions === true ? await findSentVersions(workspace, offre, module) : []),
   ];
-  const directoryList = aiModule.isReadingProfil === true ? [workspace.profilDirectoryOf(offre.candidatId)] : [];
+  const directoryList = aiModule.isReadingProfile === true ? [workspace.profileDirectoryOf(offre.candidateId)] : [];
   return { versionList, directoryList };
 }
 
@@ -146,7 +146,7 @@ export async function describeModule(workspace: Workspace, offre: Offre, artefac
   return { refusal: refusal === undefined ? null : wordRefusal(refusal, offre, artefact, true) };
 }
 
-// The worker runs each queued job with it (ADR-0003); the Version keeps the Consignes it was made
+// The worker runs each queued job with it (ADR-0003); the Version keeps the Instructions it was made
 // with, so that two Versions compare
 export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
   // A Version is ready only once each of its files exists, is not empty and has the module's format
@@ -172,10 +172,10 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
     const { offre, module } = job;
     const aiModule = AI_MODULE_BY_ARTEFACT[module];
     const { versionList: inputList, directoryList } = await findInputs(workspace, offre, module);
-    const candidatConsignes = workspace.readConsignes(offre.candidatId, module);
-    const consignes = candidatConsignes ?? aiModule.defaultConsignes;
-    const hasCandidatConsignes = candidatConsignes !== null;
-    const version = await workspace.startJob(job, { consignes, hasCandidatConsignes, inputList });
+    const candidateInstructions = workspace.readInstructions(offre.candidateId, module);
+    const instructions = candidateInstructions ?? aiModule.defaultInstructions;
+    const hasCandidateInstructions = candidateInstructions !== null;
+    const version = await workspace.startJob(job, { instructions, hasCandidateInstructions, inputList });
     const offreDirectory = workspace.offreDirectoryOf(offre);
     const outputDirectory = workspace.createVersionDirectory(offre, version);
     const readVersionList = inputList.map((input) => {
@@ -192,11 +192,11 @@ export function createJobRunner(workspace: Workspace, aiSession: IAiSession) {
       offre,
       outputDirectory: path.relative(offreDirectory, outputDirectory),
       readVersionList,
-      profilDirectory: workspace.profilDirectoryOf(offre.candidatId),
+      profileDirectory: workspace.profileDirectoryOf(offre.candidateId),
     });
     const session = await aiSession.runHeadless({
       fixedPrompt,
-      consignes,
+      instructions,
       directory: offreDirectory,
       // The session runs in the folder of the Offre: only the folders outside it are added
       readDirectoryList: [

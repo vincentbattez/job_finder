@@ -12,7 +12,7 @@ import { createRecordedFetch } from './recorded-http.ts';
 // the front would refuse it, but a Source may also leave the registry
 function createDataDirectoryWith(veille: object): string {
   const dataDirectory = createMigratedDataDirectory();
-  const config = { defaultDelayMonths: 6, candidatList: [{ id: 'lea', name: 'Léa', veilleList: [veille] }] };
+  const config = { defaultDelayMonths: 6, candidateList: [{ id: 'lea', name: 'Léa', veilleList: [veille] }] };
   writeFileSync(path.join(dataDirectory, 'config.json'), JSON.stringify(config));
   return dataDirectory;
 }
@@ -64,7 +64,7 @@ describe('the Sources a Veille follows', () => {
 
     await actions.detect();
 
-    const offreList = await actions.listOffres({ candidatId: 'lea' });
+    const offreList = await actions.listOffres({ candidateId: 'lea' });
     expect(offreList.filter(({ isInZone }) => isInZone).map(({ reference }) => reference)).toContain('2026-2445600');
   });
 

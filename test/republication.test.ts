@@ -49,7 +49,7 @@ async function detectBeforeRepublication(aiSession = createFakeAiSession(), { is
   });
   if (isOutOfZone) {
     await earlierActions.saveVeille({
-      candidatId: 'lea',
+      candidateId: 'lea',
       veilleId: LEA_VEILLE_ID,
       source: 'pep',
       parametres: { ...LEA_VEILLE.parametres, courtOfAppealList: ['Amiens'] },
@@ -67,7 +67,7 @@ async function detectBeforeRepublication(aiSession = createFakeAiSession(), { is
 }
 
 async function findOffre(actions: Actions, reference: string) {
-  const offreList = await actions.listOffres({ candidatId: 'lea' });
+  const offreList = await actions.listOffres({ candidateId: 'lea' });
   return offreList.find((offre) => offre.reference === reference);
 }
 
@@ -97,7 +97,7 @@ describe('a Republication detected', () => {
 
     await actions.detect();
 
-    const offreList = await actions.listOffres({ candidatId: 'lea' });
+    const offreList = await actions.listOffres({ candidateId: 'lea' });
     expect(
       offreList.filter(({ republicationOf }) => republicationOf !== null).map(({ reference }) => reference),
     ).toEqual([REPUBLICATION_REFERENCE]);
@@ -108,7 +108,7 @@ describe('a Republication detected', () => {
 });
 
 describe('the Republication of an Offre Postulée', () => {
-  it('launches no Recherche and tells the Candidat, who decides whether to apply again', async () => {
+  it('launches no Recherche and tells the Candidate, who decides whether to apply again', async () => {
     const aiSession = createFakeAiSession();
     const { actions, notificationChannel } = await detectBeforeRepublication(aiSession);
     await actions.changeStatut({ reference: REFERENCE, statut: 'postulee' });
@@ -133,7 +133,7 @@ describe('the Republication of an Offre Postulée', () => {
 });
 
 describe('the Republication of an Offre Postulée out of the Zone', () => {
-  it('tells the Candidat all the same, who already applied to the Poste', async () => {
+  it('tells the Candidate all the same, who already applied to the Poste', async () => {
     const { actions, notificationChannel } = await detectBeforeRepublication(createFakeAiSession(), {
       isOutOfZone: true,
     });
@@ -147,7 +147,7 @@ describe('the Republication of an Offre Postulée out of the Zone', () => {
   });
 
   // Archivée since, the Offre was Postulée all the same
-  it('tells the Candidat once the Offre Postulée is Archivée', async () => {
+  it('tells the Candidate once the Offre Postulée is Archivée', async () => {
     const { actions, notificationChannel } = await detectBeforeRepublication(createFakeAiSession(), {
       isOutOfZone: true,
     });
@@ -161,7 +161,7 @@ describe('the Republication of an Offre Postulée out of the Zone', () => {
 });
 
 describe('the Republication of an Offre not Postulée', () => {
-  it('tells the Candidat it publishes again an Offre, named by its reference', async () => {
+  it('tells the Candidate it publishes again an Offre, named by its reference', async () => {
     const { actions, notificationChannel } = await detectBeforeRepublication(createFakeAiSession(RECHERCHE_RUN));
 
     await actions.detect();
@@ -213,7 +213,7 @@ describe('the Republication of an Offre not Postulée', () => {
         },
       },
     ]);
-    const offreDirectory = path.join(dataDirectory, 'candidats/lea/offres', OFFRE_DIRECTORY_NAME);
+    const offreDirectory = path.join(dataDirectory, 'candidates/lea/offres', OFFRE_DIRECTORY_NAME);
     const session = aiSession.headlessSessionList[2];
     expect(session?.readDirectoryList).toEqual([
       path.join(offreDirectory, 'recherche/v1'),

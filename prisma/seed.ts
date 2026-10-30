@@ -9,16 +9,16 @@ import { openWorkspace } from '#/workspace/index.ts';
 
 // Same folder as the default database of prisma.config.ts
 const DEVELOPMENT_DATA_DIRECTORY = path.join(import.meta.dirname, '..', 'dev-data');
-const OFFRE_COUNT_PER_CANDIDAT = 30;
+const OFFRE_COUNT_PER_CANDIDATE = 30;
 const COURT_OF_APPEAL_LIST = ['Douai', 'Amiens', 'Paris', 'Rennes', 'Lyon', 'Bordeaux'];
 const SERVICE_LIST = ['pôle civil', 'pôle pénal', 'parquet', "service de l'application des peines", 'pôle mineurs'];
 
-function fakeOffre(candidatId: string): Prisma.OffreUncheckedCreateInput {
+function fakeOffre(candidateId: string): Prisma.OffreUncheckedCreateInput {
   const reference = `2026-${faker.string.numeric(7)}`;
   const city = faker.location.city();
   const hasRecherche = faker.datatype.boolean();
   return {
-    candidatId,
+    candidateId,
     source: 'pep',
     reference,
     title: `Attaché de justice (F/H) – ${faker.helpers.arrayElement(SERVICE_LIST)}`,
@@ -38,21 +38,21 @@ function fakeOffre(candidatId: string): Prisma.OffreUncheckedCreateInput {
     isInZone: faker.datatype.boolean(),
     versionList: {
       create: hasRecherche
-        ? [{ artefact: 'recherche', number: 1, isRetenue: true, state: 'ready', consignes: '' }]
+        ? [{ artefact: 'recherche', number: 1, isRetenue: true, state: 'ready', instructions: '' }]
         : [],
     },
   };
 }
 
 // Development data only: replaces the Offres of dev-data/ with fake ones, the same on every run,
-// for its Candidats, Léa when it has none yet. data/ is never touched.
+// for its Candidates, Léa when it has none yet. data/ is never touched.
 mkdirSync(DEVELOPMENT_DATA_DIRECTORY, { recursive: true });
 const workspace = await openWorkspace(DEVELOPMENT_DATA_DIRECTORY);
-const existingCandidatList = await workspace.listCandidats();
-if (existingCandidatList.length === 0) {
-  await workspace.createCandidat({ id: 'lea', name: 'Léa' });
+const existingCandidateList = await workspace.listCandidates();
+if (existingCandidateList.length === 0) {
+  await workspace.createCandidate({ id: 'lea', name: 'Léa' });
 }
-const candidatList = await workspace.listCandidats();
+const candidateList = await workspace.listCandidates();
 // The seed is tooling, not the application: it writes raw rows without the anti-corruption
 // layer (ADR-0005)
 const database = new PrismaClient({
@@ -61,8 +61,8 @@ const database = new PrismaClient({
 faker.seed(1);
 await database.$transaction([database.job.deleteMany(), database.version.deleteMany(), database.offre.deleteMany()]);
 const offreList = await database.$transaction(
-  candidatList.flatMap(({ id }) =>
-    Array.from({ length: OFFRE_COUNT_PER_CANDIDAT }, () => database.offre.create({ data: fakeOffre(id) })),
+  candidateList.flatMap(({ id }) =>
+    Array.from({ length: OFFRE_COUNT_PER_CANDIDATE }, () => database.offre.create({ data: fakeOffre(id) })),
   ),
 );
 // Every Offre has its Fiche de poste in its folder, as the Détection saves it
@@ -71,4 +71,4 @@ for (const offre of offreList) {
   mkdirSync(offreDirectory, { recursive: true });
   writeFileSync(path.join(offreDirectory, 'fiche-de-poste.md'), `## Missions\n\n${faker.lorem.paragraphs(3)}\n`);
 }
-process.stdout.write(`${String(candidatList.length * OFFRE_COUNT_PER_CANDIDAT)} Offres factices dans dev-data/\n`);
+process.stdout.write(`${String(candidateList.length * OFFRE_COUNT_PER_CANDIDATE)} Offres factices dans dev-data/\n`);

@@ -37,7 +37,7 @@ interface IVeilleRun {
   veille: Veille;
   // A first launch cut off goes on at the next Détection, still triggering nothing
   isFirstLaunch: boolean;
-  // Every Offre of its Candidat, those this Détection saves included: a Republication is found there
+  // Every Offre of its Candidate, those this Détection saves included: a Republication is found there
   offreList: Offre[];
 }
 
@@ -53,16 +53,16 @@ export function createDetectActions({ workspace, sourceList, findSource, locate,
   }
 
   // The Offres already online at the first launch start nothing (ADR-0003). The Republication of an
-  // Offre once Postulée gets no Recherche whatever the Zone: the Candidat, who applied already, decides.
+  // Offre once Postulée gets no Recherche whatever the Zone: the Candidate, who applied already, decides.
   async function saveNewOffre(
-    { veille: { candidatId, source }, isFirstLaunch, offreList }: IVeilleRun,
+    { veille: { candidateId, source }, isFirstLaunch, offreList }: IVeilleRun,
     listedOffre: ListedOffre,
     { ficheDePoste, isInZone }: ISourceReadResult,
   ): Promise<{ offre: Offre; notification: INotification | undefined }> {
     const republicationOf = findRepublishedOffre({ ...listedOffre, ...ficheDePoste }, offreList);
     const lieu = await locate(readCity(ficheDePoste.workplace));
     const offre = await workspace.saveOffre({
-      candidatId,
+      candidateId,
       source,
       listedOffre,
       ficheDePoste,
@@ -80,7 +80,7 @@ export function createDetectActions({ workspace, sourceList, findSource, locate,
     return { offre, notification: isInZone ? await startInZone(offre, republicationOf) : undefined };
   }
 
-  // An Offre another Veille of the Candidat stored out of its Zone, found in the Zone of this one: it
+  // An Offre another Veille of the Candidate stored out of its Zone, found in the Zone of this one: it
   // starts what it would have started in the Zone, unless it was online at the first launch of this
   // Veille. A Republication of an Offre once Postulée was told when it was stored.
   async function enterZone({ isFirstLaunch, offreList }: IVeilleRun, offre: Offre) {
@@ -96,14 +96,14 @@ export function createDetectActions({ workspace, sourceList, findSource, locate,
   // (ADR-0001). Each Veille has its own Zone: an Offre stored out of the Zone of one is read again
   // by each other Veille that has not read it yet.
   async function detectVeille(veille: Veille): Promise<IFoundOffres> {
-    const { candidatId, source } = veille;
+    const { candidateId, source } = veille;
     const outOfZoneOffreList = await workspace.listOutOfZoneOffresSince(veille);
     const sourceModule = findSource(source, veille.id);
     const { matchingList, nearMissList } = await sourceModule.search(veille);
     const run = {
       veille,
       isFirstLaunch: veille.detectedAt === null,
-      offreList: await workspace.listOffres(candidatId),
+      offreList: await workspace.listOffres(candidateId),
     };
     const newOffreList: Offre[] = [];
     const notificationList: INotifiedOffre[] = [];
@@ -128,7 +128,7 @@ export function createDetectActions({ workspace, sourceList, findSource, locate,
     }
     await workspace.setDetected(veille);
     return {
-      detection: { veilleId: veille.id, candidatId, isFirstLaunch: run.isFirstLaunch, newOffreList, nearMissList },
+      detection: { veilleId: veille.id, candidateId, isFirstLaunch: run.isFirstLaunch, newOffreList, nearMissList },
       notificationList,
     };
   }

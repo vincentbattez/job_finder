@@ -6,7 +6,7 @@ import {
   ARTEFACT_SCHEMA,
   OFFRE_FICHE_SCHEMA,
   VISUALISATION_SCHEMA,
-  type Candidat,
+  type Candidate,
   type Offre,
   type OffreFiche,
   type Recipients,
@@ -26,7 +26,7 @@ const VISUALISATION_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({ number: z.coe
 const ETAT_BY_VERSION_STATE = { running: 'en_cours', ready: 'pret', failed: 'en_echec' } as const;
 const ETAT_BY_JOB_STATE = { queued: 'en_cours', running: 'en_cours', done: 'pret', failed: 'en_echec' } as const;
 
-export function createOffreActions({ workspace, findCandidat, findOffre }: ActionContext) {
+export function createOffreActions({ workspace, findCandidate, findOffre }: ActionContext) {
   async function findRecipients(offre: Offre): Promise<Recipients | null> {
     const version = await findVersionRetenue(workspace, offre, 'lettre');
     return version === undefined ? null : LETTRE_MODULE.readRecipients(workspace.versionDirectoryOf(offre, version));
@@ -51,13 +51,13 @@ export function createOffreActions({ workspace, findCandidat, findOffre }: Actio
   }
 
   return {
-    listCandidats(): Promise<Candidat[]> {
-      return workspace.listCandidats();
+    listCandidates(): Promise<Candidate[]> {
+      return workspace.listCandidates();
     },
 
     async listOffres(rawInput: unknown): Promise<Offre[]> {
-      const candidat = await findCandidat(rawInput);
-      return workspace.listOffres(candidat.id);
+      const candidate = await findCandidate(rawInput);
+      return workspace.listOffres(candidate.id);
     },
 
     async readOffre(rawInput: unknown): Promise<OffreFiche> {
@@ -106,7 +106,7 @@ export function createOffreActions({ workspace, findCandidat, findOffre }: Actio
       const { reference, number } = VISUALISATION_INPUT_SCHEMA.parse(rawInput);
       const offre = await findOffre(reference);
       const versionList = await workspace.listVersions(offre, 'visualisation');
-      const version = versionList.find((candidate) => candidate.number === number);
+      const version = versionList.find((entry) => entry.number === number);
       if (version === undefined) {
         throw new Error(
           `Version inconnue : visualisation v${String(number)} de l'Offre ${reference}. « jf versions ${reference} visualisation » liste ses Versions.`,

@@ -8,8 +8,8 @@ import { messageOf } from '#/text/index.ts';
 
 import type { ActionContext } from './context.ts';
 import { runExtraction } from './import-fiche-de-poste.ts';
-import { runConversion } from './pieces.ts';
 import { findInputs, parseModule } from './run-job.ts';
+import { runConversion } from './uploads.ts';
 
 const MODULE_INPUT_SCHEMA = z.object({ module: z.string(), reference: z.string() });
 const JOB_INPUT_SCHEMA = z.object({ jobId: z.coerce.number().int() });

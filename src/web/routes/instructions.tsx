@@ -1,39 +1,42 @@
 import { redirect, useLoaderData, type ActionFunctionArgs, type LoaderFunctionArgs } from 'react-router';
 
 import { ACTIONS } from '#/web/acl/actions.server.ts';
-import { readCandidat } from '#/web/candidat.server.ts';
-import { ModuleConsignes } from '#/web/components/module-consignes.tsx';
+import { readCandidate } from '#/web/candidate.server.ts';
+import { ModuleInstructions } from '#/web/components/module-instructions.tsx';
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const { candidat } = await readCandidat(request);
-  return { candidat, consignesList: candidat === null ? [] : await ACTIONS.listConsignes({ candidatId: candidat.id }) };
+  const { candidate } = await readCandidate(request);
+  return {
+    candidate,
+    instructionsList: candidate === null ? [] : await ACTIONS.listInstructions({ candidateId: candidate.id }),
+  };
 }
 
-// The Candidat is the one of the menu, never one the form names
+// The Candidate is the one of the menu, never one the form names
 export async function action({ request }: ActionFunctionArgs) {
-  const { candidat } = await readCandidat(request);
-  if (candidat === null) {
-    return redirect('/consignes');
+  const { candidate } = await readCandidate(request);
+  if (candidate === null) {
+    return redirect('/instructions');
   }
   const formData = await request.formData();
   const module = formData.get('module');
   if (formData.get('intent') === 'delete') {
-    await ACTIONS.deleteConsignes({ candidatId: candidat.id, module });
+    await ACTIONS.deleteInstructions({ candidateId: candidate.id, module });
   } else {
-    await ACTIONS.saveConsignes({ candidatId: candidat.id, module, consignes: formData.get('consignes') });
+    await ACTIONS.saveInstructions({ candidateId: candidate.id, module, instructions: formData.get('instructions') });
   }
-  return redirect('/consignes');
+  return redirect('/instructions');
 }
 
 export function meta() {
   return [{ title: 'Consignes · Job Finder' }];
 }
 
-export default function Consignes() {
-  const { candidat, consignesList } = useLoaderData<typeof loader>();
+export default function Instructions() {
+  const { candidate, instructionsList } = useLoaderData<typeof loader>();
   return (
     <main className="container page">
-      {candidat === null ? (
+      {candidate === null ? (
         <div className="page__head">
           <h1>Qui consulte ses Consignes ?</h1>
           <p>Choisissez votre nom dans le menu en haut de la page. Le front s’en souviendra.</p>
@@ -41,17 +44,17 @@ export default function Consignes() {
       ) : (
         <>
           <div className="page__head">
-            <h1>Consignes de {candidat.name}</h1>
+            <h1>Consignes de {candidate.name}</h1>
             <p>
               Les Consignes disent à chaque module comment produire son Artefact. Les vôtres remplacent celles par
               défaut pour ses prochaines Versions. Ses règles fixes, comme ne jamais inventer un fait, s’appliquent
               toujours.
             </p>
           </div>
-          {consignesList.map((consignes) => (
-            <ModuleConsignes
-              key={`${consignes.module}-${consignes.candidatConsignes === null ? 'defaut' : 'candidat'}`}
-              {...consignes}
+          {instructionsList.map((instructions) => (
+            <ModuleInstructions
+              key={`${instructions.module}-${instructions.candidateInstructions === null ? 'defaut' : 'candidate'}`}
+              {...instructions}
             />
           ))}
         </>

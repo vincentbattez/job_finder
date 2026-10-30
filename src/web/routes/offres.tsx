@@ -1,7 +1,7 @@
 import { useLoaderData, useSearchParams, type LoaderFunctionArgs } from 'react-router';
 
 import { ACTIONS } from '#/web/acl/actions.server.ts';
-import { readCandidat } from '#/web/candidat.server.ts';
+import { readCandidate } from '#/web/candidate.server.ts';
 import { Detection } from '#/web/components/detection.tsx';
 import { FicheDePosteImport } from '#/web/components/fiche-de-poste-import.tsx';
 import { filterOffres, OffreFilters } from '#/web/components/offre-filters.tsx';
@@ -9,8 +9,8 @@ import { OffreList } from '#/web/components/offre-list.tsx';
 import { OffreMap } from '#/web/components/offre-map.tsx';
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const { candidat } = await readCandidat(request);
-  return { candidat, offreList: candidat === null ? [] : await ACTIONS.listOffres({ candidatId: candidat.id }) };
+  const { candidate } = await readCandidate(request);
+  return { candidate, offreList: candidate === null ? [] : await ACTIONS.listOffres({ candidateId: candidate.id }) };
 }
 
 export function meta() {
@@ -18,9 +18,9 @@ export function meta() {
 }
 
 export default function Offres() {
-  const { candidat, offreList } = useLoaderData<typeof loader>();
+  const { candidate, offreList } = useLoaderData<typeof loader>();
   const [searchParameters] = useSearchParams();
-  if (candidat === null) {
+  if (candidate === null) {
     return (
       <main className="container page">
         <div className="page__head">
@@ -34,7 +34,7 @@ export default function Offres() {
   return (
     <main className="container page">
       <div className="page__head">
-        <h1>Offres de {candidat.name}</h1>
+        <h1>Offres de {candidate.name}</h1>
         <Detection />
         <FicheDePosteImport />
         {offreList.length > 0 && <OffreFilters offreList={offreList} />}

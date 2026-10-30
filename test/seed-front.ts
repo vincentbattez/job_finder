@@ -19,10 +19,10 @@ import { createRecordedFetch } from './recorded-http.ts';
 // that change data work on Offres of their own: Bastia 2026-2426147 (a Recherche and a Lettre to
 // correct), Versailles 2026-2409178 (two Recherches), Rennes 2026-2420931 (a Recherche, ready for
 // its Lettre) and Narbonne 2026-2412591 (a Recherche en échec). Sacha, Noé, Inès, Malo and Rose, without
-// Veille either, each have their Profil changed by one e2e test only, which writes it first; Sacha
-// also has the Consignes the e2e tests change. Léa, Camille and Sacha have their Canal de notification
+// Veille either, each have their Profile changed by one e2e test only, which writes it first; Sacha
+// also has the Instructions the e2e tests change. Léa, Camille and Sacha have their Canal de notification
 // through the fake Home Assistant; Yanis and Zoé each have theirs changed by one e2e test only. Léa's Offre
-// 2026-2409247 has a Recherche made with the default Consignes, then one made with hers. Jade, without
+// 2026-2409247 has a Recherche made with the default Instructions, then one made with hers. Jade, without
 // Veille, has hers created, changed and deleted by one e2e test only.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 // The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
@@ -34,11 +34,11 @@ const BASTIA_REFERENCE = '2026-2426147';
 const VERSAILLES_REFERENCE = '2026-2409178';
 const RENNES_REFERENCE = '2026-2420931';
 const NARBONNE_REFERENCE = '2026-2412591';
-const CONSIGNES_REFERENCE = '2026-2409247';
+const INSTRUCTIONS_REFERENCE = '2026-2409247';
 // Where playwright.config.ts started the fake Home Assistant
 const FAKE_HOME_ASSISTANT_URL = process.env.FAKE_HOME_ASSISTANT_URL ?? '';
 // Without a Veille, beside Léa (test/lea.ts)
-const OTHER_CANDIDAT_LIST = [
+const OTHER_CANDIDATE_LIST = [
   { id: 'camille', name: 'Camille' },
   { id: 'sacha', name: 'Sacha' },
   { id: 'noe', name: 'Noé' },
@@ -93,8 +93,8 @@ const RUN_BY_VERSION: Record<string, Parameters<typeof createFakeAiSession>[numb
   [`${VERSAILLES_REFERENCE} recherche v2`]: rechercheRun('Recherche relancée : le pôle civil du TJ de Versailles'),
   [`${RENNES_REFERENCE} recherche v1`]: rechercheRun('Recherche : la JIRS du TJ de Rennes'),
   [`${NARBONNE_REFERENCE} recherche v1`]: { isSuccess: false },
-  [`${CONSIGNES_REFERENCE} recherche v1`]: rechercheRun('Recherche par défaut : le TJ de Pontoise'),
-  [`${CONSIGNES_REFERENCE} recherche v2`]: rechercheRun('Recherche selon Léa : le TJ de Pontoise'),
+  [`${INSTRUCTIONS_REFERENCE} recherche v1`]: rechercheRun('Recherche par défaut : le TJ de Pontoise'),
+  [`${INSTRUCTIONS_REFERENCE} recherche v2`]: rechercheRun('Recherche selon Léa : le TJ de Pontoise'),
 };
 
 // A session writes in <offre>/<artefact>/v<n>, the folder of its Offre starting with its reference
@@ -117,17 +117,17 @@ const actions = await createActions({
 });
 // Created as from the front, which the database alone now knows (ADR-0011)
 await createLea(actions);
-for (const candidat of OTHER_CANDIDAT_LIST) {
-  await actions.createCandidat(candidat);
+for (const candidate of OTHER_CANDIDATE_LIST) {
+  await actions.createCandidate(candidate);
 }
 // A notify service of the fake Home Assistant (test/fake-home-assistant.ts) for each phone
-for (const [candidatId, service] of [
+for (const [candidateId, service] of [
   ['lea', 'notify.mobile_app_iphone_de_lea'],
   ['camille', 'notify.mobile_app_pixel_de_camille'],
   ['sacha', 'notify.mobile_app_iphone_de_sacha'],
 ]) {
   await actions.saveCanalNotification({
-    candidatId,
+    candidateId,
     canal: 'home-assistant',
     parametres: { url: FAKE_HOME_ASSISTANT_URL, token: FAKE_HOME_ASSISTANT_TOKEN, service },
   });
@@ -150,13 +150,13 @@ await actions.runModule({ module: 'recherche', reference: RENNES_REFERENCE });
 await actions.runModule({ module: 'recherche', reference: NARBONNE_REFERENCE });
 await actions.runQueuedJobs();
 
-// One Recherche with the default Consignes, one with Léa's, which she then deletes
-await actions.runModule({ module: 'recherche', reference: CONSIGNES_REFERENCE });
+// One Recherche with the default Instructions, one with Léa's, which she then deletes
+await actions.runModule({ module: 'recherche', reference: INSTRUCTIONS_REFERENCE });
 await actions.runQueuedJobs();
-await actions.saveConsignes({ candidatId: 'lea', module: 'recherche', consignes: 'Creuse la ville.\n' });
-await actions.runModule({ module: 'recherche', reference: CONSIGNES_REFERENCE });
+await actions.saveInstructions({ candidateId: 'lea', module: 'recherche', instructions: 'Creuse la ville.\n' });
+await actions.runModule({ module: 'recherche', reference: INSTRUCTIONS_REFERENCE });
 await actions.runQueuedJobs();
-await actions.deleteConsignes({ candidatId: 'lea', module: 'recherche' });
+await actions.deleteInstructions({ candidateId: 'lea', module: 'recherche' });
 
 await actions.changeStatut({ reference: '2026-2285305', statut: 'postulee' });
 await actions.changeStatut({ reference: '2026-2290529', statut: 'archivee' });

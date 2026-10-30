@@ -75,7 +75,7 @@ export function declareParametres<TShape extends ParametreShape>(
     parametreList,
     parse: (rawParametres: unknown, composeMessage: MessageComposer) =>
       parseWith(parametreSchema, rawParametres, composeMessage),
-    // What the Candidat typed, to try it: each Paramètre may be missing
+    // What the Candidate typed, to try it: each Paramètre may be missing
     parseTrial: (rawParametres: unknown, composeMessage: MessageComposer) =>
       parseWith(parametreSchema.partial(), rawParametres, composeMessage),
     // As the database keeps them

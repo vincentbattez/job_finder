@@ -13,7 +13,7 @@ const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
 type Offre = Awaited<ReturnType<Actions['listOffres']>>[number];
 type Version = Awaited<ReturnType<Actions['listVersions']>>[number];
 type Recipients = Awaited<ReturnType<Actions['readRecipients']>>;
-type ModuleConsignes = Awaited<ReturnType<Actions['listConsignes']>>[number];
+type ModuleInstructions = Awaited<ReturnType<Actions['listInstructions']>>[number];
 
 interface ICommand {
   description: string;
@@ -51,7 +51,7 @@ function formatOffre(offre: Offre): string {
   ].join('\t');
 }
 
-// The terminal where the Candidat answers, one line per question. Ctrl-C or Ctrl-D closes it,
+// The terminal where the Candidate answers, one line per question. Ctrl-C or Ctrl-D closes it,
 // which ends the answers instead of leaving a question pending forever.
 function openTerminal() {
   const readline = createInterface({ input: process.stdin, output: process.stdout });
@@ -103,27 +103,27 @@ async function choose<T>(terminal: Terminal, { question, itemList, label, emptyM
   return item;
 }
 
-async function chooseCandidat(actions: Actions, terminal: Terminal) {
+async function chooseCandidate(actions: Actions, terminal: Terminal) {
   return choose(terminal, {
     question: 'Candidat',
-    itemList: await actions.listCandidats(),
+    itemList: await actions.listCandidates(),
     label: ({ name }) => name,
     emptyMessage: 'Aucun Candidat : en créer un dans la page Candidats du front.',
   });
 }
 
 async function chooseReference(actions: Actions, terminal: Terminal): Promise<string> {
-  const candidat = await chooseCandidat(actions, terminal);
+  const candidate = await chooseCandidate(actions, terminal);
   const offre = await choose(terminal, {
     question: 'Offre à modifier',
-    itemList: await actions.listOffres({ candidatId: candidat.id }),
+    itemList: await actions.listOffres({ candidateId: candidate.id }),
     label: formatOffre,
-    emptyMessage: `Aucune Offre pour ${candidat.name} : « jf detect » cherche les nouvelles Offres.`,
+    emptyMessage: `Aucune Offre pour ${candidate.name} : « jf detect » cherche les nouvelles Offres.`,
   });
   return offre.reference;
 }
 
-// From a list, unless given: the Candidat has no reference to remember
+// From a list, unless given: the Candidate has no reference to remember
 async function chooseArtefact(actions: Actions, [givenReference, givenArtefact]: string[]) {
   if (givenReference !== undefined && givenArtefact !== undefined) {
     return { reference: givenReference, artefact: givenArtefact };
@@ -144,7 +144,7 @@ async function chooseArtefact(actions: Actions, [givenReference, givenArtefact]:
   }
 }
 
-// Typed or redirected from a file: the Consignes end with the input (Ctrl-D in a terminal)
+// Typed or redirected from a file: the Instructions end with the input (Ctrl-D in a terminal)
 async function readStandardInput(): Promise<string> {
   if (process.stdin.isTTY) {
     process.stderr.write('Tapez ou collez les Consignes, puis Ctrl-D :\n');
@@ -156,39 +156,39 @@ async function readStandardInput(): Promise<string> {
   return text;
 }
 
-const CONSIGNES_USAGE =
-  'Usage : jf consignes <candidat> [<module> [defaut|remplacer|supprimer]], par exemple jf consignes lea lettre.';
+const INSTRUCTIONS_USAGE =
+  'Usage : jf instructions <candidat> [<module> [default|replace|delete]], par exemple jf instructions lea lettre.';
 
-// The Consignes in effect for a module, or those the operation names; « remplacer » reads the new
+// The Instructions in effect for a module, or those the operation names; « replace » reads the new
 // ones on the standard input
-async function runConsignesOperation(
+async function runInstructionsOperation(
   actions: Actions,
-  { candidatId, module, defaultConsignes, candidatConsignes }: ModuleConsignes & { candidatId: string },
+  { candidateId, module, defaultInstructions, candidateInstructions }: ModuleInstructions & { candidateId: string },
   operation: string | undefined,
 ): Promise<void> {
   switch (operation) {
     case undefined: {
-      const origin = candidatConsignes === null ? 'par défaut' : 'du Candidat';
+      const origin = candidateInstructions === null ? 'par défaut' : 'du Candidat';
       process.stderr.write(`Consignes ${origin} de ${module} :\n`);
-      process.stdout.write(candidatConsignes ?? defaultConsignes);
+      process.stdout.write(candidateInstructions ?? defaultInstructions);
       return;
     }
-    case 'defaut': {
-      process.stdout.write(defaultConsignes);
+    case 'default': {
+      process.stdout.write(defaultInstructions);
       return;
     }
-    case 'remplacer': {
-      await actions.saveConsignes({ candidatId, module, consignes: await readStandardInput() });
+    case 'replace': {
+      await actions.saveInstructions({ candidateId, module, instructions: await readStandardInput() });
       process.stdout.write(`${module} suivra ces Consignes du Candidat dans ses prochaines Versions.\n`);
       return;
     }
-    case 'supprimer': {
-      await actions.deleteConsignes({ candidatId, module });
+    case 'delete': {
+      await actions.deleteInstructions({ candidateId, module });
       process.stdout.write(`${module} revient à ses Consignes par défaut.\n`);
       return;
     }
     default: {
-      throw new Error(`Opération inconnue : ${operation}. ${CONSIGNES_USAGE}`);
+      throw new Error(`Opération inconnue : ${operation}. ${INSTRUCTIONS_USAGE}`);
     }
   }
 }
@@ -208,12 +208,12 @@ function changeStatutCommand(statut: Offre['statut'], name: string, description:
 
 // The CLI only relays to the actions: no business rule here (ADR-0003)
 const COMMAND_BY_NAME: Record<string, ICommand> = {
-  candidats: {
+  candidates: {
     description: 'Liste les Candidats, que la page Candidats du front crée et renomme',
     run: async (actions) => {
-      const candidatList = await actions.listCandidats();
-      for (const candidat of candidatList) {
-        process.stdout.write(`${candidat.id}\t${candidat.name}\n`);
+      const candidateList = await actions.listCandidates();
+      for (const candidate of candidateList) {
+        process.stdout.write(`${candidate.id}\t${candidate.name}\n`);
       }
     },
   },
@@ -222,11 +222,11 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     run: async (actions) => {
       const detectionList = await actions.detect();
       for (const detection of detectionList) {
-        const { veilleId, candidatId, isFirstLaunch, newOffreList, nearMissList } = detection;
+        const { veilleId, candidateId, isFirstLaunch, newOffreList, nearMissList } = detection;
         const summary =
           newOffreList.length === 0 ? 'aucune nouvelle Offre' : `${String(newOffreList.length)} nouvelles Offres`;
         const firstLaunch = isFirstLaunch ? ', premier lancement : importées sans rien déclencher' : '';
-        process.stdout.write(`Veille ${veilleId} (${candidatId}) : ${summary}${firstLaunch}\n`);
+        process.stdout.write(`Veille ${veilleId} (${candidateId}) : ${summary}${firstLaunch}\n`);
         for (const offre of newOffreList) {
           process.stdout.write(`  ${formatOffre(offre)}\n`);
         }
@@ -247,28 +247,28 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
   import: {
     description:
       "Importe une Fiche de poste en Markdown trouvée ailleurs : le worker en relève les champs avec Claude Code, puis met sa Recherche en file ; Candidat proposé si absent, --wait attend l'extraction : jf import <fichier> [<candidat>] [--wait]",
-    run: async (actions, [filePath, givenCandidatId], { isWaiting }) => {
+    run: async (actions, [filePath, givenCandidateId], { isWaiting }) => {
       if (filePath === undefined) {
         throw new Error(
           'Usage : jf import <fichier> [<candidat>] [--wait], par exemple jf import offre-greffier.md lea.',
         );
       }
       const markdown = readTextFile(filePath);
-      let candidatId = givenCandidatId;
-      if (candidatId === undefined) {
+      let candidateId = givenCandidateId;
+      if (candidateId === undefined) {
         const terminal = openTerminal();
         try {
-          ({ id: candidatId } = await chooseCandidat(actions, terminal));
+          ({ id: candidateId } = await chooseCandidate(actions, terminal));
         } finally {
           terminal.close();
         }
       }
-      const job = await actions.importFicheDePoste({ candidatId, fileName: path.basename(filePath), markdown });
+      const job = await actions.importFicheDePoste({ candidateId, fileName: path.basename(filePath), markdown });
       const { reference } = job.offre;
       process.stdout.write(`Offre ${reference} importée, extraction de ses champs en file (job ${String(job.id)}).\n`);
       if (!isWaiting) {
         process.stdout.write(
-          `Le worker la lance, puis met sa Recherche en file. « jf list ${candidatId} » la montre.\n`,
+          `Le worker la lance, puis met sa Recherche en file. « jf list ${candidateId} » la montre.\n`,
         );
         return;
       }
@@ -286,11 +286,11 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
   },
   list: {
     description: "Liste les Offres d'un Candidat : jf list <candidat>",
-    run: async (actions, [candidatId]) => {
-      if (candidatId === undefined) {
-        throw new Error('Usage : jf list <candidat>. « jf candidats » liste les Candidats.');
+    run: async (actions, [candidateId]) => {
+      if (candidateId === undefined) {
+        throw new Error('Usage : jf list <candidat>. « jf candidates » liste les Candidats.');
       }
-      const offreList = await actions.listOffres({ candidatId });
+      const offreList = await actions.listOffres({ candidateId });
       for (const offre of offreList) {
         process.stdout.write(`${formatOffre(offre)}\n`);
       }
@@ -344,12 +344,12 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
         throw new Error('Usage : jf versions <offre> <artefact>, par exemple jf versions 2026-2445600 recherche.');
       }
       const versionList = await actions.listVersions({ reference, artefact });
-      for (const { number, state, isRetenue, hasCandidatConsignes, createdAt } of versionList) {
+      for (const { number, state, isRetenue, hasCandidateInstructions, createdAt } of versionList) {
         const columnList = [
           `v${String(number)}`,
           VERSION_STATE_LABEL_BY_STATE[state],
           isRetenue ? 'retenue' : '—',
-          hasCandidatConsignes ? 'Consignes du Candidat' : 'Consignes par défaut',
+          hasCandidateInstructions ? 'Consignes du Candidat' : 'Consignes par défaut',
         ];
         process.stdout.write(`${[...columnList, createdAt.toLocaleString('fr-FR')].join('\t')}\n`);
       }
@@ -378,33 +378,33 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     'traiter',
     "Remet À traiter une Offre Archivée qui n'a jamais été Postulée",
   ),
-  profil: {
-    description: "Complète le Profil d'un Candidat avec Claude Code : jf profil <candidat>",
-    run: async (actions, [candidatId]) => {
-      if (candidatId === undefined) {
-        throw new Error('Usage : jf profil <candidat>. « jf candidats » liste les Candidats.');
+  profile: {
+    description: "Complète le Profil d'un Candidat avec Claude Code : jf profile <candidat>",
+    run: async (actions, [candidateId]) => {
+      if (candidateId === undefined) {
+        throw new Error('Usage : jf profile <candidat>. « jf candidates » liste les Candidats.');
       }
-      await actions.openProfil({ candidatId });
+      await actions.openProfile({ candidateId });
     },
   },
-  consignes: {
+  instructions: {
     description:
-      "Montre, remplace (lues sur l'entrée standard) ou supprime les Consignes d'un module : jf consignes <candidat> [<module> [defaut|remplacer|supprimer]]",
-    run: async (actions, [candidatId, module, operation]) => {
-      if (candidatId === undefined) {
-        throw new Error(`${CONSIGNES_USAGE} « jf candidats » liste les Candidats.`);
+      "Montre, remplace (lues sur l'entrée standard) ou supprime les Consignes d'un module : jf instructions <candidat> [<module> [default|replace|delete]]",
+    run: async (actions, [candidateId, module, operation]) => {
+      if (candidateId === undefined) {
+        throw new Error(`${INSTRUCTIONS_USAGE} « jf candidates » liste les Candidats.`);
       }
       if (module === undefined) {
-        const consignesList = await actions.listConsignes({ candidatId });
-        for (const { module: name, candidatConsignes } of consignesList) {
+        const instructionsList = await actions.listInstructions({ candidateId });
+        for (const { module: name, candidateInstructions } of instructionsList) {
           process.stdout.write(
-            `${name}\t${candidatConsignes === null ? 'Consignes par défaut' : 'Consignes du Candidat'}\n`,
+            `${name}\t${candidateInstructions === null ? 'Consignes par défaut' : 'Consignes du Candidat'}\n`,
           );
         }
         return;
       }
-      const consignes = await actions.readConsignes({ candidatId, module });
-      await runConsignesOperation(actions, { ...consignes, candidatId }, operation);
+      const instructions = await actions.readInstructions({ candidateId, module });
+      await runInstructionsOperation(actions, { ...instructions, candidateId }, operation);
     },
   },
   edit: {

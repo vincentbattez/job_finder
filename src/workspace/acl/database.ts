@@ -8,17 +8,17 @@ import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { z } from 'zod/v4';
 
 import {
-  CANDIDAT_SCHEMA,
+  CANDIDATE_SCHEMA,
   DELAI_PAR_DEFAUT_SCHEMA,
   JOB_SCHEMA,
   OFFRE_SCHEMA,
-  PROFIL_JOB_SCHEMA,
+  PROFILE_JOB_SCHEMA,
   QUEUED_JOB_SCHEMA,
   SAVED_CANAL_NOTIFICATION_SCHEMA,
   VEILLE_SCHEMA,
   VERSION_SCHEMA,
   type Artefact,
-  type Candidat,
+  type Candidate,
   type DelaiParDefaut,
   type FicheDePoste,
   type Job,
@@ -27,11 +27,11 @@ import {
   type Module,
   type Offre,
   type Parametres,
-  type PieceFileName,
-  type ProfilJob,
+  type ProfileJob,
   type QueuedJob,
   type SavedCanalNotification,
   type Statut,
+  type UploadFileName,
   type Veille,
   type Version,
 } from '#/domain/index.ts';
@@ -53,7 +53,7 @@ const OFFRE_INCLUDE = {
   republicationOf: LINKED_OFFRE_SELECT,
   republicationList: { ...LINKED_OFFRE_SELECT, orderBy: { reference: 'asc' } },
 } as const;
-// The single row of the Délai par défaut every Candidat shares
+// The single row of the Délai par défaut every Candidate shares
 const DELAI_PAR_DEFAUT_ID = 1;
 // The Délai par défaut of a new database, that of the example config of older versions
 const DEFAULT_DELAY_MONTHS = 6;
@@ -61,7 +61,7 @@ const DEFAULT_DELAY_MONTHS = 6;
 const JOB_INCLUDE = { offre: { include: OFFRE_INCLUDE }, version: { include: VERSION_INCLUDE } };
 
 export interface INewOffre {
-  candidatId: string;
+  candidateId: string;
   source: string;
   listedOffre: ListedOffre;
   ficheDePoste: FicheDePoste;
@@ -136,18 +136,18 @@ export function openDatabase(databasePath: string) {
   }
 
   return {
-    async listCandidats(): Promise<Candidat[]> {
-      return z.array(CANDIDAT_SCHEMA).parse(await prisma.candidat.findMany({ orderBy: { name: 'asc' } }));
+    async listCandidates(): Promise<Candidate[]> {
+      return z.array(CANDIDATE_SCHEMA).parse(await prisma.candidate.findMany({ orderBy: { name: 'asc' } }));
     },
 
     // Secret Paramètres included, for the actions to reduce or send, never to return (ADR-0006)
-    async findCanalNotification(candidatId: string): Promise<SavedCanalNotification> {
-      const { name, canalNotification } = await prisma.candidat.findUniqueOrThrow({
-        where: { id: candidatId },
+    async findCanalNotification(candidateId: string): Promise<SavedCanalNotification> {
+      const { name, canalNotification } = await prisma.candidate.findUniqueOrThrow({
+        where: { id: candidateId },
         include: { canalNotification: true },
       });
       return SAVED_CANAL_NOTIFICATION_SCHEMA.parse({
-        candidatName: name,
+        candidateName: name,
         module: canalNotification?.module ?? null,
         parametres: canalNotification?.parametres ?? {},
       });
@@ -155,22 +155,22 @@ export function openDatabase(databasePath: string) {
 
     // The Paramètres replace the saved ones as a whole: the actions merge them first (ADR-0010)
     async saveCanalNotification(
-      candidatId: string,
+      candidateId: string,
       { module, parametres }: { module: string; parametres: Parametres },
     ) {
       await prisma.canalNotification.upsert({
-        where: { candidatId },
-        create: { candidatId, module, parametres },
+        where: { candidateId },
+        create: { candidateId, module, parametres },
         update: { module, parametres },
       });
     },
 
-    async createCandidat({ id, name }: { id: string; name: string }): Promise<void> {
-      await prisma.candidat.create({ data: { id, name } });
+    async createCandidate({ id, name }: { id: string; name: string }): Promise<void> {
+      await prisma.candidate.create({ data: { id, name } });
     },
 
-    async renameCandidat({ id }: Candidat, name: string): Promise<void> {
-      await prisma.candidat.update({ where: { id }, data: { name } });
+    async renameCandidate({ id }: Candidate, name: string): Promise<void> {
+      await prisma.candidate.update({ where: { id }, data: { name } });
     },
 
     // Whether the Délai par défaut exists: from then on, the config an older jf left is never read
@@ -179,7 +179,7 @@ export function openDatabase(databasePath: string) {
       return (await prisma.delaiParDefaut.count()) > 0;
     },
 
-    // Creates the Délai par défaut, from the config an older jf left when there is one: its Candidats
+    // Creates the Délai par défaut, from the config an older jf left when there is one: its Candidates
     // and Veilles are added or updated, never deleted, and each Veille keeps when its Détection last
     // went through. The row is claimed first, so a process launched at the same time imports nothing.
     async createDelaiParDefaut(config: Config | null): Promise<void> {
@@ -191,10 +191,10 @@ export function openDatabase(databasePath: string) {
         if (claimedCount === 0 || config === null) {
           return;
         }
-        for (const { id, name, veilleList } of config.candidatList) {
-          await transaction.candidat.upsert({ where: { id }, create: { id, name }, update: { name } });
+        for (const { id, name, veilleList } of config.candidateList) {
+          await transaction.candidate.upsert({ where: { id }, create: { id, name }, update: { name } });
           for (const { id: veilleId, source, parametres } of veilleList) {
-            const veille = { candidatId: id, source, parametres };
+            const veille = { candidateId: id, source, parametres };
             await transaction.veille.upsert({
               where: { id: veilleId },
               create: { id: veilleId, ...veille },
@@ -219,18 +219,18 @@ export function openDatabase(databasePath: string) {
       defaultDelayMonths = months;
     },
 
-    // Every Veille, for the Détection, or those of a Candidat
-    async listVeilles(candidatId?: string): Promise<Veille[]> {
+    // Every Veille, for the Détection, or those of a Candidate
+    async listVeilles(candidateId?: string): Promise<Veille[]> {
       return z.array(VEILLE_SCHEMA).parse(
         await prisma.veille.findMany({
-          where: candidatId === undefined ? {} : { candidatId },
+          where: candidateId === undefined ? {} : { candidateId },
           orderBy: { id: 'asc' },
         }),
       );
     },
 
     // A new Veille is on its first launch: detectedAt stays null
-    async createVeille(veille: { id: string; candidatId: string; source: string; parametres: Parametres }) {
+    async createVeille(veille: { id: string; candidateId: string; source: string; parametres: Parametres }) {
       await prisma.veille.create({ data: veille });
     },
 
@@ -239,15 +239,15 @@ export function openDatabase(databasePath: string) {
       await prisma.veille.update({ where: { id }, data: { source, parametres, detectedAt: null } });
     },
 
-    // Its Offres stay: they belong to the Candidat, not to the Veille
+    // Its Offres stay: they belong to the Candidate, not to the Veille
     async deleteVeille({ id }: Veille): Promise<void> {
       await prisma.veille.delete({ where: { id } });
     },
 
-    async listOffres(candidatId: string): Promise<Offre[]> {
+    async listOffres(candidateId: string): Promise<Offre[]> {
       return z.array(OFFRE_SCHEMA).parse(
         await prisma.offre.findMany({
-          where: { candidatId },
+          where: { candidateId },
           orderBy: { reference: 'desc' },
           include: OFFRE_INCLUDE,
         }),
@@ -263,10 +263,10 @@ export function openDatabase(databasePath: string) {
     async startJob(
       { id, module, offre }: Job & { module: Artefact },
       {
-        consignes,
-        hasCandidatConsignes,
+        instructions,
+        hasCandidateInstructions,
         inputList,
-      }: { consignes: string; hasCandidatConsignes: boolean; inputList: { offre: Offre; version: Version }[] },
+      }: { instructions: string; hasCandidateInstructions: boolean; inputList: { offre: Offre; version: Version }[] },
     ): Promise<Version> {
       const { _max: max } = await prisma.version.aggregate({
         where: { offreId: offre.id, artefact: module },
@@ -280,8 +280,8 @@ export function openDatabase(databasePath: string) {
             artefact: module,
             number: (max.number ?? 0) + 1,
             state: 'running',
-            consignes,
-            hasCandidatConsignes,
+            instructions,
+            hasCandidateInstructions,
             jobId: id,
             inputList: {
               connect: inputList.map(({ offre: { id: offreId }, version: { artefact, number } }) => ({
@@ -332,7 +332,7 @@ export function openDatabase(databasePath: string) {
         );
     },
 
-    // A job of an Offre: those of a Profil are followed on its page
+    // A job of an Offre: those of a Profile are followed on its page
     async findJob(id: number): Promise<Job | null> {
       const job = await prisma.job.findUnique({ where: { id, offreId: { not: null } }, include: JOB_INCLUDE });
       return job === null ? null : JOB_SCHEMA.parse(job);
@@ -371,18 +371,18 @@ export function openDatabase(databasePath: string) {
         );
     },
 
-    async createProfilJob(candidatId: string, piece: PieceFileName): Promise<ProfilJob> {
-      return PROFIL_JOB_SCHEMA.parse(await prisma.job.create({ data: { module: 'conversion', candidatId, piece } }));
+    async createProfileJob(candidateId: string, upload: UploadFileName): Promise<ProfileJob> {
+      return PROFILE_JOB_SCHEMA.parse(await prisma.job.create({ data: { module: 'conversion', candidateId, upload } }));
     },
 
-    async listProfilJobs(candidatId: string): Promise<ProfilJob[]> {
+    async listProfileJobs(candidateId: string): Promise<ProfileJob[]> {
       return z
-        .array(PROFIL_JOB_SCHEMA)
-        .parse(await prisma.job.findMany({ where: { candidatId }, orderBy: { id: 'asc' } }));
+        .array(PROFILE_JOB_SCHEMA)
+        .parse(await prisma.job.findMany({ where: { candidateId }, orderBy: { id: 'asc' } }));
     },
 
-    async finishProfilJob({ id }: ProfilJob, { log, sessionId }: { log: string; sessionId: string | null }) {
-      return PROFIL_JOB_SCHEMA.parse(
+    async finishProfileJob({ id }: ProfileJob, { log, sessionId }: { log: string; sessionId: string | null }) {
+      return PROFILE_JOB_SCHEMA.parse(
         await prisma.job.update({ where: { id }, data: { state: 'done', log, sessionId } }),
       );
     },
@@ -405,19 +405,19 @@ export function openDatabase(databasePath: string) {
       await prisma.veille.update({ where: { id }, data: { detectedAt: new Date() } });
     },
 
-    // The Offres of its Candidat and Source that another Veille stored out of its own Zone since this
+    // The Offres of its Candidate and Source that another Veille stored out of its own Zone since this
     // one last went through, all of them on its first launch: they may be in the Zone of this one
-    async listOutOfZoneOffresSince({ candidatId, source, detectedAt }: Veille): Promise<Offre[]> {
+    async listOutOfZoneOffresSince({ candidateId, source, detectedAt }: Veille): Promise<Offre[]> {
       const since = detectedAt === null ? {} : { detectedAt: { gt: detectedAt } };
       return z.array(OFFRE_SCHEMA).parse(
         await prisma.offre.findMany({
-          where: { candidatId, source, isInZone: false, ...since },
+          where: { candidateId, source, isInZone: false, ...since },
           include: OFFRE_INCLUDE,
         }),
       );
     },
 
-    // An Offre is in the Zone as soon as it is in that of one of its Candidat's Veilles
+    // An Offre is in the Zone as soon as it is in that of one of its Candidate's Veilles
     async setInZone({ id }: Offre): Promise<Offre> {
       return OFFRE_SCHEMA.parse(
         await prisma.offre.update({ where: { id }, data: { isInZone: true }, include: OFFRE_INCLUDE }),
@@ -454,7 +454,7 @@ export function openDatabase(databasePath: string) {
     },
 
     async createOffre({
-      candidatId,
+      candidateId,
       source,
       listedOffre,
       ficheDePoste,
@@ -464,7 +464,7 @@ export function openDatabase(databasePath: string) {
     }: INewOffre): Promise<Offre> {
       const { reference, title, url, publishedAt } = listedOffre;
       const { dateLimite, employer, workplace, applicationEmail, contact1, contact2 } = ficheDePoste;
-      const data = { candidatId, source, reference, title, url, publishedAt, dateLimite, employer, workplace };
+      const data = { candidateId, source, reference, title, url, publishedAt, dateLimite, employer, workplace };
       return OFFRE_SCHEMA.parse(
         await prisma.offre.create({
           data: {

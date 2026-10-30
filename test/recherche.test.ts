@@ -4,7 +4,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
-import { RECHERCHE_DEFAULT_CONSIGNES } from '#/modules/recherche/consignes.ts';
+import { RECHERCHE_DEFAULT_INSTRUCTIONS } from '#/modules/recherche/instructions.ts';
 
 import { detectOffres as detectRecordedOffres, LEA_OFFRES_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
@@ -67,7 +67,7 @@ describe('recherche', () => {
     expect(readFileSync(path.join(offreDirectory, 'recherche/v2/recherche.md'), 'utf8')).toBe(secondRecherche);
   });
 
-  it('retains the Version the Candidat chooses', async () => {
+  it('retains the Version the Candidate chooses', async () => {
     const recherche = { fileByName: { 'recherche.md': RECHERCHE } };
     const { actions } = await detectOffres(createFakeAiSession(recherche, recherche));
     await runRecherche(actions);
@@ -82,7 +82,7 @@ describe('recherche', () => {
     ]);
   });
 
-  it('sends the fixed part of the prompt and the default Consignes, and keeps them in the Version', async () => {
+  it('sends the fixed part of the prompt and the default Instructions, and keeps them in the Version', async () => {
     const aiSession = createFakeAiSession({ fileByName: { 'recherche.md': RECHERCHE } });
     const { actions, offreDirectory } = await detectOffres(aiSession);
 
@@ -90,27 +90,27 @@ describe('recherche', () => {
 
     expect(aiSession.headlessSessionList).toHaveLength(1);
     expect(aiSession.headlessSessionList[0]).toMatchObject({
-      consignes: RECHERCHE_DEFAULT_CONSIGNES,
+      instructions: RECHERCHE_DEFAULT_INSTRUCTIONS,
       directory: offreDirectory,
       outputDirectory: path.join(offreDirectory, 'recherche/v1'),
     });
     expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain("N'invente jamais un fait.");
     expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain('`recherche/v1/recherche.md`');
-    expect(version).toMatchObject({ consignes: RECHERCHE_DEFAULT_CONSIGNES, inputList: [] });
+    expect(version).toMatchObject({ instructions: RECHERCHE_DEFAULT_INSTRUCTIONS, inputList: [] });
   });
 
-  it("replaces the default Consignes with the Candidat's own, keeping the fixed part", async () => {
-    const consignes = 'Insiste sur la justice des mineurs dans le ressort de Béthune.\n';
+  it("replaces the default Instructions with the Candidate's own, keeping the fixed part", async () => {
+    const instructions = 'Insiste sur la justice des mineurs dans le ressort de Béthune.\n';
     const aiSession = createFakeAiSession({ fileByName: { 'recherche.md': RECHERCHE } });
     const { actions, dataDirectory } = await detectOffres(aiSession);
-    mkdirSync(path.join(dataDirectory, 'candidats/lea/consignes'));
-    writeFileSync(path.join(dataDirectory, 'candidats/lea/consignes/recherche.md'), consignes);
+    mkdirSync(path.join(dataDirectory, 'candidates/lea/instructions'));
+    writeFileSync(path.join(dataDirectory, 'candidates/lea/instructions/recherche.md'), instructions);
 
     const { version } = await runRecherche(actions);
 
-    expect(aiSession.headlessSessionList[0]?.consignes).toBe(consignes);
+    expect(aiSession.headlessSessionList[0]?.instructions).toBe(instructions);
     expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain("N'invente jamais un fait.");
-    expect(version?.consignes).toBe(consignes);
+    expect(version?.instructions).toBe(instructions);
   });
 });
 

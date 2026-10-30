@@ -10,7 +10,7 @@ const FAKE_CLAUDE_DIRECTORY = path.join(import.meta.dirname, 'fixtures', 'claude
 
 const SESSION = {
   fixedPrompt: "Tu produis la Recherche d'une Offre.\nN'invente jamais un fait.",
-  consignes: 'Va droit au but.\n',
+  instructions: 'Va droit au but.\n',
   readDirectoryList: [],
 };
 
@@ -55,15 +55,15 @@ describe('the headless launch of Claude Code', () => {
     expect(argumentList).toEqual(expect.arrayContaining(['-p', 'dontAsk', 'Edit(//donnees/recherche/v1/**)']));
     expect(argumentList).not.toContain('--add-dir');
     expect(argumentList[argumentList.indexOf('--append-system-prompt') + 1]).toBe(SESSION.fixedPrompt);
-    expect(readRecord(recordDirectory, 'message')).toBe(SESSION.consignes);
+    expect(readRecord(recordDirectory, 'message')).toBe(SESSION.instructions);
     expect(readRecord(recordDirectory, 'directory').trim()).toBe(realpathSync(directory));
     expect(readRecord(recordDirectory, 'environment')).not.toMatch(/^(?:ANTHROPIC_API_KEY|CLAUDECODE)=/m);
   });
 
-  // The Lettre reads the Profil and the Lettres already sent, outside the folder of its Offre
+  // The Lettre reads the Profile and the Lettres already sent, outside the folder of its Offre
   it('lets the session read the folders it is given besides its own', async () => {
     const recordDirectory = stubClaude({ subtype: 'success', is_error: false, session_id: 'session-3' });
-    const readDirectoryList = ['/donnees/profil', '/donnees/offres/2026-2445609/lettre/v1'];
+    const readDirectoryList = ['/donnees/profile', '/donnees/offres/2026-2445609/lettre/v1'];
 
     await CLAUDE_CODE.runHeadless({
       ...SESSION,

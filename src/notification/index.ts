@@ -12,13 +12,13 @@ import { declareParametres, labelOf, type ParametreShape, type ParametresOf } fr
 // The contract of the family of the Canaux de notification: what each module of
 // src/modules/notification-<nom>/ declares, and what the rest of the application knows of them (ADR-0010)
 
-// What the Candidat reads on their phone
+// What the Candidate reads on their phone
 export interface INotification {
   title: string;
   message: string;
 }
 
-// What the Candidat typed, each Paramètre perhaps missing
+// What the Candidate typed, each Paramètre perhaps missing
 type TrialOf<TShape extends ParametreShape> = z.output<
   z.ZodObject<{ -readonly [TName in keyof TShape]: z.ZodOptional<TShape[TName]> }>
 >;
@@ -26,7 +26,7 @@ type TrialOf<TShape extends ParametreShape> = z.output<
 type ChoiceLister<TShape extends ParametreShape> = (parametres: TrialOf<TShape>) => Promise<ParametreChoice[]>;
 
 // What a module of the family exports, through defineCanalNotification. Testing the Canal and
-// listing the choices of a Paramètre try what the Candidat typed, so each Paramètre may be missing.
+// listing the choices of a Paramètre try what the Candidate typed, so each Paramètre may be missing.
 interface ICanalNotificationDefinition<TShape extends ParametreShape> {
   id: string;
   name: string;
@@ -72,7 +72,7 @@ export function defineCanalNotification<TShape extends ParametreShape>(
     },
     async listChoices(parametreName, rawParametres) {
       const listChoices = Object.entries<ChoiceLister<TShape> | undefined>(listChoicesByParametre).find(
-        ([candidate]) => candidate === parametreName,
+        ([key]) => key === parametreName,
       )?.[1];
       if (listChoices === undefined) {
         throw new Error(
@@ -117,7 +117,7 @@ export function composeRepublicationNotification(offre: Offre, republishedOffre:
   };
 }
 
-// The Candidat already applied to the Offre published again: they decide whether to apply again
+// The Candidate already applied to the Offre published again: they decide whether to apply again
 export function composeRepublicationPostuleeNotification(offre: Offre, republishedOffre: Offre): INotification {
   return {
     title: "Republication d'une Offre Postulée",
@@ -130,9 +130,9 @@ export function composeRepublicationPostuleeNotification(offre: Offre, republish
   };
 }
 
-// What the Candidat receives when they try their Canal de notification
-export function composeTestNotification(candidatName: string): INotification {
-  return { title: 'Notification de test', message: `Le Canal de notification de ${candidatName} fonctionne.` };
+// What the Candidate receives when they try their Canal de notification
+export function composeTestNotification(candidateName: string): INotification {
+  return { title: 'Notification de test', message: `Le Canal de notification de ${candidateName} fonctionne.` };
 }
 
 export function composeRecherchePreteNotification(offre: Offre): INotification {

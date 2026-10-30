@@ -34,7 +34,7 @@ export function isExpiree(
   return lastDay !== undefined && FRANCE_DAY_FORMAT.format(now) > lastDay;
 }
 
-// Postulée once, even if Archivée since: the Candidat sent its Lettre retenue. An Offre Postulée
+// Postulée once, even if Archivée since: the Candidate sent its Lettre retenue. An Offre Postulée
 // before postuleeAt existed has none.
 export function hasBeenPostulee({ statut, postuleeAt }: Pick<Offre, 'statut' | 'postuleeAt'>): boolean {
   return statut === 'postulee' || postuleeAt !== null;

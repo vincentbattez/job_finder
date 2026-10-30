@@ -9,9 +9,9 @@ datasource db {
   provider = "sqlite"
 }
 
-// Candidats, their Veilles and the Délai par défaut are written from the front: the database is
-// their source of truth (ADR-0011). A Candidat is never deleted, so the rows tied to them stay.
-model Candidat {
+// Candidates, their Veilles and the Délai par défaut are written from the front: the database is
+// their source of truth (ADR-0011). A Candidate is never deleted, so the rows tied to them stay.
+model Candidate {
   id                String             @id
   name              String
   veilleList        Veille[]
@@ -20,7 +20,7 @@ model Candidat {
   jobList           Job[]
 }
 
-// The Délai par défaut every Candidat shares, in a single row. Created at the first launch, from the
+// The Délai par défaut every Candidate shares, in a single row. Created at the first launch, from the
 // data/config.json an older jf read when one is left, imported once and never read again (ADR-0011).
 model DelaiParDefaut {
   id     Int @id
@@ -28,33 +28,33 @@ model DelaiParDefaut {
   months Int
 }
 
-// The Canal de notification a Candidat chose, saved from the front. Its Paramètres are those of its
+// The Canal de notification a Candidate chose, saved from the front. Its Paramètres are those of its
 // module, parsed by the module's schema (ADR-0010); a secret one is write-only, no action returns it
 // (ADR-0006).
 model CanalNotification {
-  candidat   Candidat @relation(fields: [candidatId], references: [id], onDelete: Cascade)
-  candidatId String   @id
-  module     String
-  parametres Json
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId String    @id
+  module      String
+  parametres  Json
 }
 
 model Veille {
-  id         String    @id
-  candidat   Candidat  @relation(fields: [candidatId], references: [id])
-  candidatId String
+  id          String    @id
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  candidateId String
   // The Source the Veille follows, and its Paramètres, its Zone among them: they are those of the
   // Source, parsed by the Source's schema (ADR-0010)
-  source     String
-  parametres Json
+  source      String
+  parametres  Json
   // When a Détection of this Veille last went through; null during its first launch, which may take
   // several Détections when one is cut off
-  detectedAt DateTime?
+  detectedAt  DateTime?
 }
 
 model Offre {
   id                Int         @id @default(autoincrement())
-  candidat          Candidat    @relation(fields: [candidatId], references: [id])
-  candidatId        String
+  candidate         Candidate   @relation(fields: [candidateId], references: [id])
+  candidateId       String
   source            String
   reference         String
   title             String
@@ -82,7 +82,7 @@ model Offre {
   versionList       Version[]
   jobList           Job[]
 
-  @@unique([candidatId, source, reference])
+  @@unique([candidateId, source, reference])
 }
 
 enum OffreStatut {
@@ -93,23 +93,23 @@ enum OffreStatut {
 
 // A Version of the lettre Artefact holds a pair: the Brouillon, never changed, and the Lettre.
 model Version {
-  id                   Int          @id @default(autoincrement())
-  offre                Offre        @relation(fields: [offreId], references: [id])
-  offreId              Int
-  artefact             Artefact
-  number               Int
-  isRetenue            Boolean      @default(false)
-  state                VersionState
-  consignes            String
-  // Whether those Consignes are the Candidat's own rather than the module's default ones
-  hasCandidatConsignes Boolean      @default(false)
+  id                       Int          @id @default(autoincrement())
+  offre                    Offre        @relation(fields: [offreId], references: [id])
+  offreId                  Int
+  artefact                 Artefact
+  number                   Int
+  isRetenue                Boolean      @default(false)
+  state                    VersionState
+  instructions             String
+  // Whether those Instructions are the Candidate's own rather than the module's default ones
+  hasCandidateInstructions Boolean      @default(false)
   // The Versions this one read as input
-  inputList            Version[]    @relation("Input")
-  readByList           Version[]    @relation("Input")
-  createdAt            DateTime     @default(now())
+  inputList                Version[]    @relation("Input")
+  readByList               Version[]    @relation("Input")
+  createdAt                DateTime     @default(now())
   // The job that produced this Version, so a job can be followed to its Version
-  job                  Job?         @relation(fields: [jobId], references: [id])
-  jobId                Int?         @unique
+  job                      Job?         @relation(fields: [jobId], references: [id])
+  jobId                    Int?         @unique
 
   @@unique([offreId, artefact, number])
 }
@@ -127,19 +127,19 @@ enum VersionState {
   failed
 }
 
-// A job works on an Offre, or on the Profil of a Candidat: the conversion of one of its Pièces
+// A job works on an Offre, or on the Profile of a Candidate: the conversion of one of its Uploads
 model Job {
-  id         Int       @id @default(autoincrement())
-  module     String
-  offre      Offre?    @relation(fields: [offreId], references: [id], onDelete: Restrict)
-  offreId    Int?
-  candidat   Candidat? @relation(fields: [candidatId], references: [id], onDelete: Cascade)
-  candidatId String?
-  piece      String?
-  state      JobState  @default(queued)
-  log        String    @default("")
-  sessionId  String?
-  version    Version?
+  id          Int        @id @default(autoincrement())
+  module      String
+  offre       Offre?     @relation(fields: [offreId], references: [id], onDelete: Restrict)
+  offreId     Int?
+  candidate   Candidate? @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId String?
+  upload      String?
+  state       JobState   @default(queued)
+  log         String     @default("")
+  sessionId   String?
+  version     Version?
 }
 
 enum JobState {

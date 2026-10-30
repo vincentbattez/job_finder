@@ -103,7 +103,7 @@ export default defineConfig(
     rules: { 'sonarjs/no-clear-text-protocols': 'off' },
   },
   {
-    // A field typed into shows an example of what goes in it, so the Candidat knows what to write. A
+    // A field typed into shows an example of what goes in it, so the Candidate knows what to write. A
     // select is left out: its first option is a choice of its own, such as « Toutes », or a hint.
     files: ['src/web/**/*.tsx'],
     rules: {

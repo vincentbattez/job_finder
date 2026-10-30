@@ -21,7 +21,7 @@ async function openJadeVeilles(page: Page) {
 }
 
 // The form of a Veille, built from the descriptor of its Source (ADR-0010)
-test('creates, changes and deletes a Veille of the Profil', async ({ page }) => {
+test('creates, changes and deletes a Veille of the Profile', async ({ page }) => {
   const veilles = await openJadeVeilles(page);
   const creation = veilles.getByRole('group', { name: 'Nouvelle Veille' });
 

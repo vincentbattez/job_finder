@@ -152,7 +152,7 @@ function findModuleNamesOutsideTheirFolder(projectDirectory: string): string[] {
   });
 }
 
-// The database holds the Candidats, their Veilles and the Délai par défaut, which the front writes:
+// The database holds the Candidates, their Veilles and the Délai par défaut, which the front writes:
 // data/config.json is read only by the anti-corruption layer that imports it once (ADR-0011). Any
 // mention counts, a message or a comment included, since each points someone back to the file.
 const LEGACY_CONFIG_READER_PATH = 'src/workspace/acl/config.ts';
@@ -250,12 +250,12 @@ describe('architecture', () => {
       createProject({
         'src/modules/notification-home-assistant/index.ts': 'export const homeAssistant = 1;\n',
         'src/actions/modules.ts': "import { homeAssistant } from '#/modules/notification-home-assistant/index.ts';\n",
-        'src/web/routes/profil.tsx': content,
+        'src/web/routes/profile.tsx': content,
       }),
     );
 
     expect(findModuleNamesOutsideTheirFolder(projectDirectory)).toEqual([
-      'src/web/routes/profil.tsx names home-assistant',
+      'src/web/routes/profile.tsx names home-assistant',
     ]);
   });
 
@@ -263,7 +263,7 @@ describe('architecture', () => {
     const projectDirectory = path.dirname(
       createProject({
         'src/modules/notification-telegram/index.ts': 'export const telegram = 1;\n',
-        'prisma/schema.prisma': 'model ConnexionTelegram {\n  candidatId String @id\n  botToken String\n}\n',
+        'prisma/schema.prisma': 'model ConnexionTelegram {\n  candidateId String @id\n  botToken String\n}\n',
       }),
     );
 

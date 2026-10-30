@@ -120,12 +120,12 @@ describe('detection on the responses recorded on 2026-10-29', () => {
   });
 
   async function findOffre(reference: string): Promise<Offre | undefined> {
-    const offreList = await actions.listOffres({ candidatId: 'lea' });
+    const offreList = await actions.listOffres({ candidateId: 'lea' });
     return offreList.find((offre) => offre.reference === reference);
   }
 
   it('retains every attaché de justice offer of the feed, and no known false positive', async () => {
-    const offreList = await actions.listOffres({ candidatId: 'lea' });
+    const offreList = await actions.listOffres({ candidateId: 'lea' });
 
     expect(offreList.map((offre) => offre.reference).toSorted((left, right) => left.localeCompare(right))).toEqual(
       ATTACHE_DE_JUSTICE_REFERENCE_LIST,
@@ -133,7 +133,7 @@ describe('detection on the responses recorded on 2026-10-29', () => {
   });
 
   it('places in the Zone the Offres of the courts of appeal of Douai and Amiens, whatever department they show', async () => {
-    const offreList = await actions.listOffres({ candidatId: 'lea' });
+    const offreList = await actions.listOffres({ candidateId: 'lea' });
 
     expect(offreList.filter((offre) => offre.isInZone).map((offre) => offre.reference)).toEqual([
       '2026-2445609',
@@ -150,7 +150,7 @@ describe('detection on the responses recorded on 2026-10-29', () => {
 
   it('records the fields of the detail page as published', async () => {
     expect(await findOffre('2026-2445600')).toMatchObject({
-      candidatId: 'lea',
+      candidateId: 'lea',
       reference: '2026-2445600',
       title: 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE',
       url: 'https://choisirleservicepublic.gouv.fr/offre-emploi/2026-2445600/?tracking=1&idOrigine=502',
@@ -179,7 +179,7 @@ describe('detection on the responses recorded on 2026-10-29', () => {
   });
 
   it('locates every Offre, those out of the Zone too', async () => {
-    const offreList = await actions.listOffres({ candidatId: 'lea' });
+    const offreList = await actions.listOffres({ candidateId: 'lea' });
 
     expect(offreList.filter(({ latitude, longitude }) => latitude === null || longitude === null)).toEqual([]);
     expect(await findOffre('2026-2430337')).toMatchObject({
@@ -201,7 +201,7 @@ describe('detection on the responses recorded on 2026-10-29', () => {
     const fichePoste = readFileSync(
       path.join(
         dataDirectory,
-        'candidats/lea/offres',
+        'candidates/lea/offres',
         '2026-2445600-attache-de-justice-affecte-aupres-des-magistrats-du-siege-tribunal-pour-enfants-tj-bethune',
         'fiche-de-poste.md',
       ),
@@ -247,7 +247,7 @@ describe('a second detection', () => {
     const { actions, detectionList } = await detectTwice({ [DSJ_FEED_URL]: { body: republishedFeed } });
 
     expect(detectionList).toMatchObject([{ isFirstLaunch: false, newOffreList: [] }]);
-    const offreList = await actions.listOffres({ candidatId: 'lea' });
+    const offreList = await actions.listOffres({ candidateId: 'lea' });
     expect(offreList).toHaveLength(ATTACHE_DE_JUSTICE_REFERENCE_LIST.length);
     expect(offreList.find(({ reference }) => reference === '2026-2445600')?.publishedAt).toEqual(
       new Date('2026-10-20T09:28:40Z'),
@@ -266,7 +266,7 @@ describe('a second detection', () => {
 
     await actions.detect();
 
-    const offreList = await actions.listOffres({ candidatId: 'lea' });
+    const offreList = await actions.listOffres({ candidateId: 'lea' });
     expect(offreList.filter(({ latitude }) => latitude === null)).toEqual([]);
     expect(offreList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
       city: 'Béthune',
@@ -320,7 +320,7 @@ describe('a ville API Géo does not know', () => {
     const recordedFetch = createRecordedFetch({ [BETHUNE_API_GEO_URL]: { body: '[]' } });
     const firstActions = await createActions({ dataDirectory, fetch: recordedFetch.fetch });
     await firstActions.detect();
-    const firstOffreList = await firstActions.listOffres({ candidatId: 'lea' });
+    const firstOffreList = await firstActions.listOffres({ candidateId: 'lea' });
     expect(firstOffreList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
       city: 'Béthune',
       region: null,
@@ -331,7 +331,7 @@ describe('a ville API Géo does not know', () => {
 
     await actions.detect();
 
-    const offreList = await actions.listOffres({ candidatId: 'lea' });
+    const offreList = await actions.listOffres({ candidateId: 'lea' });
     expect(offreList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
       city: 'Béthune',
       latitude: 50.5299,
@@ -384,7 +384,7 @@ it('reads pages holding invalid UTF-8 and private-use characters', async () => {
 
   await actions.detect();
 
-  const offreList = await actions.listOffres({ candidatId: 'lea' });
+  const offreList = await actions.listOffres({ candidateId: 'lea' });
   expect(offreList.find(({ reference }) => reference === '2026-2445600')?.workplace).toBe(
     'Tribunal Judiciaire de B\u{FFFD}ethune',
   );

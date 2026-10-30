@@ -31,8 +31,8 @@ export interface IArtefactVersions {
       number: number;
       state: VersionState;
       isRetenue: boolean;
-      hasCandidatConsignes: boolean;
-      consignes: string;
+      hasCandidateInstructions: boolean;
+      instructions: string;
       createdAt: Date;
     };
     isRetenable: boolean;

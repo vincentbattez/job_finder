@@ -15,7 +15,7 @@ async function detectWithDefaultDelay(months: number): Promise<Actions> {
 }
 
 async function findOffre(actions: Actions, reference: string) {
-  const offreList = await actions.listOffres({ candidatId: 'lea' });
+  const offreList = await actions.listOffres({ candidateId: 'lea' });
   return offreList.find((offre) => offre.reference === reference);
 }
 
@@ -48,7 +48,7 @@ describe('statut of an Offre', () => {
     expect(await findStatus('2026-2445600')).toBe('postulee');
   });
 
-  it('marks as Postulées the Boulogne Offres the Candidat applied to before the tool, though Expirées', async () => {
+  it('marks as Postulées the Boulogne Offres the Candidate applied to before the tool, though Expirées', async () => {
     await actions.changeStatut({ reference: '2026-2231960', statut: 'postulee' });
     await actions.changeStatut({ reference: '2026-2338409', statut: 'postulee' });
 
@@ -140,14 +140,14 @@ describe('statut of an Offre', () => {
   });
 });
 
-it('refuses a reference shared by the Offres of two Candidats', async () => {
+it('refuses a reference shared by the Offres of two Candidates', async () => {
   const actions = await createActions({
     dataDirectory: createMigratedDataDirectory(),
     fetch: createRecordedFetch().fetch,
   });
-  for (const candidatId of ['lea', 'camille']) {
-    await actions.createCandidat({ id: candidatId, name: candidatId });
-    await actions.saveVeille({ candidatId, ...LEA_VEILLE });
+  for (const candidateId of ['lea', 'camille']) {
+    await actions.createCandidate({ id: candidateId, name: candidateId });
+    await actions.saveVeille({ candidateId, ...LEA_VEILLE });
   }
   await actions.detect();
 

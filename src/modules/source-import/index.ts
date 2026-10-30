@@ -10,7 +10,7 @@ import { composeExtractionPrompt, EXTRACTION_REQUEST } from './prompt.ts';
 // The folder of the Offre where the session writes what it read
 const EXTRACTION_DIRECTORY_NAME = 'extraction';
 
-// The Source Import Markdown: a Fiche de poste the Candidat found elsewhere
+// The Source Import Markdown: a Fiche de poste the Candidate found elsewhere
 export function createImportSource(aiSession: IAiSession) {
   return {
     // The Offre as the import lists it, before Claude reads its fields: known by the content of its
@@ -39,7 +39,7 @@ export function createImportSource(aiSession: IAiSession) {
       emptyExtractionDirectory(outputDirectory);
       const session = await aiSession.runHeadless({
         fixedPrompt: composeExtractionPrompt(path.join(EXTRACTION_DIRECTORY_NAME, EXTRACTION_FILE_NAME)),
-        consignes: EXTRACTION_REQUEST,
+        instructions: EXTRACTION_REQUEST,
         directory: offreDirectory,
         readDirectoryList: [],
         outputDirectory,

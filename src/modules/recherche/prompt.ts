@@ -21,8 +21,8 @@ Ne refais pas ce travail : pars de sa Recherche, vérifie ce que la Fiche de pos
 `;
 }
 
-// The fixed part sets the objective and the rules no Consignes can lift (ADR-0003); the way to
-// reach it is left to the session and its Consignes
+// The fixed part sets the objective and the rules no Instructions can lift (ADR-0003); the way to
+// reach it is left to the session and its Instructions
 export function composeRecherchePrompt({ offre, outputDirectory, readVersionList }: IPromptInput): string {
   const outputPath = `${outputDirectory}/${RECHERCHE_FILE_NAME}`;
   return `Tu produis la Recherche d'une Offre d'emploi, pour le Candidat qui va y postuler. Écris en français.

@@ -5,18 +5,18 @@ import type { Actions } from '#/actions/index.ts';
 
 import { useIsHydrated } from './use-is-hydrated.ts';
 
-type Rubrique = Awaited<ReturnType<Actions['readFaits']>>[number];
+type Section = Awaited<ReturnType<Actions['readFacts']>>[number];
 
-// A list rubrique, such as Diplômes: each entry is a field the Candidat adds or removes. Its key
+// A list section, such as Diplômes: each entry is a field the Candidate adds or removes. Its key
 // keeps each field with its text when an entry above it goes.
-function ListRubrique({ title, example, entryList }: Readonly<Rubrique>) {
+function ListSection({ title, example, entryList }: Readonly<Section>) {
   const [entryItemList, setEntryItemList] = useState(() => entryList.map((entry, key) => ({ key, entry })));
   const isHydrated = useIsHydrated();
   return (
-    <fieldset className="faits__rubrique">
+    <fieldset className="facts__section">
       <legend>{title}</legend>
       {entryItemList.map(({ key, entry }, index) => (
-        <div key={key} className="faits__entry">
+        <div key={key} className="facts__entry">
           <label>
             Entrée {index + 1}
             <textarea name={title} defaultValue={entry} rows={2} placeholder={example} />
@@ -47,27 +47,27 @@ function ListRubrique({ title, example, entryList }: Readonly<Rubrique>) {
   );
 }
 
-// The Faits by rubrique, read from faits.md and written back into it; the rest of the file stays as
+// The Facts by section, read from facts.md and written back into it; the rest of the file stays as
 // written
-export function FaitsForm({ rubriqueList }: Readonly<{ rubriqueList: Rubrique[] }>) {
+export function FactsForm({ sectionList }: Readonly<{ sectionList: Section[] }>) {
   const headingId = useId();
   return (
-    <section className="faits" aria-labelledby={headingId}>
+    <section className="facts" aria-labelledby={headingId}>
       <h2 id={headingId}>Faits</h2>
-      <p>Ce que vous avez validé sur vous-même, rubrique par rubrique. Le formulaire écrit dans faits.md.</p>
+      <p>Ce que vous avez validé sur vous-même, rubrique par rubrique. Le formulaire écrit dans facts.md.</p>
       <Form method="post" preventScrollReset>
-        <input type="hidden" name="intent" value="faits" />
-        {rubriqueList.map((rubrique) =>
-          rubrique.isList ? (
-            <ListRubrique key={rubrique.title} {...rubrique} />
+        <input type="hidden" name="intent" value="facts" />
+        {sectionList.map((section) =>
+          section.isList ? (
+            <ListSection key={section.title} {...section} />
           ) : (
-            <label key={rubrique.title} className="faits__rubrique">
-              {rubrique.title}
+            <label key={section.title} className="facts__section">
+              {section.title}
               <textarea
-                name={rubrique.title}
-                defaultValue={rubrique.entryList.join('\n\n')}
+                name={section.title}
+                defaultValue={section.entryList.join('\n\n')}
                 rows={2}
-                placeholder={rubrique.example}
+                placeholder={section.example}
               />
             </label>
           ),

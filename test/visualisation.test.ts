@@ -4,7 +4,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
-import { VISUALISATION_DEFAULT_CONSIGNES } from '#/modules/visualisation/consignes.ts';
+import { VISUALISATION_DEFAULT_INSTRUCTIONS } from '#/modules/visualisation/instructions.ts';
 
 import { detectOffres as detectRecordedOffres, LEA_OFFRES_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
@@ -103,12 +103,12 @@ describe('visualisation', () => {
     const aiSession = createFakeAiSession(RECHERCHE_RUN, FICHE_RUN, visualisationRun());
     const { actions } = await produceVisualisation(aiSession);
 
-    const { fixedPrompt, consignes } = aiSession.headlessSessionList.at(-1) ?? {};
+    const { fixedPrompt, instructions } = aiSession.headlessSessionList.at(-1) ?? {};
     expect(fixedPrompt).toContain("même contenu que la Fiche d'entretien, mis en forme : n'ajoute aucun fait");
     expect(fixedPrompt).toContain('Aucun JavaScript');
-    expect(consignes).toBe(VISUALISATION_DEFAULT_CONSIGNES);
+    expect(instructions).toBe(VISUALISATION_DEFAULT_INSTRUCTIONS);
     const [version] = await actions.listVersions({ reference: REFERENCE, artefact: 'visualisation' });
-    expect(version?.consignes).toBe(VISUALISATION_DEFAULT_CONSIGNES);
+    expect(version?.instructions).toBe(VISUALISATION_DEFAULT_INSTRUCTIONS);
   });
 
   it("refuses to run without a Fiche d'entretien retenue, before queuing anything", async () => {

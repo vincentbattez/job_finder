@@ -26,12 +26,12 @@ async function openActions() {
 
 // The Canal de notification of the module home-assistant, through the generic actions of the family
 // (ADR-0010)
-function saveCanal(actions: Actions, parametres: object, candidatId = 'lea') {
-  return actions.saveCanalNotification({ candidatId, canal: 'home-assistant', parametres });
+function saveCanal(actions: Actions, parametres: object, candidateId = 'lea') {
+  return actions.saveCanalNotification({ candidateId, canal: 'home-assistant', parametres });
 }
 
 function testCanal(actions: Actions, parametres: object = {}) {
-  return actions.testCanalNotification({ candidatId: 'lea', parametres });
+  return actions.testCanalNotification({ candidateId: 'lea', parametres });
 }
 
 // A first Détection on the feed as it was before the two Béthune Offres, then the actions for the
@@ -43,7 +43,7 @@ async function detectBeforeBethune(dataDirectory: string) {
   return createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
 }
 
-describe('the Canal de notification Home Assistant of a Candidat', () => {
+describe('the Canal de notification Home Assistant of a Candidate', () => {
   it('is one of the Canaux offered, with its address, its write-only token and its service to choose', async () => {
     const actions = await openActions();
 
@@ -70,7 +70,7 @@ describe('the Canal de notification Home Assistant of a Candidat', () => {
     await expect(testCanal(actions)).resolves.toBeUndefined();
   });
 
-  it('tells the Candidat to replace a token Home Assistant refuses', async () => {
+  it('tells the Candidate to replace a token Home Assistant refuses', async () => {
     const { url } = await startHomeAssistant();
     const actions = await openActions();
     await saveCanal(actions, { url, token: 'jeton-révoqué', service: LEA_SERVICE });
@@ -80,7 +80,7 @@ describe('the Canal de notification Home Assistant of a Candidat', () => {
     );
   });
 
-  it('tells the Candidat to check the address of a Home Assistant it cannot reach', async () => {
+  it('tells the Candidate to check the address of a Home Assistant it cannot reach', async () => {
     const { url, token, simulateFailure } = await startHomeAssistant();
     simulateFailure('unreachable');
     const actions = await openActions();
@@ -96,7 +96,7 @@ describe('the Canal de notification Home Assistant of a Candidat', () => {
     const actions = await openActions();
 
     const choiceList = await actions.listParametreChoices({
-      candidatId: 'lea',
+      candidateId: 'lea',
       canal: 'home-assistant',
       parametre: 'service',
       parametres: { url, token },
@@ -114,7 +114,7 @@ describe('the Canal de notification Home Assistant of a Candidat', () => {
     const actions = await openActions();
     await saveCanal(actions, { url, token, service: CAMILLE_SERVICE });
 
-    await actions.sendTestNotification({ candidatId: 'lea' });
+    await actions.sendTestNotification({ candidateId: 'lea' });
 
     expect(notificationList).toEqual([
       {
@@ -129,31 +129,31 @@ describe('the Canal de notification Home Assistant of a Candidat', () => {
     const { url, token } = await startHomeAssistant();
     const actions = await openActions();
 
-    expect(await actions.readCanalNotification({ candidatId: 'lea' })).toEqual({
+    expect(await actions.readCanalNotification({ candidateId: 'lea' })).toEqual({
       module: null,
       parametres: {},
       configuredSecretList: [],
     });
     await saveCanal(actions, { url, token, service: LEA_SERVICE });
-    expect(await actions.readCanalNotification({ candidatId: 'lea' })).toEqual({
+    expect(await actions.readCanalNotification({ candidateId: 'lea' })).toEqual({
       module: 'home-assistant',
       parametres: { url, service: LEA_SERVICE },
       configuredSecretList: ['token'],
     });
   });
 
-  // The Profil tests what the Candidat typed before saving it: a refused token is never saved
+  // The Profile tests what the Candidate typed before saving it: a refused token is never saved
   it('tests and lists an address and a token given, without saving them', async () => {
     const { url, token } = await startHomeAssistant();
     const actions = await openActions();
-    const trial = { candidatId: 'lea', canal: 'home-assistant' };
+    const trial = { candidateId: 'lea', canal: 'home-assistant' };
 
     await expect(
       actions.testCanalNotification({ ...trial, parametres: { url, token: 'jeton-révoqué' } }),
     ).rejects.toThrow(/Home Assistant a refusé le jeton \(HTTP 401\)/);
     await expect(actions.testCanalNotification({ ...trial, parametres: { url, token } })).resolves.toBeUndefined();
 
-    expect(await actions.readCanalNotification({ candidatId: 'lea' })).toMatchObject({ module: null });
+    expect(await actions.readCanalNotification({ candidateId: 'lea' })).toMatchObject({ module: null });
   });
 
   // Anyone on the LAN reaches the front (ADR-0002): the saved token goes to the saved address only
@@ -165,12 +165,12 @@ describe('the Canal de notification Home Assistant of a Candidat', () => {
 
     await expect(testCanal(actions, { url: other.url })).rejects.toThrow(/Home Assistant n'est pas configuré/);
     await expect(
-      actions.listParametreChoices({ candidatId: 'lea', parametre: 'service', parametres: { url: other.url } }),
+      actions.listParametreChoices({ candidateId: 'lea', parametre: 'service', parametres: { url: other.url } }),
     ).rejects.toThrow(/Home Assistant n'est pas configuré/);
     await expect(saveCanal(actions, { url: other.url })).rejects.toThrow(
       /Le Canal de notification Home Assistant est incomplet : renseigner « Jeton d’accès longue durée »/,
     );
-    await actions.sendTestNotification({ candidatId: 'lea' });
+    await actions.sendTestNotification({ candidateId: 'lea' });
 
     expect(other.authorizationList).toEqual([]);
     await expect(testCanal(actions, { url })).resolves.toBeUndefined();
@@ -184,7 +184,7 @@ describe('the Canal de notification Home Assistant of a Candidat', () => {
     await saveCanal(actions, { url, service: CAMILLE_SERVICE });
 
     await expect(testCanal(actions)).resolves.toBeUndefined();
-    expect(await actions.readCanalNotification({ candidatId: 'lea' })).toMatchObject({
+    expect(await actions.readCanalNotification({ candidateId: 'lea' })).toMatchObject({
       parametres: { service: CAMILLE_SERVICE },
       configuredSecretList: ['token'],
     });
@@ -198,7 +198,7 @@ describe('the Canal de notification Home Assistant of a Candidat', () => {
 
     await saveCanal(actions, { url, token: '', service: '' });
 
-    expect(await actions.readCanalNotification({ candidatId: 'lea' })).toEqual({
+    expect(await actions.readCanalNotification({ candidateId: 'lea' })).toEqual({
       module: 'home-assistant',
       parametres: { url, service: CAMILLE_SERVICE },
       configuredSecretList: ['token'],
@@ -210,7 +210,7 @@ describe('the Canal de notification Home Assistant of a Candidat', () => {
     const actions = await openActions();
 
     await expect(
-      actions.saveCanalNotification({ candidatId: 'lea', canal: 'pigeon-voyageur', parametres: {} }),
+      actions.saveCanalNotification({ candidateId: 'lea', canal: 'pigeon-voyageur', parametres: {} }),
     ).rejects.toThrow(/Canal de notification inconnu : pigeon-voyageur/);
   });
 
@@ -218,14 +218,14 @@ describe('the Canal de notification Home Assistant of a Candidat', () => {
   it('sends nothing until a Canal is saved', async () => {
     const actions = await openActions();
 
-    await expect(actions.sendTestNotification({ candidatId: 'lea' })).rejects.toThrow(
+    await expect(actions.sendTestNotification({ candidateId: 'lea' })).rejects.toThrow(
       /Aucun Canal de notification pour Léa : en choisir un dans la section Notifications de son Profil/,
     );
   });
 });
 
 describe('the notification of a new Offre', () => {
-  it('goes to the Home Assistant the Candidat saved', async () => {
+  it('goes to the Home Assistant the Candidate saved', async () => {
     const homeAssistant = await startHomeAssistant();
     const actions = await detectBeforeBethune(createDataDirectory());
     await saveCanal(actions, { url: homeAssistant.url, token: homeAssistant.token, service: LEA_SERVICE });
@@ -238,15 +238,15 @@ describe('the notification of a new Offre', () => {
     ]);
   });
 
-  it("goes to each Candidat's own Home Assistant", async () => {
-    const homeAssistantByCandidatId = { lea: await startHomeAssistant(), camille: await startHomeAssistant() };
+  it("goes to each Candidate's own Home Assistant", async () => {
+    const homeAssistantByCandidateId = { lea: await startHomeAssistant(), camille: await startHomeAssistant() };
     const dataDirectory = createDataDirectory();
     // Camille follows the same Offres as Léa, those of the courts of appeal of Douai and Amiens
     const frontActions = await createActions({ dataDirectory });
-    await frontActions.createCandidat({ id: 'camille', name: 'Camille' });
-    await frontActions.saveVeille({ candidatId: 'camille', ...LEA_VEILLE });
+    await frontActions.createCandidate({ id: 'camille', name: 'Camille' });
+    await frontActions.saveVeille({ candidateId: 'camille', ...LEA_VEILLE });
     const actions = await detectBeforeBethune(dataDirectory);
-    const { lea, camille } = homeAssistantByCandidatId;
+    const { lea, camille } = homeAssistantByCandidateId;
     await saveCanal(actions, { url: lea.url, token: lea.token, service: LEA_SERVICE });
     await saveCanal(actions, { url: camille.url, token: camille.token, service: CAMILLE_SERVICE }, 'camille');
 

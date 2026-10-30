@@ -72,7 +72,7 @@ function VeilleForm({ veille, sourceList }: Readonly<{ veille: Veille | null; so
   );
 }
 
-// The Veilles of the Candidat, each on its Source; a deleted Veille leaves its Offres behind
+// The Veilles of the Candidate, each on its Source; a deleted Veille leaves its Offres behind
 export function Veilles({ veilleList, sourceList }: Readonly<{ veilleList: Veille[]; sourceList: SourceModule[] }>) {
   const headingId = useId();
   return (

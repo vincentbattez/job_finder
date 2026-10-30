@@ -2,7 +2,7 @@ import type { IPromptInput } from '#/ai-module/index.ts';
 
 export const VISUALISATION_FILE_NAME = 'visualisation.html';
 
-// The rules no Consignes can lift (ADR-0003); a single self-contained file without JavaScript,
+// The rules no Instructions can lift (ADR-0003); a single self-contained file without JavaScript,
 // since the front's sandboxed frame runs no script and loads nothing from outside
 export function composeVisualisationPrompt({ offre, outputDirectory, readVersionList }: IPromptInput): string {
   const outputPath = `${outputDirectory}/${VISUALISATION_FILE_NAME}`;

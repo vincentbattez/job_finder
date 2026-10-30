@@ -1,5 +1,5 @@
 /* Hallmark · shape: app screen · genre: modern-minimal · theme: Dose (deal 3/3, seed soft-friendly-app-track-8518·cf75787d·2026-10-29·r0)
- * nav: a top bar, the wordmark, the Candidat's pages (Offres, Profil, Consignes: #14) and the Candidat menu (#11) · signature: the Offre label, reference and Date limite in DM Mono over a dashed stub, above four plastic Artefact compartments · states: full and empty list, the four états · dose: white
+ * nav: a top bar, the wordmark, the Candidate's pages (Offres, Profile, Instructions: #14) and the Candidate menu (#11) · signature: the Offre label, reference and Date limite in DM Mono over a dashed stub, above four plastic Artefact compartments · states: full and empty list, the four états · dose: white
  * axes: light/grotesk-sans/chromatic-green · posture: committed · contrast: pass · v2.0.0 */
 /* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a list and a fiche fit any tracker; the Offre became a pharmacy label with its Artefacts as an organiser's compartments */
 /* Hallmark · deviation: Expirée and En échec are red, against Dose's grey for a missed state, because the map of issue #20 asks red for Expirée · no fibre grain: an app screen takes the theme's surfaces, not its ornament */
@@ -26,23 +26,23 @@
 }
 
 /* Who is reading: the one choice the front asks for, without any password */
-.candidat-menu {
+.candidate-menu {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
 }
-.candidat-menu label {
+.candidate-menu label {
   color: var(--color-muted);
   font: 500 var(--text-sm) var(--font-body);
 }
-/* The front creates Candidats (ADR-0011): a long name stays inside a phone screen */
-.candidat-menu select {
+/* The front creates Candidates (ADR-0011): a long name stays inside a phone screen */
+.candidate-menu select {
   min-width: 0;
   max-width: 12rem;
   text-overflow: ellipsis;
 }
-.candidat-menu select,
-.candidat-menu button,
+.candidate-menu select,
+.candidate-menu button,
 .command button,
 .module-launch button,
 .detection button,
@@ -60,14 +60,14 @@
   cursor: pointer;
   transition: background-color var(--dur-short) var(--ease-out);
 }
-.candidat-menu select:hover,
+.candidate-menu select:hover,
 .command button:hover,
 .edition button:hover,
 .canal button:hover:enabled,
 .settings button:hover:enabled {
   background: var(--color-paper-2);
 }
-.candidat-menu button,
+.candidate-menu button,
 .module-launch button,
 .detection button,
 .edition .button--primary,
@@ -77,7 +77,7 @@
   background: var(--color-accent);
   color: var(--color-accent-ink);
 }
-.candidat-menu button:hover,
+.candidate-menu button:hover,
 .module-launch button:hover:enabled,
 .detection button:hover:enabled,
 .edition .button--primary:hover,
@@ -114,7 +114,7 @@
   color: var(--color-error);
 }
 
-/* The drop zone of a file, such as a Fiche de poste or a Pièce: a dashed tray that lights up under a file */
+/* The drop zone of a file, such as a Fiche de poste or an Upload: a dashed tray that lights up under a file */
 .drop-zone {
   display: grid;
   justify-items: start;
@@ -159,7 +159,7 @@
 .drop-zone__error {
   color: var(--color-error);
 }
-/* The pages of the Candidat chosen in the menu: their Offres, their Profil, their Consignes */
+/* The pages of the Candidate chosen in the menu: their Offres, their Profile, their Instructions */
 .topbar__nav {
   display: flex;
   flex-wrap: wrap;
@@ -345,7 +345,7 @@ a:active {
   font-size: var(--text-sm);
 }
 
-/* The filters under the title, in the plain controls of the Candidat menu */
+/* The filters under the title, in the plain controls of the Candidate menu */
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -851,31 +851,31 @@ a:active {
   }
 }
 
-/* Each file of the Profil, named as on disk */
-.profil-file {
+/* Each file of the Profile, named as on disk */
+.profile-file {
   display: grid;
   gap: var(--space-sm);
   min-width: 0;
 }
-.profil-file form,
-.consignes form {
+.profile-file form,
+.instructions form {
   display: grid;
   gap: var(--space-sm);
 }
-.profil-file h2 {
+.profile-file h2 {
   font: var(--text-md) / 1.4 var(--font-outlier);
   letter-spacing: 0;
 }
-.profil-file__name {
+.profile-file__name {
   display: grid;
   gap: var(--space-xs);
   max-width: 32rem;
 }
-.profil-file__name label {
+.profile-file__name label {
   color: var(--color-ink-2);
   font: 500 var(--text-sm) / 1.4 var(--font-body);
 }
-.profil-file__name input {
+.profile-file__name input {
   min-height: 40px;
   padding: 0 var(--space-sm);
   border: var(--rule-hair) solid var(--color-muted);
@@ -886,26 +886,26 @@ a:active {
   color: var(--color-ink);
   font-family: var(--font-outlier);
 }
-.profil-file__name input:focus-visible {
+.profile-file__name input:focus-visible {
   outline-color: var(--color-focus);
 }
-.edition .profil-file__error {
+.edition .profile-file__error {
   color: var(--color-error);
 }
 /* Deleting a file takes unfolding, then a button in the colour of what cannot be undone */
-.profil-file__delete summary {
+.profile-file__delete summary {
   color: var(--color-muted);
   font-size: var(--text-sm);
   cursor: pointer;
 }
-.profil-file__delete[open] summary {
+.profile-file__delete[open] summary {
   margin-bottom: var(--space-sm);
 }
-.profil-file .profil-file__delete form {
+.profile-file .profile-file__delete form {
   display: flex;
 }
 /* Not a file yet: named in the voice of the page, not as on disk */
-.profil-file--new h2 {
+.profile-file--new h2 {
   font: 600 var(--text-md) / 1.4 var(--font-body);
 }
 .edition .button--danger {
@@ -917,38 +917,38 @@ a:active {
   background: color-mix(in oklch, var(--color-error), var(--color-ink) 20%);
 }
 
-/* The Consignes of a module sit in its compartment, under its tint, like its Versions */
-.consignes__head {
+/* The Instructions of a module sit in its compartment, under its tint, like its Versions */
+.instructions__head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-xs) var(--space-sm);
 }
-.badge[data-consignes='candidat'] {
+.badge[data-instructions='candidate'] {
   --badge-ink: var(--color-accent-ink);
   --badge-soft: var(--color-accent);
 }
-/* Consignes folded under what they produced: the default ones under the Candidat's, and those of
+/* Instructions folded under what they produced: the default ones under the Candidate's, and those of
    each Version under it */
-.consignes__default summary,
-.version-consignes summary {
+.instructions__default summary,
+.version-instructions summary {
   color: var(--color-accent-deep);
   font-weight: 500;
   cursor: pointer;
 }
-.consignes__default[open] summary,
-.version-consignes[open] summary {
+.instructions__default[open] summary,
+.version-instructions[open] summary {
   margin-bottom: var(--space-sm);
 }
-.consignes__default .prose,
-.version-consignes .prose {
+.instructions__default .prose,
+.version-instructions .prose {
   max-width: none;
   padding: var(--space-md);
   border-radius: var(--radius-input);
   background: var(--color-paper-2);
 }
-/* Which Consignes produced a Version: a small tag, like the source of a recipient */
-.consignes-origin {
+/* Which Instructions produced a Version: a small tag, like the source of a recipient */
+.instructions-origin {
   padding: 0 var(--space-xs);
   border-radius: var(--radius-pill);
   background: var(--color-paper-2);
@@ -957,17 +957,17 @@ a:active {
   font-weight: 500;
 }
 
-/* The form of the Faits: one field per rubrique, and one per entry of a list rubrique */
-.faits,
-.faits form {
+/* The form of the Facts: one field per section, and one per entry of a list section */
+.facts,
+.facts form {
   display: grid;
   gap: var(--space-md);
   min-width: 0;
 }
-.faits > p {
+.facts > p {
   color: var(--color-ink-2);
 }
-.faits__rubrique {
+.facts__section {
   display: grid;
   gap: var(--space-xs);
   min-width: 0;
@@ -977,17 +977,17 @@ a:active {
   color: var(--color-ink);
   font: 600 var(--text-sm) / 1.4 var(--font-body);
 }
-.faits__rubrique legend {
+.facts__section legend {
   padding: 0;
   margin-bottom: var(--space-xs);
 }
-.faits__entry {
+.facts__entry {
   display: flex;
   align-items: end;
   gap: var(--space-sm);
 }
-/* An entry is named under its rubrique, a step quieter */
-.faits__entry label {
+/* An entry is named under its section, a step quieter */
+.facts__entry label {
   display: grid;
   flex: 1;
   gap: var(--space-2xs);
@@ -995,7 +995,7 @@ a:active {
   color: var(--color-ink-2);
   font-weight: 500;
 }
-.faits textarea {
+.facts textarea {
   padding: var(--space-sm);
   border: var(--rule-hair) solid var(--color-muted);
   border-radius: var(--radius-input);
@@ -1005,11 +1005,11 @@ a:active {
   resize: vertical;
   field-sizing: content;
 }
-.faits textarea:focus-visible {
+.facts textarea:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: -3px;
 }
-.faits__rubrique button {
+.facts__section button {
   justify-self: start;
   min-height: 40px;
   padding: 0 var(--space-sm);
@@ -1022,29 +1022,29 @@ a:active {
   cursor: pointer;
   transition: background-color var(--dur-short) var(--ease-out);
 }
-.faits__rubrique button:hover:enabled {
+.facts__section button:hover:enabled {
   background: var(--color-paper-2);
 }
 /* Adding or removing an entry waits for React to run the page */
-.faits__rubrique button:disabled {
+.facts__section button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-/* The PDFs of the Profil, kept as dropped: one row each, name and date, deletion folded */
-.pieces h2 {
+/* The PDFs of the Profile, kept as dropped: one row each, name and date, deletion folded */
+.uploads h2 {
   font: 600 var(--text-md) / 1.4 var(--font-body);
 }
-.pieces__empty {
+.uploads__empty {
   color: var(--color-ink-2);
 }
-.pieces__list {
+.uploads__list {
   display: grid;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.pieces__item {
+.uploads__item {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -1053,20 +1053,20 @@ a:active {
   border-bottom: var(--rule-hair) solid var(--color-paper-2);
   min-width: 0;
 }
-.pieces__item .reference {
+.uploads__item .reference {
   overflow-wrap: anywhere;
 }
-.pieces__date {
+.uploads__date {
   color: var(--color-ink-2);
   font-size: var(--text-sm);
 }
-.pieces__item .profil-file__delete {
+.uploads__item .profile-file__delete {
   margin-inline-start: auto;
 }
-.pieces__conversion {
+.uploads__conversion {
   flex-basis: 100%;
 }
-.pieces__item .profil-file__delete form {
+.uploads__item .profile-file__delete form {
   display: flex;
   margin-top: var(--space-xs);
 }

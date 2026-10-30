@@ -1,18 +1,18 @@
-import { FICHE_DE_POSTE_FILE_NAME, type Artefact, type Candidat, type Offre } from '#/domain/index.ts';
+import { FICHE_DE_POSTE_FILE_NAME, type Artefact, type Candidate, type Offre } from '#/domain/index.ts';
 import { ARTEFACT_LABEL_BY_ARTEFACT } from '#/domain/labels.ts';
 import { BROUILLON_FILE_NAME, LETTRE_MODULE } from '#/modules/lettre/index.ts';
 
 interface IEditedArtefact {
-  candidat: Candidat;
+  candidate: Candidate;
   offre: Offre;
   artefact: Artefact;
   // The folder of the Version retenue, relative to the Offre folder
   versionPath: string;
 }
 
-// Fixed, with no Consignes to replace it (ADR-0003); the session runs in the Offre folder, its
+// Fixed, with no Instructions to replace it (ADR-0003); the session runs in the Offre folder, its
 // « dossier courant »
-export function composeEditPrompt({ candidat: { name }, offre, artefact, versionPath }: IEditedArtefact): string {
+export function composeEditPrompt({ candidate: { name }, offre, artefact, versionPath }: IEditedArtefact): string {
   // Every Artefact is feminine
   const artefactName = `la ${ARTEFACT_LABEL_BY_ARTEFACT[artefact]}`;
   const lettreFiles =

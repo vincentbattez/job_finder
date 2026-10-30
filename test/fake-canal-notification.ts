@@ -14,7 +14,7 @@ export const LEA_TARGET = 'notify.mobile_app_iphone_de_lea';
 // Stands in for the Canal de notification, an external boundary: a module of the family, as a real one
 // is declared (ADR-0010), that records each notification with its target instead of sending it. Given
 // an errorMessage, every send fails with it. createActions takes canalNotificationList in place of the
-// registry; saveFor saves it as a Candidat's Canal.
+// registry; saveFor saves it as a Candidate's Canal.
 export function createFakeCanalNotification({ errorMessage }: { errorMessage?: string } = {}) {
   const sentList: ISentNotification[] = [];
   const targetParametre = parametre(z.string(), { label: 'Cible' });
@@ -33,7 +33,7 @@ export function createFakeCanalNotification({ errorMessage }: { errorMessage?: s
   return {
     canalNotificationList: [module],
     sentList,
-    saveFor: (actions: Actions, candidatId = 'lea', target = LEA_TARGET) =>
-      actions.saveCanalNotification({ candidatId, canal: 'faux', parametres: { target } }),
+    saveFor: (actions: Actions, candidateId = 'lea', target = LEA_TARGET) =>
+      actions.saveCanalNotification({ candidateId, canal: 'faux', parametres: { target } }),
   };
 }

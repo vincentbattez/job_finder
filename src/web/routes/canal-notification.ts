@@ -2,7 +2,7 @@ import type { ActionFunctionArgs } from 'react-router';
 
 import { messageOf, type Actions } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
-import { readCandidat } from '#/web/candidat.server.ts';
+import { readCandidate } from '#/web/candidate.server.ts';
 import { readParametres } from '#/web/parametres.server.ts';
 
 type ParametreChoice = Awaited<ReturnType<Actions['listParametreChoices']>>[number];
@@ -15,15 +15,15 @@ function refuse(error: string) {
   return { message: null, error, choiceList: null };
 }
 
-// The buttons of the Notifications section of the Profil, for the Candidat of the menu; each answers
+// The buttons of the Notifications section of the Profile, for the Candidate of the menu; each answers
 // its own fetcher, a refusal in the words of the action. No secret Paramètre comes back (ADR-0006).
 export async function action({ request }: ActionFunctionArgs) {
-  const { candidat } = await readCandidat(request);
+  const { candidate } = await readCandidate(request);
   const formData = await request.formData();
   const moduleId = formData.get('canal');
   const moduleList = await ACTIONS.listCanauxNotification();
   const input = {
-    candidatId: candidat?.id,
+    candidateId: candidate?.id,
     canal: moduleId ?? undefined,
     parametre: formData.get('parametre') ?? undefined,
     parametres: readParametres(formData, moduleList.find(({ id }) => id === moduleId)?.parametreList),

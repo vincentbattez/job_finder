@@ -9,20 +9,20 @@ import {
 
 import type { ActionContext } from './context.ts';
 
-// The identifier names the Candidat's folder and the commands of jf: a slug, which never leads out of
+// The identifier names the Candidate's folder and the commands of jf: a slug, which never leads out of
 // the data folder
-const CANDIDAT_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const CANDIDATE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const RENAME_INPUT_SCHEMA = z.object({ name: z.string() });
 
-const NEW_CANDIDAT_INPUT_SCHEMA = RENAME_INPUT_SCHEMA.extend({ id: z.string() });
+const NEW_CANDIDATE_INPUT_SCHEMA = RENAME_INPUT_SCHEMA.extend({ id: z.string() });
 
 // A field of the front arrives as text
 const DELAI_PAR_DEFAUT_INPUT_SCHEMA = z.object({ months: z.union([z.string(), z.number()]) });
 
 // The identifier and the name come from the front: checked before anything is saved
-function parseCandidatId(id: string): string {
-  if (!CANDIDAT_ID_PATTERN.test(id)) {
+function parseCandidateId(id: string): string {
+  if (!CANDIDATE_ID_PATTERN.test(id)) {
     throw new Error(
       `« ${id} » n'est pas un identifiant de Candidat : des minuscules sans accent et des chiffres, séparés par des « - », comme « lea » ou « jean-pierre ».`,
     );
@@ -46,23 +46,23 @@ function parseMonths(typedMonths: string | number): number {
   return months;
 }
 
-// Any visitor of the front creates or renames a Candidat and sets the Délai par défaut; no Candidat is
+// Any visitor of the front creates or renames a Candidate and sets the Délai par défaut; no Candidate is
 // ever deleted (ADR-0002, ADR-0011)
-export function createCandidatActions({ workspace, findCandidat }: ActionContext) {
+export function createCandidateActions({ workspace, findCandidate }: ActionContext) {
   return {
-    async createCandidat(rawInput: unknown): Promise<void> {
-      const input = NEW_CANDIDAT_INPUT_SCHEMA.parse(rawInput);
-      const candidat = { id: parseCandidatId(input.id), name: parseName(input.name) };
-      const candidatList = await workspace.listCandidats();
-      if (candidatList.some(({ id }) => id === candidat.id)) {
-        throw new Error(`Un Candidat a déjà l'identifiant ${candidat.id} : en choisir un autre.`);
+    async createCandidate(rawInput: unknown): Promise<void> {
+      const input = NEW_CANDIDATE_INPUT_SCHEMA.parse(rawInput);
+      const candidate = { id: parseCandidateId(input.id), name: parseName(input.name) };
+      const candidateList = await workspace.listCandidates();
+      if (candidateList.some(({ id }) => id === candidate.id)) {
+        throw new Error(`Un Candidat a déjà l'identifiant ${candidate.id} : en choisir un autre.`);
       }
-      await workspace.createCandidat(candidat);
+      await workspace.createCandidate(candidate);
     },
 
-    async renameCandidat(rawInput: unknown): Promise<void> {
-      const candidat = await findCandidat(rawInput);
-      await workspace.renameCandidat(candidat, parseName(RENAME_INPUT_SCHEMA.parse(rawInput).name));
+    async renameCandidate(rawInput: unknown): Promise<void> {
+      const candidate = await findCandidate(rawInput);
+      await workspace.renameCandidate(candidate, parseName(RENAME_INPUT_SCHEMA.parse(rawInput).name));
     },
 
     readDelaiParDefaut(): Promise<DelaiParDefaut> {
@@ -75,7 +75,7 @@ export function createCandidatActions({ workspace, findCandidat }: ActionContext
       await workspace.saveDelaiParDefaut(DELAI_PAR_DEFAUT_SCHEMA.parse({ months: parseMonths(months) }));
     },
 
-    // The config an older jf left, which jf and the Candidats page say to delete once imported
+    // The config an older jf left, which jf and the Candidates page say to delete once imported
     findObsoleteConfig(): Promise<ObsoleteConfig> {
       return Promise.resolve(OBSOLETE_CONFIG_SCHEMA.parse({ path: workspace.findObsoleteConfig() }));
     },

@@ -9,77 +9,77 @@ import {
 
 import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
-import { readCandidat } from '#/web/candidat.server.ts';
+import { readCandidate } from '#/web/candidate.server.ts';
 import { CanalNotificationForm } from '#/web/components/canal-notification.tsx';
 import { CopyCommand } from '#/web/components/copy-command.tsx';
-import { FaitsForm } from '#/web/components/faits-form.tsx';
-import { Pieces } from '#/web/components/pieces.tsx';
-import { ProfilFile, ProfilFileCreation } from '#/web/components/profil-file.tsx';
+import { FactsForm } from '#/web/components/facts-form.tsx';
+import { ProfileFile, ProfileFileCreation } from '#/web/components/profile-file.tsx';
+import { Uploads } from '#/web/components/uploads.tsx';
 import { Veilles } from '#/web/components/veilles.tsx';
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const { candidat } = await readCandidat(request);
+  const { candidate } = await readCandidate(request);
   return {
-    candidat,
-    profilFileList: candidat === null ? [] : await ACTIONS.listProfilFiles({ candidatId: candidat.id }),
-    pieceList: candidat === null ? [] : await ACTIONS.listPieces({ candidatId: candidat.id }),
-    rubriqueList: candidat === null ? [] : await ACTIONS.readFaits({ candidatId: candidat.id }),
-    canal: candidat === null ? null : await ACTIONS.readCanalNotification({ candidatId: candidat.id }),
+    candidate,
+    profileFileList: candidate === null ? [] : await ACTIONS.listProfileFiles({ candidateId: candidate.id }),
+    uploadList: candidate === null ? [] : await ACTIONS.listUploads({ candidateId: candidate.id }),
+    sectionList: candidate === null ? [] : await ACTIONS.readFacts({ candidateId: candidate.id }),
+    canal: candidate === null ? null : await ACTIONS.readCanalNotification({ candidateId: candidate.id }),
     canalModuleList: await ACTIONS.listCanauxNotification(),
-    veilleList: candidat === null ? [] : await ACTIONS.listVeilles({ candidatId: candidat.id }),
+    veilleList: candidate === null ? [] : await ACTIONS.listVeilles({ candidateId: candidate.id }),
     sourceList: await ACTIONS.listSources(),
   };
 }
 
-// The Candidat is the one of the menu, never one the form names; a refusal goes back to the file
+// The Candidate is the one of the menu, never one the form names; a refusal goes back to the file
 // it concerns, in the words of the action
 export async function action({ request }: ActionFunctionArgs) {
-  const { candidat } = await readCandidat(request);
-  if (candidat === null) {
-    return redirect('/profil');
+  const { candidate } = await readCandidate(request);
+  if (candidate === null) {
+    return redirect('/profile');
   }
   const formData = await request.formData();
   const intent = formData.get('intent');
   const fileName = formData.get('fileName');
-  const formInput = { candidatId: candidat.id, fileName, markdown: formData.get('markdown') };
+  const formInput = { candidateId: candidate.id, fileName, markdown: formData.get('markdown') };
   try {
     switch (intent) {
       case 'create': {
-        await ACTIONS.createProfilFile(formInput);
+        await ACTIONS.createProfileFile(formInput);
         break;
       }
       case 'delete': {
-        await ACTIONS.deleteProfilFile(formInput);
+        await ACTIONS.deleteProfileFile(formInput);
         break;
       }
       case 'save': {
-        await ACTIONS.saveProfilFile(formInput);
+        await ACTIONS.saveProfileFile(formInput);
         break;
       }
-      case 'piece': {
+      case 'upload': {
         // No file at all is refused by the action, like a file that is not a PDF
-        const piece = formData.get('piece');
-        const file = piece instanceof File ? piece : new File([], '');
-        await ACTIONS.savePiece({
-          candidatId: candidat.id,
+        const upload = formData.get('upload');
+        const file = upload instanceof File ? upload : new File([], '');
+        await ACTIONS.saveUpload({
+          candidateId: candidate.id,
           fileName: file.name,
           content: new Uint8Array(await file.arrayBuffer()),
         });
         break;
       }
-      case 'deletePiece': {
-        await ACTIONS.deletePiece(formInput);
+      case 'deleteUpload': {
+        await ACTIONS.deleteUpload(formInput);
         break;
       }
-      case 'convertPiece': {
-        await ACTIONS.convertPiece(formInput);
+      case 'convertUpload': {
+        await ACTIONS.convertUpload(formInput);
         break;
       }
-      case 'faits': {
-        // Each field is named after its rubrique, one per entry of a list rubrique
+      case 'facts': {
+        // Each field is named after its section, one per entry of a list section
         const titleList = [...new Set(formData.keys())].filter((name) => name !== 'intent');
-        await ACTIONS.saveFaits({
-          candidatId: candidat.id,
+        await ACTIONS.saveFacts({
+          candidateId: candidate.id,
           entryListByTitle: Object.fromEntries(titleList.map((title) => [title, formData.getAll(title)])),
         });
         break;
@@ -88,53 +88,53 @@ export async function action({ request }: ActionFunctionArgs) {
   } catch (error) {
     return { refusal: { isCreation: intent === 'create', fileName, message: messageOf(error) } };
   }
-  // The Pièces are sent by a fetcher, which revalidates the page by itself and keeps what it receives
-  return intent === 'piece' || intent === 'deletePiece' || intent === 'convertPiece'
+  // The Uploads are sent by a fetcher, which revalidates the page by itself and keeps what it receives
+  return intent === 'upload' || intent === 'deleteUpload' || intent === 'convertUpload'
     ? { refusal: null }
-    : redirect('/profil');
+    : redirect('/profile');
 }
 
 export function meta() {
   return [{ title: 'Profil · Job Finder' }];
 }
 
-export default function Profil() {
-  const { candidat, profilFileList, pieceList, rubriqueList, canal, canalModuleList, veilleList, sourceList } =
+export default function Profile() {
+  const { candidate, profileFileList, uploadList, sectionList, canal, canalModuleList, veilleList, sourceList } =
     useLoaderData<typeof loader>();
   const refusal = useActionData<typeof action>()?.refusal ?? null;
   return (
     <main className="container page">
-      {candidat === null ? (
+      {candidate === null ? (
         <div className="page__head">
           <h1>Qui consulte son Profil ?</h1>
           <p>
             Choisissez votre nom dans le menu en haut de la page. Le front s’en souviendra. Pas encore dans le menu ? La
-            page <Link to="/candidats">Candidats</Link> vous y ajoute.
+            page <Link to="/candidates">Candidats</Link> vous y ajoute.
           </p>
         </div>
       ) : (
         <>
           <div className="page__head">
-            <h1>Profil de {candidat.name}</h1>
+            <h1>Profil de {candidate.name}</h1>
             <p>
               Ce que l’outil sait de vous pour écrire à votre place : vos faits validés, votre CV et vos lettres
               passées.
             </p>
           </div>
           {/* Keyed by their content, so that a save of one shows in the other */}
-          <FaitsForm key={JSON.stringify(rubriqueList)} rubriqueList={rubriqueList} />
-          <Pieces pieceList={pieceList} />
-          {profilFileList.length === 0 ? (
+          <FactsForm key={JSON.stringify(sectionList)} sectionList={sectionList} />
+          <Uploads uploadList={uploadList} />
+          {profileFileList.length === 0 ? (
             <div className="empty">
               <p>
                 Votre Profil est vide pour l’instant. Cette commande le remplit avec Claude Code, qui vous interroge :
               </p>
-              <CopyCommand command={`jf profil ${candidat.id}`} />
+              <CopyCommand command={`jf profile ${candidate.id}`} />
               <p>Vous pouvez aussi créer vos fichiers vous-même, plus bas.</p>
             </div>
           ) : (
-            profilFileList.map(({ fileName, markdown }) => (
-              <ProfilFile
+            profileFileList.map(({ fileName, markdown }) => (
+              <ProfileFile
                 key={`${fileName}:${markdown}`}
                 fileName={fileName}
                 markdown={markdown}
@@ -145,8 +145,8 @@ export default function Profil() {
             ))
           )}
           {/* Remounted once the files change, so a created file leaves an empty form behind */}
-          <ProfilFileCreation
-            key={profilFileList.map(({ fileName }) => fileName).join('/')}
+          <ProfileFileCreation
+            key={profileFileList.map(({ fileName }) => fileName).join('/')}
             error={refusal?.isCreation === true ? refusal.message : null}
           />
           <Veilles veilleList={veilleList} sourceList={sourceList} />

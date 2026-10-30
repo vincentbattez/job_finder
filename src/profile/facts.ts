@@ -1,12 +1,12 @@
-// A `## ` heading and the lines up to the next one, kept as written; the first section is what comes
-// before the first heading, the title and free text of faits.md
-interface ISection {
+// A `## ` heading and the lines up to the next one, kept as written; the first part is what comes
+// before the first heading, the title and free text of facts.md
+interface IPart {
   title: string | null;
   raw: string;
   isRewritten?: boolean;
 }
 
-// How the entries of a rubrique are read from its body and written back
+// How the entries of a section are read from its body and written back
 interface IFormat {
   isList: boolean;
   read(body: string): string[];
@@ -59,10 +59,10 @@ const LIST_FORMAT: IFormat = {
   clean: (entryList) => entryList.map((entry) => entry.trim()).filter((entry) => entry !== ''),
 };
 
-// The rubriques of faits.md, in their order. jf profil's prompt and the form of the Faits share them:
+// The sections of facts.md, in their order. jf profile's prompt and the form of the Facts share them:
 // what Claude writes, the form reads. Each has an example of what it holds, which its empty field
-// shows: a whole rubrique for a text one, a single item for a list one.
-export const RUBRIQUE_LIST = [
+// shows: a whole section for a text one, a single item for a list one.
+export const SECTION_LIST = [
   { title: 'Identité', format: TEXT_FORMAT, example: 'Léa Durand, née le 4 mars 1999, de nationalité française' },
   {
     title: 'Coordonnées',
@@ -84,97 +84,95 @@ export const RUBRIQUE_LIST = [
   { title: 'Mobilité', format: TEXT_FORMAT, example: '- Lille et alentours\n- Béthune, Arras, Boulogne-sur-Mer' },
 ] as const;
 
-interface IRubrique {
+interface ISection {
   title: string;
   isList: boolean;
   example: string;
-  // A list rubrique has one entry per item, a text rubrique a single one
+  // A list section has one entry per item, a text section a single one
   entryList: string[];
 }
 
-const EMPTY_FAITS = '# Faits\n';
+const EMPTY_FACTS = '# Faits\n';
 
-// Claude may write « Experiences » or « mobilité »: a rubrique is found whatever its case and accents
+// Claude may write « Experiences » or « mobilité »: a section is found whatever its case and accents
 function normalizeTitle(title: string | null): string | null {
   return title === null ? null : title.normalize('NFD').replaceAll(/\p{M}/gu, '').toLowerCase();
 }
 
-function splitSections(markdown: string): ISection[] {
-  const sectionList: ISection[] = [{ title: null, raw: '' }];
+function splitParts(markdown: string): IPart[] {
+  const partList: IPart[] = [{ title: null, raw: '' }];
   for (const line of markdown.split(/(?<=\n)/)) {
-    const lastSection = sectionList.at(-1);
+    const lastPart = partList.at(-1);
     if (line.startsWith('## ')) {
-      sectionList.push({ title: line.slice(3).trim(), raw: line });
-    } else if (lastSection !== undefined) {
-      lastSection.raw += line;
+      partList.push({ title: line.slice(3).trim(), raw: line });
+    } else if (lastPart !== undefined) {
+      lastPart.raw += line;
     }
   }
-  return sectionList;
+  return partList;
 }
 
-function findSection(sectionList: ISection[], title: string): ISection | undefined {
-  return sectionList.find(
-    (section) => section.title !== null && normalizeTitle(section.title) === normalizeTitle(title),
-  );
+function findPart(partList: IPart[], title: string): IPart | undefined {
+  return partList.find((part) => part.title !== null && normalizeTitle(part.title) === normalizeTitle(title));
 }
 
-function bodyOf({ raw }: ISection): string {
+function bodyOf({ raw }: IPart): string {
   return raw.includes('\n') ? raw.slice(raw.indexOf('\n') + 1) : '';
 }
 
-function writeSection(title: string, content: string): string {
+function writePart(title: string, content: string): string {
   return content === '' ? `## ${title}\n` : `## ${title}\n\n${content}\n`;
 }
 
-export function readRubriques(markdown: string): IRubrique[] {
-  const sectionList = splitSections(markdown);
-  return RUBRIQUE_LIST.map(({ title, format, example }) => {
-    const section = findSection(sectionList, title);
+export function readSections(markdown: string): ISection[] {
+  const partList = splitParts(markdown);
+  return SECTION_LIST.map(({ title, format, example }) => {
+    const part = findPart(partList, title);
     return {
       title,
       isList: format.isList,
       example,
-      entryList: format.read(section === undefined ? '' : bodyOf(section)),
+      entryList: format.read(part === undefined ? '' : bodyOf(part)),
     };
   });
 }
 
-// A new rubrique goes before the next rubrique of the form, else at the end
-function insertSection(sectionList: ISection[], rubriqueIndex: number, section: ISection): void {
-  const nextKeySet = new Set(RUBRIQUE_LIST.slice(rubriqueIndex + 1).map(({ title }) => normalizeTitle(title)));
-  const nextIndex = sectionList.findIndex(({ title }) => nextKeySet.has(normalizeTitle(title)));
-  sectionList.splice(nextIndex === -1 ? sectionList.length : nextIndex, 0, section);
+// A new section goes before the next section of the form, else at the end
+function insertPart(partList: IPart[], sectionIndex: number, part: IPart): void {
+  const nextKeySet = new Set(SECTION_LIST.slice(sectionIndex + 1).map(({ title }) => normalizeTitle(title)));
+  const nextIndex = partList.findIndex(({ title }) => nextKeySet.has(normalizeTitle(title)));
+  partList.splice(nextIndex === -1 ? partList.length : nextIndex, 0, part);
 }
 
-// A rewritten section is set apart by a blank line; the others keep their spacing as written
-function joinSections(sectionList: ISection[]): string {
+// A rewritten part is set apart by a blank line; the others keep their spacing as written
+function joinParts(partList: IPart[]): string {
   let markdown = '';
-  for (const [index, { raw, isRewritten }] of sectionList.entries()) {
-    const isNextToRewritten = isRewritten === true || sectionList[index - 1]?.isRewritten === true;
+  for (const [index, { raw, isRewritten }] of partList.entries()) {
+    const isNextToRewritten = isRewritten === true || partList[index - 1]?.isRewritten === true;
     markdown = markdown !== '' && isNextToRewritten ? `${markdown.trimEnd()}\n\n${raw}` : markdown + raw;
   }
   return markdown;
 }
 
-// Rewrites only the rubriques whose entries changed, in place; the other sections and the free text
+// Rewrites only the sections whose entries changed, in place; the other parts and the free text
 // stay as written, and a file left unchanged is returned byte for byte
-export function writeRubriques(markdown: string, rubriqueList: Pick<IRubrique, 'title' | 'entryList'>[]): string {
-  const sectionList = splitSections(markdown === '' ? EMPTY_FAITS : markdown);
+export function writeSections(markdown: string, sectionList: Pick<ISection, 'title' | 'entryList'>[]): string {
+  const partList = splitParts(markdown === '' ? EMPTY_FACTS : markdown);
   let hasChanged = markdown === '';
-  for (const [index, { title, format }] of RUBRIQUE_LIST.entries()) {
-    const entryList = format.clean(rubriqueList.find((rubrique) => rubrique.title === title)?.entryList ?? []);
-    const section = findSection(sectionList, title);
-    const body = section === undefined ? '' : bodyOf(section);
+  for (const [index, { title, format }] of SECTION_LIST.entries()) {
+    const entryList = format.clean(sectionList.find((section) => section.title === title)?.entryList ?? []);
+    const part = findPart(partList, title);
+    const body = part === undefined ? '' : bodyOf(part);
     if (format.read(body).join('\0') === entryList.join('\0')) {
       continue;
     }
-    const raw = writeSection(section?.title ?? title, format.write(entryList, body));
-    if (section === undefined) {
-      insertSection(sectionList, index, { title, raw, isRewritten: true });
+    const raw = writePart(part?.title ?? title, format.write(entryList, body));
+    if (part === undefined) {
+      insertPart(partList, index, { title, raw, isRewritten: true });
     } else {
-      Object.assign(section, { raw, isRewritten: true });
+      Object.assign(part, { raw, isRewritten: true });
     }
     hasChanged = true;
   }
-  return hasChanged ? joinSections(sectionList) : markdown;
+  return hasChanged ? joinParts(partList) : markdown;
 }

@@ -21,7 +21,7 @@ const TOKEN_PARAMETRE = parametre(z.string().min(1), {
 // One of the notify services of the Home Assistant, such as notify.mobile_app_iphone_de_lea
 const SERVICE_PARAMETRE = parametre(z.string().startsWith('notify.'), { label: 'Service de notification' });
 
-// A Canal de notification through the Candidat's own Home Assistant: one of its notify services
+// A Canal de notification through the Candidate's own Home Assistant: one of its notify services
 // pushes to their phone (ADR-0010). The token is write-only (ADR-0006).
 export const HOME_ASSISTANT = defineCanalNotification({
   id: 'home-assistant',

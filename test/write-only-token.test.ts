@@ -36,17 +36,17 @@ const RUN_BY_MODULE = {
   visualisation: { fileByName: { 'visualisation.html': '<!DOCTYPE html>\n<title>Fiche</title>\n' } },
 };
 
-// What an action needs beyond the shared input of the check, such as a Pièce, named in .pdf
-const PIECE = { fileName: 'cv.pdf' };
+// What an action needs beyond the shared input of the check, such as an Upload, named in .pdf
+const UPLOAD = { fileName: 'cv.pdf' };
 const INPUT_BY_ACTION: Record<string, object> = {
-  savePiece: {
-    ...PIECE,
-    content: new Uint8Array(readFileSync(path.join(import.meta.dirname, 'fixtures/profil/cv.pdf'))),
+  saveUpload: {
+    ...UPLOAD,
+    content: new Uint8Array(readFileSync(path.join(import.meta.dirname, 'fixtures/profile/cv.pdf'))),
   },
-  convertPiece: PIECE,
-  deletePiece: PIECE,
-  createCandidat: { id: 'camille', name: 'Camille' },
-  renameCandidat: { name: 'Léa' },
+  convertUpload: UPLOAD,
+  deleteUpload: UPLOAD,
+  createCandidate: { id: 'camille', name: 'Camille' },
+  renameCandidate: { name: 'Léa' },
   saveDelaiParDefaut: { months: 6 },
   saveVeille: LEA_VEILLE,
   deleteVeille: { veilleId: LEA_VEILLE_ID },
@@ -121,7 +121,7 @@ async function saveCanal(module: ICanalNotification, parametres: Record<string, 
     canalNotificationList: [module],
   });
   const { id, parametreList } = module.description;
-  await actions.saveCanalNotification({ candidatId: 'lea', canal: id, parametres });
+  await actions.saveCanalNotification({ candidateId: 'lea', canal: id, parametres });
   await actions.detect();
   for (const artefactModule of Object.keys(RUN_BY_MODULE)) {
     await actions.runModule({ module: artefactModule, reference: REFERENCE });
@@ -129,7 +129,7 @@ async function saveCanal(module: ICanalNotification, parametres: Record<string, 
   }
   const secretSet = new Set(parametreList.filter(({ isSecret }) => isSecret).map(({ name }) => name));
   const input = {
-    candidatId: 'lea',
+    candidateId: 'lea',
     reference: REFERENCE,
     module: 'recherche',
     artefact: 'recherche',
@@ -138,7 +138,7 @@ async function saveCanal(module: ICanalNotification, parametres: Record<string, 
     statut: 'a_traiter',
     fileName: 'recherche.md',
     markdown: '# Recherche\n',
-    consignes: 'Citer chaque source.',
+    instructions: 'Citer chaque source.',
     entryListByTitle: {},
     canal: id,
     parametre: parametreList.find(({ hasChoices }) => hasChoices)?.name,

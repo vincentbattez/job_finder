@@ -12,11 +12,11 @@ export interface IInteractiveSession {
   readOnlyPathList?: string[];
 }
 
-// The fixed part of a module's prompt, then its Consignes (ADR-0003); the session writes only in
+// The fixed part of a module's prompt, then its Instructions (ADR-0003); the session writes only in
 // its output folder
 export interface IHeadlessSession {
   fixedPrompt: string;
-  consignes: string;
+  instructions: string;
   directory: string;
   readDirectoryList: string[];
   outputDirectory: string;
@@ -73,7 +73,7 @@ function readResult(output: string, exitCode: number | null): SessionResult {
 // The only file that knows the AI runs on Claude Code, through the subscription and never an API
 // key (ADR-0003): the rest of the app sees an IAiSession, which the tests replace with a fake.
 export const CLAUDE_CODE: IAiSession = {
-  // The prompt goes into the system prompt, not the Candidat's messages; the manual mode asks their
+  // The prompt goes into the system prompt, not the Candidate's messages; the manual mode asks their
   // consent to each edit, and a confined session has no shell that could get round its read-only paths
   openInteractive({ prompt, directory, readOnlyPathList }) {
     const confinementList =
@@ -108,9 +108,9 @@ export const CLAUDE_CODE: IAiSession = {
     }
   },
 
-  // The fixed part goes into the system prompt so that no Consignes can lift its rules (ADR-0003);
+  // The fixed part goes into the system prompt so that no Instructions can lift its rules (ADR-0003);
   // dontAsk refuses any tool not listed. A session that cannot run is a failed one, never a throw.
-  async runHeadless({ fixedPrompt, consignes, directory, readDirectoryList, outputDirectory }) {
+  async runHeadless({ fixedPrompt, instructions, directory, readDirectoryList, outputDirectory }) {
     const argumentList = [
       '-p',
       '--output-format',
@@ -137,7 +137,7 @@ export const CLAUDE_CODE: IAiSession = {
       env: subscriptionEnvironment(),
       stdio: ['pipe', 'pipe', 'inherit'],
     });
-    child.stdin.end(consignes);
+    child.stdin.end(instructions);
     let output = '';
     child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
       output += chunk;
