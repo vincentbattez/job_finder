@@ -1,0 +1,21 @@
+@layer components {
+  /* The Detection beside the name of the list: what it found shows below the button */
+  .detection {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-xs);
+    margin-top: var(--space-xs);
+  }
+  .detection [role='status'] {
+    display: grid;
+    gap: var(--space-xs);
+    color: var(--color-ink-2);
+  }
+  .detection ul {
+    margin: 0;
+    padding-inline-start: var(--space-lg);
+  }
+  .detection__error {
+    color: var(--color-error);
+  }
+}

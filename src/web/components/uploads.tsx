@@ -27,12 +27,7 @@ function UploadConversion({ fileName, conversion }: Readonly<{ fileName: string;
   const { state, log } = conversion;
   const { t } = useTranslation('settings');
   return (
-    <fetcher.Form
-      method="post"
-      action="/profile"
-      className="module-launch uploads__conversion"
-      aria-labelledby={labelId}
-    >
+    <fetcher.Form method="post" action="/profile" className="launch uploads__conversion" aria-labelledby={labelId}>
       <input type="hidden" name="fileName" value={fileName} />
       <span id={labelId}>
         {t('uploads.conversion')}
@@ -53,7 +48,7 @@ function UploadConversion({ fileName, conversion }: Readonly<{ fileName: string;
           <span className="visually-hidden">{t('uploads.ofFile', { fileName })}</span>
         </button>
       )}
-      {state === 'failed' && <p className="module-launch__refusal">{log}</p>}
+      {state === 'failed' && <p className="launch__refusal">{log}</p>}
       {fetcher.state === 'idle' && fetcher.data?.refusal != null && <p role="alert">{fetcher.data.refusal.message}</p>}
     </fetcher.Form>
   );

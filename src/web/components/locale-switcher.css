@@ -1,0 +1,32 @@
+@layer components {
+  /* The Locale Switcher: two codes side by side, the current one filled like the menu's button */
+  .locale-switcher {
+    display: flex;
+  }
+  .locale-switcher__option {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0 var(--space-xs);
+    border: var(--rule-hair) solid var(--color-muted);
+    background: var(--light);
+    color: var(--color-ink-2);
+    font: 500 var(--text-sm) var(--font-outlier);
+    cursor: pointer;
+    transition: background-color var(--dur-short) var(--ease-out);
+  }
+  .locale-switcher__option:first-child {
+    border-radius: var(--radius-input) 0 0 var(--radius-input);
+  }
+  .locale-switcher__option:last-child {
+    border-inline-start: 0;
+    border-radius: 0 var(--radius-input) var(--radius-input) 0;
+  }
+  .locale-switcher__option:hover {
+    background: var(--color-paper-2);
+  }
+  .locale-switcher__option[aria-pressed='true'] {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
+}

@@ -7,6 +7,8 @@ import type { Actions } from '#/actions/index.ts';
 import { ParameterField } from './parameter-field.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 
+import './watches.css';
+
 type Watch = Awaited<ReturnType<Actions['listWatches']>>[number];
 type SourceModule = Awaited<ReturnType<Actions['listSources']>>[number];
 
@@ -29,10 +31,10 @@ function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; source
   const isDisabled = !isHydrated || fetcher.state !== 'idle';
   return (
     <fetcher.Form method="post" action="/watch">
-      <fieldset>
+      <fieldset className="watches__watch">
         <legend>{watch === null ? t('watches.newWatch') : t('watches.watch', { watchId: watch.id })}</legend>
         {watch !== null && <input type="hidden" name="watchId" value={watch.id} />}
-        <label className="settings__field">
+        <label className="field">
           {t('watches.source')}
           <select
             name="source"
@@ -54,10 +56,9 @@ function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; source
             key={`${sourceId}:${parameter.name}`}
             parameter={parameter}
             savedValue={savedParameters?.[parameter.name]}
-            className="settings__field"
           />
         ))}
-        <div className="settings__step">
+        <div className="form-step">
           <button type="submit" name="intent" value="save" className="button button--primary" disabled={isDisabled}>
             {watch === null ? t('watches.create') : t('watches.save')}
           </button>
@@ -79,7 +80,7 @@ export function Watches({ watchList, sourceList }: Readonly<{ watchList: Watch[]
   const headingId = useId();
   const { t } = useTranslation('settings');
   return (
-    <section className="settings" aria-labelledby={headingId}>
+    <section className="form-section" aria-labelledby={headingId}>
       <h2 id={headingId}>{t('watches.heading')}</h2>
       <p>{t('watches.intro')}</p>
       {watchList.map((watch) => (

@@ -40,3 +40,86 @@
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+/* A form of the settings, such as a Watch, the Notification Channel or a Candidate: its heading, what
+   it does, then its fields. A route has no CSS of its own, so the Candidates page shares it too */
+.form-section,
+.form-section form {
+  display: grid;
+  gap: var(--space-md);
+  min-width: 0;
+}
+.form-section h2 {
+  font: 600 var(--text-md) / 1.4 var(--font-body);
+}
+.form-section > p {
+  color: var(--color-ink-2);
+}
+.form-section form {
+  max-width: 32rem;
+}
+/* A field, its name above its input */
+.field {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+  color: var(--color-ink-2);
+  font: 500 var(--text-sm) / 1.4 var(--font-body);
+}
+.field input,
+.field select,
+.field textarea {
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 var(--space-sm);
+  border: var(--rule-hair) solid var(--color-muted);
+  border-radius: var(--radius-input);
+  outline: 2px solid transparent;
+  outline-offset: -3px;
+  background: var(--light);
+  color: var(--color-ink);
+  font: 400 var(--text-sm) / 1.4 var(--font-outlier);
+}
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
+  outline-color: var(--color-focus);
+}
+/* A list Parameter, one value per line, such as the courts of appeal of a Zone */
+.field textarea {
+  padding: var(--space-xs) var(--space-sm);
+  resize: vertical;
+}
+/* A button of a form and, beside it, what its last click answered */
+.form-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  font-size: var(--text-sm);
+}
+.form-step [role='status'] {
+  color: var(--color-success);
+}
+.form-step [role='alert'] {
+  flex-basis: 100%;
+  color: var(--color-error);
+}
+/* A job of the worker, such as a module or a conversion: its state, the button that launches it,
+   then why it waits or what failed */
+.launch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+}
+.launch p {
+  flex-basis: 100%;
+  font-size: var(--text-sm);
+}
+.launch__refusal {
+  color: var(--color-muted);
+}
+.launch [role='alert'] {
+  color: var(--color-error);
+}

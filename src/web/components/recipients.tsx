@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
+import './recipients.css';
+
 type ContactField = 'applicationEmail' | 'contact1' | 'contact2';
 
 export interface IRecipients {
@@ -26,14 +28,14 @@ export function Recipients({ recipients }: Readonly<{ recipients: IRecipients }>
         <div>
           <dt>{t('recipientTerm')}</dt>
           <dd>
-            {to === null ? <span className="missing">{t('noRecipientAddress')}</span> : to.email}
+            {to === null ? <span className="recipients__missing">{t('noRecipientAddress')}</span> : to.email}
             <Source field={to?.source ?? null} />
           </dd>
         </div>
         <div>
           <dt>{t('ccTerm')}</dt>
           {ccList.length === 0 ? (
-            <dd className="missing">{t('noCc')}</dd>
+            <dd className="recipients__missing">{t('noCc')}</dd>
           ) : (
             ccList.map(({ email, source }) => (
               <dd key={email}>

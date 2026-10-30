@@ -4,6 +4,8 @@ import { Form } from 'react-router';
 import { LOCALE_LIST } from '#/actions/i18n.ts';
 import { useLocale } from '#/web/i18n.tsx';
 
+import './locale-switcher.css';
+
 // The Locale Switcher (GLOSSARY.md): each button shows its locale's code and is named in the current
 // locale (ADR-0012). A plain form, so it also works before React hydrates the page.
 export function LocaleSwitcher() {

@@ -21,7 +21,7 @@ export function ModuleLaunch({
   useRevalidateWhile(isRunning);
   const error = fetcher.data?.error ?? null;
   return (
-    <fetcher.Form method="post" action="/run" className="module-launch">
+    <fetcher.Form method="post" action="/run" className="launch">
       <input type="hidden" name="reference" value={reference} />
       <input type="hidden" name="module" value={artifact} />
       <span role="status">
@@ -36,7 +36,7 @@ export function ModuleLaunch({
           artifactLabel: t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' }),
         })}
       </button>
-      {module.refusal !== null && <p className="module-launch__refusal">{module.refusal}</p>}
+      {module.refusal !== null && <p className="launch__refusal">{module.refusal}</p>}
       {error !== null && <p role="alert">{error}</p>}
     </fetcher.Form>
   );

@@ -18,7 +18,7 @@ export function ExtractionLaunch({
   const labelId = useId();
   useRevalidateWhile(state === 'in_progress');
   return (
-    <fetcher.Form method="post" action="/run" className="module-launch" aria-labelledby={labelId}>
+    <fetcher.Form method="post" action="/run" className="launch" aria-labelledby={labelId}>
       <input type="hidden" name="reference" value={reference} />
       <input type="hidden" name="module" value="extraction" />
       <span id={labelId}>{t('extractionLabel')}</span>
@@ -30,7 +30,7 @@ export function ExtractionLaunch({
           <button className="button button--primary" type="submit" disabled={!isHydrated || fetcher.state !== 'idle'}>
             {t('relaunchExtraction')}
           </button>
-          <p className="module-launch__refusal">{log}</p>
+          <p className="launch__refusal">{log}</p>
         </>
       )}
       {fetcher.data?.error != null && <p role="alert">{fetcher.data.error}</p>}

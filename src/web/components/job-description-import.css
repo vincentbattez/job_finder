@@ -1,0 +1,6 @@
+@layer components {
+  /* What the import refused, in the red of every refusal */
+  .job-description-import__error {
+    color: var(--color-error);
+  }
+}
