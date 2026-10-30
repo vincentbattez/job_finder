@@ -192,7 +192,7 @@ _Avoid_: current version, active version, selected version
 _Formerly_: Version retenue
 
 **Instructions**:
-Directions that tell the AI how to produce a type of Artifact; each type has default Instructions, which a Candidate can replace with their own.
+Directions that tell the AI how to produce a type of Artifact; each type has default Instructions in each Locale, which a Candidate reads in theirs and can replace with their own. Whatever their language, the Artifact is written in the language of the Job Description.
 _Avoid_: prompt, template, guidelines
 _Formerly_: Consignes
 
