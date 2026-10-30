@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -62,22 +62,31 @@ const WIRING_LIST = [
   },
 ];
 
-// A copy of the repo's spellcheck, its script and configs, around a single staged file: the command
-// of the hook or of CI runs there as it runs in the repo
-function runInSandbox(command: string, stagedFile: string, content: string): number | null {
+// Each run of the hook or of CI starts cspell cold, twice: seconds on the 2-vCPU GitHub runner
+const WIRING_TIMEOUT = 60_000;
+
+// A copy of the repo's spellcheck, its script and configs only, around the staged files: the command
+// of the hook or of CI runs there as it runs in the repo, and resolves to its exit code
+function runInSandbox(command: string, stagedFileList: Record<string, string>): Promise<number | null> {
   const sandboxDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-spellcheck-'));
   for (const filePath of ['scripts/spellcheck.sh', 'cspell.config.yaml', 'cspell.fr.config.yaml', 'cspell-words.txt']) {
     mkdirSync(path.dirname(path.join(sandboxDirectory, filePath)), { recursive: true });
     copyFileSync(path.join(ROOT_DIRECTORY, filePath), path.join(sandboxDirectory, filePath));
   }
   symlinkSync(path.join(ROOT_DIRECTORY, 'node_modules'), path.join(sandboxDirectory, 'node_modules'));
-  mkdirSync(path.dirname(path.join(sandboxDirectory, stagedFile)), { recursive: true });
-  writeFileSync(path.join(sandboxDirectory, stagedFile), content);
-  const { status } = spawnSync('/bin/sh', ['-c', command.replace('{staged_files}', () => stagedFile)], {
-    cwd: sandboxDirectory,
-    encoding: 'utf8',
+  for (const [stagedFile, content] of Object.entries(stagedFileList)) {
+    mkdirSync(path.dirname(path.join(sandboxDirectory, stagedFile)), { recursive: true });
+    writeFileSync(path.join(sandboxDirectory, stagedFile), content);
+  }
+  const stagedFiles = Object.keys(stagedFileList).join(' ');
+  return new Promise((resolve, reject) => {
+    spawn('/bin/sh', ['-c', command.replace('{staged_files}', () => stagedFiles)], {
+      cwd: sandboxDirectory,
+      stdio: 'ignore',
+    })
+      .on('error', reject)
+      .on('close', resolve);
   });
-  return status;
 }
 
 describe('spellcheck', () => {
@@ -132,12 +141,23 @@ describe('spellcheck', () => {
     expect(isSpelledRight('prisma/migrations/0_fixture/migration.sql', '-- Les offres du candidat\n')).toBe(true);
   });
 
-  it.each(WIRING_LIST)('runs both passes in $name', ({ command }) => {
-    expect(runInSandbox(command, 'src/actions/fixture.ts', 'export const candidateList = [];\n')).toBe(0);
-    expect(runInSandbox(command, 'src/actions/fixture.ts', 'export const listeCandidats = [];\n')).not.toBe(0);
-    expect(runInSandbox(command, 'src/modules/pep/copy.ts', moduleCopy({}))).toBe(0);
-    expect(runInSandbox(command, 'src/modules/pep/copy.ts', moduleCopy({ label: 'Le site est injoignabl.' }))).not.toBe(
-      0,
-    );
-  });
+  // Both English files share one run; each failure needs its own, as the script stops at the first
+  // failing pass. The three runs go side by side
+  it.each(WIRING_LIST)(
+    'runs both passes in $name',
+    async ({ command }) => {
+      const [englishStatus, frenchIdentifierStatus, misspelledLabelStatus] = await Promise.all([
+        runInSandbox(command, {
+          'src/actions/fixture.ts': 'export const candidateList = [];\n',
+          'src/modules/pep/copy.ts': moduleCopy({}),
+        }),
+        runInSandbox(command, { 'src/actions/fixture.ts': 'export const listeCandidats = [];\n' }),
+        runInSandbox(command, { 'src/modules/pep/copy.ts': moduleCopy({ label: 'Le site est injoignabl.' }) }),
+      ]);
+      expect(englishStatus).toBe(0);
+      expect(frenchIdentifierStatus).not.toBe(0);
+      expect(misspelledLabelStatus).not.toBe(0);
+    },
+    WIRING_TIMEOUT,
+  );
 });
