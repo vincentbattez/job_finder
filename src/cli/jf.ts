@@ -273,6 +273,10 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
         for (const { reference, title } of nearMissList) {
           process.stdout.write(`  ${reference}\t${title}\n`);
         }
+        // API Géo down fails nothing: the next Detection locates these Postings
+        if (detection.locationFailure !== null) {
+          process.stderr.write(`${detection.locationFailure}\n`);
+        }
       }
       // What the Detection found is printed first; a notification not sent then fails the run in lpm
       const failureList = detectionList.flatMap(({ notificationFailureList }) => notificationFailureList);

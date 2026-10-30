@@ -124,8 +124,9 @@ export const POSTING_SCHEMA = z
 
 export type Posting = z.infer<typeof POSTING_SCHEMA>;
 
-// What a Detection found for one Watch, and why each notification it could not send failed. On
-// the first launch, the Postings already online are imported without triggering anything.
+// What a Detection found for one Watch, why each notification it could not send failed, and why
+// its Postings stay off the map, API Géo being down. On the first launch, the Postings already
+// online are imported without triggering anything.
 export const DETECTION_SCHEMA = z
   .object({
     watchId: z.string(),
@@ -134,6 +135,7 @@ export const DETECTION_SCHEMA = z
     newPostingList: z.array(POSTING_SCHEMA),
     nearMissList: z.array(LISTED_POSTING_SCHEMA),
     notificationFailureList: z.array(z.string()),
+    locationFailure: z.string().nullable(),
   })
   .brand<'Domain'>();
 
@@ -164,6 +166,7 @@ const DETECTION_WATCH_SCHEMA = z
     newPostingList: z.array(DETECTED_POSTING_SCHEMA),
     nearMissList: z.array(DETECTED_POSTING_SCHEMA),
     notificationFailureList: z.array(z.string()),
+    locationFailure: z.string().nullable(),
   })
   .brand<'Domain'>();
 

@@ -123,4 +123,8 @@ export const ERROR_FR: typeof ERROR_EN = {
 
   apiGeoUnreachable: 'API Géo est injoignable ({{url}}) : {{reason}}. Vérifier la connexion, puis relancer.',
   apiGeoStatus: 'API Géo a répondu HTTP {{status}} pour {{url}}. Relancer plus tard.',
+  apiGeoFormatChanged:
+    'API Géo a répondu dans un format inattendu pour {{url}} : {{problem}}. Son API a peut-être changé : le signaler, les Offres restent hors de la carte en attendant.',
+  postingsNotLocated:
+    'Offres enregistrées sans coordonnées, hors de la carte jusqu’à ce que la prochaine Détection les localise : {{reason}}',
 };

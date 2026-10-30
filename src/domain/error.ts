@@ -170,6 +170,8 @@ export const ERROR_CATALOGUE = {
   api_geo_unreachable: 'error:apiGeoUnreachable',
   // API Géo answers with an HTTP error
   api_geo_status: 'error:apiGeoStatus',
+  // API Géo answers something other than its list of communes: its API changed
+  api_geo_format_changed: 'error:apiGeoFormatChanged',
 
   // Modules of a family, their Parameters and the Notification Channels (ADR-0010)
   // A module declares a Parameter without parameter(), a mistake of its author

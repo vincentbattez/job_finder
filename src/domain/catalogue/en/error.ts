@@ -139,4 +139,9 @@ export const ERROR_EN = {
   // API Géo, which places the Postings on the map
   apiGeoUnreachable: 'API Géo is unreachable ({{url}}): {{reason}}. Check the connection, then run again.',
   apiGeoStatus: 'API Géo answered HTTP {{status}} for {{url}}. Run again later.',
+  apiGeoFormatChanged:
+    'API Géo answered in an unexpected format for {{url}}: {{problem}}. Its API may have changed: report it, the Postings stay off the map meanwhile.',
+  // Stored on a Detection that went on while API Géo was down, which placed nothing on the map
+  postingsNotLocated:
+    'Postings saved without coordinates, off the map until the next Detection locates them: {{reason}}',
 };

@@ -24,6 +24,7 @@ interface IDetectionWatch {
   newPostingList: IDetectedPosting[];
   nearMissList: IDetectedPosting[];
   notificationFailureList: string[];
+  locationFailure: string | null;
 }
 
 export interface IRecordedDetection {
@@ -144,7 +145,7 @@ function headingOf(detection: IRecordedDetection, t: ReturnType<typeof useTransl
 
 function WatchVerdict({ watch }: Readonly<{ watch: IDetectionWatch }>) {
   const { t } = useTranslation('posting');
-  const { label, newPostingList, nearMissList, notificationFailureList } = watch;
+  const { label, newPostingList, nearMissList, notificationFailureList, locationFailure } = watch;
   const count = newPostingList.length;
   let line = t('detection.newPostings', { label, count });
   if (watch.step === 'waiting') {
@@ -194,6 +195,7 @@ function WatchVerdict({ watch }: Readonly<{ watch: IDetectionWatch }>) {
           {failure}
         </p>
       ))}
+      {locationFailure !== null && <p className="detection__error">{locationFailure}</p>}
     </li>
   );
 }

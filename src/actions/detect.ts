@@ -1,16 +1,18 @@
 import { z } from 'zod/v4';
 
-import { defaultErrorTranslator } from '#/domain/catalogue/i18n.ts';
-import { codedError, codedErrorOf } from '#/domain/coded-error.ts';
+import { defaultErrorTranslator, tFor } from '#/domain/catalogue/i18n.ts';
+import { codedError, codedErrorOf, formatError } from '#/domain/coded-error.ts';
 import {
   DETECTION_ORIGIN_SCHEMA,
   DETECTION_OVERVIEW_SCHEMA,
   DETECTION_SCHEMA,
+  LOCATION_SCHEMA,
   type Detection,
   type DetectionOrigin,
   type DetectionOverview,
   type ListedPosting,
   type Locale,
+  type Location,
   type Posting,
   type RecordedDetection,
   type SourceModule,
@@ -45,6 +47,9 @@ function staleOption() {
   };
 }
 
+// The failures of API Géo, a secondary service whose outage leaves the Postings off the map
+const API_GEO_FAILURE_SET = new Set<string>(['api_geo_unreachable', 'api_geo_status', 'api_geo_format_changed']);
+
 // What a Posting a Detection found keeps of it: its reference and its title
 const referenceAndTitle = ({ reference, title }: { reference: string; title: string }) => ({ reference, title });
 
@@ -61,7 +66,7 @@ interface INotifiedPosting {
 
 // What a Detection found for one Watch, and the notifications to send once every Watch is done
 interface IFoundPostings {
-  detection: Omit<z.input<typeof DETECTION_SCHEMA>, 'notificationFailureList'>;
+  detection: Omit<z.input<typeof DETECTION_SCHEMA>, 'notificationFailureList' | 'locationFailure'>;
   notificationList: INotifiedPosting[];
 }
 
@@ -74,6 +79,7 @@ interface IWatchRun {
   // Every Posting of its Candidate, those this Detection saves included: a Repost is found there
   postingList: Posting[];
   locale: Locale;
+  locate: (city: string | null, locale: Locale) => Promise<Location>;
 }
 
 // The Detection, in the actions rather than a module: it reads the Source modules, which no module
@@ -108,12 +114,12 @@ export function createDetectActions({
   // The Postings already online at the first launch start nothing (ADR-0003). The Repost of an
   // Posting once Applied gets no Research whatever the Zone: the Candidate, who applied already, decides.
   async function saveNewPosting(
-    { watch: { candidateId, source }, isFirstLaunch, postingList, locale }: IWatchRun,
+    { watch: { candidateId, source }, isFirstLaunch, postingList, locale, locate: locateCity }: IWatchRun,
     listedPosting: ListedPosting,
     { jobDescription, isInZone }: ISourceReadResult,
   ): Promise<{ posting: Posting; notification: NotificationComposer | undefined }> {
     const repostOf = findRepostedPosting({ ...listedPosting, ...jobDescription }, postingList);
-    const location = await locate(readCity(jobDescription.workplace), locale);
+    const location = await locateCity(readCity(jobDescription.workplace), locale);
     const posting = await workspace.savePosting({
       candidateId,
       source,
@@ -148,7 +154,11 @@ export function createDetectActions({
   // A Posting is known by its reference, never by its publication date, which the site changes
   // (ADR-0001). Each Watch has its own Zone: a Posting stored out of the Zone of one is read again
   // by each other Watch that has not read it yet.
-  async function detectWatch(detection: RecordedDetection, watch: Watch): Promise<IFoundPostings> {
+  async function detectWatch(
+    detection: RecordedDetection,
+    watch: Watch,
+    locateCity: IWatchRun['locate'],
+  ): Promise<IFoundPostings> {
     const { candidateId, source } = watch;
     await workspace.updateDetectionWatch(detection, watch.id, { step: 'searching' });
     const outOfZonePostingList = await workspace.listOutOfZonePostingsSince(watch);
@@ -161,6 +171,7 @@ export function createDetectActions({
       isFirstLaunch: watch.detectedAt === null,
       postingList: await workspace.listPostings(candidateId),
       locale,
+      locate: locateCity,
     };
     const newPostingList: Posting[] = [];
     const notificationList: INotifiedPosting[] = [];
@@ -246,16 +257,44 @@ export function createDetectActions({
     }
   }
 
+  // API Géo only places a Posting on the map: down, it leaves the Postings without coordinates, which
+  // the next Detection locates (listUnlocatedPostings), and is asked no more for this Detection
+  function createDetectionLocator() {
+    let outage: unknown;
+    return {
+      locate: async (city: string | null, locale: Locale): Promise<Location> => {
+        if (outage === undefined) {
+          try {
+            return await locate(city, locale);
+          } catch (error) {
+            if (!API_GEO_FAILURE_SET.has(codedErrorOf(error).code)) {
+              throw error;
+            }
+            outage = error;
+          }
+        }
+        return LOCATION_SCHEMA.parse({ city, region: null, latitude: null, longitude: null });
+      },
+      // What each Watch reports of the outage, with its code, in its Candidate's locale
+      failureFor: (locale: Locale): string | null => {
+        return outage === undefined
+          ? null
+          : tFor(locale, 'error')('postingsNotLocated', { reason: formatError(outage) });
+      },
+    };
+  }
+
   async function detectWatches(detection: RecordedDetection, watchList: Watch[]): Promise<Detection[]> {
+    const locator = createDetectionLocator();
     // The Postings saved before they had a city, or whose city API Géo did not know
     const unlocatedPostingList = await workspace.listUnlocatedPostings();
     for (const posting of unlocatedPostingList) {
       const locale = await findLocale(posting.candidateId);
-      await workspace.setLocation(posting, await locate(posting.city ?? readCity(posting.workplace), locale));
+      await workspace.setLocation(posting, await locator.locate(posting.city ?? readCity(posting.workplace), locale));
     }
     const foundList: IFoundPostings[] = [];
     for (const watch of watchList) {
-      foundList.push(await detectWatch(detection, watch));
+      foundList.push(await detectWatch(detection, watch, locator.locate));
     }
     // Notified last, once every Posting is saved and its Research queued. A notification not sent
     // undoes nothing: it comes back with what the Detection found, which jf detect prints first.
@@ -266,11 +305,13 @@ export function createDetectActions({
         notificationList.map(({ posting, notification }) => notify(posting, notification)),
       );
       const notificationFailureList = failureList.filter((failure) => failure !== undefined);
-      const watchDetection = DETECTION_SCHEMA.parse({ ...found, notificationFailureList });
+      const locationFailure = locator.failureFor(await findLocale(found.candidateId));
+      const watchDetection = DETECTION_SCHEMA.parse({ ...found, notificationFailureList, locationFailure });
       detectionList.push(watchDetection);
       await workspace.updateDetectionWatch(detection, found.watchId, {
         step: 'done',
         notificationFailureList,
+        locationFailure,
       });
     }
     return detectionList;
