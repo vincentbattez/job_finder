@@ -6,7 +6,7 @@ import { createApiGeo } from '#/geo/acl/api-geo.ts';
 import { createPieceConversion } from '#/modules/conversion/index.ts';
 import { createImportSource } from '#/modules/source-import/index.ts';
 import type { ICanalNotification, INotification } from '#/notification/index.ts';
-import type { ISource } from '#/source/index.ts';
+import type { ISource, SourceFactory } from '#/source/index.ts';
 import { messageOf } from '#/text/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
@@ -25,8 +25,8 @@ export interface IActionsOption {
   fetch?: typeof globalThis.fetch;
   // The modules a Candidat chooses their Canal de notification from: the registry, or a fake one
   canalNotificationList?: readonly ICanalNotification[];
-  // The Sources a Veille follows: the registry, or a fake one
-  sourceList?: readonly ISource[];
+  // The Sources a Veille follows, created with fetch: the registry, or a fake one
+  sourceFactoryList?: readonly SourceFactory[];
 }
 
 // What the actions of every feature share: the data folder, the external boundaries, which the
@@ -36,10 +36,11 @@ export async function openContext({
   aiSession = CLAUDE_CODE,
   fetch,
   canalNotificationList = CANAL_NOTIFICATION_LIST,
-  sourceList = SOURCE_LIST,
+  sourceFactoryList = SOURCE_LIST,
 }: IActionsOption) {
   const workspace = await openWorkspace(dataDirectory);
   const apiGeo = createApiGeo(fetch);
+  const sourceList = sourceFactoryList.map((createSource) => createSource(fetch));
 
   async function findCandidat(rawInput: unknown): Promise<Candidat> {
     const { candidatId } = CANDIDAT_INPUT_SCHEMA.parse(rawInput);
@@ -120,7 +121,6 @@ export async function openContext({
   return {
     workspace,
     aiSession,
-    httpFetch: fetch,
     sourceList,
     findSource,
     importSource: createImportSource(aiSession),

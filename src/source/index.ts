@@ -28,8 +28,8 @@ export interface ISourceReadResult {
   isInZone: boolean;
 }
 
-// What a module of the family exports, through defineSource. The tests replace fetch with recorded
-// responses.
+// What a module of the family declares to defineSource. Its operations read the site with the fetch
+// the Source was created with, which the tests replace with recorded responses.
 interface ISourceDefinition<TShape extends ParametreShape> {
   id: string;
   name: string;
@@ -48,9 +48,12 @@ interface ISourceDefinition<TShape extends ParametreShape> {
 export interface ISource {
   description: SourceModule;
   parseParametres(rawParametres: unknown): Parametres;
-  search(veille: Veille, httpFetch?: typeof fetch): Promise<ISearchResult>;
-  readFicheDePoste(reference: string, veille: Veille, httpFetch?: typeof fetch): Promise<ISourceReadResult>;
+  search(veille: Veille): Promise<ISearchResult>;
+  readFicheDePoste(reference: string, veille: Veille): Promise<ISourceReadResult>;
 }
+
+// What a module of the family exports: it creates the Source, bound to the fetch it reads the site with
+export type SourceFactory = (httpFetch?: typeof fetch) => ISource;
 
 export function defineSource<TShape extends ParametreShape>({
   id,
@@ -58,7 +61,7 @@ export function defineSource<TShape extends ParametreShape>({
   parametreSchema,
   search,
   readFicheDePoste,
-}: ISourceDefinition<TShape>): ISource {
+}: ISourceDefinition<TShape>): SourceFactory {
   const description = SOURCE_MODULE_SCHEMA.parse({
     id,
     name,
@@ -76,7 +79,7 @@ export function defineSource<TShape extends ParametreShape>({
     );
   }
 
-  return {
+  return (httpFetch) => ({
     description,
     parseParametres: (rawParametres) =>
       PARAMETRES_SCHEMA.parse(
@@ -87,8 +90,7 @@ export function defineSource<TShape extends ParametreShape>({
           (labelList) => `La Source ${name} attend d'autres Paramètres : renseigner ${labelList}.`,
         ),
       ),
-    search: (veille, httpFetch) => search(parseParametresOf(veille), httpFetch),
-    readFicheDePoste: (reference, veille, httpFetch) =>
-      readFicheDePoste(reference, parseParametresOf(veille), httpFetch),
-  };
+    search: (veille) => search(parseParametresOf(veille), httpFetch),
+    readFicheDePoste: (reference, veille) => readFicheDePoste(reference, parseParametresOf(veille), httpFetch),
+  });
 }

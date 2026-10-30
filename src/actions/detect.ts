@@ -43,7 +43,7 @@ interface IVeilleRun {
 
 // The Détection, in the actions rather than a module: it reads the Source modules, which no module
 // may import (ADR-0003). It knows them only through their family (ADR-0010).
-export function createDetectActions({ workspace, sourceList, findSource, httpFetch, locate, notify }: ActionContext) {
+export function createDetectActions({ workspace, sourceList, findSource, locate, notify }: ActionContext) {
   // In the Zone, an Offre gets its Recherche (ADR-0003)
   async function startInZone(offre: Offre, republicationOf: Offre | undefined): Promise<INotification> {
     await workspace.createJob(offre, 'recherche');
@@ -99,7 +99,7 @@ export function createDetectActions({ workspace, sourceList, findSource, httpFet
     const { candidatId, source } = veille;
     const outOfZoneOffreList = await workspace.listOutOfZoneOffresSince(veille);
     const sourceModule = findSource(source, veille.id);
-    const { matchingList, nearMissList } = await sourceModule.search(veille, httpFetch);
+    const { matchingList, nearMissList } = await sourceModule.search(veille);
     const run = {
       veille,
       isFirstLaunch: veille.detectedAt === null,
@@ -116,7 +116,7 @@ export function createDetectActions({ workspace, sourceList, findSource, httpFet
       if (outOfZoneOffre === undefined && run.offreList.some((offre) => isSame(offre))) {
         continue;
       }
-      const readResult = await sourceModule.readFicheDePoste(listedOffre.reference, veille, httpFetch);
+      const readResult = await sourceModule.readFicheDePoste(listedOffre.reference, veille);
       if (outOfZoneOffre === undefined) {
         const { offre, notification } = await saveNewOffre(run, listedOffre, readResult);
         newOffreList.push(offre);
