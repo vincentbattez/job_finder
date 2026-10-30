@@ -1,0 +1,31 @@
+/* The drop zone of a file, such as a Job Description or an Upload: a dashed tray that lights up under a file */
+@layer components {
+  .drop-zone {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-sm);
+    margin-top: var(--space-xs);
+    padding: var(--space-md);
+    border: var(--rule-hair) dashed var(--color-muted);
+    border-radius: var(--radius-card);
+    color: var(--color-ink-2);
+    transition: background-color var(--dur-short) var(--ease-out);
+  }
+  .drop-zone[data-drag-over='true'] {
+    border-style: solid;
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+  }
+  /* A label in the look of a button, for the hidden file input it holds */
+  .drop-zone__choose {
+    display: inline-flex;
+    align-items: center;
+  }
+  .drop-zone__choose:focus-within {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+  .drop-zone__error {
+    color: var(--color-error);
+  }
+}

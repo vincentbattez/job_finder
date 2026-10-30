@@ -8,6 +8,8 @@ import { MarkdownEditor } from './markdown-editor.tsx';
 import { Markdown } from './markdown.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 
+import './edition.css';
+
 // What the Candidate changes from the Posting page. Each form posts to a route that relays to
 // an action, then comes back to the Posting page where it was (ADR-0003).
 
@@ -32,7 +34,7 @@ export function ArtifactDocument({
   const [editedMarkdown, setEditedMarkdown] = useState(markdown);
   const { t } = useTranslation('posting');
   return (
-    <figure className="document">
+    <figure className="edition__document">
       <figcaption className="reference">{fileName}</figcaption>
       {isModifiable ? (
         <Form method="post" action={`/postings/${reference}/${artifact}/document`} preventScrollReset>

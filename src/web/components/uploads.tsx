@@ -8,6 +8,8 @@ import { DropZone } from './drop-zone.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
 
+import './uploads.css';
+
 // What the Profile action answers a fetcher: a refusal, in the words of the action, or none
 interface IUploadRefusal {
   refusal: { message: string } | null;
@@ -27,12 +29,7 @@ function UploadConversion({ fileName, conversion }: Readonly<{ fileName: string;
   const { state, log } = conversion;
   const { t } = useTranslation('settings');
   return (
-    <fetcher.Form
-      method="post"
-      action="/profile"
-      className="module-launch uploads__conversion"
-      aria-labelledby={labelId}
-    >
+    <fetcher.Form method="post" action="/profile" className="uploads__conversion" aria-labelledby={labelId}>
       <input type="hidden" name="fileName" value={fileName} />
       <span id={labelId}>
         {t('uploads.conversion')}
@@ -53,7 +50,7 @@ function UploadConversion({ fileName, conversion }: Readonly<{ fileName: string;
           <span className="visually-hidden">{t('uploads.ofFile', { fileName })}</span>
         </button>
       )}
-      {state === 'failed' && <p className="module-launch__refusal">{log}</p>}
+      {state === 'failed' && <p className="uploads__refusal">{log}</p>}
       {fetcher.state === 'idle' && fetcher.data?.refusal != null && <p role="alert">{fetcher.data.refusal.message}</p>}
     </fetcher.Form>
   );
@@ -86,18 +83,18 @@ export function Uploads({
         <ul className="uploads__list">
           {uploadList.map(({ fileName, savedAt, conversion }) => (
             <li key={fileName} className="uploads__item">
-              <span className="reference">{fileName}</span>
+              <span className="reference uploads__file-name">{fileName}</span>
               <span className="uploads__date">
                 {t('uploads.savedOn')} <DateText date={savedAt} />
               </span>
               {/* Folded, so a deletion always takes a second, deliberate click */}
-              <details className="profile-file__delete">
+              <details className="uploads__delete">
                 {/* The name is read aloud only: the row already shows it */}
                 <summary>
                   {t('uploads.delete')}
                   <span className="visually-hidden"> {fileName}</span>…
                 </summary>
-                <fetcher.Form method="post" action="/profile" className="edition">
+                <fetcher.Form method="post" action="/profile">
                   <input type="hidden" name="fileName" value={fileName} />
                   <button type="submit" name="intent" value="deleteUpload" className="button button--danger">
                     {t('uploads.deleteForGood')}
