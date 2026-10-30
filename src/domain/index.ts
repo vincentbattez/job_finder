@@ -210,6 +210,14 @@ export const PROFIL_FILE_NAME_SCHEMA = z
 
 export type ProfilFileName = z.infer<typeof PROFIL_FILE_NAME_SCHEMA>;
 
+// A rubrique of the Faits, such as Diplômes, as the form edits it: a list rubrique has one entry per
+// item of faits.md, a text rubrique a single one
+export const RUBRIQUE_SCHEMA = z
+  .object({ title: z.string(), isList: z.boolean(), entryList: z.array(z.string()) })
+  .brand<'Domain'>();
+
+export type Rubrique = z.infer<typeof RUBRIQUE_SCHEMA>;
+
 // A Markdown file of a Version, and whether the Candidat may correct it by hand
 const DOCUMENT_SCHEMA = z.object({ ...MARKDOWN_FILE_SHAPE, isModifiable: z.boolean() });
 

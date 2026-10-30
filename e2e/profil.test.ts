@@ -11,7 +11,7 @@ test.describe('Profil of a Candidat', () => {
     await page.getByRole('link', { name: 'Profil', exact: true }).click();
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Profil de Sacha');
-    await expect(page.getByRole('heading', { level: 2 })).toHaveText(['cv.md', 'faits.md', 'Nouveau fichier']);
+    await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Faits', 'cv.md', 'faits.md', 'Nouveau fichier']);
     const faits = page.getByRole('region', { name: 'faits.md' });
     await expect(faits.getByRole('textbox')).toHaveValue('# Faits\n\n## Mobilité\n\n- Lille et alentours\n');
     await faits.getByRole('textbox').fill('# Faits\n\n## Mobilité\n\n- Lille, Arras et Béthune\n');
@@ -57,7 +57,41 @@ test.describe('Profil of a Candidat', () => {
     await lettre.getByRole('button', { name: 'Supprimer définitivement lettre-tj-lille-2025.md' }).click();
     await expect(lettre).toHaveCount(0);
     await page.reload();
-    await expect(page.getByRole('heading', { level: 2 })).toHaveText(['cv.md', 'faits.md', 'Nouveau fichier']);
+    await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Faits', 'cv.md', 'faits.md', 'Nouveau fichier']);
+  });
+
+  test('shows in faits.md what the form of the Faits saves, and in the form what faits.md says', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Sacha');
+    await page.getByRole('button', { name: 'Choisir' }).click();
+    await page.getByRole('link', { name: 'Profil', exact: true }).click();
+
+    const faitsMarkdown = page.getByRole('region', { name: 'faits.md' }).getByRole('textbox');
+    const foundMarkdown = await faitsMarkdown.inputValue();
+    const faitsForm = page.getByRole('region', { name: 'Faits', exact: true });
+    await faitsForm.getByRole('textbox', { name: 'Identité' }).fill('Sacha Morel');
+    const experiences = faitsForm.getByRole('group', { name: 'Expériences' });
+    await experiences.getByRole('button', { name: 'Ajouter' }).click();
+    await experiences.getByRole('textbox', { name: 'Entrée 1' }).fill('Juriste, Mairie de Lens, 2026');
+    await faitsForm.getByRole('button', { name: 'Enregistrer les Faits' }).click();
+
+    await expect(faitsMarkdown).toHaveValue(/## Identité\n\nSacha Morel\n/);
+    await expect(faitsMarkdown).toHaveValue(/## Expériences\n\n- Juriste, Mairie de Lens, 2026\n/);
+    await expect(faitsMarkdown).toHaveValue(/## Mobilité\n/);
+
+    const markdown = await faitsMarkdown.inputValue();
+    await faitsMarkdown.fill(
+      `${markdown.replace('Sacha Morel', 'Sacha Morel-Durand')}\n## Compétences\n\nDroit public\n`,
+    );
+    await page.getByRole('region', { name: 'faits.md' }).getByRole('button', { name: 'Enregistrer' }).click();
+
+    await expect(faitsForm.getByRole('textbox', { name: 'Identité' })).toHaveValue('Sacha Morel-Durand');
+    await expect(faitsForm.getByRole('textbox', { name: 'Compétences' })).toHaveValue('Droit public');
+    await expect(experiences.getByRole('textbox', { name: 'Entrée 1' })).toHaveValue('Juriste, Mairie de Lens, 2026');
+
+    await faitsMarkdown.fill(foundMarkdown);
+    await page.getByRole('region', { name: 'faits.md' }).getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(faitsForm.getByRole('textbox', { name: 'Identité' })).toHaveValue('');
   });
 
   test('says how to fill an empty Profil', async ({ page }) => {

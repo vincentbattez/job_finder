@@ -1,5 +1,7 @@
 import type { Candidat } from '#/domain/index.ts';
 
+import { RUBRIQUE_LIST } from './faits.ts';
+
 // Fixed, with no Consignes to replace it (ADR-0003); the session runs in the Profil folder, its
 // « dossier courant »
 export function composeProfilPrompt({ name }: Candidat): string {
@@ -9,9 +11,13 @@ Le dossier courant est ce Profil : des fichiers Markdown où l'outil job_finder 
 
 Déroulé :
 1. Lis d'abord tous les fichiers du dossier courant. S'il y en a, résume en quelques lignes ce que le Profil contient déjà et ce qui manque.
-2. Interroge ${name} sur son parcours, une question à la fois : diplômes, stages, expériences professionnelles, motivations, mobilité géographique. Demande des faits précis : intitulés exacts, établissements, employeurs, dates, missions, réalisations.
+2. Interroge ${name} sur son parcours, une question à la fois : identité, coordonnées, diplômes, stages, expériences professionnelles, compétences, motivations, mobilité géographique. Demande des faits précis : intitulés exacts, établissements, employeurs, dates, missions, réalisations.
 3. Avant chaque écriture, montre à ${name} le texte exact que tu vas écrire et attends son accord.
-4. Écris les faits validés dans \`faits.md\`, rangés par section : Diplômes, Stages, Expériences, Motivations, Mobilité.
+4. Écris les faits validés dans \`faits.md\`, rangés par rubrique : ${RUBRIQUE_LIST.map(({ title }) => title).join(', ')}. Chaque rubrique est un titre « ## » ; dans ${RUBRIQUE_LIST.filter(
+    ({ format }) => format.isList,
+  )
+    .map(({ title }) => title)
+    .join(' et ')}, chaque entrée est un élément de liste « - ». Les stages vont dans Expériences.
 
 Règles non négociables :
 - N'invente jamais un fait et ne déduis rien qu'on ne t'a pas dit. Si une information manque, pose la question ou laisse-la de côté.

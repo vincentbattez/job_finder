@@ -4,6 +4,7 @@ import { createConsignesActions } from './consignes.ts';
 import { openContext, type IActionsOption } from './context.ts';
 import { createDetectActions } from './detect.ts';
 import { createEditionActions } from './edition.ts';
+import { createFaitsActions } from './faits.ts';
 import { createImportActions } from './import-fiche-de-poste.ts';
 import { createJobActions } from './jobs.ts';
 import { createOffreActions } from './offres.ts';
@@ -25,6 +26,7 @@ export async function createActions(option: IActionsOption) {
     ...createImportActions(context),
     ...createStatutActions(context),
     ...createProfilActions(context),
+    ...createFaitsActions(context),
     ...createConsignesActions(context),
     ...createEditionActions(context),
     ...createJobActions(context),

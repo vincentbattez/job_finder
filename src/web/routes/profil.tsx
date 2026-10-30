@@ -4,6 +4,7 @@ import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidat } from '#/web/candidat.server.ts';
 import { CopyCommand } from '#/web/components/copy-command.tsx';
+import { FaitsForm } from '#/web/components/faits-form.tsx';
 import { ProfilFile, ProfilFileCreation } from '#/web/components/profil-file.tsx';
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -11,6 +12,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return {
     candidat,
     profilFileList: candidat === null ? [] : await ACTIONS.listProfilFiles({ candidatId: candidat.id }),
+    rubriqueList: candidat === null ? [] : await ACTIONS.readFaits({ candidatId: candidat.id }),
   };
 }
 
@@ -39,6 +41,15 @@ export async function action({ request }: ActionFunctionArgs) {
         await ACTIONS.saveProfilFile(formInput);
         break;
       }
+      case 'faits': {
+        // Each field is named after its rubrique, one per entry of a list rubrique
+        const titleList = [...new Set(formData.keys())].filter((name) => name !== 'intent');
+        await ACTIONS.saveFaits({
+          candidatId: candidat.id,
+          entryListByTitle: Object.fromEntries(titleList.map((title) => [title, formData.getAll(title)])),
+        });
+        break;
+      }
     }
   } catch (error) {
     return { refusal: { isCreation: intent === 'create', fileName, message: messageOf(error) } };
@@ -51,7 +62,7 @@ export function meta() {
 }
 
 export default function Profil() {
-  const { candidat, profilFileList } = useLoaderData<typeof loader>();
+  const { candidat, profilFileList, rubriqueList } = useLoaderData<typeof loader>();
   const refusal = useActionData<typeof action>()?.refusal ?? null;
   return (
     <main className="container page">
@@ -69,6 +80,8 @@ export default function Profil() {
               passées.
             </p>
           </div>
+          {/* Keyed by their content, so that a save of one shows in the other */}
+          <FaitsForm key={JSON.stringify(rubriqueList)} rubriqueList={rubriqueList} />
           {profilFileList.length === 0 ? (
             <div className="empty">
               <p>
@@ -80,7 +93,7 @@ export default function Profil() {
           ) : (
             profilFileList.map(({ fileName, markdown }) => (
               <ProfilFile
-                key={fileName}
+                key={`${fileName}:${markdown}`}
                 fileName={fileName}
                 markdown={markdown}
                 error={

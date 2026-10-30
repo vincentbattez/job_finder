@@ -156,4 +156,66 @@ describe('profil', () => {
       },
     );
   });
+
+  it('reads the Faits by rubrique, in the order of the form', async () => {
+    const { actions } = await openProfil();
+
+    const rubriqueList = await actions.readFaits({ candidatId: 'lea' });
+
+    expect(rubriqueList.map(({ title, entryList }) => [title, entryList])).toEqual([
+      ['Identité', ['']],
+      ['Coordonnées', ['']],
+      ['Diplômes', ['Master 2 droit privé']],
+      ['Expériences', []],
+      ['Compétences', ['']],
+      ['Motivations', ['']],
+      ['Mobilité', ['']],
+    ]);
+  });
+
+  it('saves the Faits into faits.md, keeping what the form does not show', async () => {
+    const { actions, profilDirectory } = await openProfil();
+    writeFileSync(
+      path.join(profilDirectory, 'faits.md'),
+      '# Faits\n\nValidés par Léa.\n\n## Diplômes\n\n- Master 2 droit privé\n\n## Stages\n\n- Cabinet Dupont, 2024\n',
+    );
+
+    await actions.saveFaits({
+      candidatId: 'lea',
+      entryListByTitle: {
+        Identité: ['Léa Martin'],
+        Diplômes: ['Master 2 droit privé', 'Licence de droit'],
+        Expériences: ['Assistante juridique, Cabinet Martin, 2025'],
+      },
+    });
+
+    expect(readFileSync(path.join(profilDirectory, 'faits.md'), 'utf8')).toBe(
+      '# Faits\n\nValidés par Léa.\n\n## Identité\n\nLéa Martin\n\n## Diplômes\n\n- Master 2 droit privé\n- Licence de droit\n\n## Stages\n\n- Cabinet Dupont, 2024\n\n## Expériences\n\n- Assistante juridique, Cabinet Martin, 2025\n',
+    );
+    expect(readFileSync(path.join(profilDirectory, 'cv.md'), 'utf8')).toBe('# CV de Léa\n');
+  });
+
+  it('creates faits.md when the Profil has none', async () => {
+    const dataDirectory = createDataDirectory();
+    const actions = await createActions({ dataDirectory, aiSession: createFakeAiSession() });
+
+    await actions.saveFaits({ candidatId: 'lea', entryListByTitle: { Mobilité: ['Lille'] } });
+
+    expect(await actions.listProfilFiles({ candidatId: 'lea' })).toEqual([
+      { fileName: 'faits.md', markdown: '# Faits\n\n## Mobilité\n\nLille\n' },
+    ]);
+  });
+
+  // One list for both, so that the form reads what Claude writes
+  it('asks jf profil to write faits.md by the rubriques of the form', async () => {
+    const dataDirectory = createDataDirectory();
+    const aiSession = createFakeAiSession();
+    const actions = await createActions({ dataDirectory, aiSession });
+
+    await actions.openProfil({ candidatId: 'lea' });
+
+    expect(aiSession.interactiveSessionList[0]?.prompt).toContain(
+      'rangés par rubrique : Identité, Coordonnées, Diplômes, Expériences, Compétences, Motivations, Mobilité.',
+    );
+  });
 });
