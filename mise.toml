@@ -42,14 +42,13 @@ run = "prisma generate"
 # Regenerate first: a client older than the schema crashes at the first query
 depends = ["db:generate"]
 description = "Serve the front of data/ on port 5180, open to the LAN and WireGuard: the lpm service web (ADR-0002)"
-# .env holds the Home Assistant fallback of the notifications, which the Détection button sends (ADR-0006)
-run = "node --env-file-if-exists=.env node_modules/@react-router/dev/bin.cjs dev --host --port 5180 --strictPort"
+run = "node node_modules/@react-router/dev/bin.cjs dev --host --port 5180 --strictPort"
 
 [tasks."web:dev"]
 # Regenerate first: a client older than the schema crashes at the first query
 depends = ["db:generate"]
 description = "Serve the front of dev-data/, the fake Offres of development, on port 5181 of this machine only"
-# Never .env: a Détection from dev-data/ sends no notification to a real phone
+# The Canaux de notification saved in dev-data/, never those of data/: no real phone gets notified
 env = { JF_DATA_DIRECTORY = "dev-data" }
 run = "node node_modules/@react-router/dev/bin.cjs dev --port 5181 --strictPort"
 
@@ -57,8 +56,7 @@ run = "node node_modules/@react-router/dev/bin.cjs dev --port 5181 --strictPort"
 # Regenerate first: a client older than the schema crashes at the first query
 depends = ["db:generate"]
 description = "Run the queued jobs of data/, one Claude session at a time: the lpm service worker (ADR-0003)"
-# .env holds the Home Assistant fallback of the notifications (ADR-0006)
-run = "node --env-file-if-exists=.env src/worker/worker.ts"
+run = "node src/worker/worker.ts"
 
 [tasks."lint:ts"]
 description = "Lint with ESLint"
