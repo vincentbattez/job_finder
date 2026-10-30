@@ -16,7 +16,7 @@ import {
   type INotification,
 } from '#/notification/index.ts';
 import { findRepublishedOffre } from '#/republication/index.ts';
-import type { ISource, ISourceReadResult } from '#/source/index.ts';
+import type { ISourceReadResult } from '#/source/index.ts';
 import { hasBeenPostulee } from '#/statut/index.ts';
 
 import type { ActionContext } from './context.ts';
@@ -43,18 +43,7 @@ interface IVeilleRun {
 
 // The Détection, in the actions rather than a module: it reads the Source modules, which no module
 // may import (ADR-0003). It knows them only through their family (ADR-0010).
-export function createDetectActions({ workspace, sourceList, httpFetch, locate, notify }: ActionContext) {
-  function findSource({ id, source }: Veille): ISource {
-    const found = sourceList.find(({ description }) => description.id === source);
-    if (found === undefined) {
-      const knownList = sourceList.map(({ description }) => description.id).join(', ');
-      throw new Error(
-        `La Veille ${id} suit une Source inconnue : ${source}. En choisir une parmi ${knownList} dans le Profil de son Candidat.`,
-      );
-    }
-    return found;
-  }
-
+export function createDetectActions({ workspace, sourceList, findSource, httpFetch, locate, notify }: ActionContext) {
   // In the Zone, an Offre gets its Recherche (ADR-0003)
   async function startInZone(offre: Offre, republicationOf: Offre | undefined): Promise<INotification> {
     await workspace.createJob(offre, 'recherche');
@@ -109,7 +98,7 @@ export function createDetectActions({ workspace, sourceList, httpFetch, locate, 
   async function detectVeille(veille: Veille): Promise<IFoundOffres> {
     const { candidatId, source } = veille;
     const outOfZoneOffreList = await workspace.listOutOfZoneOffresSince(veille);
-    const sourceModule = findSource(veille);
+    const sourceModule = findSource(source, veille.id);
     const { matchingList, nearMissList } = await sourceModule.search(veille, httpFetch);
     const run = {
       veille,

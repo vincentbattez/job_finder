@@ -82,12 +82,15 @@ export async function openContext({
     return module;
   }
 
-  // A Source by its identifier, as a Veille saved it or as the Candidat picked it (ADR-0010)
-  function findSource(sourceId: string): ISource {
+  // A Source by its identifier, as the Candidat picked it, or as the Veille named saved it (ADR-0010)
+  function findSource(sourceId: string, veilleId?: string): ISource {
     const source = sourceList.find(({ description: { id } }) => id === sourceId);
     if (source === undefined) {
       const knownList = sourceList.map(({ description: { id } }) => id).join(', ');
-      throw new Error(`Source inconnue : ${sourceId}. En choisir une parmi ${knownList} dans les Veilles du Profil.`);
+      const ofVeille = veilleId === undefined ? '' : ` pour la Veille ${veilleId}`;
+      throw new Error(
+        `Source inconnue${ofVeille} : ${sourceId}. En choisir une parmi ${knownList} dans les Veilles du Profil.`,
+      );
     }
     return source;
   }
