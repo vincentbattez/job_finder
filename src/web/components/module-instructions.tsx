@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Form } from 'react-router';
 
+import { Badge } from './badge.tsx';
 import { MarkdownEditor } from './markdown-editor.tsx';
 import { Markdown } from './markdown.tsx';
 import type { IArtifactVersions } from './posting-detail.tsx';
@@ -38,9 +39,9 @@ export function ModuleInstructions({
     <section className="artifact instructions" data-artifact={module} aria-labelledby={headingId}>
       <div className="instructions__head">
         <h2 id={headingId}>{t(`artifactLabelByArtifact.${module}`, { ns: 'common' })}</h2>
-        <span className="badge" data-instructions={hasCandidateInstructions ? 'candidate' : 'default'}>
+        <Badge data-instructions={hasCandidateInstructions ? 'candidate' : 'default'}>
           {hasCandidateInstructions ? t('instructions.candidateBadge') : t('instructions.defaultOrigin')}
-        </span>
+        </Badge>
       </div>
       <Form method="post" preventScrollReset>
         <input type="hidden" name="module" value={module} />

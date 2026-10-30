@@ -1,0 +1,82 @@
+/* A status of a Posting or a state of an Artifact: a pill in the soft tint of its signal */
+@layer components {
+  .badge {
+    --badge-ink: var(--color-status-to-apply);
+    --badge-soft: var(--color-status-to-apply-soft);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    min-height: 28px;
+    padding: 0 var(--space-sm);
+    border: var(--rule-hair) solid var(--badge-soft);
+    border-radius: var(--radius-pill);
+    background: var(--badge-soft);
+    color: var(--badge-ink);
+    font: 500 var(--text-sm) / 1 var(--font-body);
+    white-space: nowrap;
+  }
+  .badge[data-status='applied'] {
+    --badge-ink: var(--color-status-applied);
+    --badge-soft: var(--color-status-applied-soft);
+  }
+  .badge[data-status='expired'] {
+    --badge-ink: var(--color-status-expired);
+    --badge-soft: var(--color-status-expired-soft);
+  }
+  .badge[data-status='archived'] {
+    --badge-ink: var(--color-status-archived);
+    --badge-soft: var(--color-status-archived-soft);
+  }
+  .badge[data-state='absent'] {
+    --badge-ink: var(--color-state-absent);
+    --badge-soft: var(--color-state-absent-soft);
+  }
+  .badge[data-state='in_progress'] {
+    --badge-ink: var(--color-state-in-progress);
+    --badge-soft: var(--color-state-in-progress-soft);
+  }
+  .badge[data-state='ready'] {
+    --badge-ink: var(--color-state-ready);
+    --badge-soft: var(--color-state-ready-soft);
+  }
+  .badge[data-state='failed'] {
+    --badge-ink: var(--color-state-failed);
+    --badge-soft: var(--color-state-failed-soft);
+  }
+  /* What steps back keeps its place: a dashed rim instead of a fill */
+  .badge:is([data-status='archived'], [data-state='absent']) {
+    border-style: dashed;
+    border-color: var(--color-muted);
+  }
+  /* The one motion of the screen: a loader while a module writes the Artifact */
+  .badge[data-state='in_progress']::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border: 2px solid currentColor;
+    border-inline-end-color: color-mix(in oklab, currentColor 25%, transparent);
+    border-radius: var(--radius-pill);
+    animation: badge-turn 900ms linear infinite;
+  }
+  @keyframes badge-turn {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+  /* A still arc reads as a letter: the label alone carries the state */
+  @media (prefers-reduced-motion: reduce) {
+    .badge[data-state='in_progress']::before {
+      content: none;
+    }
+  }
+  /* The Chosen Version, the one the next Artifacts read and the one sent: the full accent */
+  .badge[data-chosen] {
+    --badge-ink: var(--color-accent-ink);
+    --badge-soft: var(--color-accent);
+  }
+  /* The Candidate's own Instructions of a module, on the same full accent */
+  .badge[data-instructions='candidate'] {
+    --badge-ink: var(--color-accent-ink);
+    --badge-soft: var(--color-accent);
+  }
+}

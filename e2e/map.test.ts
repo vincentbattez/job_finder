@@ -21,7 +21,7 @@ async function filter(page: Page, { city = '', region = '' }: { city?: string; r
 }
 
 function findPoints(page: Page) {
-  return page.getByRole('region', { name: 'Carte des Offres' }).locator('.posting-point');
+  return page.getByRole('region', { name: 'Carte des Offres' }).locator('.posting-map__point');
 }
 
 test.describe('map of the Postings', () => {

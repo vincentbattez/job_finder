@@ -8,6 +8,8 @@ import type { IPostingRow } from './posting-list.tsx';
 import { Recipients, type IRecipients } from './recipients.tsx';
 import { RepostFacts, type IRepost } from './repost.tsx';
 
+import './posting-detail.css';
+
 type Artifact = 'research' | 'letter' | 'interview_brief' | 'visualization';
 
 type VersionState = 'running' | 'ready' | 'failed';
@@ -67,7 +69,7 @@ export function PostingDetail({
   const TITLE_TAG = isPage ? 'h1' : 'h3';
   const PART_TAG = isPage ? 'h2' : 'h4';
   const { t } = useTranslation('posting');
-  const missingContact = <span className="missing">{t('missingContact')}</span>;
+  const missingContact = <span className="posting-detail__missing">{t('missingContact')}</span>;
   const artifactsId = useId();
   const contactsId = useId();
   const recipientsId = useId();
@@ -84,19 +86,19 @@ export function PostingDetail({
           <dl className="posting-detail__facts">
             <div>
               <dt>{t('referenceTerm')}</dt>
-              <dd className="reference">
+              <dd className="posting-detail__reference">
                 {posting.url === null ? posting.reference : <a href={posting.url}>{posting.reference}</a>}
               </dd>
             </div>
             <div>
               <dt>{t('publishedAtTerm')}</dt>
-              <dd className="date">
+              <dd className="posting-detail__date">
                 <DateText date={posting.publishedAt} />
               </dd>
             </div>
             <div>
               <dt>{t('deadlineTerm')}</dt>
-              <dd className="date">
+              <dd className="posting-detail__date">
                 <DateText date={posting.deadline} />
               </dd>
             </div>
@@ -105,10 +107,12 @@ export function PostingDetail({
           {children}
         </header>
         <section className="posting-detail__part" aria-labelledby={artifactsId}>
-          <PART_TAG id={artifactsId}>{t('artifactsHeading')}</PART_TAG>
-          <ul className="artifact-list">
+          <PART_TAG className="posting-detail__heading" id={artifactsId}>
+            {t('artifactsHeading')}
+          </PART_TAG>
+          <ul className="posting-detail__compartments">
             {artifactList.map(({ artifact, state }) => (
-              <li key={artifact} data-artifact={artifact}>
+              <li key={artifact} className="posting-detail__compartment" data-artifact={artifact}>
                 <a href={`#${artifact}`}>{t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' })}</a>
                 <StateBadge state={state} />
               </li>
@@ -118,7 +122,9 @@ export function PostingDetail({
       </div>
       <div className="posting-detail__column">
         <section className="posting-detail__part" aria-labelledby={contactsId}>
-          <PART_TAG id={contactsId}>{t('contactsHeading')}</PART_TAG>
+          <PART_TAG className="posting-detail__heading" id={contactsId}>
+            {t('contactsHeading')}
+          </PART_TAG>
           <dl className="posting-detail__contacts">
             <div>
               <dt>{t('contactLabelByField.applicationEmail')}</dt>
@@ -141,15 +147,19 @@ export function PostingDetail({
           </dl>
         </section>
         <section className="posting-detail__part" aria-labelledby={recipientsId}>
-          <PART_TAG id={recipientsId}>{t('recipientsHeading')}</PART_TAG>
+          <PART_TAG className="posting-detail__heading" id={recipientsId}>
+            {t('recipientsHeading')}
+          </PART_TAG>
           {recipients === null ? (
-            <p className="missing">{t('noRecipients')}</p>
+            <p className="posting-detail__missing">{t('noRecipients')}</p>
           ) : (
             <Recipients recipients={recipients} />
           )}
         </section>
         <section className="posting-detail__part" aria-labelledby={jobDescriptionId}>
-          <PART_TAG id={jobDescriptionId}>{t('jobDescriptionHeading')}</PART_TAG>
+          <PART_TAG className="posting-detail__heading" id={jobDescriptionId}>
+            {t('jobDescriptionHeading')}
+          </PART_TAG>
           <details className="posting-detail__job-description">
             <summary>{t('readJobDescription')}</summary>
             <Markdown markdown={jobDescription} />

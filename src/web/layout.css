@@ -74,3 +74,12 @@
 .page__head p {
   color: var(--color-ink-2);
 }
+/* The samples of /design: the badges side by side, as no component lists them */
+.badge-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

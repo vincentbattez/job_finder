@@ -99,6 +99,11 @@
   --color-state-ready-soft: var(--color-status-applied-soft);
   --color-state-failed: var(--color-status-expired);
   --color-state-failed-soft: var(--color-status-expired-soft);
+
+  /* Leaflet's own colors for the links of the map, which the links of base would turn to the text's */
+  --color-leaflet-link: #0078a8;
+  --color-leaflet-control: #000;
+  --color-leaflet-control-disabled: #bbb;
 }
 /* Smaller screens, narrower gutters and gaps */
 @media (max-width: 60rem) {

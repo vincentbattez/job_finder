@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router';
 
 import { showStatus, type Status } from './badge.tsx';
 
+import './posting-map.css';
+
 interface IMappedPosting {
   reference: string;
   title: string;
@@ -81,7 +83,7 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
         for (const [index, posting] of locationPostingList.entries()) {
           const shift = (index - (locationPostingList.length - 1) / 2) * POINT_STEP;
           const icon = leaflet.divIcon({
-            className: 'posting-point',
+            className: 'posting-map__point',
             iconSize: [POINT_SIZE, POINT_SIZE],
             iconAnchor: [POINT_SIZE / 2 - shift, POINT_SIZE / 2],
           });

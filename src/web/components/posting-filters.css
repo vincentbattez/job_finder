@@ -1,0 +1,32 @@
+/* The filters under the title, in the plain controls of the Candidate menu */
+@layer components {
+  .posting-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: var(--space-sm) var(--space-md);
+    margin-top: var(--space-sm);
+  }
+  .posting-filters label {
+    display: grid;
+    gap: var(--space-2xs);
+    min-width: 0;
+    color: var(--color-muted);
+    font: 500 var(--text-sm) var(--font-body);
+  }
+  .posting-filters__control {
+    max-width: 100%;
+  }
+  .posting-filters .posting-filters__check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    min-height: 40px;
+    color: var(--color-ink-2);
+  }
+  .posting-filters__check input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-accent);
+  }
+}
