@@ -1,5 +1,5 @@
 import type { IAiModule } from '#/ai-module/index.ts';
-import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { catalogueFor } from '#/domain/catalogue/index.ts';
 import type { Locale } from '#/domain/index.ts';
 
 import { composeInterviewBriefPrompt, INTERVIEW_BRIEF_FILE_NAME } from './prompt.ts';
@@ -7,7 +7,7 @@ import { composeInterviewBriefPrompt, INTERVIEW_BRIEF_FILE_NAME } from './prompt
 // An Interview Brief starts with its title; its plan is that of the Instructions, which the
 // Candidate may change
 function findFormatError(markdown: string, locale: Locale): string | undefined {
-  return markdown.trimStart().startsWith('# ') ? undefined : catalogueOf({ locale }).error.noLevelOneHeading;
+  return markdown.trimStart().startsWith('# ') ? undefined : catalogueFor(locale).error.noLevelOneHeading;
 }
 
 // The Interview Brief of a Posting: a headless Claude session writes a single Markdown file, to

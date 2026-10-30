@@ -57,5 +57,10 @@ export function localeOf(candidate: { locale: Locale } | null | undefined): Loca
 }
 
 export function catalogueOf(candidate: { locale: Locale } | null | undefined): Catalogue {
-  return CATALOGUE_BY_LOCALE[localeOf(candidate)];
+  return catalogueFor(localeOf(candidate));
+}
+
+// The catalogue of a locale already known, without a Candidate to read it from
+export function catalogueFor(locale: Locale): Catalogue {
+  return CATALOGUE_BY_LOCALE[locale];
 }

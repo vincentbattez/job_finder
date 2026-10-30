@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { catalogueFor } from '#/domain/catalogue/index.ts';
 import {
   ARTIFACT_SCHEMA,
   POSTING_DETAIL_SCHEMA,
@@ -118,7 +118,7 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
     async readVisualization(rawInput: unknown): Promise<Visualization> {
       const { reference, number } = VISUALIZATION_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
-      const { error } = catalogueOf({ locale: await findLocale(posting.candidateId) });
+      const { error } = catalogueFor(await findLocale(posting.candidateId));
       const versionList = await workspace.listVersions(posting, 'visualization');
       const version = versionList.find((entry) => entry.number === number);
       if (version === undefined) {
@@ -138,7 +138,7 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
       const posting = await findPosting(reference);
       const recipients = await findRecipients(posting);
       if (recipients === null) {
-        const { error } = catalogueOf({ locale: await findLocale(posting.candidateId) });
+        const { error } = catalogueFor(await findLocale(posting.candidateId));
         throw new Error(error.noChosenLetter(reference));
       }
       return recipients;

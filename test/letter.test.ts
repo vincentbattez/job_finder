@@ -4,13 +4,13 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
-import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { catalogueFor } from '#/domain/catalogue/index.ts';
 
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
 // Léa's, in French
-const { defaultInstructions } = catalogueOf({ locale: 'fr' });
+const { defaultInstructions } = catalogueFor('fr');
 const LETTER_DEFAULT_INSTRUCTIONS = defaultInstructions.letter;
 
 // Béthune, juvenile court: mail p.tj-bethune@justice.fr, contact 1 the president, contact 2 the

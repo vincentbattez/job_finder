@@ -1,12 +1,12 @@
 import type { IAiModule } from '#/ai-module/index.ts';
-import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { catalogueFor } from '#/domain/catalogue/index.ts';
 import type { Locale } from '#/domain/index.ts';
 
 import { composeResearchPrompt, RESEARCH_FILE_NAME } from './prompt.ts';
 
 // A Research starts with its title and ends with its sources, at least one link
 function findFormatError(markdown: string, locale: Locale): string | undefined {
-  const { error } = catalogueOf({ locale });
+  const { error } = catalogueFor(locale);
   if (!markdown.trimStart().startsWith('# ')) {
     return error.noLevelOneHeading;
   }

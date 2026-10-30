@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import type { IAiModule } from '#/ai-module/index.ts';
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { catalogueFor, catalogueOf } from '#/domain/catalogue/index.ts';
 import {
   ARTIFACT_SCHEMA,
   type Artifact,
@@ -50,11 +50,11 @@ function parseArtifactName(name: string, composeError: (name: string, nameList: 
 }
 
 export function parseModule(name: string, locale: Locale): Artifact {
-  return parseArtifactName(name, catalogueOf({ locale }).error.unknownModule);
+  return parseArtifactName(name, catalogueFor(locale).error.unknownModule);
 }
 
 export function parseArtifact(name: string, locale: Locale): Artifact {
-  return parseArtifactName(name, catalogueOf({ locale }).error.unknownArtifact);
+  return parseArtifactName(name, catalogueFor(locale).error.unknownArtifact);
 }
 
 // Those of the Candidate's locale, the ones they read and edit; the Artifact's language is set by the
@@ -123,7 +123,7 @@ function wordRefusal(refusal: Refusal, posting: Posting, module: Artifact, local
     return refusal.freeze;
   }
   const { missingArtifact } = refusal;
-  const { common, error } = catalogueOf({ locale });
+  const { common, error } = catalogueFor(locale);
   const missingLabel = common.artifactLabelByArtifact[missingArtifact];
   const moduleLabel = common.artifactLabelByArtifact[module];
   return isForFront
@@ -176,7 +176,7 @@ export function createJobRunner(
     outputDirectory: string,
     locale: Locale,
   ) {
-    const { error } = catalogueOf({ locale });
+    const { error } = catalogueFor(locale);
     const filePath = path.join(outputDirectory, name);
     const outputPath = path.relative(workspace.postingDirectoryOf(posting), filePath);
     const content = workspace.readTextFile(filePath);

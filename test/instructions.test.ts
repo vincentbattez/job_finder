@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
-import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { catalogueFor } from '#/domain/catalogue/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 // Léa's, in French
-const { defaultInstructions } = catalogueOf({ locale: 'fr' });
+const { defaultInstructions } = catalogueFor('fr');
 const INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS = defaultInstructions.interview_brief;
 const LETTER_DEFAULT_INSTRUCTIONS = defaultInstructions.letter;
 const RESEARCH_DEFAULT_INSTRUCTIONS = defaultInstructions.research;

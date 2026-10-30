@@ -1,6 +1,6 @@
 import { z } from 'zod/v4';
 
-import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { catalogueFor } from '#/domain/catalogue/index.ts';
 import { LOCATION_SCHEMA, type Locale, type Location } from '#/domain/index.ts';
 import { wordListOf } from '#/text/index.ts';
 
@@ -27,7 +27,7 @@ export function createApiGeo(httpFetch: typeof fetch = fetch) {
     // The commune named like the city, the most populated one when several are. Its search is
     // fuzzy, so a commune with another name is never taken for the city: null.
     async findLocation(city: string, locale: Locale): Promise<Location | null> {
-      const { error: message } = catalogueOf({ locale });
+      const { error: message } = catalogueFor(locale);
       const url = `${ORIGIN}/communes?nom=${encodeURIComponent(city)}&fields=nom,centre,region&boost=population&limit=5`;
       let response: Response;
       try {

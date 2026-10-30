@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { catalogueFor } from '#/domain/catalogue/index.ts';
 import { ARTIFACT_SCHEMA, type Artifact, type Locale, type Posting, type Version } from '#/domain/index.ts';
 import { composeEditPrompt } from '#/edit/prompt.ts';
 import { DRAFT_FILE_NAME } from '#/modules/letter/index.ts';
@@ -22,7 +22,7 @@ export function assertArtifactModifiable(
   locale: Locale,
 ): asserts version is Version {
   const { reference } = posting;
-  const { error } = catalogueOf({ locale });
+  const { error } = catalogueFor(locale);
   if (artifact === 'visualization') {
     throw new Error(error.visualizationNotEditable(reference));
   }
@@ -43,7 +43,7 @@ export function assertDocumentModifiable(
 ): asserts version is Version {
   assertArtifactModifiable(posting, artifact, version, locale);
   if (fileName === DRAFT_FILE_NAME) {
-    throw new Error(catalogueOf({ locale }).error.draftNotEditable(posting.reference));
+    throw new Error(catalogueFor(locale).error.draftNotEditable(posting.reference));
   }
 }
 
@@ -56,7 +56,7 @@ export function assertChoosable(
   locale: Locale,
 ): asserts version is Version {
   const { reference } = posting;
-  const { error } = catalogueOf({ locale });
+  const { error } = catalogueFor(locale);
   assertNotFrozen(posting, artifact, locale);
   if (version === undefined) {
     throw new Error(error.unknownVersion(reference, artifact, number));
@@ -121,7 +121,7 @@ export function createEditionActions({ workspace, aiSession, findCandidate, find
       assertDocumentModifiable(posting, artifact, version, fileName, locale);
       // The front sends the name back: nothing else than a file of the Version may be written
       if (workspace.readVersionDocuments(posting, version).every((document) => document.fileName !== fileName)) {
-        throw new Error(catalogueOf({ locale }).error.notAVersionFile(fileName, artifact, reference));
+        throw new Error(catalogueFor(locale).error.notAVersionFile(fileName, artifact, reference));
       }
       workspace.writeVersionDocument(posting, version, fileName, markdown);
     },

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { z } from 'zod/v4';
 
 import type { IAiModule } from '#/ai-module/index.ts';
-import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { catalogueFor } from '#/domain/catalogue/index.ts';
 import type { Locale, Posting, Recipients } from '#/domain/index.ts';
 
 import { copyAsReadOnlyOriginal } from './acl/files.ts';
@@ -15,7 +15,7 @@ export { DRAFT_FILE_NAME } from './prompt.ts';
 // The recipients follow the format of the prompt, and each address is found as is in the field of
 // the Posting it cites, so none is invented, even from a field written as free text
 function findRecipientsError(json: string, locale: Locale, posting: Posting): string | undefined {
-  const { error: message } = catalogueOf({ locale });
+  const { error: message } = catalogueFor(locale);
   let recipients: Recipients;
   try {
     recipients = parseRecipients(json);

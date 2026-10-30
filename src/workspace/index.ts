@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { catalogueFor } from '#/domain/catalogue/index.ts';
 import {
   JOB_DESCRIPTION_FILE_NAME,
   type Artifact,
@@ -181,7 +181,7 @@ export async function openWorkspace(dataDirectory: string) {
       const filePath = path.join(postingDirectoryOf(posting), JOB_DESCRIPTION_FILE_NAME);
       const jobDescription = readTextFile(filePath);
       if (jobDescription === null) {
-        throw new Error(catalogueOf({ locale }).error.missingJobDescription(posting.reference, filePath));
+        throw new Error(catalogueFor(locale).error.missingJobDescription(posting.reference, filePath));
       }
       return jobDescription;
     },

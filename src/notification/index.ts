@@ -1,6 +1,6 @@
 import type { z } from 'zod/v4';
 
-import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { catalogueFor } from '#/domain/catalogue/index.ts';
 import {
   NOTIFICATION_CHANNEL_MODULE_SCHEMA,
   type Locale,
@@ -56,7 +56,7 @@ export interface INotificationChannel {
 }
 
 function copyOf(locale: Locale) {
-  return catalogueOf({ locale }).notification;
+  return catalogueFor(locale).notification;
 }
 
 export function defineNotificationChannel<TShape extends ParameterShape>(
@@ -97,13 +97,13 @@ export function defineNotificationChannel<TShape extends ParameterShape>(
 
 // The jurisdiction of a Posting is its workplace, such as « Tribunal Judiciaire de Béthune »
 function jurisdictionOf({ workplace }: Posting, locale: Locale): string {
-  return workplace ?? catalogueOf({ locale }).notification.missingJurisdiction;
+  return workplace ?? catalogueFor(locale).notification.missingJurisdiction;
 }
 
 // One composer per notified event, whatever the Channel
 export function composeNewPostingNotification(posting: Posting): NotificationComposer {
   return (locale) => {
-    const copy = catalogueOf({ locale }).notification;
+    const copy = catalogueFor(locale).notification;
     return {
       title: copy.newPostingTitle,
       message: [posting.title, jurisdictionOf(posting, locale), copy.deadline(posting.deadline)].join('\n'),
@@ -114,7 +114,7 @@ export function composeNewPostingNotification(posting: Posting): NotificationCom
 // A Repost in the Zone, whose Research starts from that of the Posting it publishes again
 export function composeRepostNotification(posting: Posting, repostedPosting: Posting): NotificationComposer {
   return (locale) => {
-    const copy = catalogueOf({ locale }).notification;
+    const copy = catalogueFor(locale).notification;
     return {
       title: copy.repostTitle,
       message: [
@@ -130,7 +130,7 @@ export function composeRepostNotification(posting: Posting, repostedPosting: Pos
 // The Candidate already applied to the Posting published again: they decide whether to apply again
 export function composeRepostAppliedNotification(posting: Posting, repostedPosting: Posting): NotificationComposer {
   return (locale) => {
-    const copy = catalogueOf({ locale }).notification;
+    const copy = catalogueFor(locale).notification;
     return {
       title: copy.repostAppliedTitle,
       message: [
@@ -146,14 +146,14 @@ export function composeRepostAppliedNotification(posting: Posting, repostedPosti
 // What the Candidate receives when they try their Notification Channel
 export function composeTestNotification(candidateName: string): NotificationComposer {
   return (locale) => {
-    const copy = catalogueOf({ locale }).notification;
+    const copy = catalogueFor(locale).notification;
     return { title: copy.testTitle, message: copy.testMessage(candidateName) };
   };
 }
 
 export function composeResearchReadyNotification(posting: Posting): NotificationComposer {
   return (locale) => ({
-    title: catalogueOf({ locale }).notification.researchReadyTitle,
+    title: catalogueFor(locale).notification.researchReadyTitle,
     message: [posting.title, jurisdictionOf(posting, locale)].join('\n'),
   });
 }

@@ -1,5 +1,5 @@
 import type { IAiModule } from '#/ai-module/index.ts';
-import { catalogueOf } from '#/domain/catalogue/index.ts';
+import { catalogueFor } from '#/domain/catalogue/index.ts';
 import type { Locale } from '#/domain/index.ts';
 
 import { composeVisualizationPrompt, VISUALIZATION_FILE_NAME } from './prompt.ts';
@@ -7,7 +7,7 @@ import { composeVisualizationPrompt, VISUALIZATION_FILE_NAME } from './prompt.ts
 // A whole HTML page, without a script: the front's sandboxed frame runs none, so a diagram drawn by
 // one would never show
 function findFormatError(html: string, locale: Locale): string | undefined {
-  const { error } = catalogueOf({ locale });
+  const { error } = catalogueFor(locale);
   if (!/^<!doctype html>/i.test(html.trimStart()) || !/<\/html>\s*$/i.test(html)) {
     return error.notACompletePage;
   }
