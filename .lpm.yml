@@ -6,6 +6,9 @@ services:
   web:
     cmd: mise run web
     port: 5180
+    portConflict: free
+    dependsOn:
+      - worker
   worker: mise run worker
 jobs:
   # The daily Détection (ADR-0003). Run in a login shell from the repo root, where mise puts `jf` on
