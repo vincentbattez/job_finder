@@ -1,11 +1,24 @@
 import { useId } from 'react';
-import { Form, redirect, useActionData, useLoaderData, type ActionFunctionArgs } from 'react-router';
+import {
+  Form,
+  redirect,
+  useActionData,
+  useLoaderData,
+  type ActionFunctionArgs,
+  type LoaderFunctionArgs,
+  type MetaArgs,
+} from 'react-router';
 
+import { catalogueOf } from '#/actions/catalogue.ts';
 import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
+import { readCandidate } from '#/web/candidate.server.ts';
+import { useCatalogue } from '#/web/catalogue.ts';
 
-export async function loader() {
+export async function loader({ request }: LoaderFunctionArgs) {
+  const { candidate } = await readCandidate(request);
   return {
+    candidate,
     candidateList: await ACTIONS.listCandidates(),
     defaultDeadlinePeriod: await ACTIONS.readDefaultDeadlinePeriod(),
     obsoleteConfig: await ACTIONS.findObsoleteConfig(),
@@ -41,8 +54,8 @@ export async function action({ request }: ActionFunctionArgs) {
   return redirect('/candidates');
 }
 
-export function meta() {
-  return [{ title: 'Candidats · Job Finder' }];
+export function meta({ loaderData }: MetaArgs<typeof loader>) {
+  return [{ title: catalogueOf(loaderData?.candidate).settings.candidates.pageTitle }];
 }
 
 function Refusal({ message }: Readonly<{ message: string | undefined }>) {
@@ -52,6 +65,7 @@ function Refusal({ message }: Readonly<{ message: string | undefined }>) {
 export default function Candidates() {
   const { candidateList, defaultDeadlinePeriod, obsoleteConfig } = useLoaderData<typeof loader>();
   const refusal = useActionData<typeof action>()?.refusal;
+  const { candidates } = useCatalogue().settings;
   const refusalOf = (intent: string, candidateId?: string) =>
     refusal?.intent === intent && (candidateId === undefined || refusal.candidateId === candidateId)
       ? refusal.message
@@ -62,31 +76,24 @@ export default function Candidates() {
   return (
     <main className="container page">
       <div className="page__head">
-        <h1>Candidats</h1>
-        <p>
-          Les personnes qui cherchent un emploi avec l’outil. Chacun règle ses Veilles dans son Profil ; un Candidat ne
-          se supprime pas.
-        </p>
-        {obsoleteConfig.path !== null && (
-          <p role="note">
-            {obsoleteConfig.path} n’est plus lu : son contenu a été importé ici. Le supprimer du Mac mini.
-          </p>
-        )}
+        <h1>{candidates.heading}</h1>
+        <p>{candidates.intro}</p>
+        {obsoleteConfig.path !== null && <p role="note">{candidates.obsoleteConfig(obsoleteConfig.path)}</p>}
       </div>
       <section className="settings" aria-labelledby={listHeadingId}>
-        <h2 id={listHeadingId}>Renommer un Candidat</h2>
-        {candidateList.length === 0 && <p>Aucun Candidat pour l’instant : créez le premier plus bas.</p>}
+        <h2 id={listHeadingId}>{candidates.renameHeading}</h2>
+        {candidateList.length === 0 && <p>{candidates.noCandidate}</p>}
         {candidateList.map(({ id, name }) => (
           <Form key={`${id}:${name}`} method="post">
             <input type="hidden" name="intent" value="rename" />
             <input type="hidden" name="candidateId" value={id} />
             <label className="settings__field">
-              {`Nom de ${id}`}
-              <input name="name" required defaultValue={name} placeholder="Léa Martin" />
+              {candidates.nameOf(id)}
+              <input name="name" required defaultValue={name} placeholder={candidates.fullNamePlaceholder} />
             </label>
             <div className="settings__step">
-              <button type="submit" aria-label={`Renommer ${id}`}>
-                Renommer
+              <button type="submit" aria-label={candidates.renameOf(id)}>
+                {candidates.rename}
               </button>
               <Refusal message={refusalOf('rename', id)} />
             </div>
@@ -94,33 +101,33 @@ export default function Candidates() {
         ))}
       </section>
       <section className="settings" aria-labelledby={creationHeadingId}>
-        <h2 id={creationHeadingId}>Nouveau Candidat</h2>
+        <h2 id={creationHeadingId}>{candidates.creationHeading}</h2>
         {/* Remounted once a Candidate is created, so the form starts blank again */}
         <Form key={candidateList.length} method="post">
           <input type="hidden" name="intent" value="create" />
           <label className="settings__field">
-            Nom
-            <input name="name" required placeholder="Léa" />
+            {candidates.name}
+            <input name="name" required placeholder={candidates.namePlaceholder} />
           </label>
           <label className="settings__field">
-            Identifiant, qui nomme son dossier et ses commandes jf : minuscules, chiffres et tirets
-            <input name="id" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="lea" />
+            {candidates.id}
+            <input name="id" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder={candidates.idPlaceholder} />
           </label>
           <div className="settings__step">
             <button type="submit" className="button--primary">
-              Créer le Candidat
+              {candidates.create}
             </button>
             <Refusal message={refusalOf('create')} />
           </div>
         </Form>
       </section>
       <section className="settings" aria-labelledby={delayHeadingId}>
-        <h2 id={delayHeadingId}>Délai par défaut</h2>
-        <p>Une Offre publiée sans Date limite est Expirée ce nombre de mois après sa publication, pour tous.</p>
+        <h2 id={delayHeadingId}>{candidates.defaultDeadlinePeriodHeading}</h2>
+        <p>{candidates.defaultDeadlinePeriodHint}</p>
         <Form key={defaultDeadlinePeriod.months} method="post">
           <input type="hidden" name="intent" value="default-deadline-period" />
           <label className="settings__field">
-            Délai par défaut, en mois
+            {candidates.defaultDeadlinePeriodMonths}
             <input
               name="months"
               type="number"
@@ -133,7 +140,7 @@ export default function Candidates() {
           </label>
           <div className="settings__step">
             <button type="submit" className="button--primary">
-              Enregistrer le Délai par défaut
+              {candidates.saveDefaultDeadlinePeriod}
             </button>
             <Refusal message={refusalOf('default-deadline-period')} />
           </div>

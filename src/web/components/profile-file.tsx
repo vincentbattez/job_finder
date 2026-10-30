@@ -1,6 +1,8 @@
 import { useId, useState } from 'react';
 import { Form } from 'react-router';
 
+import { useCatalogue } from '#/web/catalogue.ts';
+
 import { MarkdownEditor } from './markdown-editor.tsx';
 
 // One Markdown file of the Profile, such as facts.md, edited in place
@@ -11,6 +13,8 @@ export function ProfileFile({
 }: Readonly<{ fileName: string; markdown: string; error: string | null }>) {
   const headingId = useId();
   const [editedMarkdown, setEditedMarkdown] = useState(markdown);
+  const { settings } = useCatalogue();
+  const { profileFile } = settings;
   return (
     <section className="profile-file" aria-labelledby={headingId}>
       <h2 id={headingId} className="reference">
@@ -20,16 +24,16 @@ export function ProfileFile({
         <input type="hidden" name="fileName" value={fileName} />
         <MarkdownEditor
           name="markdown"
-          label={`Contenu de ${fileName}`}
+          label={profileFile.contentOf(fileName)}
           defaultValue={markdown}
-          placeholder={'# Titre\n\n## Rubrique\n\n- Un fait par ligne, en Markdown'}
+          placeholder={profileFile.contentPlaceholder}
           onChange={setEditedMarkdown}
         />
         <div className="edition">
           <button type="submit" name="intent" value="save" className="button--primary">
-            Enregistrer
+            {profileFile.save}
           </button>
-          {editedMarkdown !== markdown && <p role="status">Modifications non enregistrées</p>}
+          {editedMarkdown !== markdown && <p role="status">{settings.unsavedChanges}</p>}
           {error !== null && (
             <p role="alert" className="profile-file__error">
               {error}
@@ -39,12 +43,12 @@ export function ProfileFile({
       </Form>
       {/* Folded, so a deletion always takes a second, deliberate click, with or without JavaScript */}
       <details className="profile-file__delete">
-        <summary>Supprimer {fileName}…</summary>
+        <summary>{profileFile.deleteSummary(fileName)}</summary>
         <Form method="post" preventScrollReset className="edition">
           <input type="hidden" name="fileName" value={fileName} />
-          <p>L’outil ne s’en servira plus pour écrire à votre place. Ce fichier ne pourra pas être récupéré.</p>
+          <p>{profileFile.deleteWarning}</p>
           <button type="submit" name="intent" value="delete" className="button--danger">
-            Supprimer définitivement {fileName}
+            {profileFile.deleteForGood(fileName)}
           </button>
         </Form>
       </details>
@@ -56,33 +60,32 @@ export function ProfileFile({
 export function ProfileFileCreation({ error }: Readonly<{ error: string | null }>) {
   const headingId = useId();
   const fileNameId = useId();
+  const { profileFile } = useCatalogue().settings;
   return (
     <section className="profile-file profile-file--new" aria-labelledby={headingId}>
-      <h2 id={headingId}>Nouveau fichier</h2>
+      <h2 id={headingId}>{profileFile.creationHeading}</h2>
       <Form method="post" preventScrollReset>
         <div className="profile-file__name">
-          <label htmlFor={fileNameId}>Nom du fichier</label>
+          <label htmlFor={fileNameId}>{profileFile.fileName}</label>
           <input
             id={fileNameId}
             type="text"
             name="fileName"
             required
-            placeholder="lettre-mairie-bethune-2025.md"
+            placeholder={profileFile.fileNamePlaceholder}
             autoComplete="off"
             spellCheck={false}
           />
         </div>
         <MarkdownEditor
           name="markdown"
-          label="Contenu, à remplir plus tard si besoin"
+          label={profileFile.creationContent}
           defaultValue=""
-          placeholder={
-            '# Lettre de motivation, Mairie de Béthune, 2025\n\nMadame, Monsieur,\n\nTitulaire d’un master de droit public, je vous propose ma candidature…'
-          }
+          placeholder={profileFile.creationContentPlaceholder}
         />
         <div className="edition">
           <button type="submit" name="intent" value="create" className="button--primary">
-            Créer le fichier
+            {profileFile.create}
           </button>
           {error !== null && (
             <p role="alert" className="profile-file__error">

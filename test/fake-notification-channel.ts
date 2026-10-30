@@ -17,7 +17,7 @@ export const LEA_TARGET = 'notify.mobile_app_iphone_de_lea';
 // registry; saveFor saves it as a Candidate's Channel.
 export function createFakeNotificationChannel({ errorMessage }: { errorMessage?: string } = {}) {
   const sentList: ISentNotification[] = [];
-  const targetParameter = parameter(z.string(), { label: 'Cible' });
+  const targetParameter = parameter(z.string(), { label: { fr: 'Cible', en: 'Target' } });
   const module = defineNotificationChannel({
     id: 'faux',
     name: 'Faux Canal',

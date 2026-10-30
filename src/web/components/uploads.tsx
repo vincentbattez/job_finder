@@ -1,6 +1,8 @@
 import { useId } from 'react';
 import { useFetcher } from 'react-router';
 
+import { useCatalogue } from '#/web/catalogue.ts';
+
 import { StateBadge, type State } from './badge.tsx';
 import { DateText } from './date.tsx';
 import { DropZone } from './drop-zone.tsx';
@@ -24,6 +26,7 @@ function UploadConversion({ fileName, conversion }: Readonly<{ fileName: string;
   const isHydrated = useIsHydrated();
   const labelId = useId();
   const { state, log } = conversion;
+  const { uploads } = useCatalogue().settings;
   return (
     <fetcher.Form
       method="post"
@@ -33,15 +36,16 @@ function UploadConversion({ fileName, conversion }: Readonly<{ fileName: string;
     >
       <input type="hidden" name="fileName" value={fileName} />
       <span id={labelId}>
-        Conversion en Markdown<span className="visually-hidden"> de {fileName}</span>
+        {uploads.conversion}
+        <span className="visually-hidden">{uploads.ofFile(fileName)}</span>
       </span>
       <span role="status">
         <StateBadge state={state} />
       </span>
       {(state === 'absent' || state === 'failed') && (
         <button type="submit" name="intent" value="convertUpload" disabled={!isHydrated || fetcher.state !== 'idle'}>
-          {state === 'absent' ? 'Convertir' : 'Relancer la conversion'}
-          <span className="visually-hidden"> de {fileName}</span>
+          {state === 'absent' ? uploads.convert : uploads.convertAgain}
+          <span className="visually-hidden">{uploads.ofFile(fileName)}</span>
         </button>
       )}
       {state === 'failed' && <p className="module-launch__refusal">{log}</p>}
@@ -57,6 +61,7 @@ export function Uploads({
   const headingId = useId();
   const fetcher = useFetcher<IUploadRefusal>();
   const isSending = fetcher.state !== 'idle';
+  const { uploads } = useCatalogue().settings;
   useRevalidateWhile(uploadList.some(({ conversion }) => conversion.state === 'in_progress'));
 
   // Multipart, so the PDF reaches the action byte for byte, unlike the text of a Job Description
@@ -69,27 +74,29 @@ export function Uploads({
 
   return (
     <section className="uploads" aria-labelledby={headingId}>
-      <h2 id={headingId}>Pièces</h2>
+      <h2 id={headingId}>{uploads.heading}</h2>
       {uploadList.length === 0 ? (
-        <p className="uploads__empty">Aucune Pièce pour l’instant.</p>
+        <p className="uploads__empty">{uploads.noUpload}</p>
       ) : (
         <ul className="uploads__list">
           {uploadList.map(({ fileName, savedAt, conversion }) => (
             <li key={fileName} className="uploads__item">
               <span className="reference">{fileName}</span>
               <span className="uploads__date">
-                déposée le <DateText date={savedAt} />
+                {uploads.savedOn} <DateText date={savedAt} />
               </span>
               {/* Folded, so a deletion always takes a second, deliberate click */}
               <details className="profile-file__delete">
                 {/* The name is read aloud only: the row already shows it */}
                 <summary>
-                  Supprimer<span className="visually-hidden"> {fileName}</span>…
+                  {uploads.delete}
+                  <span className="visually-hidden"> {fileName}</span>…
                 </summary>
                 <fetcher.Form method="post" action="/profile" className="edition">
                   <input type="hidden" name="fileName" value={fileName} />
                   <button type="submit" name="intent" value="deleteUpload" className="button--danger">
-                    Supprimer définitivement<span className="visually-hidden"> {fileName}</span>
+                    {uploads.deleteForGood}
+                    <span className="visually-hidden"> {fileName}</span>
                   </button>
                 </fetcher.Form>
               </details>
@@ -99,9 +106,9 @@ export function Uploads({
         </ul>
       )}
       <DropZone
-        intro="Glissez ici votre CV ou une lettre passée, par exemple cv-2026.pdf, en PDF de 10 Mo au plus. Une Pièce du même nom est remplacée."
+        intro={uploads.dropIntro}
         accept=".pdf,application/pdf"
-        label="Déposer une Pièce"
+        label={uploads.drop}
         isBusy={isSending}
         onFile={(file) => void saveUpload(file)}
       >

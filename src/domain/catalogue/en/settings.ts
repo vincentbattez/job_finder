@@ -1,3 +1,166 @@
 // The Profile, the Instructions, the Notification Channel, the Candidates, the menu and the design
 // page (#73)
-export const SETTINGS_EN = {};
+export const SETTINGS_EN = {
+  // The top bar and the page shown when another fails
+  layout: {
+    navigationLabel: 'Pages',
+    postingsLink: 'Postings',
+    profileLink: 'Profile',
+    instructionsLink: 'Instructions',
+    candidatesLink: 'Candidates',
+    notFoundHeading: 'Page not found',
+    notFoundHint: 'This address leads to no page of the front.',
+    errorHeading: 'This page could not be shown',
+    errorHint: 'Reload the page. If the error comes back, the logs of the front say what failed.',
+  },
+  menu: {
+    candidateLabel: 'Candidate',
+    namePlaceholder: 'Your name',
+    choose: 'Choose',
+  },
+  // A button whose form is older than the page's code
+  unknownIntent: 'This button does nothing: reload the page.',
+  unsavedChanges: 'Unsaved changes',
+  candidates: {
+    pageTitle: 'Candidates · Job Finder',
+    heading: 'Candidates',
+    intro:
+      'The people looking for a job with the tool. Each sets their Watches in their Profile; a Candidate is never deleted.',
+    obsoleteConfig: (path: string) =>
+      `${path} is no longer read: its content was imported here. Delete it from the Mac mini.`,
+    renameHeading: 'Rename a Candidate',
+    noCandidate: 'No Candidate yet: create the first one below.',
+    nameOf: (candidateId: string) => `Name of ${candidateId}`,
+    fullNamePlaceholder: 'Emma Smith',
+    renameOf: (candidateId: string) => `Rename ${candidateId}`,
+    rename: 'Rename',
+    creationHeading: 'New Candidate',
+    name: 'Name',
+    namePlaceholder: 'Emma',
+    id: 'Identifier, which names their folder and their jf commands: lowercase letters, digits and dashes',
+    idPlaceholder: 'emma',
+    create: 'Create the Candidate',
+    defaultDeadlinePeriodHeading: 'Default Deadline Period',
+    defaultDeadlinePeriodHint:
+      'A Posting published without a Deadline is Expired this many months after its publication, for everyone.',
+    defaultDeadlinePeriodMonths: 'Default Deadline Period, in months',
+    saveDefaultDeadlinePeriod: 'Save the Default Deadline Period',
+  },
+  profile: {
+    pageTitle: 'Profile · Job Finder',
+    noCandidateHeading: 'Who is looking at their Profile?',
+    // Around the link to the Candidates page
+    noCandidateHintStart:
+      'Pick your name in the menu at the top of the page. The front will remember it. Not in the menu yet? The',
+    noCandidateHintLink: 'Candidates',
+    noCandidateHintEnd: 'page adds you to it.',
+    heading: (candidateName: string) => `${candidateName}’s Profile`,
+    intro: 'What the tool knows about you to write in your place: your validated facts, your CV and your past letters.',
+    emptyHint: 'Your Profile is empty for now. This command fills it with Claude Code, which asks you questions:',
+    emptyManualHint: 'You can also create your files yourself, below.',
+  },
+  facts: {
+    heading: 'Facts',
+    intro: 'What you validated about yourself, Section by Section. The form writes into facts.md.',
+    entry: (number: number) => `Entry ${String(number)}`,
+    deleteEntry: (number: number) => `Delete entry ${String(number)}`,
+    delete: 'Delete',
+    add: 'Add',
+    save: 'Save the Facts',
+  },
+  profileFile: {
+    contentOf: (fileName: string) => `Content of ${fileName}`,
+    contentPlaceholder: '# Title\n\n## Section\n\n- One fact per line, in Markdown',
+    save: 'Save',
+    deleteSummary: (fileName: string) => `Delete ${fileName}…`,
+    deleteWarning: 'The tool will no longer use it to write in your place. This file cannot be recovered.',
+    deleteForGood: (fileName: string) => `Delete ${fileName} for good`,
+    creationHeading: 'New file',
+    fileName: 'File name',
+    fileNamePlaceholder: 'letter-city-hall-2025.md',
+    creationContent: 'Content, to fill in later if needed',
+    creationContentPlaceholder:
+      '# Cover letter, City Hall, 2025\n\nDear Sir or Madam,\n\nHolding a master’s degree in public law, I am applying…',
+    create: 'Create the file',
+  },
+  uploads: {
+    heading: 'Uploads',
+    noUpload: 'No Upload yet.',
+    // Before the date the Upload was dropped
+    savedOn: 'dropped on',
+    delete: 'Delete',
+    deleteForGood: 'Delete for good',
+    conversion: 'Conversion to Markdown',
+    // Read aloud only, after a button or a label: the row already shows the file
+    ofFile: (fileName: string) => ` of ${fileName}`,
+    convert: 'Convert',
+    convertAgain: 'Run the conversion again',
+    dropIntro:
+      'Drop your CV or a past letter here, for example cv-2026.pdf, as a PDF of 10 MB at most. An Upload of the same name is replaced.',
+    drop: 'Drop an Upload',
+  },
+  watches: {
+    heading: 'Watches',
+    intro:
+      'Each Watch keeps looking for the new Postings of a Source. A Watch created or modified first imports the Postings already online, without launching anything; then each new Posting of its Zone launches its Research and is notified to you. Deleting a Watch keeps its Postings.',
+    newWatch: 'New Watch',
+    watch: (watchId: string) => `Watch ${watchId}`,
+    source: 'Source',
+    create: 'Create the Watch',
+    save: 'Save',
+    delete: 'Delete the Watch',
+    saved: 'Watch saved.',
+  },
+  notificationChannel: {
+    heading: 'Notifications',
+    intro:
+      'Your Notification Channel sends each new Posting to your phone. The test and the list of choices try what you typed; the test notification goes to what is saved.',
+    channel: 'Notification Channel',
+    reloadChoicesFirst: 'Reload the list of choices',
+    choose: 'Choose',
+    reloadChoicesOf: (label: string) => `Reload the choices of ${label}`,
+    reloadChoices: 'Reload the choices',
+    test: 'Test the Channel',
+    save: 'Save',
+    notify: 'Send a test notification',
+    saved: 'Notification Channel saved.',
+    answers: 'The Notification Channel answers.',
+    choicesFound: (count: number) => `${String(count)} choices found.`,
+    notified: 'Test notification sent: look at your phone.',
+  },
+  // A field built from the descriptor of a module (ADR-0010)
+  parameter: {
+    configured: ' configured ✓',
+    keepSaved: 'Leave empty to keep the saved value',
+    onePerLine: (label: string) => `${label}, one per line`,
+  },
+  instructions: {
+    pageTitle: 'Instructions · Job Finder',
+    noCandidateHeading: 'Who is looking at their Instructions?',
+    noCandidateHint: 'Pick your name in the menu at the top of the page. The front will remember it.',
+    heading: (candidateName: string) => `${candidateName}’s Instructions`,
+    intro:
+      'The Instructions tell each module how to produce its Artifact. Yours replace the default ones for its next Versions. Its fixed rules, such as never making up a fact, always apply.',
+    candidateOrigin: 'Candidate’s Instructions',
+    defaultOrigin: 'Default Instructions',
+    candidateBadge: 'Your Instructions',
+    candidateLabel: 'Your Instructions, which the module follows',
+    defaultLabel: 'The default Instructions, to modify to make them yours',
+    placeholder: '- A sober, direct tone\n- One page at most',
+    save: 'Save my Instructions',
+    backToDefault: 'Go back to the default Instructions',
+    showDefault: 'See the default Instructions',
+  },
+  design: {
+    pageTitle: 'Job Finder design system',
+    description: 'The components of the Job Finder front, shown with sample Postings.',
+    heading: 'Design system',
+    intro: 'The components of the front, shown with sample Postings.',
+    statuses: 'Statuses of a Posting',
+    states: 'States of an Artifact',
+    postingList: 'List of Postings',
+    emptyList: 'Empty list',
+    postingDetail: 'Detail of a Posting',
+    editor: 'Markdown editor',
+  },
+};

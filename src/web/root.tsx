@@ -15,7 +15,7 @@ import {
 } from 'react-router';
 
 import { readCandidate } from './candidate.server.ts';
-import { useLocale } from './catalogue.ts';
+import { useCatalogue, useLocale } from './catalogue.ts';
 import { CandidateMenu } from './components/candidate-menu.tsx';
 import { englishUrlOf } from './redirects.ts';
 
@@ -40,6 +40,7 @@ export function Layout({ children }: Readonly<{ children: ReactNode }>) {
   // Undefined when the root loader itself failed: the error page then shows without the menu
   const candidateData = useRouteLoaderData<typeof loader>('root');
   const locale = useLocale();
+  const { layout } = useCatalogue().settings;
   return (
     <html lang={locale}>
       <head>
@@ -54,13 +55,13 @@ export function Layout({ children }: Readonly<{ children: ReactNode }>) {
             <Link to="/" className="wordmark">
               Job Finder
             </Link>
-            <nav className="topbar__nav" aria-label="Pages">
+            <nav className="topbar__nav" aria-label={layout.navigationLabel}>
               <NavLink to="/" end>
-                Offres
+                {layout.postingsLink}
               </NavLink>
-              <NavLink to="/profile">Profil</NavLink>
-              <NavLink to="/instructions">Consignes</NavLink>
-              <NavLink to="/candidates">Candidats</NavLink>
+              <NavLink to="/profile">{layout.profileLink}</NavLink>
+              <NavLink to="/instructions">{layout.instructionsLink}</NavLink>
+              <NavLink to="/candidates">{layout.candidatesLink}</NavLink>
             </nav>
             {candidateData !== undefined && <CandidateMenu {...candidateData} />}
           </div>
@@ -79,15 +80,12 @@ export default function App() {
 
 export function ErrorBoundary({ error }: Readonly<{ error: unknown }>) {
   const isNotFound = isRouteErrorResponse(error) && error.status === 404;
+  const { layout } = useCatalogue().settings;
   return (
     <main className="container page">
       <div className="page__head">
-        <h1>{isNotFound ? 'Page introuvable' : 'Cette page n’a pas pu s’afficher'}</h1>
-        <p>
-          {isNotFound
-            ? 'Cette adresse ne mène à aucune page du front.'
-            : 'Rechargez la page. Si l’erreur revient, les journaux du front disent ce qui a échoué.'}
-        </p>
+        <h1>{isNotFound ? layout.notFoundHeading : layout.errorHeading}</h1>
+        <p>{isNotFound ? layout.notFoundHint : layout.errorHint}</p>
       </div>
     </main>
   );

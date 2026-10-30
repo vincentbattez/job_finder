@@ -1,6 +1,14 @@
 import { z } from 'zod/v4';
 
-import { PARAMETER_SCHEMA, PARAMETERS_SCHEMA, type Parameter, type Parameters } from '#/domain/index.ts';
+import { DEFAULT_LOCALE } from '#/domain/catalogue/index.ts';
+import {
+  PARAMETER_SCHEMA,
+  PARAMETERS_SCHEMA,
+  type Locale,
+  type LocalizedText,
+  type Parameter,
+  type Parameters,
+} from '#/domain/index.ts';
 
 // How each family of interchangeable modules declares its Parameters, so that the front builds its
 // form from the descriptor of a module (ADR-0010)
@@ -8,8 +16,8 @@ import { PARAMETER_SCHEMA, PARAMETERS_SCHEMA, type Parameter, type Parameters } 
 // How the front shows a Parameter: a list takes several values, such as the courts of appeal of a
 // Zone. A secret one is write-only: no action returns it (ADR-0006).
 interface IParameterMeta {
-  label: string;
-  placeholder?: string;
+  label: LocalizedText;
+  placeholder?: LocalizedText;
   type?: 'text' | 'url' | 'list';
   isSecret?: boolean;
 }
@@ -84,6 +92,11 @@ export function declareParameters<TShape extends ParameterShape>(
   };
 }
 
-export function labelOf(parameterList: readonly Parameter[], parameterName: PropertyKey | undefined): string {
-  return parameterList.find(({ name }) => name === parameterName)?.label ?? String(parameterName);
+// French by default, as the error messages that name a Parameter are until they take the Candidate's locale
+export function labelOf(
+  parameterList: readonly Parameter[],
+  parameterName: PropertyKey | undefined,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  return parameterList.find(({ name }) => name === parameterName)?.label[locale] ?? String(parameterName);
 }

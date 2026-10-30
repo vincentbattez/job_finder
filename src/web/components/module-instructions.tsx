@@ -16,9 +16,10 @@ export interface IModuleInstructions {
 
 // Which Instructions a Version was produced with, so two Versions can be compared
 export function InstructionsOrigin({ hasCandidateInstructions }: Readonly<{ hasCandidateInstructions: boolean }>) {
+  const { instructions } = useCatalogue().settings;
   return (
     <span className="instructions-origin">
-      {hasCandidateInstructions ? 'Consignes du Candidat' : 'Consignes par défaut'}
+      {hasCandidateInstructions ? instructions.candidateOrigin : instructions.defaultOrigin}
     </span>
   );
 }
@@ -30,7 +31,8 @@ export function ModuleInstructions({
   defaultInstructions,
   candidateInstructions,
 }: Readonly<IModuleInstructions>) {
-  const { common } = useCatalogue();
+  const { common, settings } = useCatalogue();
+  const { instructions } = settings;
   const headingId = useId();
   const hasCandidateInstructions = candidateInstructions !== null;
   const [editedInstructions, setEditedInstructions] = useState(candidateInstructions ?? defaultInstructions);
@@ -39,39 +41,35 @@ export function ModuleInstructions({
       <div className="instructions__head">
         <h2 id={headingId}>{common.artifactLabelByArtifact[module]}</h2>
         <span className="badge" data-instructions={hasCandidateInstructions ? 'candidate' : 'default'}>
-          {hasCandidateInstructions ? 'Vos Consignes' : 'Consignes par défaut'}
+          {hasCandidateInstructions ? instructions.candidateBadge : instructions.defaultOrigin}
         </span>
       </div>
       <Form method="post" preventScrollReset>
         <input type="hidden" name="module" value={module} />
         <MarkdownEditor
           name="instructions"
-          label={
-            hasCandidateInstructions
-              ? 'Vos Consignes, que suit le module'
-              : 'Les Consignes par défaut, à modifier pour en faire les vôtres'
-          }
+          label={hasCandidateInstructions ? instructions.candidateLabel : instructions.defaultLabel}
           defaultValue={candidateInstructions ?? defaultInstructions}
-          placeholder={'- Un ton sobre et direct\n- Une page au plus'}
+          placeholder={instructions.placeholder}
           onChange={setEditedInstructions}
         />
         <div className="edition">
           <button type="submit" name="intent" value="save" className="button--primary">
-            Enregistrer mes Consignes
+            {instructions.save}
           </button>
           {hasCandidateInstructions && (
             <button type="submit" name="intent" value="delete">
-              Revenir aux Consignes par défaut
+              {instructions.backToDefault}
             </button>
           )}
           {editedInstructions !== (candidateInstructions ?? defaultInstructions) && (
-            <p role="status">Modifications non enregistrées</p>
+            <p role="status">{settings.unsavedChanges}</p>
           )}
         </div>
       </Form>
       {hasCandidateInstructions && (
         <details className="instructions__default">
-          <summary>Voir les Consignes par défaut</summary>
+          <summary>{instructions.showDefault}</summary>
           <Markdown markdown={defaultInstructions} />
         </details>
       )}

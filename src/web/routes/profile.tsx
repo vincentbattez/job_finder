@@ -5,11 +5,14 @@ import {
   useLoaderData,
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
+  type MetaArgs,
 } from 'react-router';
 
+import { catalogueOf } from '#/actions/catalogue.ts';
 import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
+import { useCatalogue } from '#/web/catalogue.ts';
 import { CopyCommand } from '#/web/components/copy-command.tsx';
 import { FactsForm } from '#/web/components/facts-form.tsx';
 import { NotificationChannelForm } from '#/web/components/notification-channel.tsx';
@@ -94,43 +97,39 @@ export async function action({ request }: ActionFunctionArgs) {
     : redirect('/profile');
 }
 
-export function meta() {
-  return [{ title: 'Profil · Job Finder' }];
+export function meta({ loaderData }: MetaArgs<typeof loader>) {
+  return [{ title: catalogueOf(loaderData?.candidate).settings.profile.pageTitle }];
 }
 
 export default function Profile() {
   const { candidate, profileFileList, uploadList, sectionList, channel, channelModuleList, watchList, sourceList } =
     useLoaderData<typeof loader>();
   const refusal = useActionData<typeof action>()?.refusal ?? null;
+  const { profile } = useCatalogue().settings;
   return (
     <main className="container page">
       {candidate === null ? (
         <div className="page__head">
-          <h1>Qui consulte son Profil ?</h1>
+          <h1>{profile.noCandidateHeading}</h1>
           <p>
-            Choisissez votre nom dans le menu en haut de la page. Le front s’en souviendra. Pas encore dans le menu ? La
-            page <Link to="/candidates">Candidats</Link> vous y ajoute.
+            {profile.noCandidateHintStart} <Link to="/candidates">{profile.noCandidateHintLink}</Link>{' '}
+            {profile.noCandidateHintEnd}
           </p>
         </div>
       ) : (
         <>
           <div className="page__head">
-            <h1>Profil de {candidate.name}</h1>
-            <p>
-              Ce que l’outil sait de vous pour écrire à votre place : vos faits validés, votre CV et vos lettres
-              passées.
-            </p>
+            <h1>{profile.heading(candidate.name)}</h1>
+            <p>{profile.intro}</p>
           </div>
           {/* Keyed by their content, so that a save of one shows in the other */}
           <FactsForm key={JSON.stringify(sectionList)} sectionList={sectionList} />
           <Uploads uploadList={uploadList} />
           {profileFileList.length === 0 ? (
             <div className="empty">
-              <p>
-                Votre Profil est vide pour l’instant. Cette commande le remplit avec Claude Code, qui vous interroge :
-              </p>
+              <p>{profile.emptyHint}</p>
               <CopyCommand command={`jf profile ${candidate.id}`} />
-              <p>Vous pouvez aussi créer vos fichiers vous-même, plus bas.</p>
+              <p>{profile.emptyManualHint}</p>
             </div>
           ) : (
             profileFileList.map(({ fileName, markdown }) => (

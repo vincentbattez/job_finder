@@ -1,4 +1,5 @@
 import type { Actions } from '#/actions/index.ts';
+import { useCatalogue, useLocale } from '#/web/catalogue.ts';
 
 type Parameter = Awaited<ReturnType<Actions['listSources']>>[number]['parameterList'][number];
 
@@ -16,7 +17,7 @@ function valueOf(value: unknown): string {
 // A Parameter typed in, the field built from the descriptor of its module (ADR-0010). A secret one
 // always starts empty: it is write-only, and left empty it keeps the saved one (ADR-0006).
 export function ParameterField({
-  parameter: { name, label, placeholder, type, isRequired, isSecret },
+  parameter: { name, label: labelByLocale, placeholder: placeholderByLocale, type, isRequired, isSecret },
   savedValue,
   className,
   isConfigured = false,
@@ -28,20 +29,25 @@ export function ParameterField({
   isConfigured?: boolean;
   secretReference?: (input: HTMLInputElement | null) => void;
 }>) {
+  const copy = useCatalogue().settings.parameter;
+  const locale = useLocale();
+  // The module gives its words in each locale, from its own folder (ADR-0010)
+  const label = labelByLocale[locale];
+  const placeholder = placeholderByLocale?.[locale] ?? '';
   const fieldName = `${PARAMETER_FIELD_PREFIX}${name}`;
   if (isSecret) {
     return (
       <label className={className}>
         <span>
           {label}
-          {isConfigured && <span className="parameter-field__configured"> configuré ✓</span>}
+          {isConfigured && <span className="parameter-field__configured">{copy.configured}</span>}
         </span>
         <input
           ref={secretReference}
           type="password"
           name={fieldName}
           autoComplete="off"
-          placeholder={isConfigured ? 'Laisser vide pour garder la valeur enregistrée' : (placeholder ?? '')}
+          placeholder={isConfigured ? copy.keepSaved : placeholder}
         />
       </label>
     );
@@ -49,13 +55,13 @@ export function ParameterField({
   if (type === 'list') {
     return (
       <label className={className}>
-        {`${label}, une par ligne`}
+        {copy.onePerLine(label)}
         <textarea
           name={fieldName}
           rows={3}
           required={isRequired}
           defaultValue={valueOf(savedValue)}
-          placeholder={placeholder ?? ''}
+          placeholder={placeholder}
         />
       </label>
     );
@@ -68,7 +74,7 @@ export function ParameterField({
         name={fieldName}
         required={isRequired}
         defaultValue={valueOf(savedValue)}
-        placeholder={placeholder ?? ''}
+        placeholder={placeholder}
       />
     </label>
   );

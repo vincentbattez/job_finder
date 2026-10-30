@@ -1,5 +1,7 @@
 import { Form } from 'react-router';
 
+import { useCatalogue } from '#/web/catalogue.ts';
+
 interface ICandidate {
   id: string;
   name: string;
@@ -10,13 +12,14 @@ export function CandidateMenu({
   candidateList,
   candidate,
 }: Readonly<{ candidateList: ICandidate[]; candidate: ICandidate | null }>) {
+  const { menu } = useCatalogue().settings;
   return (
     <Form method="post" action="/candidate" className="candidate-menu">
-      <label htmlFor="candidate">Candidat</label>
+      <label htmlFor="candidate">{menu.candidateLabel}</label>
       <select id="candidate" name="candidateId" key={candidate?.id} defaultValue={candidate?.id ?? ''}>
         {candidate === null && (
           <option value="" disabled>
-            Votre nom
+            {menu.namePlaceholder}
           </option>
         )}
         {candidateList.map(({ id, name }) => (
@@ -25,7 +28,7 @@ export function CandidateMenu({
           </option>
         ))}
       </select>
-      <button type="submit">Choisir</button>
+      <button type="submit">{menu.choose}</button>
     </Form>
   );
 }

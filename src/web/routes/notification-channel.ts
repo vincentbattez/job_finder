@@ -1,5 +1,6 @@
 import type { ActionFunctionArgs } from 'react-router';
 
+import { catalogueOf } from '#/actions/catalogue.ts';
 import { messageOf, type Actions } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
@@ -19,6 +20,8 @@ function refuse(error: string) {
 // its own fetcher, a refusal in the words of the action. No secret Parameter comes back (ADR-0006).
 export async function action({ request }: ActionFunctionArgs) {
   const { candidate } = await readCandidate(request);
+  const { settings } = catalogueOf(candidate);
+  const copy = settings.notificationChannel;
   const formData = await request.formData();
   const moduleId = formData.get('channel');
   const moduleList = await ACTIONS.listNotificationChannels();
@@ -32,23 +35,23 @@ export async function action({ request }: ActionFunctionArgs) {
     switch (formData.get('intent')) {
       case 'save': {
         await ACTIONS.saveNotificationChannel(input);
-        return answer('Canal de notification enregistré.');
+        return answer(copy.saved);
       }
       case 'test': {
         await ACTIONS.testNotificationChannel(input);
-        return answer('Le Canal de notification répond.');
+        return answer(copy.answers);
       }
       case 'choices': {
         const choiceList = await ACTIONS.listParameterChoices(input);
-        return answer(`${String(choiceList.length)} choix trouvés.`, choiceList);
+        return answer(copy.choicesFound(choiceList.length), choiceList);
       }
       case 'notify': {
         await ACTIONS.sendTestNotification(input);
-        return answer('Notification de test envoyée : regardez votre téléphone.');
+        return answer(copy.notified);
       }
     }
   } catch (error) {
     return refuse(messageOf(error));
   }
-  return refuse('Ce bouton ne fait rien : recharger la page.');
+  return refuse(settings.unknownIntent);
 }

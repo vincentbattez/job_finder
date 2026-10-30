@@ -1,7 +1,9 @@
-import { redirect, useLoaderData, type ActionFunctionArgs, type LoaderFunctionArgs } from 'react-router';
+import { redirect, useLoaderData, type ActionFunctionArgs, type LoaderFunctionArgs, type MetaArgs } from 'react-router';
 
+import { catalogueOf } from '#/actions/catalogue.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
+import { useCatalogue } from '#/web/catalogue.ts';
 import { ModuleInstructions } from '#/web/components/module-instructions.tsx';
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -28,28 +30,25 @@ export async function action({ request }: ActionFunctionArgs) {
   return redirect('/instructions');
 }
 
-export function meta() {
-  return [{ title: 'Consignes · Job Finder' }];
+export function meta({ loaderData }: MetaArgs<typeof loader>) {
+  return [{ title: catalogueOf(loaderData?.candidate).settings.instructions.pageTitle }];
 }
 
 export default function Instructions() {
   const { candidate, instructionsList } = useLoaderData<typeof loader>();
+  const { instructions: copy } = useCatalogue().settings;
   return (
     <main className="container page">
       {candidate === null ? (
         <div className="page__head">
-          <h1>Qui consulte ses Consignes ?</h1>
-          <p>Choisissez votre nom dans le menu en haut de la page. Le front s’en souviendra.</p>
+          <h1>{copy.noCandidateHeading}</h1>
+          <p>{copy.noCandidateHint}</p>
         </div>
       ) : (
         <>
           <div className="page__head">
-            <h1>Consignes de {candidate.name}</h1>
-            <p>
-              Les Consignes disent à chaque module comment produire son Artefact. Les vôtres remplacent celles par
-              défaut pour ses prochaines Versions. Ses règles fixes, comme ne jamais inventer un fait, s’appliquent
-              toujours.
-            </p>
+            <h1>{copy.heading(candidate.name)}</h1>
+            <p>{copy.intro}</p>
           </div>
           {instructionsList.map((instructions) => (
             <ModuleInstructions
