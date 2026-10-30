@@ -95,14 +95,21 @@ export default function App() {
   return <Outlet />;
 }
 
+// A failure shows its code's message, which says what to do: the front, on the LAN or WireGuard
+// only, has nothing to hide (ADR-0002, CODING_STANDARDS “Visible failure”)
 export function ErrorBoundary({ error }: Readonly<{ error: unknown }>) {
   const isNotFound = isRouteErrorResponse(error) && error.status === 404;
   const { t } = useTranslation('settings');
+  const message = error instanceof Error ? error.message : null;
   return (
     <main className="container page">
       <div className="page__head">
         <h1>{isNotFound ? t('layout.notFoundHeading') : t('layout.errorHeading')}</h1>
-        <p>{isNotFound ? t('layout.notFoundHint') : t('layout.errorHint')}</p>
+        {message === null ? (
+          <p>{isNotFound ? t('layout.notFoundHint') : t('layout.errorHint')}</p>
+        ) : (
+          <p role="alert">{message}</p>
+        )}
       </div>
     </main>
   );

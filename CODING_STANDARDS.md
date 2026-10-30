@@ -12,6 +12,7 @@ The generic rules of the code. The why of a decision is in its ADR (`docs/adr/`)
 ## Architecture
 
 - **Actions.** Each feature is an action of `src/actions/`. The CLI and the front relay to it, with no business rule (ADR-0003). **(CI)**
+- **Front failures.** Every action of a route of `src/web/routes/` goes through `relayAction` (`src/web/relay-action.server.ts`): a refusal goes back to the form that posted it, in its code's message, and the form keeps what was typed. The `ErrorBoundary` shows the message of what failed (ADR-0002). **(CI)**
 - **Modules.** A module lives in its folder of `src/modules/`, with a single entry point and its prompts in separate files. It exchanges with the other modules through the Artifacts on disk and through the database, without importing them (ADR-0003). **(CI)**
 - **Interchangeable modules (ADR-0010).** When the Candidate picks between several modules that do the same job (a Notification Channel, the Source of a Watch), these modules form a family:
   - the family's contract lives in `src/<family>/`;

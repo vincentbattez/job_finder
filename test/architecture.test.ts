@@ -520,6 +520,52 @@ function findErrorsOutsideCatalogue(projectDirectory: string): string[] {
   });
 }
 
+// The helper every action of a route goes through, so that a failure goes back to the form that
+// posted it, in its code's message, instead of replacing the page (CODING_STANDARDS “Visible failure”)
+const RELAY_ACTION_NAME = 'relayAction';
+
+function isExported(node: ts.Node): boolean {
+  return (
+    ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some(({ kind }) => kind === ts.SyntaxKind.ExportKeyword)
+  );
+}
+
+function isCallingRelayAction(node: ts.Node): boolean {
+  return ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === RELAY_ACTION_NAME
+    ? true
+    : (ts.forEachChild(node, isCallingRelayAction) ?? false);
+}
+
+// Each route of src/web/routes whose exported action never calls relayAction
+function findActionsWithoutRelay(projectDirectory: string): string[] {
+  const filePathList = globSync('src/web/routes/*.{ts,tsx}', { cwd: projectDirectory });
+  return filePathList.flatMap((filePath) => {
+    const content = readFileSync(path.join(projectDirectory, filePath), 'utf8');
+    const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const actionList = sourceFile.statements.flatMap((statement): ts.Node[] => {
+      if (!isExported(statement)) {
+        return [];
+      }
+      if (ts.isFunctionDeclaration(statement)) {
+        return statement.name?.text === 'action' ? [statement] : [];
+      }
+      if (ts.isVariableStatement(statement)) {
+        return statement.declarationList.declarations.filter(
+          ({ name }) => ts.isIdentifier(name) && name.text === 'action',
+        );
+      }
+      return [];
+    });
+    return actionList
+      .filter((action) => !isCallingRelayAction(action))
+      .map(
+        () =>
+          `${filePath} exports an action that does not go through ${RELAY_ACTION_NAME}: a failure would replace the page ` +
+          'instead of showing its message by the form (CODING_STANDARDS “Visible failure”)',
+      );
+  });
+}
+
 function createProject(fileContentByPath: Record<string, string>): string {
   const projectDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-architecture-'));
   const tsconfigPath = path.join(projectDirectory, 'tsconfig.json');
@@ -604,6 +650,31 @@ describe('architecture', () => {
 
   it('throws only errors of the catalogue of codes', () => {
     expect(findErrorsOutsideCatalogue(ROOT_DIRECTORY)).toEqual([]);
+  });
+
+  it('catches a route action that does not go through relayAction', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/routes/status.ts':
+          'export async function action({ request }) {\n  await ACTIONS.changeStatus(await request.formData());\n  return null;\n}\n',
+        'src/web/routes/document.ts': 'export const action = () => ACTIONS.saveDocument({});\n',
+        'src/web/routes/run.ts':
+          'export function action({ request }) {\n  return relayAction(request, () => ACTIONS.runModule({}));\n}\n',
+        'src/web/routes/posting.tsx': 'export function loader() {\n  return ACTIONS.readPosting({});\n}\n',
+      }),
+    );
+
+    const violationList = findActionsWithoutRelay(projectDirectory);
+
+    expect(sortedList(violationList).map((violation) => violation.split(' exports', 1)[0])).toEqual([
+      'src/web/routes/document.ts',
+      'src/web/routes/status.ts',
+    ]);
+    expect(violationList[0]).toMatch(/“Visible failure”/);
+  });
+
+  it('has every route action go through relayAction', () => {
+    expect(findActionsWithoutRelay(ROOT_DIRECTORY)).toEqual([]);
   });
 
   it('catches the front running the queued jobs', () => {

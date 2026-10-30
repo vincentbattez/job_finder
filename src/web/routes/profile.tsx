@@ -10,7 +10,6 @@ import {
 } from 'react-router';
 
 import { localeOf, tFor } from '#/actions/i18n.ts';
-import { codedErrorOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { CopyCommand } from '#/web/components/copy-command.tsx';
@@ -21,6 +20,7 @@ import { ProfileFile, ProfileFileCreation } from '#/web/components/profile-file.
 import { Uploads } from '#/web/components/uploads.tsx';
 import { Watches } from '#/web/components/watches.tsx';
 import { translateParameters } from '#/web/parameters.server.ts';
+import { relayAction } from '#/web/relay-action.server.ts';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { candidate, locale } = await readCandidate(request);
@@ -48,56 +48,58 @@ export async function action({ request }: ActionFunctionArgs) {
   const intent = formData.get('intent');
   const fileName = formData.get('fileName');
   const formInput = { candidateId: candidate.id, fileName, markdown: formData.get('markdown') };
-  try {
-    switch (intent) {
-      case 'create': {
-        await ACTIONS.createProfileFile(formInput);
-        break;
+  return relayAction(
+    request,
+    async () => {
+      switch (intent) {
+        case 'create': {
+          await ACTIONS.createProfileFile(formInput);
+          break;
+        }
+        case 'delete': {
+          await ACTIONS.deleteProfileFile(formInput);
+          break;
+        }
+        case 'save': {
+          await ACTIONS.saveProfileFile(formInput);
+          break;
+        }
+        case 'upload': {
+          // No file at all is refused by the action, like a file that is not a PDF
+          const upload = formData.get('upload');
+          const file = upload instanceof File ? upload : new File([], '');
+          await ACTIONS.saveUpload({
+            candidateId: candidate.id,
+            fileName: file.name,
+            content: new Uint8Array(await file.arrayBuffer()),
+          });
+          break;
+        }
+        case 'deleteUpload': {
+          await ACTIONS.deleteUpload(formInput);
+          break;
+        }
+        case 'convertUpload': {
+          await ACTIONS.convertUpload(formInput);
+          break;
+        }
+        case 'facts': {
+          // Each field is named after its section, one per entry of a list section
+          const titleList = [...new Set(formData.keys())].filter((name) => name !== 'intent');
+          await ACTIONS.saveFacts({
+            candidateId: candidate.id,
+            entryListByTitle: Object.fromEntries(titleList.map((title) => [title, formData.getAll(title)])),
+          });
+          break;
+        }
       }
-      case 'delete': {
-        await ACTIONS.deleteProfileFile(formInput);
-        break;
-      }
-      case 'save': {
-        await ACTIONS.saveProfileFile(formInput);
-        break;
-      }
-      case 'upload': {
-        // No file at all is refused by the action, like a file that is not a PDF
-        const upload = formData.get('upload');
-        const file = upload instanceof File ? upload : new File([], '');
-        await ACTIONS.saveUpload({
-          candidateId: candidate.id,
-          fileName: file.name,
-          content: new Uint8Array(await file.arrayBuffer()),
-        });
-        break;
-      }
-      case 'deleteUpload': {
-        await ACTIONS.deleteUpload(formInput);
-        break;
-      }
-      case 'convertUpload': {
-        await ACTIONS.convertUpload(formInput);
-        break;
-      }
-      case 'facts': {
-        // Each field is named after its section, one per entry of a list section
-        const titleList = [...new Set(formData.keys())].filter((name) => name !== 'intent');
-        await ACTIONS.saveFacts({
-          candidateId: candidate.id,
-          entryListByTitle: Object.fromEntries(titleList.map((title) => [title, formData.getAll(title)])),
-        });
-        break;
-      }
-    }
-  } catch (error) {
-    return { refusal: { isCreation: intent === 'create', fileName, message: codedErrorOf(error).message } };
-  }
-  // The Uploads are sent by a fetcher, which revalidates the page by itself and keeps what it receives
-  return intent === 'upload' || intent === 'deleteUpload' || intent === 'convertUpload'
-    ? { refusal: null }
-    : redirect('/profile');
+      // The Uploads are sent by a fetcher, which revalidates the page by itself and keeps what it receives
+      return intent === 'upload' || intent === 'deleteUpload' || intent === 'convertUpload'
+        ? { refusal: null }
+        : redirect('/profile');
+    },
+    (message) => ({ refusal: { isCreation: intent === 'create', fileName, message } }),
+  );
 }
 
 export function meta({ loaderData }: MetaArgs<typeof loader>) {
