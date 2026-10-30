@@ -4,11 +4,13 @@
   line-height: 1.45;
   max-width: 52ch;
 }
+
 .num,
 .figure,
 td.num {
   font-variant-numeric: tabular-nums;
 }
+
 .visually-hidden {
   position: absolute;
   width: 1px;

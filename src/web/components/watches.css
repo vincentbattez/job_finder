@@ -9,6 +9,7 @@
     border: var(--rule-hair) solid var(--color-muted);
     border-radius: var(--radius-input);
   }
+
   .watches__watch legend {
     padding: 0 var(--space-xs);
     font: 600 var(--text-sm) / 1.4 var(--font-body);

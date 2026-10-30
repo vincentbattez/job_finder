@@ -6,6 +6,7 @@
     align-items: center;
     gap: var(--space-xs);
   }
+
   .copy-command code {
     padding: var(--space-xs) var(--space-sm);
     border-radius: var(--radius-input);

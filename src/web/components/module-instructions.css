@@ -8,10 +8,12 @@
     padding-top: var(--space-md);
     border-top: 4px solid var(--tint);
   }
+
   .module-instructions form {
     display: grid;
     gap: var(--space-sm);
   }
+
   /* Save, back to the default, and whether a change waits to be saved */
   .module-instructions__actions {
     display: flex;
@@ -19,25 +21,30 @@
     align-items: center;
     gap: var(--space-xs) var(--space-sm);
   }
+
   .module-instructions__actions p {
     color: var(--color-muted);
     font-size: var(--text-sm);
   }
+
   .module-instructions__head {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-xs) var(--space-sm);
   }
+
   /* The default Instructions folded under the Candidate's */
   .module-instructions__default summary {
     color: var(--color-accent-deep);
     font-weight: 500;
     cursor: pointer;
   }
+
   .module-instructions__default[open] summary {
     margin-bottom: var(--space-sm);
   }
+
   /* Which Instructions produced a Version: a small tag, like the source of a recipient */
   .module-instructions__origin {
     padding: 0 var(--space-xs);

@@ -7,21 +7,26 @@
     background: var(--color-paper-2);
     line-height: 1.65;
   }
+
   .markdown > * + * {
     margin-top: var(--space-sm);
   }
+
   .markdown :is(h1, h2, h3, h4) {
     max-width: none;
     margin-top: var(--space-lg);
     font-size: var(--text-md);
   }
+
   .markdown :is(h1, h2, h3, h4):first-child {
     margin-top: 0;
   }
+
   .markdown :is(ul, ol) {
     margin-bottom: 0;
     padding-inline-start: var(--space-lg);
   }
+
   /* A missing fact the Letter marks « [à compléter : …] »: a highlighter stroke, so that none is sent */
   .markdown mark {
     padding-inline: var(--space-3xs);
