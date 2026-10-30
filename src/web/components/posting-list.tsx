@@ -1,5 +1,7 @@
 import { Link } from 'react-router';
 
+import { useCatalogue } from '#/web/catalogue.ts';
+
 import { StatusBadge, type Status } from './badge.tsx';
 import { DateText } from './date.tsx';
 
@@ -16,21 +18,18 @@ export interface IPostingRow {
 }
 
 export function PostingList({ postingList }: Readonly<{ postingList: IPostingRow[] }>) {
+  const { postingList: copy } = useCatalogue();
   if (postingList.length === 0) {
-    return (
-      <p className="empty">
-        Aucune Offre pour l’instant. Chaque Détection ajoute ici les nouvelles Offres de vos Veilles.
-      </p>
-    );
+    return <p className="empty">{copy.noPosting}</p>;
   }
   return (
     <table className="posting-list">
       <thead>
         <tr>
-          <th scope="col">Offre</th>
-          <th scope="col">Statut</th>
-          <th scope="col">Publiée le</th>
-          <th scope="col">Date limite</th>
+          <th scope="col">{copy.postingColumn}</th>
+          <th scope="col">{copy.statusColumn}</th>
+          <th scope="col">{copy.publishedAtColumn}</th>
+          <th scope="col">{copy.deadlineColumn}</th>
         </tr>
       </thead>
       <tbody>
@@ -54,10 +53,10 @@ export function PostingList({ postingList }: Readonly<{ postingList: IPostingRow
             <td>
               <StatusBadge status={posting.status} isExpired={posting.isExpired} />
             </td>
-            <td className="date" data-label="Publiée le">
+            <td className="date" data-label={copy.publishedAtColumn}>
               <DateText date={posting.publishedAt} />
             </td>
-            <td className="date" data-label="Date limite">
+            <td className="date" data-label={copy.deadlineColumn}>
               <DateText date={posting.deadline} />
             </td>
           </tr>

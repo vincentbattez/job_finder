@@ -1,7 +1,9 @@
 import { z } from 'zod/v4';
 
+import { DEFAULT_LOCALE } from '#/domain/catalogue/index.ts';
 import {
   DEFAULT_DEADLINE_PERIOD_SCHEMA,
+  LOCALE_SCHEMA,
   OBSOLETE_CONFIG_SCHEMA,
   type DefaultDeadlinePeriod,
   type ObsoleteConfig,
@@ -15,7 +17,11 @@ const CANDIDATE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const RENAME_INPUT_SCHEMA = z.object({ name: z.string() });
 
-const NEW_CANDIDATE_INPUT_SCHEMA = RENAME_INPUT_SCHEMA.extend({ id: z.string() });
+// No screen sets the locale yet (spec #65)
+const NEW_CANDIDATE_INPUT_SCHEMA = RENAME_INPUT_SCHEMA.extend({
+  id: z.string(),
+  locale: LOCALE_SCHEMA.default(DEFAULT_LOCALE),
+});
 
 // A field of the front arrives as text
 const DEFAULT_DEADLINE_PERIOD_INPUT_SCHEMA = z.object({ months: z.union([z.string(), z.number()]) });
@@ -52,7 +58,7 @@ export function createCandidateActions({ workspace, findCandidate }: ActionConte
   return {
     async createCandidate(rawInput: unknown): Promise<void> {
       const input = NEW_CANDIDATE_INPUT_SCHEMA.parse(rawInput);
-      const candidate = { id: parseCandidateId(input.id), name: parseName(input.name) };
+      const candidate = { id: parseCandidateId(input.id), name: parseName(input.name), locale: input.locale };
       const candidateList = await workspace.listCandidates();
       if (candidateList.some(({ id }) => id === candidate.id)) {
         throw new Error(`Un Candidat a déjà l'identifiant ${candidate.id} : en choisir un autre.`);

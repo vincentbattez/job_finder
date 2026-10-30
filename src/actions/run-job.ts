@@ -2,8 +2,8 @@ import path from 'node:path';
 
 import type { IAiModule } from '#/ai-module/index.ts';
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 import { ARTIFACT_SCHEMA, type Artifact, type Job, type Posting, type Version } from '#/domain/index.ts';
-import { ARTIFACT_LABEL_BY_ARTIFACT } from '#/domain/labels.ts';
 import { INTERVIEW_BRIEF_MODULE } from '#/modules/interview-brief/index.ts';
 import { LETTER_MODULE } from '#/modules/letter/index.ts';
 import { RESEARCH_MODULE } from '#/modules/research/index.ts';
@@ -108,8 +108,10 @@ function wordRefusal(refusal: Refusal, posting: Posting, module: Artifact, isFor
     return refusal.freeze;
   }
   const { missingArtifact } = refusal;
-  const missingLabel = ARTIFACT_LABEL_BY_ARTIFACT[missingArtifact];
-  const reason = `L'Offre ${posting.reference} n'a pas de ${missingLabel} retenue, sur laquelle s'appuie la ${ARTIFACT_LABEL_BY_ARTIFACT[module]}`;
+  // In French, as the rest of the refusal, until it speaks the Candidate's locale (#74)
+  const { artifactLabelByArtifact } = catalogueOf(null).common;
+  const missingLabel = artifactLabelByArtifact[missingArtifact];
+  const reason = `L'Offre ${posting.reference} n'a pas de ${missingLabel} retenue, sur laquelle s'appuie la ${artifactLabelByArtifact[module]}`;
   return isForFront
     ? `${reason} : lancez d'abord la ${missingLabel}.`
     : `${reason}. La produire d'abord : jf run ${missingArtifact} ${posting.reference}.`;

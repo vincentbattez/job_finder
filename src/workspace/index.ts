@@ -13,7 +13,7 @@ import {
 import { wordListOf } from '#/text/index.ts';
 
 import { findObsoleteConfig, readObsoleteConfig } from './acl/config.ts';
-import { openDatabase, type INewPosting } from './acl/database.ts';
+import { openDatabase, type INewCandidate, type INewPosting } from './acl/database.ts';
 import {
   createDirectory,
   deleteFile,
@@ -75,7 +75,7 @@ export async function openWorkspace(dataDirectory: string) {
     profileDirectoryOf,
 
     // A Candidate gets their Profile folder as soon as they exist, as at launch
-    async createCandidate(candidate: { id: string; name: string }): Promise<void> {
+    async createCandidate(candidate: INewCandidate): Promise<void> {
       await database.createCandidate(candidate);
       createDirectory(profileDirectoryOf(candidate.id));
     },

@@ -39,7 +39,7 @@ describe('actions', () => {
   it('lists the Candidates', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
-    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa' }]);
+    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa', locale: 'fr' }]);
   });
 
   it('gives each Candidate an empty Profile folder on first launch', async () => {
@@ -58,7 +58,7 @@ describe('actions', () => {
     const actions = await createActions({ dataDirectory });
 
     expect(listLeaProfileFiles(dataDirectory)).toEqual(['facts.md']);
-    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa' }]);
+    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa', locale: 'fr' }]);
   });
 
   // The real data/ comes with the config the older jf read: it is imported too (ADR-0011)

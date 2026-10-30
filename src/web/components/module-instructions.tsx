@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { Form } from 'react-router';
 
-import { ARTIFACT_LABEL_BY_ARTIFACT } from '#/actions/labels.ts';
+import { useCatalogue } from '#/web/catalogue.ts';
 
 import { MarkdownEditor } from './markdown-editor.tsx';
 import { Markdown } from './markdown.tsx';
@@ -30,13 +30,14 @@ export function ModuleInstructions({
   defaultInstructions,
   candidateInstructions,
 }: Readonly<IModuleInstructions>) {
+  const { common } = useCatalogue();
   const headingId = useId();
   const hasCandidateInstructions = candidateInstructions !== null;
   const [editedInstructions, setEditedInstructions] = useState(candidateInstructions ?? defaultInstructions);
   return (
     <section className="artifact instructions" data-artifact={module} aria-labelledby={headingId}>
       <div className="instructions__head">
-        <h2 id={headingId}>{ARTIFACT_LABEL_BY_ARTIFACT[module]}</h2>
+        <h2 id={headingId}>{common.artifactLabelByArtifact[module]}</h2>
         <span className="badge" data-instructions={hasCandidateInstructions ? 'candidate' : 'default'}>
           {hasCandidateInstructions ? 'Vos Consignes' : 'Consignes par défaut'}
         </span>

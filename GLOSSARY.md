@@ -11,6 +11,10 @@ Person looking for a job with the tool; each Posting belongs to a single Candida
 _Avoid_: user, account
 _Formerly_: Candidat
 
+**Locale**:
+Language a Candidate reads the tool in, French or English, French unless they chose otherwise; it never changes the language an Artifact is written in, which is that of the Job Description.
+_Avoid_: language setting, i18n, translation
+
 **Profile**:
 What the tool knows about a Candidate in order to write on their behalf: their CV, the Facts they validated and their past letters.
 _Avoid_: file, record, CV

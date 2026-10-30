@@ -1,12 +1,8 @@
-import { STATUS_LABEL_BY_STATUS } from '#/actions/labels.ts';
+import type { Catalogue } from '#/actions/catalogue.ts';
+import { useCatalogue } from '#/web/catalogue.ts';
 
-// The statuses as the actions name them
-export type Status = keyof typeof STATUS_LABEL_BY_STATUS;
-
-const SHOWN_STATUS_LABEL_BY_STATUS: Record<Status | 'expired', string> = {
-  ...STATUS_LABEL_BY_STATUS,
-  expired: 'Expirée',
-};
+// The statuses as the catalogue names them
+export type Status = keyof Catalogue['common']['statusLabelByStatus'];
 
 // Expired comes from the Deadline, whatever the status (GLOSSARY.md). The badge and the map
 // show it only in place of To Apply: an Applied Posting stays green past its Deadline.
@@ -15,10 +11,11 @@ export function showStatus(status: Status, isExpired: boolean): Status | 'expire
 }
 
 export function StatusBadge({ status, isExpired }: Readonly<{ status: Status; isExpired: boolean }>) {
+  const { common } = useCatalogue();
   const shownStatus = showStatus(status, isExpired);
   return (
     <span className="badge" data-status={shownStatus}>
-      {SHOWN_STATUS_LABEL_BY_STATUS[shownStatus]}
+      {shownStatus === 'expired' ? common.expired : common.statusLabelByStatus[shownStatus]}
     </span>
   );
 }

@@ -116,7 +116,7 @@ describe('the French data folder', () => {
 
     const actions = await createActions({ dataDirectory });
 
-    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa' }]);
+    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa', locale: 'fr' }]);
     expect(await actions.listProfileFiles({ candidateId: 'lea' })).toEqual([
       { fileName: 'cv.md', markdown: CV },
       { fileName: 'facts.md', markdown: FACTS },
@@ -302,7 +302,7 @@ describe('the French data folder', () => {
 
     const actions = await createActions({ dataDirectory });
 
-    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa' }]);
+    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa', locale: 'fr' }]);
     expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([
       { id: 'lea-1', candidateId: 'lea', source: 'pep', parameters: WATCH_PARAMETERS, detectedAt: null },
     ]);

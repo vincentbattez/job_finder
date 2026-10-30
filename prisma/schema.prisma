@@ -14,10 +14,17 @@ datasource db {
 model Candidate {
   id                  String               @id
   name                String
+  // The language of the interface, French unless the config of the first launch names another
+  locale              Locale               @default(fr)
   watchList           Watch[]
   postingList         Posting[]
   notificationChannel NotificationChannel?
   jobList             Job[]
+}
+
+enum Locale {
+  fr
+  en
 }
 
 // The Default Deadline Period every Candidate shares, in a single row. Created at the first launch,

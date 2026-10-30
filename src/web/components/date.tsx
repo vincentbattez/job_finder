@@ -1,9 +1,10 @@
-const DATE_FORMAT = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeZone: 'Europe/Paris' });
+import { useCatalogue } from '#/web/catalogue.ts';
 
 export function DateText({ date }: Readonly<{ date: Date | null }>) {
+  const { common } = useCatalogue();
   return date === null ? (
-    <span className="missing">Non précisée</span>
+    <span className="missing">{common.missingDate}</span>
   ) : (
-    <time dateTime={date.toISOString()}>{DATE_FORMAT.format(date)}</time>
+    <time dateTime={date.toISOString()}>{common.formatDate(date)}</time>
   );
 }

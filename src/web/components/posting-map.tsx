@@ -4,6 +4,8 @@ import type { LatLngTuple, Map as LeafletMap } from 'leaflet';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 
+import { useCatalogue } from '#/web/catalogue.ts';
+
 import { showStatus, type Status } from './badge.tsx';
 
 interface IMappedPosting {
@@ -52,6 +54,7 @@ function groupByLocation(postingList: ILocatedPosting[]): ILocatedPosting[][] {
 // A point per Posting, coloured by status like its badge; a click opens its page. The map shows
 // metropolitan France, or only the overseas points when the filters leave nothing else.
 export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosting[] }>) {
+  const { common } = useCatalogue();
   const containerReference = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const unlocatedCount = postingList.filter((posting) => !isLocated(posting)).length;
@@ -109,10 +112,10 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
     <section aria-label="Carte des Offres" className="posting-map">
       <div ref={containerReference} className="posting-map__canvas" />
       <ul className="posting-map__legend">
-        <li data-status="to_apply">À traiter</li>
-        <li data-status="applied">Postulée</li>
-        <li data-status="expired">Expirée</li>
-        <li data-status="archived">Archivée</li>
+        <li data-status="to_apply">{common.statusLabelByStatus.to_apply}</li>
+        <li data-status="applied">{common.statusLabelByStatus.applied}</li>
+        <li data-status="expired">{common.expired}</li>
+        <li data-status="archived">{common.statusLabelByStatus.archived}</li>
       </ul>
       {unlocatedCount > 0 && (
         <p className="posting-map__note">

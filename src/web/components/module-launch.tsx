@@ -1,6 +1,6 @@
 import { useFetcher } from 'react-router';
 
-import { ARTIFACT_LABEL_BY_ARTIFACT } from '#/actions/labels.ts';
+import { useCatalogue } from '#/web/catalogue.ts';
 
 import { StateBadge } from './badge.tsx';
 import type { IArtifactVersions } from './posting-detail.tsx';
@@ -15,6 +15,7 @@ export function ModuleLaunch({
   state,
   module,
 }: Readonly<Pick<IArtifactVersions, 'artifact' | 'state' | 'module'> & { reference: string }>) {
+  const { common } = useCatalogue();
   const fetcher = useFetcher<{ error: string | null }>();
   const isHydrated = useIsHydrated();
   const isRunning = state === 'in_progress';
@@ -28,7 +29,7 @@ export function ModuleLaunch({
         <StateBadge state={state} />
       </span>
       <button type="submit" disabled={!isHydrated || isRunning || module.refusal !== null || fetcher.state !== 'idle'}>
-        {state === 'absent' ? 'Lancer' : 'Relancer'} la {ARTIFACT_LABEL_BY_ARTIFACT[artifact]}
+        {state === 'absent' ? 'Lancer' : 'Relancer'} la {common.artifactLabelByArtifact[artifact]}
       </button>
       {module.refusal !== null && <p className="module-launch__refusal">{module.refusal}</p>}
       {error !== null && <p role="alert">{error}</p>}

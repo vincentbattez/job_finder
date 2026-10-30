@@ -3,8 +3,9 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
+import { DEFAULT_LOCALE } from '#/domain/catalogue/index.ts';
 import { ERROR } from '#/domain/error.ts';
-import { PARAMETERS_SCHEMA } from '#/domain/index.ts';
+import { LOCALE_SCHEMA, PARAMETERS_SCHEMA } from '#/domain/index.ts';
 
 // The file where an older jf read the Candidates, their Watches and the Default Deadline Period. The database
 // holds them now, written by the front: the file is imported once, at the first launch of a database
@@ -29,6 +30,7 @@ const WATCH_SCHEMA = z.union([
 const CANDIDATE_SCHEMA = z.strictObject({
   id: SLUG_SCHEMA,
   name: z.string().min(1),
+  locale: LOCALE_SCHEMA.default(DEFAULT_LOCALE),
   watchList: z.array(WATCH_SCHEMA),
 });
 

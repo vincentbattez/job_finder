@@ -50,7 +50,7 @@ mkdirSync(DEVELOPMENT_DATA_DIRECTORY, { recursive: true });
 const workspace = await openWorkspace(DEVELOPMENT_DATA_DIRECTORY);
 const existingCandidateList = await workspace.listCandidates();
 if (existingCandidateList.length === 0) {
-  await workspace.createCandidate({ id: 'lea', name: 'Léa' });
+  await workspace.createCandidate({ id: 'lea', name: 'Léa', locale: 'fr' });
 }
 const candidateList = await workspace.listCandidates();
 // The seed is tooling, not the application: it writes raw rows without the anti-corruption

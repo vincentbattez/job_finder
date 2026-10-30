@@ -1,5 +1,5 @@
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 import { JOB_DESCRIPTION_FILE_NAME, type Artifact, type Candidate, type Posting } from '#/domain/index.ts';
-import { ARTIFACT_LABEL_BY_ARTIFACT } from '#/domain/labels.ts';
 import { DRAFT_FILE_NAME, LETTER_MODULE } from '#/modules/letter/index.ts';
 
 interface IEditedArtifact {
@@ -13,8 +13,8 @@ interface IEditedArtifact {
 // Fixed, with no Instructions to replace it (ADR-0003); the session runs in the Posting folder, its
 // « dossier courant »
 export function composeEditPrompt({ candidate: { name }, posting, artifact, versionPath }: IEditedArtifact): string {
-  // Every Artifact is feminine
-  const artifactName = `la ${ARTIFACT_LABEL_BY_ARTIFACT[artifact]}`;
+  // Every Artifact is feminine; the prompt is French until #75 rewrites it
+  const artifactName = `la ${catalogueOf(null).common.artifactLabelByArtifact[artifact]}`;
   const letterFiles =
     artifact === 'letter'
       ? ` La Lettre à corriger est \`${versionPath}/${LETTER_MODULE.fileName}\`, et \`${versionPath}/${DRAFT_FILE_NAME}\` est son Brouillon, ce que l'IA avait écrit.`

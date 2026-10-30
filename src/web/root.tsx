@@ -15,6 +15,7 @@ import {
 } from 'react-router';
 
 import { readCandidate } from './candidate.server.ts';
+import { useLocale } from './catalogue.ts';
 import { CandidateMenu } from './components/candidate-menu.tsx';
 import { englishUrlOf } from './redirects.ts';
 
@@ -38,8 +39,9 @@ export const links: LinksFunction = () => [
 export function Layout({ children }: Readonly<{ children: ReactNode }>) {
   // Undefined when the root loader itself failed: the error page then shows without the menu
   const candidateData = useRouteLoaderData<typeof loader>('root');
+  const locale = useLocale();
   return (
-    <html lang="fr">
+    <html lang={locale}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

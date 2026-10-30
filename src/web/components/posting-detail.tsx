@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from 'react';
 
-import { ARTIFACT_LABEL_BY_ARTIFACT } from '#/actions/labels.ts';
+import { useCatalogue } from '#/web/catalogue.ts';
 
 import { StateBadge, StatusBadge, type State } from './badge.tsx';
 import { DateText } from './date.tsx';
@@ -69,6 +69,7 @@ export function PostingDetail({
   const { posting, jobDescription, artifactList, recipients } = detail;
   const TITLE_TAG = isPage ? 'h1' : 'h3';
   const PART_TAG = isPage ? 'h2' : 'h4';
+  const { common } = useCatalogue();
   const artifactsId = useId();
   const contactsId = useId();
   const recipientsId = useId();
@@ -110,7 +111,7 @@ export function PostingDetail({
           <ul className="artifact-list">
             {artifactList.map(({ artifact, state }) => (
               <li key={artifact} data-artifact={artifact}>
-                <a href={`#${artifact}`}>{ARTIFACT_LABEL_BY_ARTIFACT[artifact]}</a>
+                <a href={`#${artifact}`}>{common.artifactLabelByArtifact[artifact]}</a>
                 <StateBadge state={state} />
               </li>
             ))}

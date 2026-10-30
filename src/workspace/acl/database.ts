@@ -23,6 +23,7 @@ import {
   type Job,
   type JobDescription,
   type ListedPosting,
+  type Locale,
   type Location,
   type Module,
   type Parameters,
@@ -59,6 +60,12 @@ const DEFAULT_DEADLINE_PERIOD_ID = 1;
 const DEFAULT_DELAY_MONTHS = 6;
 
 const JOB_INCLUDE = { posting: { include: POSTING_INCLUDE }, version: { include: VERSION_INCLUDE } };
+
+export interface INewCandidate {
+  id: string;
+  name: string;
+  locale: Locale;
+}
 
 export interface INewPosting {
   candidateId: string;
@@ -168,8 +175,8 @@ export function openDatabase(databasePath: string) {
       });
     },
 
-    async createCandidate({ id, name }: { id: string; name: string }): Promise<void> {
-      await prisma.candidate.create({ data: { id, name } });
+    async createCandidate({ id, name, locale }: INewCandidate): Promise<void> {
+      await prisma.candidate.create({ data: { id, name, locale } });
     },
 
     async renameCandidate({ id }: Candidate, name: string): Promise<void> {
@@ -194,8 +201,8 @@ export function openDatabase(databasePath: string) {
         if (claimedCount === 0 || config === null) {
           return;
         }
-        for (const { id, name, watchList } of config.candidateList) {
-          await transaction.candidate.upsert({ where: { id }, create: { id, name }, update: { name } });
+        for (const { id, name, locale, watchList } of config.candidateList) {
+          await transaction.candidate.upsert({ where: { id }, create: { id, name, locale }, update: { name, locale } });
           for (const { id: watchId, source, parameters } of watchList) {
             const watch = { candidateId: id, source, parameters };
             await transaction.watch.upsert({

@@ -2,7 +2,12 @@ import { z } from 'zod/v4';
 
 // The brand marks a value parsed by a domain schema, so that a raw row cannot pass for one
 // (ADR-0005); an enum stays unbranded, so that its literals can be written in the code
-export const CANDIDATE_SCHEMA = z.object({ id: z.string(), name: z.string() }).brand<'Domain'>();
+// The language a Candidate reads the interface in (src/domain/catalogue/)
+export const LOCALE_SCHEMA = z.enum(['fr', 'en']);
+
+export type Locale = z.infer<typeof LOCALE_SCHEMA>;
+
+export const CANDIDATE_SCHEMA = z.object({ id: z.string(), name: z.string(), locale: LOCALE_SCHEMA }).brand<'Domain'>();
 
 export type Candidate = z.infer<typeof CANDIDATE_SCHEMA>;
 

@@ -1,5 +1,5 @@
+import { catalogueOf } from '#/domain/catalogue/index.ts';
 import type { Posting, Status } from '#/domain/index.ts';
-import { STATUS_LABEL_BY_STATUS } from '#/domain/labels.ts';
 
 // What the status rules read of a Posting
 type PostingStatus = Pick<Posting, 'reference' | 'status' | 'appliedAt'>;
@@ -68,10 +68,12 @@ export function assertStatusChange(posting: PostingStatus, status: Status): void
   if (status === posting.status || nextStatusList.includes(status)) {
     return;
   }
-  const nextLabelList = nextStatusList.map((nextStatus) => STATUS_LABEL_BY_STATUS[nextStatus]);
+  // In French, as the rest of the message, until it speaks the Candidate's locale (#74)
+  const { statusLabelByStatus } = catalogueOf(null).common;
+  const nextLabelList = nextStatusList.map((nextStatus) => statusLabelByStatus[nextStatus]);
   const reason = hasBeenApplied(posting) ? ", Postulée ne s'annulant jamais : sa Lettre retenue est celle envoyée" : '';
   throw new Error(
-    `L'Offre ${posting.reference} est ${STATUS_LABEL_BY_STATUS[posting.status]} : elle ne peut passer qu'en ${nextLabelList.join(' ou ')}${reason}.`,
+    `L'Offre ${posting.reference} est ${statusLabelByStatus[posting.status]} : elle ne peut passer qu'en ${nextLabelList.join(' ou ')}${reason}.`,
   );
 }
 

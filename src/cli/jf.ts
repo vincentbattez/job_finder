@@ -2,12 +2,16 @@ import path from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 
+import { catalogueOf } from '#/actions/catalogue.ts';
 import { createActions, messageOf, type Actions } from '#/actions/index.ts';
-import { ARTIFACT_LABEL_BY_ARTIFACT, STATUS_LABEL_BY_STATUS } from '#/actions/labels.ts';
 
 import { readTextFile } from './acl/files.ts';
 
 const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
+
+// French, as the rest of the output, until it speaks the locale of the Candidate the command acts for
+// (#74)
+const COMMON = catalogueOf(null).common;
 
 // Through the actions only: the CLI never reaches the domain directly (ADR-0003)
 type Posting = Awaited<ReturnType<Actions['listPostings']>>[number];
@@ -43,7 +47,9 @@ function formatPosting(posting: Posting): string {
     posting.title,
     posting.workplace ?? '—',
     posting.deadline?.toLocaleDateString('fr-FR', { timeZone: 'UTC' }) ?? '—',
-    posting.isExpired ? `${STATUS_LABEL_BY_STATUS[posting.status]}, Expirée` : STATUS_LABEL_BY_STATUS[posting.status],
+    posting.isExpired
+      ? `${COMMON.statusLabelByStatus[posting.status]}, ${COMMON.expired}`
+      : COMMON.statusLabelByStatus[posting.status],
     posting.isInZone ? 'Zone' : 'hors Zone',
     // The link of a Repost, both ways, only on the Postings that have one
     ...(repostOf === null ? [] : [`Republication de ${repostOf.reference}`]),
@@ -134,7 +140,7 @@ async function chooseArtifact(actions: Actions, [givenReference, givenArtifact]:
     const version = await choose(terminal, {
       question: 'Artefact à modifier',
       itemList: await actions.listChosenVersions({ reference }),
-      label: ({ artifact, number }) => `${ARTIFACT_LABEL_BY_ARTIFACT[artifact]} (v${String(number)}, retenue)`,
+      label: ({ artifact, number }) => `${COMMON.artifactLabelByArtifact[artifact]} (v${String(number)}, retenue)`,
       emptyMessage: `L'Offre ${reference} n'a aucun Artefact à modifier : « jf run research ${reference} » produit sa Recherche.`,
     });
     return { reference, artifact: version.artifact };
@@ -201,7 +207,7 @@ function changeStatusCommand(status: Posting['status'], name: string, descriptio
         throw new Error(`Usage : jf ${name} <offre>. « jf list <candidat> » liste les Offres.`);
       }
       await actions.changeStatus({ reference, status });
-      process.stdout.write(`${reference} : ${STATUS_LABEL_BY_STATUS[status]}\n`);
+      process.stdout.write(`${reference} : ${COMMON.statusLabelByStatus[status]}\n`);
     },
   };
 }

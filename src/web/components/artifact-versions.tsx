@@ -1,6 +1,6 @@
 import { useId } from 'react';
 
-import { ARTIFACT_LABEL_BY_ARTIFACT } from '#/actions/labels.ts';
+import { useCatalogue } from '#/web/catalogue.ts';
 
 import { StateBadge } from './badge.tsx';
 import { CopyCommand } from './copy-command.tsx';
@@ -53,10 +53,11 @@ export function ArtifactVersions({
   isEditable,
   versionList,
 }: Readonly<IArtifactVersions & { reference: string }>) {
+  const { common } = useCatalogue();
   const headingId = useId();
   return (
     <section className="artifact" id={artifact} data-artifact={artifact} aria-labelledby={headingId}>
-      <h2 id={headingId}>{ARTIFACT_LABEL_BY_ARTIFACT[artifact]}</h2>
+      <h2 id={headingId}>{common.artifactLabelByArtifact[artifact]}</h2>
       <ModuleLaunch reference={reference} artifact={artifact} state={state} module={module} />
       {isEditable && <CopyCommand command={`jf edit ${reference} ${artifact}`} />}
       {versionList.length === 0 ? (

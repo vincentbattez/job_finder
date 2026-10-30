@@ -51,11 +51,24 @@ describe('Candidates', () => {
     await actions.createCandidate({ id: 'jean-pierre', name: ' Jean-Pierre ' });
 
     expect(await actions.listCandidates()).toEqual([
-      { id: 'jean-pierre', name: 'Jean-Pierre' },
-      { id: 'lea', name: 'Léa' },
+      { id: 'jean-pierre', name: 'Jean-Pierre', locale: 'fr' },
+      { id: 'lea', name: 'Léa', locale: 'fr' },
     ]);
     expect(await actions.listProfileFiles({ candidateId: 'jean-pierre' })).toEqual([]);
     expect(existsSync(path.join(dataDirectory, 'candidates', 'jean-pierre', 'profile'))).toBe(true);
+  });
+
+  // French by default, as Léa reads it: no screen sets the locale yet, only the config of the first
+  // launch and this action
+  it('creates a Candidate who reads the interface in English', async () => {
+    const actions = await createActions({ dataDirectory: createDataDirectory() });
+
+    await actions.createCandidate({ id: 'emma', name: 'Emma', locale: 'en' });
+
+    expect(await actions.listCandidates()).toEqual([
+      { id: 'emma', name: 'Emma', locale: 'en' },
+      { id: 'lea', name: 'Léa', locale: 'fr' },
+    ]);
   });
 
   it('refuses a Candidate whose identifier another one has', async () => {
@@ -64,7 +77,7 @@ describe('Candidates', () => {
     await expect(actions.createCandidate({ id: 'lea', name: 'Léa bis' })).rejects.toThrow(
       "Un Candidat a déjà l'identifiant lea : en choisir un autre.",
     );
-    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa' }]);
+    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa', locale: 'fr' }]);
   });
 
   it.each(['Léa', '../lea', 'lea jean', ''])(
@@ -91,7 +104,7 @@ describe('Candidates', () => {
 
     await actions.renameCandidate({ candidateId: 'lea', name: 'Léa Martin' });
 
-    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa Martin' }]);
+    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa Martin', locale: 'fr' }]);
   });
 });
 
@@ -105,8 +118,8 @@ describe('the config an older jf left', () => {
     const actions = await createActions({ dataDirectory });
 
     expect(await actions.listCandidates()).toEqual([
-      { id: 'camille', name: 'Camille' },
-      { id: 'lea', name: 'Léa' },
+      { id: 'camille', name: 'Camille', locale: 'fr' },
+      { id: 'lea', name: 'Léa', locale: 'fr' },
     ]);
     expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([
       {
@@ -120,6 +133,22 @@ describe('the config an older jf left', () => {
     // Left in place, but no longer read: jf says so until it is deleted
     expect(await actions.readDefaultDeadlinePeriod()).toEqual({ months: 4 });
     expect(await actions.findObsoleteConfig()).toEqual({ path: configPath });
+  });
+
+  it('gives each Candidate the locale it names, French otherwise', async () => {
+    const dataDirectory = createMigratedDataDirectory();
+    writeConfig(dataDirectory, {
+      ...OLDER_CONFIG,
+      candidateList: [...OLDER_CONFIG.candidateList, { id: 'emma', name: 'Emma', locale: 'en', watchList: [] }],
+    });
+
+    const actions = await createActions({ dataDirectory });
+
+    expect(await actions.listCandidates()).toEqual([
+      { id: 'camille', name: 'Camille', locale: 'fr' },
+      { id: 'emma', name: 'Emma', locale: 'en' },
+      { id: 'lea', name: 'Léa', locale: 'fr' },
+    ]);
   });
 
   it('is never read again, so what the front set stays', async () => {
@@ -138,8 +167,8 @@ describe('the config an older jf left', () => {
     const actions = await createActions({ dataDirectory });
 
     expect(await actions.listCandidates()).toEqual([
-      { id: 'camille', name: 'Camille' },
-      { id: 'lea', name: 'Léa Martin' },
+      { id: 'camille', name: 'Camille', locale: 'fr' },
+      { id: 'lea', name: 'Léa Martin', locale: 'fr' },
     ]);
     expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([]);
     expect(await actions.readDefaultDeadlinePeriod()).toEqual({ months: 8 });
@@ -151,7 +180,7 @@ describe('the config an older jf left', () => {
 
     const actions = await createActions({ dataDirectory });
 
-    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa' }]);
+    expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa', locale: 'fr' }]);
   });
 
   it('refuses the first launch while invalid, naming the faulty field', async () => {
