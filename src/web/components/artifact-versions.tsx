@@ -10,6 +10,8 @@ import { InstructionsOrigin } from './module-instructions.tsx';
 import { ModuleLaunch } from './module-launch.tsx';
 import { STATE_BY_VERSION_STATE, type IArtifactVersions } from './posting-detail.tsx';
 
+import './artifact-versions.css';
+
 type VersionDocuments = IArtifactVersions['versionList'][number];
 
 // A Visualization shows in a frame that runs none of its scripts: the page comes from an AI session
@@ -22,7 +24,7 @@ function VersionFiles({
   const { t } = useTranslation('posting');
   if (artifact === 'visualization' && version.state === 'ready') {
     return (
-      <div className="visualization">
+      <div className="artifact-versions__visualization">
         <iframe
           src={`/postings/${reference}/visualization/${String(version.number)}`}
           sandbox=""
@@ -56,14 +58,14 @@ export function ArtifactVersions({
   const { t } = useTranslation('posting');
   const headingId = useId();
   return (
-    <section className="artifact" id={artifact} data-artifact={artifact} aria-labelledby={headingId}>
+    <section className="artifact-versions" id={artifact} data-artifact={artifact} aria-labelledby={headingId}>
       <h2 id={headingId}>{t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' })}</h2>
       <ModuleLaunch reference={reference} artifact={artifact} state={state} module={module} />
       {isEditable && <CopyCommand command={`jf edit ${reference} ${artifact}`} />}
       {versionList.length === 0 ? (
         <p className="missing">{t('noVersion')}</p>
       ) : (
-        <ol className="version-list">
+        <ol className="artifact-versions__list">
           {versionList.map(({ version, isChoosable, documentList }) => (
             <li key={version.number}>
               <details open={version.isChosen}>
@@ -76,12 +78,12 @@ export function ArtifactVersions({
                     </span>
                   )}
                   <InstructionsOrigin hasCandidateInstructions={version.hasCandidateInstructions} />
-                  <span className="date">
+                  <span className="date artifact-versions__date">
                     <DateText date={version.createdAt} />
                   </span>
                 </summary>
                 {isChoosable && <ChooseButton reference={reference} artifact={artifact} number={version.number} />}
-                <details className="version-instructions">
+                <details className="artifact-versions__instructions">
                   <summary>{t('versionInstructions')}</summary>
                   <Markdown markdown={version.instructions} />
                 </details>

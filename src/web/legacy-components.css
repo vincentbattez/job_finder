@@ -68,35 +68,6 @@
     color: var(--color-error);
   }
 
-  /* The drop zone of a file, such as a Job Description or an Upload: a dashed tray that lights up under a file */
-  .drop-zone {
-    display: grid;
-    justify-items: start;
-    gap: var(--space-sm);
-    margin-top: var(--space-xs);
-    padding: var(--space-md);
-    border: var(--rule-hair) dashed var(--color-muted);
-    border-radius: var(--radius-card);
-    color: var(--color-ink-2);
-    transition: background-color var(--dur-short) var(--ease-out);
-  }
-  .drop-zone[data-drag-over='true'] {
-    border-style: solid;
-    border-color: var(--color-accent);
-    background: var(--color-accent-soft);
-  }
-  /* A label in the look of a button, for the hidden file input it holds */
-  .drop-zone__choose {
-    display: inline-flex;
-    align-items: center;
-  }
-  .drop-zone__choose:focus-within {
-    outline: 2px solid var(--color-focus);
-    outline-offset: 2px;
-  }
-  .drop-zone__error {
-    color: var(--color-error);
-  }
   .missing {
     color: var(--color-muted);
     font-family: var(--font-body);
@@ -162,75 +133,7 @@
     color: var(--color-ink-2);
     font-size: var(--text-sm);
   }
-  .prose {
-    max-width: 65ch;
-    line-height: 1.65;
-  }
-  .prose > * + * {
-    margin-top: var(--space-sm);
-  }
-  .prose :is(h1, h2, h3, h4) {
-    max-width: none;
-    margin-top: var(--space-lg);
-    font-size: var(--text-md);
-  }
-  .prose :is(h1, h2, h3, h4):first-child {
-    margin-top: 0;
-  }
-  .prose :is(ul, ol) {
-    margin-bottom: 0;
-    padding-inline-start: var(--space-lg);
-  }
-  .editor {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-lg);
-  }
-  .editor__pane {
-    display: grid;
-    grid-template-rows: auto 1fr;
-    gap: var(--space-xs);
-    min-width: 0;
-  }
-  .editor label,
-  .editor__label {
-    color: var(--color-ink-2);
-    margin: 0;
-    font: 500 var(--text-sm) / 1.4 var(--font-body);
-  }
-  .editor textarea {
-    min-height: 20rem;
-    padding: var(--space-md);
-    border: var(--rule-hair) solid var(--color-muted);
-    border-radius: var(--radius-input);
-    outline: 2px solid transparent;
-    outline-offset: -3px;
-    background: var(--light);
-    color: var(--color-ink);
-    line-height: 1.6;
-    resize: vertical;
-    field-sizing: content;
-    transition: background-color var(--dur-short) var(--ease-out);
-  }
-  .editor textarea:hover {
-    background: var(--color-paper);
-  }
-  .editor textarea:focus-visible {
-    outline-color: var(--color-focus);
-  }
-  /* A Letter is frozen once its Posting is Applied */
-  .editor textarea:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-  @media (max-width: 60rem) {
-    .editor {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
-  .posting-detail .prose,
-  .editor .prose,
-  .document .prose {
+  .posting-detail .prose {
     max-width: none;
     padding: var(--space-md);
     border-radius: var(--radius-input);
@@ -276,49 +179,7 @@
     font: var(--text-sm) / 1.4 var(--font-outlier);
     overflow-wrap: anywhere;
   }
-  .version-list {
-    display: grid;
-    gap: var(--space-xs);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .version-list details {
-    border: var(--rule-hair) solid var(--color-rule);
-    border-radius: var(--radius-card);
-    background: var(--light);
-  }
-  .version-list summary {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-xs) var(--space-sm);
-    padding: var(--space-sm) var(--space-md);
-    cursor: pointer;
-  }
-  .version-list summary .date {
-    margin-inline-start: auto;
-    color: var(--color-muted);
-    font-size: var(--text-sm);
-  }
-  .version-list details > :not(summary) {
-    margin: 0 var(--space-md) var(--space-md);
-  }
-  .document {
-    display: grid;
-    gap: var(--space-xs);
-  }
-  .document figcaption {
-    color: var(--color-muted);
-  }
-  /* A missing fact the Letter marks « [à compléter : …] »: a highlighter stroke, so that none is sent */
-  .prose mark {
-    padding-inline: var(--space-3xs);
-    border-radius: var(--space-2xs);
-    background: var(--p-wed);
-    color: var(--color-ink);
-    font-weight: 500;
-  }
+  /* A copy of edition.css for the module Instructions and the Facts form, which don't load it */
   .edition {
     display: flex;
     flex-wrap: wrap;
@@ -329,75 +190,9 @@
     color: var(--color-muted);
     font-size: var(--text-sm);
   }
-  .document form {
-    display: grid;
-    gap: var(--space-sm);
-  }
-  /* The Visualization, a page of its own, read in a tall frame on the paper of the Posting page */
-  .visualization iframe {
-    display: block;
-    width: 100%;
-    height: min(80vh, 48rem);
-    border: var(--rule-hair) solid var(--color-rule);
-    border-radius: var(--radius-input);
-    background: var(--glint);
-  }
-  /* Each file of the Profile, named as on disk */
-  .profile-file {
-    display: grid;
-    gap: var(--space-md);
-    min-width: 0;
-  }
-  .profile-file form,
   .instructions form {
     display: grid;
     gap: var(--space-sm);
-  }
-  .profile-file h2 {
-    font: var(--text-md) / 1.4 var(--font-outlier);
-    letter-spacing: 0;
-  }
-  .profile-file__name {
-    display: grid;
-    gap: var(--space-xs);
-    max-width: 32rem;
-  }
-  .profile-file__name label {
-    color: var(--color-ink-2);
-    font: 500 var(--text-sm) / 1.4 var(--font-body);
-  }
-  .profile-file__name input {
-    min-height: 40px;
-    padding: 0 var(--space-sm);
-    border: var(--rule-hair) solid var(--color-muted);
-    border-radius: var(--radius-input);
-    outline: 2px solid transparent;
-    outline-offset: -3px;
-    background: var(--light);
-    color: var(--color-ink);
-    font-family: var(--font-outlier);
-  }
-  .profile-file__name input:focus-visible {
-    outline-color: var(--color-focus);
-  }
-  .edition .profile-file__error {
-    color: var(--color-error);
-  }
-  /* Deleting a file takes unfolding, then a button in the color of what cannot be undone */
-  .profile-file__delete summary {
-    color: var(--color-muted);
-    font-size: var(--text-sm);
-    cursor: pointer;
-  }
-  .profile-file__delete[open] summary {
-    margin-bottom: var(--space-sm);
-  }
-  .profile-file .profile-file__delete form {
-    display: flex;
-  }
-  /* Not a file yet: named in the voice of the page, not as on disk */
-  .profile-file--new h2 {
-    font: 600 var(--text-md) / 1.4 var(--font-body);
   }
 
   /* The Instructions of a module sit in its compartment, under its tint, like its Versions */
@@ -409,18 +204,15 @@
   }
   /* Instructions folded under what they produced: the default ones under the Candidate's, and those of
    each Version under it */
-  .instructions__default summary,
-  .version-instructions summary {
+  .instructions__default summary {
     color: var(--color-accent-deep);
     font-weight: 500;
     cursor: pointer;
   }
-  .instructions__default[open] summary,
-  .version-instructions[open] summary {
+  .instructions__default[open] summary {
     margin-bottom: var(--space-sm);
   }
-  .instructions__default .prose,
-  .version-instructions .prose {
+  .instructions__default .prose {
     max-width: none;
     padding: var(--space-md);
     border-radius: var(--radius-input);
@@ -490,46 +282,6 @@
   }
   .facts__add {
     justify-self: start;
-  }
-
-  /* The PDFs of the Profile, kept as dropped: one row each, name and date, deletion folded */
-  .uploads h2 {
-    font: 600 var(--text-md) / 1.4 var(--font-body);
-  }
-  .uploads__empty {
-    color: var(--color-ink-2);
-  }
-  .uploads__list {
-    display: grid;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .uploads__item {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: var(--space-2xs) var(--space-md);
-    padding-block: var(--space-sm);
-    border-bottom: var(--rule-hair) solid var(--color-paper-2);
-    min-width: 0;
-  }
-  .uploads__item .reference {
-    overflow-wrap: anywhere;
-  }
-  .uploads__date {
-    color: var(--color-ink-2);
-    font-size: var(--text-sm);
-  }
-  .uploads__item .profile-file__delete {
-    margin-inline-start: auto;
-  }
-  .uploads__conversion {
-    flex-basis: 100%;
-  }
-  .uploads__item .profile-file__delete form {
-    display: flex;
-    margin-top: var(--space-xs);
   }
 
   /* The Notification Channel: each field, then the button that tries it and what it answered */
