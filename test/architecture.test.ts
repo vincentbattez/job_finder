@@ -170,7 +170,7 @@ function findConfigReadsOutsideImport(projectDirectory: string): string[] {
 }
 
 // The CSS of the front: global stylesheets beside the root, imported by the entry one, and one
-// stylesheet per component beside its .tsx, styling only its BEM block
+// stylesheet per component beside its .tsx, styling only its BEM block (ADR-0013)
 const FRONT_DIRECTORY = 'src/web';
 const COMPONENT_DIRECTORY = 'src/web/components';
 const ENTRY_STYLESHEET_PATH = 'src/web/app.css';

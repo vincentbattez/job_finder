@@ -42,6 +42,26 @@ The generic rules of the code. The why of a decision is in its ADR (`docs/adr/`)
 - Spelling is checked by cspell (`scripts/spellcheck.sh`, its English pass `cspell.config.yaml`) with an English dictionary, on the staged files and on the whole repo. French is only allowed in the French resources (`src/domain/catalogue/fr/`), checked with the French dictionary, and in recorded fixtures; narrowly besides, in the string literals of a module's copy file (ADR-0010), checked with the French dictionary by the second pass (`cspell.fr.config.yaml`), in the literals of a test, which drive the French locale, and in the former names that the data migration and the redirects match. A proper noun or a tool name goes in `cspell-words.txt`. **(hook)** **(CI)**
 - A comment gives, in one or two lines, the why that the code does not show, and cites the relevant ADR.
 
+## CSS (ADR-0013)
+
+The front's styles are one stylesheet per component, in BEM, ordered by cascade layers. `stylelint.config.ts` and the CSS part of `test/architecture.test.ts` are the reference.
+
+- **Layers.** `src/web/app.css` keeps the Hallmark stamp at its head, declares the order once, `@layer vendor, tokens, base, layout, components, utilities;`, and imports each global stylesheet into its layer, Leaflet into `vendor`. `root.tsx` imports `app.css` first, so its `@layer` comes before any other. A rule wins by its layer, never by its line or by force.
+- **Global stylesheets** sit beside the root, for what belongs to no component: `tokens.css` (palette, spacing, type and z-index scales), `base.css` (reset, HTML elements, focus, reduced motion), `layout.css` (the frame of every page), `controls.css` (the shared `.button` and form controls), `utilities.css`. A look shared by several components goes in `controls.css` or `layout.css`, never in a component's stylesheet.
+- **Component stylesheets.** A Dumb of `src/web/components/` that has styles gets a `.css` named like it, beside its `.tsx`, which alone imports it; its rules sit in `@layer components`, its `@media` rules with them. Containers and routes carry no stylesheet: a route-specific look becomes a Dumb or goes in `layout.css`.
+- **States** go through `data-*` and ARIA attributes (`[data-status]`, `[aria-current]`, `:disabled`), never a state class.
+- A stylesheet has at most 200 lines: past that, it is split. **(CI)**
+- A component stylesheet has a same-named `.tsx` beside it that imports it, and no other file imports it. **(CI)**
+- A component stylesheet only styles its block, named like the file: `.badge`, `.badge__x`, `.badge--y` in `badge.css`. A library's class (Leaflet's) only appears in the same compound as the block, and never another component's block. **(CI)**
+- A global stylesheet never styles a component's block, even a component without a stylesheet. **(CI)**
+- Only `app.css` has `@import`. **(CI)**
+- Class names are kebab-case BEM: `block`, `block__element`, `block--modifier`. **(hook)** **(CI)**
+- A color comes from a token: no hex, no named color, no color function outside `tokens.css`; `color-mix()` and relative colors over a token pass. **(hook)** **(CI)**
+- Selectors stay flat: no ID, at most three compound selectors, specificity at most 0,3,1. **(hook)** **(CI)**
+- No `!important`, except in `base.css` and `utilities.css`, which must beat every layer. **(hook)** **(CI)**
+- A selector and a property are written once in a block; a base selector comes before its higher-specificity variants. **(hook)** **(CI)**
+- `stylelint-config-standard` applies too; the hook fixes what Stylelint can, then Prettier formats. **(hook)** **(CI)**
+
 ## Data
 
 - `data/` holds the Candidates' real data, and only `jf` writes to it. Development, tests and the seed work in `dev-data/` or in a temporary folder.
