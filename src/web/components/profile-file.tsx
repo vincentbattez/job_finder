@@ -1,7 +1,6 @@
 import { useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Form } from 'react-router';
-
-import { useCatalogue } from '#/web/catalogue.ts';
 
 import { MarkdownEditor } from './markdown-editor.tsx';
 
@@ -13,8 +12,7 @@ export function ProfileFile({
 }: Readonly<{ fileName: string; markdown: string; error: string | null }>) {
   const headingId = useId();
   const [editedMarkdown, setEditedMarkdown] = useState(markdown);
-  const { settings } = useCatalogue();
-  const { profileFile } = settings;
+  const { t } = useTranslation('settings');
   return (
     <section className="profile-file" aria-labelledby={headingId}>
       <h2 id={headingId} className="reference">
@@ -24,16 +22,16 @@ export function ProfileFile({
         <input type="hidden" name="fileName" value={fileName} />
         <MarkdownEditor
           name="markdown"
-          label={profileFile.contentOf(fileName)}
+          label={t('profileFile.contentOf', { fileName })}
           defaultValue={markdown}
-          placeholder={profileFile.contentPlaceholder}
+          placeholder={t('profileFile.contentPlaceholder')}
           onChange={setEditedMarkdown}
         />
         <div className="edition">
           <button type="submit" name="intent" value="save" className="button--primary">
-            {profileFile.save}
+            {t('profileFile.save')}
           </button>
-          {editedMarkdown !== markdown && <p role="status">{settings.unsavedChanges}</p>}
+          {editedMarkdown !== markdown && <p role="status">{t('unsavedChanges')}</p>}
           {error !== null && (
             <p role="alert" className="profile-file__error">
               {error}
@@ -43,12 +41,12 @@ export function ProfileFile({
       </Form>
       {/* Folded, so a deletion always takes a second, deliberate click, with or without JavaScript */}
       <details className="profile-file__delete">
-        <summary>{profileFile.deleteSummary(fileName)}</summary>
+        <summary>{t('profileFile.deleteSummary', { fileName })}</summary>
         <Form method="post" preventScrollReset className="edition">
           <input type="hidden" name="fileName" value={fileName} />
-          <p>{profileFile.deleteWarning}</p>
+          <p>{t('profileFile.deleteWarning')}</p>
           <button type="submit" name="intent" value="delete" className="button--danger">
-            {profileFile.deleteForGood(fileName)}
+            {t('profileFile.deleteForGood', { fileName })}
           </button>
         </Form>
       </details>
@@ -60,32 +58,32 @@ export function ProfileFile({
 export function ProfileFileCreation({ error }: Readonly<{ error: string | null }>) {
   const headingId = useId();
   const fileNameId = useId();
-  const { profileFile } = useCatalogue().settings;
+  const { t } = useTranslation('settings');
   return (
     <section className="profile-file profile-file--new" aria-labelledby={headingId}>
-      <h2 id={headingId}>{profileFile.creationHeading}</h2>
+      <h2 id={headingId}>{t('profileFile.creationHeading')}</h2>
       <Form method="post" preventScrollReset>
         <div className="profile-file__name">
-          <label htmlFor={fileNameId}>{profileFile.fileName}</label>
+          <label htmlFor={fileNameId}>{t('profileFile.fileName')}</label>
           <input
             id={fileNameId}
             type="text"
             name="fileName"
             required
-            placeholder={profileFile.fileNamePlaceholder}
+            placeholder={t('profileFile.fileNamePlaceholder')}
             autoComplete="off"
             spellCheck={false}
           />
         </div>
         <MarkdownEditor
           name="markdown"
-          label={profileFile.creationContent}
+          label={t('profileFile.creationContent')}
           defaultValue=""
-          placeholder={profileFile.creationContentPlaceholder}
+          placeholder={t('profileFile.creationContentPlaceholder')}
         />
         <div className="edition">
           <button type="submit" name="intent" value="create" className="button--primary">
-            {profileFile.create}
+            {t('profileFile.create')}
           </button>
           {error !== null && (
             <p role="alert" className="profile-file__error">

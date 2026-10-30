@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Form,
   redirect,
@@ -9,11 +10,10 @@ import {
   type MetaArgs,
 } from 'react-router';
 
-import { catalogueOf } from '#/actions/catalogue.ts';
+import { localeOf, tFor } from '#/actions/i18n.ts';
 import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
-import { useCatalogue } from '#/web/catalogue.ts';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { candidate, locale } = await readCandidate(request);
@@ -56,7 +56,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export function meta({ loaderData }: MetaArgs<typeof loader>) {
-  return [{ title: catalogueOf(loaderData).settings.candidates.pageTitle }];
+  return [{ title: tFor(localeOf(loaderData), 'settings')('candidates.pageTitle') }];
 }
 
 function Refusal({ message }: Readonly<{ message: string | undefined }>) {
@@ -66,7 +66,7 @@ function Refusal({ message }: Readonly<{ message: string | undefined }>) {
 export default function Candidates() {
   const { candidateList, defaultDeadlinePeriod, obsoleteConfig } = useLoaderData<typeof loader>();
   const refusal = useActionData<typeof action>()?.refusal;
-  const { candidates } = useCatalogue().settings;
+  const { t } = useTranslation('settings');
   const refusalOf = (intent: string, candidateId?: string) =>
     refusal?.intent === intent && (candidateId === undefined || refusal.candidateId === candidateId)
       ? refusal.message
@@ -77,24 +77,26 @@ export default function Candidates() {
   return (
     <main className="container page">
       <div className="page__head">
-        <h1>{candidates.heading}</h1>
-        <p>{candidates.intro}</p>
-        {obsoleteConfig.path !== null && <p role="note">{candidates.obsoleteConfig(obsoleteConfig.path)}</p>}
+        <h1>{t('candidates.heading')}</h1>
+        <p>{t('candidates.intro')}</p>
+        {obsoleteConfig.path !== null && (
+          <p role="note">{t('candidates.obsoleteConfig', { path: obsoleteConfig.path })}</p>
+        )}
       </div>
       <section className="settings" aria-labelledby={listHeadingId}>
-        <h2 id={listHeadingId}>{candidates.renameHeading}</h2>
-        {candidateList.length === 0 && <p>{candidates.noCandidate}</p>}
+        <h2 id={listHeadingId}>{t('candidates.renameHeading')}</h2>
+        {candidateList.length === 0 && <p>{t('candidates.noCandidate')}</p>}
         {candidateList.map(({ id, name }) => (
           <Form key={`${id}:${name}`} method="post">
             <input type="hidden" name="intent" value="rename" />
             <input type="hidden" name="candidateId" value={id} />
             <label className="settings__field">
-              {candidates.nameOf(id)}
-              <input name="name" required defaultValue={name} placeholder={candidates.fullNamePlaceholder} />
+              {t('candidates.nameOf', { candidateId: id })}
+              <input name="name" required defaultValue={name} placeholder={t('candidates.fullNamePlaceholder')} />
             </label>
             <div className="settings__step">
-              <button type="submit" aria-label={candidates.renameOf(id)}>
-                {candidates.rename}
+              <button type="submit" aria-label={t('candidates.renameOf', { candidateId: id })}>
+                {t('candidates.rename')}
               </button>
               <Refusal message={refusalOf('rename', id)} />
             </div>
@@ -102,33 +104,33 @@ export default function Candidates() {
         ))}
       </section>
       <section className="settings" aria-labelledby={creationHeadingId}>
-        <h2 id={creationHeadingId}>{candidates.creationHeading}</h2>
+        <h2 id={creationHeadingId}>{t('candidates.creationHeading')}</h2>
         {/* Remounted once a Candidate is created, so the form starts blank again */}
         <Form key={candidateList.length} method="post">
           <input type="hidden" name="intent" value="create" />
           <label className="settings__field">
-            {candidates.name}
-            <input name="name" required placeholder={candidates.namePlaceholder} />
+            {t('candidates.name')}
+            <input name="name" required placeholder={t('candidates.namePlaceholder')} />
           </label>
           <label className="settings__field">
-            {candidates.id}
-            <input name="id" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder={candidates.idPlaceholder} />
+            {t('candidates.id')}
+            <input name="id" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder={t('candidates.idPlaceholder')} />
           </label>
           <div className="settings__step">
             <button type="submit" className="button--primary">
-              {candidates.create}
+              {t('candidates.create')}
             </button>
             <Refusal message={refusalOf('create')} />
           </div>
         </Form>
       </section>
       <section className="settings" aria-labelledby={delayHeadingId}>
-        <h2 id={delayHeadingId}>{candidates.defaultDeadlinePeriodHeading}</h2>
-        <p>{candidates.defaultDeadlinePeriodHint}</p>
+        <h2 id={delayHeadingId}>{t('candidates.defaultDeadlinePeriodHeading')}</h2>
+        <p>{t('candidates.defaultDeadlinePeriodHint')}</p>
         <Form key={defaultDeadlinePeriod.months} method="post">
           <input type="hidden" name="intent" value="default-deadline-period" />
           <label className="settings__field">
-            {candidates.defaultDeadlinePeriodMonths}
+            {t('candidates.defaultDeadlinePeriodMonths')}
             <input
               name="months"
               type="number"
@@ -141,7 +143,7 @@ export default function Candidates() {
           </label>
           <div className="settings__step">
             <button type="submit" className="button--primary">
-              {candidates.saveDefaultDeadlinePeriod}
+              {t('candidates.saveDefaultDeadlinePeriod')}
             </button>
             <Refusal message={refusalOf('default-deadline-period')} />
           </div>

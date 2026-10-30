@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   Link,
   redirect,
@@ -8,11 +9,10 @@ import {
   type MetaArgs,
 } from 'react-router';
 
-import { catalogueOf } from '#/actions/catalogue.ts';
+import { localeOf, tFor } from '#/actions/i18n.ts';
 import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
-import { useCatalogue } from '#/web/catalogue.ts';
 import { CopyCommand } from '#/web/components/copy-command.tsx';
 import { FactsForm } from '#/web/components/facts-form.tsx';
 import { NotificationChannelForm } from '#/web/components/notification-channel.tsx';
@@ -99,38 +99,38 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export function meta({ loaderData }: MetaArgs<typeof loader>) {
-  return [{ title: catalogueOf(loaderData).settings.profile.pageTitle }];
+  return [{ title: tFor(localeOf(loaderData), 'settings')('profile.pageTitle') }];
 }
 
 export default function Profile() {
   const { candidate, profileFileList, uploadList, sectionList, channel, channelModuleList, watchList, sourceList } =
     useLoaderData<typeof loader>();
   const refusal = useActionData<typeof action>()?.refusal ?? null;
-  const { profile } = useCatalogue().settings;
+  const { t } = useTranslation('settings');
   return (
     <main className="container page">
       {candidate === null ? (
         <div className="page__head">
-          <h1>{profile.noCandidateHeading}</h1>
+          <h1>{t('profile.noCandidateHeading')}</h1>
           <p>
-            {profile.noCandidateHintStart} <Link to="/candidates">{profile.noCandidateHintLink}</Link>{' '}
-            {profile.noCandidateHintEnd}
+            {t('profile.noCandidateHintStart')} <Link to="/candidates">{t('profile.noCandidateHintLink')}</Link>{' '}
+            {t('profile.noCandidateHintEnd')}
           </p>
         </div>
       ) : (
         <>
           <div className="page__head">
-            <h1>{profile.heading(candidate.name)}</h1>
-            <p>{profile.intro}</p>
+            <h1>{t('profile.heading', { candidateName: candidate.name })}</h1>
+            <p>{t('profile.intro')}</p>
           </div>
           {/* Keyed by their content, so that a save of one shows in the other */}
           <FactsForm key={JSON.stringify(sectionList)} sectionList={sectionList} />
           <Uploads uploadList={uploadList} />
           {profileFileList.length === 0 ? (
             <div className="empty">
-              <p>{profile.emptyHint}</p>
+              <p>{t('profile.emptyHint')}</p>
               <CopyCommand command={`jf profile ${candidate.id}`} />
-              <p>{profile.emptyManualHint}</p>
+              <p>{t('profile.emptyManualHint')}</p>
             </div>
           ) : (
             profileFileList.map(({ fileName, markdown }) => (

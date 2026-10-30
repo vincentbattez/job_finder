@@ -1,5 +1,6 @@
+import { useTranslation } from 'react-i18next';
+
 import type { Actions } from '#/actions/index.ts';
-import { useCatalogue } from '#/web/catalogue.ts';
 import { useLocale } from '#/web/i18n.tsx';
 
 type Parameter = Awaited<ReturnType<Actions['listSources']>>[number]['parameterList'][number];
@@ -30,7 +31,7 @@ export function ParameterField({
   isConfigured?: boolean;
   secretReference?: (input: HTMLInputElement | null) => void;
 }>) {
-  const copy = useCatalogue().settings.parameter;
+  const { t } = useTranslation('settings');
   const locale = useLocale();
   // The module gives its words in each locale, from its own folder (ADR-0010)
   const label = labelByLocale[locale];
@@ -41,14 +42,14 @@ export function ParameterField({
       <label className={className}>
         <span>
           {label}
-          {isConfigured && <span className="parameter-field__configured">{copy.configured}</span>}
+          {isConfigured && <span className="parameter-field__configured">{t('parameter.configured')}</span>}
         </span>
         <input
           ref={secretReference}
           type="password"
           name={fieldName}
           autoComplete="off"
-          placeholder={isConfigured ? copy.keepSaved : placeholder}
+          placeholder={isConfigured ? t('parameter.keepSaved') : placeholder}
         />
       </label>
     );
@@ -56,7 +57,7 @@ export function ParameterField({
   if (type === 'list') {
     return (
       <label className={className}>
-        {copy.onePerLine(label)}
+        {t('parameter.onePerLine', { label })}
         <textarea
           name={fieldName}
           rows={3}

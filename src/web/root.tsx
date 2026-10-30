@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   isRouteErrorResponse,
   Link,
@@ -15,7 +16,6 @@ import {
 } from 'react-router';
 
 import { readCandidate } from './candidate.server.ts';
-import { useCatalogue } from './catalogue.ts';
 import { CandidateMenu } from './components/candidate-menu.tsx';
 import { LocaleSwitcher } from './components/locale-switcher.tsx';
 import { LocaleProvider, useLocale } from './i18n.tsx';
@@ -52,7 +52,7 @@ function Page({ children }: Readonly<{ children: ReactNode }>) {
   // Undefined when the root loader itself failed: the error page then shows without the menu
   const candidateData = useRouteLoaderData<typeof loader>('root');
   const locale = useLocale();
-  const { layout } = useCatalogue().settings;
+  const { t } = useTranslation('settings');
   return (
     <html lang={locale}>
       <head>
@@ -67,13 +67,13 @@ function Page({ children }: Readonly<{ children: ReactNode }>) {
             <Link to="/" className="wordmark">
               Job Finder
             </Link>
-            <nav className="topbar__nav" aria-label={layout.navigationLabel}>
+            <nav className="topbar__nav" aria-label={t('layout.navigationLabel')}>
               <NavLink to="/" end>
-                {layout.postingsLink}
+                {t('layout.postingsLink')}
               </NavLink>
-              <NavLink to="/profile">{layout.profileLink}</NavLink>
-              <NavLink to="/instructions">{layout.instructionsLink}</NavLink>
-              <NavLink to="/candidates">{layout.candidatesLink}</NavLink>
+              <NavLink to="/profile">{t('layout.profileLink')}</NavLink>
+              <NavLink to="/instructions">{t('layout.instructionsLink')}</NavLink>
+              <NavLink to="/candidates">{t('layout.candidatesLink')}</NavLink>
             </nav>
             <div className="topbar__end">
               {candidateData !== undefined && <CandidateMenu {...candidateData} />}
@@ -95,12 +95,12 @@ export default function App() {
 
 export function ErrorBoundary({ error }: Readonly<{ error: unknown }>) {
   const isNotFound = isRouteErrorResponse(error) && error.status === 404;
-  const { layout } = useCatalogue().settings;
+  const { t } = useTranslation('settings');
   return (
     <main className="container page">
       <div className="page__head">
-        <h1>{isNotFound ? layout.notFoundHeading : layout.errorHeading}</h1>
-        <p>{isNotFound ? layout.notFoundHint : layout.errorHint}</p>
+        <h1>{isNotFound ? t('layout.notFoundHeading') : t('layout.errorHeading')}</h1>
+        <p>{isNotFound ? t('layout.notFoundHint') : t('layout.errorHint')}</p>
       </div>
     </main>
   );

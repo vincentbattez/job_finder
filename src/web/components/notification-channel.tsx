@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useFetcher, type FetcherWithComponents } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
-import { useCatalogue } from '#/web/catalogue.ts';
 import { useLocale } from '#/web/i18n.tsx';
 
 import { PARAMETER_FIELD_PREFIX, ParameterField } from './parameter-field.tsx';
@@ -77,7 +77,7 @@ function ChoiceField({
   isHydrated: boolean;
 }>) {
   const fetcher = useFetcher<IOutcome>();
-  const copy = useCatalogue().settings.notificationChannel;
+  const { t } = useTranslation('settings');
   const label = labelByLocale[useLocale()];
   const valueList = fetcher.data?.choiceList?.map(({ value }) => value) ?? (savedValue === '' ? [] : [savedValue]);
   return (
@@ -87,7 +87,7 @@ function ChoiceField({
         <select name={`${PARAMETER_FIELD_PREFIX}${name}`} defaultValue={savedValue}>
           {/* A hint, never a choice: a Parameter left out keeps the one saved */}
           <option value="" disabled>
-            {valueList.length === 0 ? copy.reloadChoicesFirst : copy.choose}
+            {valueList.length === 0 ? t('notificationChannel.reloadChoicesFirst') : t('notificationChannel.choose')}
           </option>
           {valueList.map((value) => (
             <option key={value} value={value}>
@@ -100,12 +100,12 @@ function ChoiceField({
         type="button"
         fetcher={fetcher}
         isHydrated={isHydrated}
-        accessibleName={copy.reloadChoicesOf(label)}
+        accessibleName={t('notificationChannel.reloadChoicesOf', { label })}
         onClick={() => {
           send(form, fetcher, 'choices', name);
         }}
       >
-        {copy.reloadChoices}
+        {t('notificationChannel.reloadChoices')}
       </Step>
     </>
   );
@@ -119,7 +119,7 @@ export function NotificationChannelForm({
 }: Readonly<{ channel: NotificationChannel; moduleList: NotificationChannelModule[] }>) {
   const headingId = useId();
   const isHydrated = useIsHydrated();
-  const copy = useCatalogue().settings.notificationChannel;
+  const { t } = useTranslation('settings');
   const formReference = useRef<HTMLFormElement>(null);
   const secretInputList = useRef(new Set<HTMLInputElement>());
   const [moduleId, setModuleId] = useState(channel.module ?? moduleList[0]?.id ?? '');
@@ -147,8 +147,8 @@ export function NotificationChannelForm({
 
   return (
     <section className="channel" aria-labelledby={headingId}>
-      <h2 id={headingId}>{copy.heading}</h2>
-      <p>{copy.intro}</p>
+      <h2 id={headingId}>{t('notificationChannel.heading')}</h2>
+      <p>{t('notificationChannel.intro')}</p>
       <form
         ref={formReference}
         method="post"
@@ -159,7 +159,7 @@ export function NotificationChannelForm({
         }}
       >
         <label className="channel__field">
-          {copy.channel}
+          {t('notificationChannel.channel')}
           <select
             name="channel"
             value={moduleId}
@@ -208,11 +208,11 @@ export function NotificationChannelForm({
               send(formReference, testFetcher, 'test');
             }}
           >
-            {copy.test}
+            {t('notificationChannel.test')}
           </Step>
         )}
         <Step type="submit" className="button--primary" fetcher={saveFetcher} isHydrated={isHydrated}>
-          {copy.save}
+          {t('notificationChannel.save')}
         </Step>
         <Step
           type="button"
@@ -222,7 +222,7 @@ export function NotificationChannelForm({
             send(formReference, notifyFetcher, 'notify');
           }}
         >
-          {copy.notify}
+          {t('notificationChannel.notify')}
         </Step>
       </form>
     </section>

@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs } from 'react-router';
 
-import { catalogueFor } from '#/actions/catalogue.ts';
+import { tFor } from '#/actions/i18n.ts';
 import { messageOf, type Actions } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
@@ -20,8 +20,7 @@ function refuse(error: string) {
 // its own fetcher, a refusal in the words of the action. No secret Parameter comes back (ADR-0006).
 export async function action({ request }: ActionFunctionArgs) {
   const { candidate, locale } = await readCandidate(request);
-  const { settings } = catalogueFor(locale);
-  const copy = settings.notificationChannel;
+  const t = tFor(locale, 'settings');
   const formData = await request.formData();
   const moduleId = formData.get('channel');
   const moduleList = await ACTIONS.listNotificationChannels();
@@ -35,23 +34,23 @@ export async function action({ request }: ActionFunctionArgs) {
     switch (formData.get('intent')) {
       case 'save': {
         await ACTIONS.saveNotificationChannel(input);
-        return answer(copy.saved);
+        return answer(t('notificationChannel.saved'));
       }
       case 'test': {
         await ACTIONS.testNotificationChannel(input);
-        return answer(copy.answers);
+        return answer(t('notificationChannel.answers'));
       }
       case 'choices': {
         const choiceList = await ACTIONS.listParameterChoices(input);
-        return answer(copy.choicesFound(choiceList.length), choiceList);
+        return answer(t('notificationChannel.choicesFound', { count: choiceList.length }), choiceList);
       }
       case 'notify': {
         await ACTIONS.sendTestNotification(input);
-        return answer(copy.notified);
+        return answer(t('notificationChannel.notified'));
       }
     }
   } catch (error) {
     return refuse(messageOf(error));
   }
-  return refuse(settings.unknownIntent);
+  return refuse(t('unknownIntent'));
 }
