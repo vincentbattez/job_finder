@@ -57,6 +57,7 @@ The front's styles are one stylesheet per component, in BEM, ordered by cascade 
 - A component stylesheet only styles its block, named like the file: `.badge`, `.badge__x`, `.badge--y` in `badge.css`. A library's class (Leaflet's) only appears in the same compound as the block, and never another component's block. **(CI)**
 - A global stylesheet never styles a component's block, even a component without a stylesheet. **(CI)**
 - A Dumb renders in its `className`s only the classes of its own block and of `controls.css` and `utilities.css`: never another component's block (render that component instead), nor the layout's classes, which belong to the routes and the root. **(CI)**
+- A class of `controls.css` is rendered by at least two files: one rendered by a single file is that component's look, in its own stylesheet. **(CI)**
 - Only `app.css` has `@import`. **(CI)**
 - Class names are kebab-case BEM: `block`, `block__element`, `block--modifier`. **(hook)** **(CI)**
 - A color comes from a token: no hex, no named color, no color function outside `tokens.css`; `color-mix()` and relative colors over a token pass. **(hook)** **(CI)**

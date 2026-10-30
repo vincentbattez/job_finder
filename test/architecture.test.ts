@@ -445,6 +445,35 @@ function findForeignClassesInComponents(projectDirectory: string): string[] {
   );
 }
 
+// A control is shared: a class of controls.css that a single file renders is that file's look,
+// which belongs in its own stylesheet
+const CONTROL_STYLESHEET_PATH = 'src/web/controls.css';
+
+function findControlsOfASingleFile(projectDirectory: string): string[] {
+  const renderList = globSync(`${FRONT_DIRECTORY}/**/*.tsx`, { cwd: projectDirectory }).map((filePath) => {
+    const content = readFileSync(path.join(projectDirectory, filePath), 'utf8');
+    return { filePath, classNameSet: new Set(renderedClassesOf(filePath, content)) };
+  });
+  const controlStylesheet = readStylesheets(projectDirectory).find(
+    ({ filePath }) => filePath === CONTROL_STYLESHEET_PATH,
+  );
+  const controlClassSet = new Set(
+    selectedClassesOf(controlStylesheet?.content ?? '').map(({ className }) => className),
+  );
+  return sortedList(
+    [...controlClassSet]
+      .map((className) => ({
+        className,
+        rendererList: renderList.filter(({ classNameSet }) => classNameSet.has(className)),
+      }))
+      .filter(({ rendererList }) => rendererList.length === 1)
+      .map(
+        ({ className, rendererList }) =>
+          `${CONTROL_STYLESHEET_PATH} styles .${className}, which only ${rendererList[0]?.filePath ?? ''} renders`,
+      ),
+  );
+}
+
 function createProject(fileContentByPath: Record<string, string>): string {
   const projectDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-architecture-'));
   const tsconfigPath = path.join(projectDirectory, 'tsconfig.json');
@@ -750,8 +779,26 @@ describe('architecture', () => {
     ]);
   });
 
+  it('catches a shared control that a single file renders', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/controls.css': '.button {\n}\n.button--danger {\n}\n.reminder-card {\n}\n',
+        'src/web/components/uploads.tsx':
+          'export const Uploads = () => <button className="button button--danger" />;\n',
+        'src/web/components/profile-file.tsx':
+          'export const ProfileFile = () => <button className="button button--danger" />;\n',
+        'src/web/components/reminder.tsx': 'export const Reminder = () => <section className="reminder-card" />;\n',
+      }),
+    );
+
+    expect(findControlsOfASingleFile(projectDirectory)).toEqual([
+      'src/web/controls.css styles .reminder-card, which only src/web/components/reminder.tsx renders',
+    ]);
+  });
+
   it.each([
     { rule: 'at most 200 lines a stylesheet', find: findOversizedStylesheets },
+    { rule: 'every shared control rendered by several files', find: findControlsOfASingleFile },
     { rule: 'stylesheets only beside the root or in the components folder', find: findStylesheetsOutsideTheirFolders },
     { rule: 'every component rule in the components layer', find: findComponentRulesOutsideTheirLayer },
     { rule: 'only its block or the shared controls in a component', find: findForeignClassesInComponents },
