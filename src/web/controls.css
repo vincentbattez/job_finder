@@ -1,12 +1,19 @@
-/* The shared controls: one .button for every button, the selects that sit beside one and the drop
-   zone's label, outlined on light by default, filled with the accent when primary */
-.button {
+/* The shared controls: one outlined box on light for every control, the buttons and the fields */
+.button,
+.field input,
+.field select,
+.field textarea {
   min-height: 40px;
   padding: 0 var(--space-sm);
   border: var(--rule-hair) solid var(--color-muted);
   border-radius: var(--radius-input);
   background: var(--light);
   color: var(--color-ink);
+}
+
+/* One .button for every button, the selects that sit beside one and the drop zone's label, filled
+   with the accent when primary */
+.button {
   font-size: var(--text-sm);
   font-weight: 500;
   cursor: pointer;
@@ -60,14 +67,8 @@
 .field select,
 .field textarea {
   min-width: 0;
-  min-height: 40px;
-  padding: 0 var(--space-sm);
-  border: var(--rule-hair) solid var(--color-muted);
-  border-radius: var(--radius-input);
   outline: 2px solid transparent;
   outline-offset: -3px;
-  background: var(--light);
-  color: var(--color-ink);
   font: 400 var(--text-sm) / 1.4 var(--font-outlier);
 }
 
