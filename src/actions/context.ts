@@ -72,9 +72,19 @@ export async function openContext({
     return lieu ?? LIEU_SCHEMA.parse({ city, region: null, latitude: null, longitude: null });
   }
 
-  // A module of the family by its identifier, as saved or as the Candidat picked it (ADR-0010)
-  function findCanalNotificationModule(moduleId: string): ICanalNotification {
-    const module = canalNotificationList.find(({ description: { id } }) => id === moduleId);
+  // A module of the family by its identifier, undefined when the registry does not have it (ADR-0010)
+  function canalNotificationModuleOf(moduleId: string | null): ICanalNotification | undefined {
+    return canalNotificationList.find(({ description: { id } }) => id === moduleId);
+  }
+
+  // The module of the Candidat's Canal de notification, as saved or as they picked it, null until chosen
+  function findCanalNotificationModule(moduleId: string | null, candidatName: string): ICanalNotification {
+    if (moduleId === null) {
+      throw new Error(
+        `Aucun Canal de notification pour ${candidatName} : en choisir un dans la section Notifications de son Profil.`,
+      );
+    }
+    const module = canalNotificationModuleOf(moduleId);
     if (module === undefined) {
       throw new Error(
         `Canal de notification inconnu : ${moduleId}. En choisir un autre dans la section Notifications du Profil.`,
@@ -99,12 +109,7 @@ export async function openContext({
   // Through the Canal the Candidat saved, with its saved Paramètres
   async function sendNotification(candidatId: string, notification: INotification): Promise<void> {
     const { candidatName, module, parametres } = await workspace.findCanalNotification(candidatId);
-    if (module === null) {
-      throw new Error(
-        `Aucun Canal de notification pour ${candidatName} : en choisir un dans la section Notifications de son Profil.`,
-      );
-    }
-    await findCanalNotificationModule(module).send(parametres, notification);
+    await findCanalNotificationModule(module, candidatName).send(parametres, notification);
   }
 
   // A notification not sent undoes and skips nothing: it comes back as the failure to report
@@ -127,6 +132,7 @@ export async function openContext({
     pieceConversion: createPieceConversion(aiSession),
     runJob: createJobRunner(workspace, aiSession),
     canalNotificationList,
+    canalNotificationModuleOf,
     findCanalNotificationModule,
     sendNotification,
     findCandidat,

@@ -52,6 +52,7 @@ export function createCanalNotificationActions({
   workspace,
   findCandidat,
   canalNotificationList,
+  canalNotificationModuleOf,
   findCanalNotificationModule,
   sendNotification,
 }: ActionContext) {
@@ -59,13 +60,7 @@ export function createCanalNotificationActions({
   async function mergeInput(rawInput: unknown, canal: string | undefined, givenParametres: Parametres) {
     const candidat = await findCandidat(rawInput);
     const saved = await workspace.findCanalNotification(candidat.id);
-    const moduleId = canal ?? saved.module;
-    if (moduleId === null) {
-      throw new Error(
-        `Aucun Canal de notification pour ${candidat.name} : en choisir un dans la section Notifications de son Profil.`,
-      );
-    }
-    const module = findCanalNotificationModule(moduleId);
+    const module = findCanalNotificationModule(canal ?? saved.module, candidat.name);
     return { candidat, module, parametres: mergeParametres(module.description, saved, givenParametres) };
   }
 
@@ -78,8 +73,7 @@ export function createCanalNotificationActions({
     async readCanalNotification(rawInput: unknown): Promise<CanalNotification> {
       const candidat = await findCandidat(rawInput);
       const { module, parametres } = await workspace.findCanalNotification(candidat.id);
-      const parametreList =
-        canalNotificationList.find(({ description: { id } }) => id === module)?.description.parametreList ?? [];
+      const parametreList = canalNotificationModuleOf(module)?.description.parametreList ?? [];
       const savedList = parametreList.filter(({ name }) => parametres[name] !== undefined);
       return CANAL_NOTIFICATION_SCHEMA.parse({
         module,
