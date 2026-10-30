@@ -50,14 +50,6 @@
     white-space: nowrap;
   }
 
-  /* A sunken tray where the Postings will land */
-  .posting-list__empty {
-    padding: var(--space-lg);
-    border-radius: var(--radius-card);
-    background: var(--color-paper-2);
-    color: var(--color-ink-2);
-  }
-
   /* On a phone each Posting restacks as a block whose dates name themselves */
   @media (width <= 40rem) {
     .posting-list thead {

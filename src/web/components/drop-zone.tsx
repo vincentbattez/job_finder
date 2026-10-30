@@ -12,6 +12,7 @@ export function DropZone({
   label,
   isBusy,
   onFile,
+  error,
   children,
 }: Readonly<{
   intro: string;
@@ -19,7 +20,9 @@ export function DropZone({
   label: string;
   isBusy: boolean;
   onFile: (file: File) => void;
-  children: ReactNode;
+  // What the action refused, in the red of every refusal
+  error?: string | null | undefined;
+  children?: ReactNode;
 }>) {
   const isHydrated = useIsHydrated();
   const [isDragOver, setIsDragOver] = useState(false);
@@ -62,7 +65,14 @@ export function DropZone({
           }}
         />
       </label>
-      <div aria-live="polite">{children}</div>
+      <div aria-live="polite">
+        {children}
+        {error != null && (
+          <p role="alert" className="drop-zone__error">
+            {error}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

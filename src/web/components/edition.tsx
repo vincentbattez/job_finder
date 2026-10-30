@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Form } from 'react-router';
 
 import type { Status } from './badge.tsx';
+import { ButtonRow } from './button-row.tsx';
 import { CopyMarkdown } from './copy-command.tsx';
 import { MarkdownEditor } from './markdown-editor.tsx';
 import { Markdown } from './markdown.tsx';
@@ -46,20 +47,20 @@ export function ArtifactDocument({
             placeholder={t('documentPlaceholder')}
             onChange={setEditedMarkdown}
           />
-          <div className="edition">
+          <ButtonRow>
             <button type="submit" className="button button--primary">
               {t('save')}
             </button>
             <CopyMarkdown markdown={editedMarkdown} />
             {editedMarkdown !== markdown && <p role="status">{t('unsavedChanges')}</p>}
-          </div>
+          </ButtonRow>
         </Form>
       ) : (
         <>
           <Markdown markdown={markdown} />
-          <div className="edition">
+          <ButtonRow>
             <CopyMarkdown markdown={markdown} />
-          </div>
+          </ButtonRow>
         </>
       )}
     </figure>
@@ -73,11 +74,13 @@ export function ChooseButton({
 }: Readonly<{ reference: string; artifact: string; number: number }>) {
   const { t } = useTranslation('posting');
   return (
-    <Form method="post" action={`/postings/${reference}/${artifact}/chosen`} preventScrollReset className="edition">
+    <Form method="post" action={`/postings/${reference}/${artifact}/chosen`} preventScrollReset>
       <input type="hidden" name="number" value={number} />
-      <button className="button" type="submit">
-        {t('chooseVersion')}
-      </button>
+      <ButtonRow>
+        <button className="button" type="submit">
+          {t('chooseVersion')}
+        </button>
+      </ButtonRow>
     </Form>
   );
 }
@@ -92,45 +95,47 @@ export function StatusButtons({
   const { t } = useTranslation('posting');
   const isHydrated = useIsHydrated();
   return (
-    <Form method="post" action={`/postings/${reference}/status`} preventScrollReset className="edition">
-      {nextStatusList.map((status) => {
-        if (status !== 'applied') {
-          return (
-            <button className="button" key={status} type="submit" name="status" value={status}>
+    <Form method="post" action={`/postings/${reference}/status`} preventScrollReset>
+      <ButtonRow>
+        {nextStatusList.map((status) => {
+          if (status !== 'applied') {
+            return (
+              <button className="button" key={status} type="submit" name="status" value={status}>
+                {t(`statusButtonLabelByStatus.${status}`)}
+              </button>
+            );
+          }
+          return isConfirming ? (
+            <Fragment key={status}>
+              <button type="submit" name="status" value={status} className="button button--primary">
+                {t('confirmApplied')}
+              </button>
+              <button
+                className="button"
+                type="button"
+                onClick={() => {
+                  setIsConfirming(false);
+                }}
+              >
+                {t('cancel')}
+              </button>
+            </Fragment>
+          ) : (
+            <button
+              key={status}
+              type="button"
+              className="button button--primary"
+              disabled={!isHydrated}
+              onClick={() => {
+                setIsConfirming(true);
+              }}
+            >
               {t(`statusButtonLabelByStatus.${status}`)}
             </button>
           );
-        }
-        return isConfirming ? (
-          <Fragment key={status}>
-            <button type="submit" name="status" value={status} className="button button--primary">
-              {t('confirmApplied')}
-            </button>
-            <button
-              className="button"
-              type="button"
-              onClick={() => {
-                setIsConfirming(false);
-              }}
-            >
-              {t('cancel')}
-            </button>
-          </Fragment>
-        ) : (
-          <button
-            key={status}
-            type="button"
-            className="button button--primary"
-            disabled={!isHydrated}
-            onClick={() => {
-              setIsConfirming(true);
-            }}
-          >
-            {t(`statusButtonLabelByStatus.${status}`)}
-          </button>
-        );
-      })}
-      {nextStatusList.includes('applied') && <p>{t('appliedFreezesLetter')}</p>}
+        })}
+        {nextStatusList.includes('applied') && <p>{t('appliedFreezesLetter')}</p>}
+      </ButtonRow>
     </Form>
   );
 }

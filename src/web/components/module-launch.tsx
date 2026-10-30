@@ -5,6 +5,7 @@ import { StateBadge } from './badge.tsx';
 import type { IArtifactVersions } from './posting-detail.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
+import { WorkerTask } from './worker-task.tsx';
 
 // The button of the module that produces an Artifact, beside its state. The worker runs the job in
 // its own process (ADR-0003), so the Posting page reads the state again until the job is done.
@@ -21,23 +22,23 @@ export function ModuleLaunch({
   useRevalidateWhile(isRunning);
   const error = fetcher.data?.error ?? null;
   return (
-    <fetcher.Form method="post" action="/run" className="launch">
+    <fetcher.Form method="post" action="/run">
       <input type="hidden" name="reference" value={reference} />
       <input type="hidden" name="module" value={artifact} />
-      <span role="status">
-        <StateBadge state={state} />
-      </span>
-      <button
-        className="button button--primary"
-        type="submit"
-        disabled={!isHydrated || isRunning || module.refusal !== null || fetcher.state !== 'idle'}
-      >
-        {t(state === 'absent' ? 'launchArtifact' : 'relaunchArtifact', {
-          artifactLabel: t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' }),
-        })}
-      </button>
-      {module.refusal !== null && <p className="launch__refusal">{module.refusal}</p>}
-      {error !== null && <p role="alert">{error}</p>}
+      <WorkerTask refusal={module.refusal} error={error}>
+        <span role="status">
+          <StateBadge state={state} />
+        </span>
+        <button
+          className="button button--primary"
+          type="submit"
+          disabled={!isHydrated || isRunning || module.refusal !== null || fetcher.state !== 'idle'}
+        >
+          {t(state === 'absent' ? 'launchArtifact' : 'relaunchArtifact', {
+            artifactLabel: t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' }),
+          })}
+        </button>
+      </WorkerTask>
     </fetcher.Form>
   );
 }

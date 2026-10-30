@@ -1,4 +1,3 @@
-import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Form,
@@ -14,6 +13,7 @@ import { localeOf, tFor } from '#/actions/i18n.ts';
 import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
+import { SettingsPanel, SettingsStep } from '#/web/components/settings-panel.tsx';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { candidate, locale } = await readCandidate(request);
@@ -71,9 +71,6 @@ export default function Candidates() {
     refusal?.intent === intent && (candidateId === undefined || refusal.candidateId === candidateId)
       ? refusal.message
       : undefined;
-  const listHeadingId = useId();
-  const creationHeadingId = useId();
-  const delayHeadingId = useId();
   return (
     <main className="container page">
       <div className="page__head">
@@ -83,8 +80,7 @@ export default function Candidates() {
           <p role="note">{t('candidates.obsoleteConfig', { path: obsoleteConfig.path })}</p>
         )}
       </div>
-      <section className="form-section" aria-labelledby={listHeadingId}>
-        <h2 id={listHeadingId}>{t('candidates.renameHeading')}</h2>
+      <SettingsPanel heading={t('candidates.renameHeading')}>
         {candidateList.length === 0 && <p>{t('candidates.noCandidate')}</p>}
         {candidateList.map(({ id, name }) => (
           <Form key={`${id}:${name}`} method="post">
@@ -94,17 +90,16 @@ export default function Candidates() {
               {t('candidates.nameOf', { candidateId: id })}
               <input name="name" required defaultValue={name} placeholder={t('candidates.fullNamePlaceholder')} />
             </label>
-            <div className="form-step">
+            <SettingsStep>
               <button className="button" type="submit" aria-label={t('candidates.renameOf', { candidateId: id })}>
                 {t('candidates.rename')}
               </button>
               <Refusal message={refusalOf('rename', id)} />
-            </div>
+            </SettingsStep>
           </Form>
         ))}
-      </section>
-      <section className="form-section" aria-labelledby={creationHeadingId}>
-        <h2 id={creationHeadingId}>{t('candidates.creationHeading')}</h2>
+      </SettingsPanel>
+      <SettingsPanel heading={t('candidates.creationHeading')}>
         {/* Remounted once a Candidate is created, so the form starts blank again */}
         <Form key={candidateList.length} method="post">
           <input type="hidden" name="intent" value="create" />
@@ -116,16 +111,15 @@ export default function Candidates() {
             {t('candidates.id')}
             <input name="id" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder={t('candidates.idPlaceholder')} />
           </label>
-          <div className="form-step">
+          <SettingsStep>
             <button type="submit" className="button button--primary">
               {t('candidates.create')}
             </button>
             <Refusal message={refusalOf('create')} />
-          </div>
+          </SettingsStep>
         </Form>
-      </section>
-      <section className="form-section" aria-labelledby={delayHeadingId}>
-        <h2 id={delayHeadingId}>{t('candidates.defaultDeadlinePeriodHeading')}</h2>
+      </SettingsPanel>
+      <SettingsPanel heading={t('candidates.defaultDeadlinePeriodHeading')}>
         <p>{t('candidates.defaultDeadlinePeriodHint')}</p>
         <Form key={defaultDeadlinePeriod.months} method="post">
           <input type="hidden" name="intent" value="default-deadline-period" />
@@ -141,14 +135,14 @@ export default function Candidates() {
               placeholder="6"
             />
           </label>
-          <div className="form-step">
+          <SettingsStep>
             <button type="submit" className="button button--primary">
               {t('candidates.saveDefaultDeadlinePeriod')}
             </button>
             <Refusal message={refusalOf('default-deadline-period')} />
-          </div>
+          </SettingsStep>
         </Form>
-      </section>
+      </SettingsPanel>
     </main>
   );
 }

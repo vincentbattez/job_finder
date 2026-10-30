@@ -2,6 +2,8 @@ import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Form } from 'react-router';
 
+import { ButtonRow } from './button-row.tsx';
+import { Deletion } from './deletion.tsx';
 import { MarkdownEditor } from './markdown-editor.tsx';
 
 import './profile-file.css';
@@ -27,29 +29,25 @@ export function ProfileFile({
           placeholder={t('profileFile.contentPlaceholder')}
           onChange={setEditedMarkdown}
         />
-        <div className="profile-file__actions">
+        <ButtonRow>
           <button type="submit" name="intent" value="save" className="button button--primary">
             {t('profileFile.save')}
           </button>
           {editedMarkdown !== markdown && <p role="status">{t('unsavedChanges')}</p>}
-          {error !== null && (
-            <p role="alert" className="profile-file__error">
-              {error}
-            </p>
-          )}
-        </div>
+          {error !== null && <p role="alert">{error}</p>}
+        </ButtonRow>
       </Form>
-      {/* Folded, so a deletion always takes a second, deliberate click, with or without JavaScript */}
-      <details className="profile-file__delete">
-        <summary>{t('profileFile.deleteSummary', { fileName })}</summary>
-        <Form method="post" preventScrollReset className="profile-file__actions">
+      <Deletion summary={t('profileFile.deleteSummary', { fileName })}>
+        <Form method="post" preventScrollReset>
           <input type="hidden" name="fileName" value={fileName} />
-          <p>{t('profileFile.deleteWarning')}</p>
-          <button type="submit" name="intent" value="delete" className="button button--danger">
-            {t('profileFile.deleteForGood', { fileName })}
-          </button>
+          <ButtonRow>
+            <p>{t('profileFile.deleteWarning')}</p>
+            <button type="submit" name="intent" value="delete" className="button button--danger">
+              {t('profileFile.deleteForGood', { fileName })}
+            </button>
+          </ButtonRow>
         </Form>
-      </details>
+      </Deletion>
     </section>
   );
 }
@@ -60,7 +58,7 @@ export function ProfileFileCreation({ error }: Readonly<{ error: string | null }
   const fileNameId = useId();
   const { t } = useTranslation('settings');
   return (
-    <section className="profile-file profile-file--new" aria-labelledby={headingId}>
+    <section className="profile-file" data-new aria-labelledby={headingId}>
       <h2 id={headingId}>{t('profileFile.creationHeading')}</h2>
       <Form method="post" preventScrollReset>
         <div className="profile-file__name">
@@ -81,16 +79,12 @@ export function ProfileFileCreation({ error }: Readonly<{ error: string | null }
           defaultValue=""
           placeholder={t('profileFile.creationContentPlaceholder')}
         />
-        <div className="profile-file__actions">
+        <ButtonRow>
           <button type="submit" name="intent" value="create" className="button button--primary">
             {t('profileFile.create')}
           </button>
-          {error !== null && (
-            <p role="alert" className="profile-file__error">
-              {error}
-            </p>
-          )}
-        </div>
+          {error !== null && <p role="alert">{error}</p>}
+        </ButtonRow>
       </Form>
     </section>
   );

@@ -1,0 +1,9 @@
+/* A sunken tray where the Postings, or the files of the Profile, will land */
+@layer components {
+  .empty-state {
+    padding: var(--space-lg);
+    border-radius: var(--radius-card);
+    background: var(--color-paper-2);
+    color: var(--color-ink-2);
+  }
+}

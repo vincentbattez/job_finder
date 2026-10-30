@@ -5,6 +5,7 @@ import { localeOf, tFor } from '#/actions/i18n.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { Detection } from '#/web/components/detection.tsx';
+import { EmptyState } from '#/web/components/empty-state.tsx';
 import { JobDescriptionImport } from '#/web/components/job-description-import.tsx';
 import { filterPostings, PostingFilters } from '#/web/components/posting-filters.tsx';
 import { PostingList } from '#/web/components/posting-list.tsx';
@@ -49,7 +50,7 @@ export default function Postings() {
       </div>
       {postingList.length > 0 && <PostingMap postingList={filteredPostingList} />}
       {filteredPostingList.length === 0 && postingList.length > 0 ? (
-        <p className="page__empty">{t('noFilteredPosting')}</p>
+        <EmptyState>{t('noFilteredPosting')}</EmptyState>
       ) : (
         <PostingList postingList={filteredPostingList} />
       )}

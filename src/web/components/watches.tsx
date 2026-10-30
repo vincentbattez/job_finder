@@ -1,10 +1,11 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
 
 import { ParameterField } from './parameter-field.tsx';
+import { SettingsPanel, SettingsStep } from './settings-panel.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 
 import './watches.css';
@@ -58,7 +59,7 @@ function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; source
             savedValue={savedParameters?.[parameter.name]}
           />
         ))}
-        <div className="form-step">
+        <SettingsStep>
           <button type="submit" name="intent" value="save" className="button button--primary" disabled={isDisabled}>
             {watch === null ? t('watches.create') : t('watches.save')}
           </button>
@@ -69,7 +70,7 @@ function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; source
           )}
           {fetcher.state === 'idle' && fetcher.data?.error != null && <p role="alert">{fetcher.data.error}</p>}
           {fetcher.state === 'idle' && fetcher.data?.message != null && <p role="status">{fetcher.data.message}</p>}
-        </div>
+        </SettingsStep>
       </fieldset>
     </fetcher.Form>
   );
@@ -77,17 +78,15 @@ function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; source
 
 // The Watches of the Candidate, each on its Source; a deleted Watch leaves its Postings behind
 export function Watches({ watchList, sourceList }: Readonly<{ watchList: Watch[]; sourceList: SourceModule[] }>) {
-  const headingId = useId();
   const { t } = useTranslation('settings');
   return (
-    <section className="form-section" aria-labelledby={headingId}>
-      <h2 id={headingId}>{t('watches.heading')}</h2>
+    <SettingsPanel heading={t('watches.heading')}>
       <p>{t('watches.intro')}</p>
       {watchList.map((watch) => (
         <WatchForm key={watch.id} watch={watch} sourceList={sourceList} />
       ))}
       {/* Remounted once a Watch is created, so the form starts blank again */}
       <WatchForm key={watchList.map(({ id }) => id).join('/')} watch={null} sourceList={sourceList} />
-    </section>
+    </SettingsPanel>
   );
 }

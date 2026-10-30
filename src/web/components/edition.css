@@ -1,4 +1,4 @@
-/* A file of a Version, then the row of what the Candidate does with it: buttons and a quiet note */
+/* A file of a Version, its name in DM Mono above its text or its editor */
 @layer components {
   .edition__document {
     display: grid;
@@ -10,18 +10,6 @@
     font-family: var(--font-outlier);
     font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
-  }
-
-  .edition {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-xs) var(--space-sm);
-  }
-
-  .edition p {
-    color: var(--color-muted);
-    font-size: var(--text-sm);
   }
 
   .edition__document form {

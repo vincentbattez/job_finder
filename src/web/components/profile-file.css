@@ -43,40 +43,8 @@
     outline-color: var(--color-focus);
   }
 
-  /* The buttons of a file, then a quiet note of what they did or would do */
-  .profile-file__actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-xs) var(--space-sm);
-  }
-
-  .profile-file__actions p {
-    color: var(--color-muted);
-    font-size: var(--text-sm);
-  }
-
-  .profile-file__actions .profile-file__error {
-    color: var(--color-error);
-  }
-
-  /* Deleting a file takes unfolding, then a button in the color of what cannot be undone */
-  .profile-file__delete summary {
-    color: var(--color-muted);
-    font-size: var(--text-sm);
-    cursor: pointer;
-  }
-
-  .profile-file__delete[open] summary {
-    margin-bottom: var(--space-sm);
-  }
-
-  .profile-file .profile-file__delete form {
-    display: flex;
-  }
-
   /* Not a file yet: named in the voice of the page, not as on disk */
-  .profile-file--new h2 {
+  .profile-file[data-new] h2 {
     font: 600 var(--text-md) / 1.4 var(--font-body);
   }
 }

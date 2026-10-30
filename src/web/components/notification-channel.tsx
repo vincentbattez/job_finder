@@ -1,10 +1,11 @@
-import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher, type FetcherWithComponents } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
 
 import { PARAMETER_FIELD_PREFIX, ParameterField } from './parameter-field.tsx';
+import { SettingsPanel, SettingsStep } from './settings-panel.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 
 type NotificationChannel = Awaited<ReturnType<Actions['readNotificationChannel']>>;
@@ -54,13 +55,13 @@ function Step({
 }>) {
   const isIdle = fetcher.state === 'idle';
   return (
-    <div className="form-step">
+    <SettingsStep>
       <button {...buttonProperties} className={className} aria-label={accessibleName} disabled={!isHydrated || !isIdle}>
         {children}
       </button>
       {isIdle && fetcher.data?.error != null && <p role="alert">{fetcher.data.error}</p>}
       {isIdle && fetcher.data?.message != null && <p role="status">{fetcher.data.message}</p>}
-    </div>
+    </SettingsStep>
   );
 }
 
@@ -116,7 +117,6 @@ export function NotificationChannelForm({
   channel,
   moduleList,
 }: Readonly<{ channel: NotificationChannel; moduleList: NotificationChannelModule[] }>) {
-  const headingId = useId();
   const isHydrated = useIsHydrated();
   const { t } = useTranslation('settings');
   const formReference = useRef<HTMLFormElement>(null);
@@ -145,8 +145,7 @@ export function NotificationChannelForm({
   }
 
   return (
-    <section className="form-section" aria-labelledby={headingId}>
-      <h2 id={headingId}>{t('notificationChannel.heading')}</h2>
+    <SettingsPanel heading={t('notificationChannel.heading')}>
       <p>{t('notificationChannel.intro')}</p>
       <form
         ref={formReference}
@@ -223,6 +222,6 @@ export function NotificationChannelForm({
           {t('notificationChannel.notify')}
         </Step>
       </form>
-    </section>
+    </SettingsPanel>
   );
 }

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Form } from 'react-router';
 
 import { Badge } from './badge.tsx';
+import { ButtonRow } from './button-row.tsx';
 import { MarkdownEditor } from './markdown-editor.tsx';
 import { Markdown } from './markdown.tsx';
 import type { IArtifactVersions } from './posting-detail.tsx';
@@ -54,7 +55,7 @@ export function ModuleInstructions({
           placeholder={t('instructions.placeholder')}
           onChange={setEditedInstructions}
         />
-        <div className="module-instructions__actions">
+        <ButtonRow>
           <button type="submit" name="intent" value="save" className="button button--primary">
             {t('instructions.save')}
           </button>
@@ -66,7 +67,7 @@ export function ModuleInstructions({
           {editedInstructions !== (candidateInstructions ?? defaultInstructions) && (
             <p role="status">{t('unsavedChanges')}</p>
           )}
-        </div>
+        </ButtonRow>
       </Form>
       {hasCandidateInstructions && (
         <details className="module-instructions__default">

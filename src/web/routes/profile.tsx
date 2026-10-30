@@ -14,6 +14,7 @@ import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { CopyCommand } from '#/web/components/copy-command.tsx';
+import { EmptyState } from '#/web/components/empty-state.tsx';
 import { FactsForm } from '#/web/components/facts-form.tsx';
 import { NotificationChannelForm } from '#/web/components/notification-channel.tsx';
 import { ProfileFile, ProfileFileCreation } from '#/web/components/profile-file.tsx';
@@ -128,11 +129,11 @@ export default function Profile() {
           <FactsForm key={JSON.stringify(sectionList)} sectionList={sectionList} />
           <Uploads uploadList={uploadList} />
           {profileFileList.length === 0 ? (
-            <div className="page__empty">
+            <EmptyState>
               <p>{t('profile.emptyHint')}</p>
               <CopyCommand command={`jf profile ${candidate.id}`} />
               <p>{t('profile.emptyManualHint')}</p>
-            </div>
+            </EmptyState>
           ) : (
             profileFileList.map(({ fileName, markdown }) => (
               <ProfileFile

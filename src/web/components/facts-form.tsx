@@ -4,6 +4,7 @@ import { Form } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
 
+import { ButtonRow } from './button-row.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 
 import './facts-form.css';
@@ -79,11 +80,11 @@ export function FactsForm({ sectionList }: Readonly<{ sectionList: Section[] }>)
             </label>
           ),
         )}
-        <div className="facts-form__actions">
+        <ButtonRow>
           <button type="submit" className="button button--primary">
             {t('facts.save')}
           </button>
-        </div>
+        </ButtonRow>
       </Form>
     </section>
   );

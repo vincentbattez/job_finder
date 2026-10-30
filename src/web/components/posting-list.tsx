@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 
 import { StatusBadge, type Status } from './badge.tsx';
 import { DateText } from './date.tsx';
+import { EmptyState } from './empty-state.tsx';
 
 import './posting-list.css';
 
@@ -21,7 +22,7 @@ export interface IPostingRow {
 export function PostingList({ postingList }: Readonly<{ postingList: IPostingRow[] }>) {
   const { t } = useTranslation('postingList');
   if (postingList.length === 0) {
-    return <p className="posting-list__empty">{t('noPosting')}</p>;
+    return <EmptyState>{t('noPosting')}</EmptyState>;
   }
   return (
     <table className="posting-list">

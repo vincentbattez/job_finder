@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { StateBadge } from './badge.tsx';
+import { Badge, StateBadge } from './badge.tsx';
 import { CopyCommand } from './copy-command.tsx';
 import { DateText } from './date.tsx';
 import { ArtifactDocument, ChooseButton } from './edition.tsx';
@@ -74,11 +74,7 @@ export function ArtifactVersions({
                     {t('versionNumber', { versionNumber: version.number })}
                   </span>
                   <StateBadge state={STATE_BY_VERSION_STATE[version.state]} />
-                  {version.isChosen && (
-                    <span className="badge" data-chosen>
-                      {t('chosenBadge')}
-                    </span>
-                  )}
+                  {version.isChosen && <Badge data-chosen>{t('chosenBadge')}</Badge>}
                   <InstructionsOrigin hasCandidateInstructions={version.hasCandidateInstructions} />
                   <span className="artifact-versions__date">
                     <DateText date={version.createdAt} />
