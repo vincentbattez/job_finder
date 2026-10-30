@@ -53,7 +53,7 @@ export function PostingList({ postingList }: Readonly<{ postingList: IPostingRow
             <td>
               <StatusBadge status={posting.status} isExpired={posting.isExpired} />
             </td>
-            <td className="date" data-label={copy.publishedAtColumn}>
+            <td className="date" data-column="publishedAt" data-label={copy.publishedAtColumn}>
               <DateText date={posting.publishedAt} />
             </td>
             <td className="date" data-label={copy.deadlineColumn}>

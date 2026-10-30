@@ -1,8 +1,8 @@
 /* Hallmark · shape: app screen · genre: modern-minimal · theme: Dose (deal 3/3, seed soft-friendly-app-track-8518·cf75787d·2026-10-29·r0)
  * nav: a top bar, the wordmark, the Candidate's pages (Postings, Profile, Instructions: #14) and the Candidate menu (#11) · signature: the Posting label, reference and Deadline in DM Mono over a dashed stub, above four plastic Artifact compartments · states: full and empty list, the four states · dose: white
  * axes: light/grotesk-sans/chromatic-green · posture: committed · contrast: pass · v2.0.0 */
-/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a list and a Posting page fit any tracker; the Posting became a pharmacy label with its Artifacts as an organiser's compartments */
-/* Hallmark · deviation: Expired and En échec are red, against Dose's grey for a missed state, because the map of issue #20 asks red for Expired · no fibre grain: an app screen takes the theme's surfaces, not its ornament */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a list and a Posting page fit any tracker; the Posting became a pharmacy label with its Artifacts as an organizer's compartments */
+/* Hallmark · deviation: Expired and Failed are red, against Dose's grey for a missed state, because the map of issue #20 asks red for Expired · no fibre grain: an app screen takes the theme's surfaces, not its ornament */
 /* Hallmark · finish-review: subagent · 8 findings · 5 resolved 3 partial · gap: the list's loading and error states and the empty list's action (#12) */
 @import url('./tokens.css');
 @import url('./base.css');
@@ -85,7 +85,7 @@
 .settings .button--primary:hover:enabled {
   background: var(--color-accent-deep);
 }
-/* A module missing an input, an Artifact en cours, a Detection running: the button waits */
+/* A module missing an input, an Artifact in progress, a Detection running: the button waits */
 .module-launch button:disabled,
 .detection button:disabled,
 .channel button:disabled,
@@ -304,7 +304,7 @@ a:active {
     transform: rotate(1turn);
   }
 }
-/* A still arc reads as a letter: the label alone carries the état */
+/* A still arc reads as a letter: the label alone carries the state */
 @media (prefers-reduced-motion: reduce) {
   .badge[data-state='in_progress']::before {
     content: none;
@@ -394,7 +394,7 @@ a:active {
   background: var(--color-accent-deep);
 }
 
-/* A point per Posting in its status's colour, ringed in white to stand out of the tiles; an
+/* A point per Posting in its status's color, ringed in white to stand out of the tiles; an
    Archived keeps the dashed rim of its badge */
 .posting-map {
   display: grid;
@@ -519,8 +519,8 @@ a:active {
   font-weight: 500;
 }
 
-/* Plastic compartments, one tint per Artifact like the days of a pill organiser: a tint names the
-   Artifact, never its état, which the badge carries */
+/* Plastic compartments, one tint per Artifact like the days of a pill organizer: a tint names the
+   Artifact, never its state, which the badge carries */
 .artifact-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -704,7 +704,7 @@ a:active {
   padding-top: var(--space-md);
   border-top: 4px solid var(--tint);
 }
-/* The état of the Artifact, then the button of its module and why it waits, if it does */
+/* The state of the Artifact, then the button of its module and why it waits, if it does */
 .module-launch {
   display: flex;
   flex-wrap: wrap;
@@ -838,7 +838,7 @@ a:active {
   .posting-list td:first-child {
     flex-basis: 100%;
   }
-  .posting-list td[data-label='Publiée le'] {
+  .posting-list td[data-column='publishedAt'] {
     order: 1;
   }
   .posting-list td[data-label]::before {
@@ -892,7 +892,7 @@ a:active {
 .edition .profile-file__error {
   color: var(--color-error);
 }
-/* Deleting a file takes unfolding, then a button in the colour of what cannot be undone */
+/* Deleting a file takes unfolding, then a button in the color of what cannot be undone */
 .profile-file__delete summary {
   color: var(--color-muted);
   font-size: var(--text-sm);
