@@ -22,9 +22,9 @@ jf destinataires 2026-2445600                  # shows whom to address the appli
 jf versions 2026-2445600 recherche             # lists the Versions of an Artifact, each with the origin of its Instructions: default or the Candidate's
 jf retenir 2026-2445600 recherche 1            # changes the Chosen Version
 jf edit 2026-2445600 recherche                 # corrects the Chosen Version of an Artifact with Claude Code, except the Visualization, which is run again; with no argument, offers the Postings then the Artifact
-jf consignes lea                               # says, for each module, whether the Candidate follows the default Instructions or their own
-jf consignes lea lettre                        # shows the Instructions the Letter follows; "defaut" shows the default ones
-jf consignes lea lettre remplacer < c.md       # replaces the Letter's Instructions with those of the file; "supprimer" goes back to the default ones
+jf instructions lea                            # says, for each module, whether the Candidate follows the default Instructions or their own
+jf instructions lea lettre                     # shows the Instructions the Letter follows; "default" shows the default ones
+jf instructions lea lettre replace < c.md      # replaces the Letter's Instructions with those of the file; "delete" goes back to the default ones
 ```
 
 `jf` is on the `PATH` as soon as mise is active in the repo folder.
@@ -57,12 +57,12 @@ Each Candidate picks their Notification Channel in the Notifications section of 
 
 ## Data
 
-Everything lives in `data/`, outside git and without backup:
+Everything lives in `data/`, outside git and without backup. A data folder an older jf left in the French layout moves to this one the first time it opens, its config keys included; an entry found in both layouts stops the opening with a message that says what to merge:
 
 - `job_finder.sqlite`: the database, migrated on every launch. It is the source of truth for the Candidates, their Watches, the Default Deadline Period and each Candidate's Notification Channel, secret Parameters included; the front writes them (ADR-0011). The config file that previous versions read is imported only once, on the first launch of a database that does not have its Default Deadline Period yet, then never read again: `jf` reports it on every command as long as it is still there, and so does the Candidates page;
-- `candidats/<id>/profil/`: each Candidate's Profile, as Markdown files: `faits.md`, `cv.md` and one `lettre-<employer>-<year>.md` per past letter. `jf profil <candidate>` writes and completes them during an interactive Claude Code session;
-- `candidats/<id>/offres/<reference>-<title>/`: one folder per Posting, with its Job Description (`fiche-de-poste.md`) saved at Detection time, and one folder per Version of each Artifact, for example `recherche/v2/recherche.md`. A Version of the Letter (`lettre/v<n>/`) holds the Draft (`brouillon.md`, read-only), the Letter to correct (`lettre.md`, first a copy of it) and the recommended recipients (`destinataires.json`). A Version of the Interview Brief (`fiche_entretien/v<n>/fiche-entretien.md`) starts with a title; its default Instructions organise it into "À réviser", "Moyens mnémotechniques", "Présentez-vous" and "Questions probables", and the Candidate's own can organise it differently. A Version of the Visualization (`visualisation/v<n>/visualisation.html`) is a standalone HTML page, without script;
-- `candidats/<id>/consignes/<artifact>.md`: the Instructions of a module the Candidate replaced, for example `recherche.md`. Without this file, the module follows its default Instructions.
+- `candidates/<id>/profile/`: each Candidate's Profile, as Markdown files: `facts.md`, `cv.md` and one `lettre-<employer>-<year>.md` per past letter, and their Uploads, the original PDFs, in `uploads/`. `jf profile <candidate>` writes and completes them during an interactive Claude Code session;
+- `candidates/<id>/offres/<reference>-<title>/`: one folder per Posting, with its Job Description (`fiche-de-poste.md`) saved at Detection time, and one folder per Version of each Artifact, for example `recherche/v2/recherche.md`. A Version of the Letter (`lettre/v<n>/`) holds the Draft (`brouillon.md`, read-only), the Letter to correct (`lettre.md`, first a copy of it) and the recommended recipients (`destinataires.json`). A Version of the Interview Brief (`fiche_entretien/v<n>/fiche-entretien.md`) starts with a title; its default Instructions organise it into "À réviser", "Moyens mnémotechniques", "Présentez-vous" and "Questions probables", and the Candidate's own can organise it differently. A Version of the Visualization (`visualisation/v<n>/visualisation.html`) is a standalone HTML page, without script;
+- `candidates/<id>/instructions/<artifact>.md`: the Instructions of a module the Candidate replaced, for example `recherche.md`. Without this file, the module follows its default Instructions.
 
 `dev-data/` has the same shape, with fake Postings for development. Prisma commands and `db:` tasks only touch it.
 
@@ -72,7 +72,7 @@ The schema is described in `prisma/schema.prisma`, the only source to edit. Afte
 
 ## Code
 
-- `src/actions/`: the action layer, the only source of truth of each feature. The CLI and the front only call it (ADR-0003). Tests go through it. `index.ts` (`createActions`) brings together one file per feature: `detect.ts` (the Detection, which reads the Source modules and therefore cannot be a module), `import-fiche-de-poste.ts`, `statut.ts`, `profil.ts`, `consignes.ts`, `edition.ts`, `jobs.ts`, `offres.ts` and `canal-notification.ts`, on what `context.ts` shares. `modules.ts` is the registry of interchangeable modules: the only file that imports them, and therefore names them (ADR-0010, checked by `test/architecture.test.ts`).
+- `src/actions/`: the action layer, the only source of truth of each feature. The CLI and the front only call it (ADR-0003). Tests go through it. `index.ts` (`createActions`) brings together one file per feature: `detect.ts` (the Detection, which reads the Source modules and therefore cannot be a module), `import-fiche-de-poste.ts`, `statut.ts`, `profile.ts`, `facts.ts`, `uploads.ts`, `instructions.ts`, `candidates.ts`, `edition.ts`, `jobs.ts`, `offres.ts` and `canal-notification.ts`, on what `context.ts` shares. `modules.ts` is the registry of interchangeable modules: the only file that imports them, and therefore names them (ADR-0010, checked by `test/architecture.test.ts`).
 - `src/cli/`: the `jf` CLI, which relays to the actions.
 - `src/worker/`: the worker, which also relays to the actions: it drains the job queue. Only it runs the jobs, which `test/architecture.test.ts` checks.
 - `src/web/`: the React Router front, which also relays to the actions, opened once for the whole server in `acl/actions.server.ts`. `/design` shows its components with sample Postings. Colours, fonts and spacings are tokens of `src/web/tokens.css`.
@@ -80,10 +80,10 @@ The schema is described in `prisma/schema.prisma`, the only source to edit. Afte
 - `src/workspace/`: access to the data folder (database, Candidates' folders). Only its `acl/` folder reads the database, and the config file of a previous version, to import it once; `test/architecture.test.ts` checks that no other file of `src/` names it. The Prisma client is generated in `generated/`, outside git.
 - `src/ai-session/`: the launch of AI sessions. Only `acl/claude-code.ts` knows they run on Claude Code, always on the subscription (`claude -p`, with no API key); tests replace it with a fake.
 - `src/actions/run-job.ts`: running a job of an AI module: the Version, the two-part prompt (fixed part and Instructions), the check of the produced file and the Chosen Version.
-- `src/profil/`: the fixed prompt of `jf profil`.
+- `src/profile/`: the fixed prompt of `jf profile`, and the Sections of `facts.md` its form shares.
 - `src/edit/`: the fixed prompt of `jf edit`, which opens a session in the Posting's folder, with no shell nor web, where no Draft can be changed.
 - `src/statut/`: the rules of a Posting's Status: the Statuses it can move to, the Expired computation, and the freeze of the Chosen Letter of a Posting that was Applied.
-- `src/modules/`: one folder per module, with a single entry point. A module never imports another, which `test/architecture.test.ts` checks. An AI module, such as `recherche/`, has the fixed part of its prompt in `prompt.ts` and its default Instructions in `consignes.ts`.
+- `src/modules/`: one folder per module, with a single entry point. A module never imports another, which `test/architecture.test.ts` checks. An AI module, such as `recherche/`, has the fixed part of its prompt in `prompt.ts` and its default Instructions in `instructions.ts`.
 - `src/modules/source-import/`: the Markdown Import Source. The import records the Posting and queues the extraction of its fields; the worker runs it like a module, in a headless Claude session with a fixed prompt, which writes `extraction/extraction.json` in the Posting's folder. `acl/extraction.ts` refuses any value the Job Description does not contain verbatim. The fields fill the Posting, whose folder follows the new title, then its Research is queued. The Posting's reference comes from the file's content: importing the same file twice gives the same Posting again, with no new job.
 - `src/notification/`: the contract of the Notification Channel family (ADR-0010): the descriptor each module exports (id, display name, Parameters described by a Zod schema, sending, and optionally test and choices of a Parameter), and the text of each notification.
 - `src/source/`: the contract of the family of Sources a Watch follows (ADR-0010): the descriptor each module exports (id, display name, Watch Parameters described by a Zod schema, Zone included, search of Postings and reading of the detail page, which says whether the Posting is in the Zone). The `listSources` action gives these descriptors, from which a Watch's form is built.

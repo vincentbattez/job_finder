@@ -21,6 +21,11 @@ Part of the Profile that lists, by section, what the Candidate validated about t
 _Avoid_: details, information, sheet
 _Formerly_: Faits
 
+**Section**:
+Part of the Facts under one heading, such as the degrees or the mobility of the Candidate.
+_Avoid_: heading, category, field
+_Formerly_: Rubrique
+
 **Upload**:
 Original document, such as a CV or a past letter as a PDF, that the Candidate drops into their Profile; it is kept as is, and the Profile holds its Markdown conversion.
 _Avoid_: attachment, file, source file
