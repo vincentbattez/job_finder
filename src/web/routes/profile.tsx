@@ -128,7 +128,7 @@ export default function Profile() {
           <FactsForm key={JSON.stringify(sectionList)} sectionList={sectionList} />
           <Uploads uploadList={uploadList} />
           {profileFileList.length === 0 ? (
-            <div className="empty">
+            <div className="page__empty">
               <p>{t('profile.emptyHint')}</p>
               <CopyCommand command={`jf profile ${candidate.id}`} />
               <p>{t('profile.emptyManualHint')}</p>

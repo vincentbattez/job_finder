@@ -23,6 +23,9 @@
   }
   .uploads__file-name {
     overflow-wrap: anywhere;
+    font-family: var(--font-outlier);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
   }
   .uploads__date {
     color: var(--color-ink-2);

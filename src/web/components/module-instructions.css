@@ -7,6 +7,16 @@
     min-width: 0;
     padding-top: var(--space-md);
     border-top: 4px solid var(--tint);
+    --tint: var(--p-mon);
+  }
+  .module-instructions[data-artifact='letter'] {
+    --tint: var(--p-tue);
+  }
+  .module-instructions[data-artifact='interview_brief'] {
+    --tint: var(--p-wed);
+  }
+  .module-instructions[data-artifact='visualization'] {
+    --tint: var(--p-fri);
   }
   .module-instructions form {
     display: grid;

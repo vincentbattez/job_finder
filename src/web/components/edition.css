@@ -6,6 +6,9 @@
   }
   .edition__document figcaption {
     color: var(--color-muted);
+    font-family: var(--font-outlier);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
   }
   .edition {
     display: flex;

@@ -35,7 +35,7 @@ export function ArtifactDocument({
   const { t } = useTranslation('posting');
   return (
     <figure className="edition__document">
-      <figcaption className="reference">{fileName}</figcaption>
+      <figcaption>{fileName}</figcaption>
       {isModifiable ? (
         <Form method="post" action={`/postings/${reference}/${artifact}/document`} preventScrollReset>
           <input type="hidden" name="fileName" value={fileName} />

@@ -7,6 +7,20 @@
     min-width: 0;
     padding-top: var(--space-md);
     border-top: 4px solid var(--tint);
+    --tint: var(--p-mon);
+  }
+  .artifact-versions[data-artifact='letter'] {
+    --tint: var(--p-tue);
+  }
+  .artifact-versions[data-artifact='interview_brief'] {
+    --tint: var(--p-wed);
+  }
+  .artifact-versions[data-artifact='visualization'] {
+    --tint: var(--p-fri);
+  }
+  .artifact-versions__missing {
+    color: var(--color-muted);
+    font-family: var(--font-body);
   }
   /* One folded card per Version, its Instructions folded the same way inside it */
   .artifact-versions__list {
@@ -29,10 +43,18 @@
     padding: var(--space-sm) var(--space-md);
     cursor: pointer;
   }
+  .artifact-versions__reference {
+    font-family: var(--font-outlier);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
   .artifact-versions__date {
     margin-inline-start: auto;
     color: var(--color-muted);
+    font-family: var(--font-outlier);
     font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
   .artifact-versions__list details > :not(summary) {
     margin: 0 var(--space-md) var(--space-md);

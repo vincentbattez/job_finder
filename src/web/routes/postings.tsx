@@ -49,7 +49,7 @@ export default function Postings() {
       </div>
       {postingList.length > 0 && <PostingMap postingList={filteredPostingList} />}
       {filteredPostingList.length === 0 && postingList.length > 0 ? (
-        <p className="empty">{t('noFilteredPosting')}</p>
+        <p className="page__empty">{t('noFilteredPosting')}</p>
       ) : (
         <PostingList postingList={filteredPostingList} />
       )}

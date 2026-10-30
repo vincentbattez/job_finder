@@ -83,7 +83,7 @@ export function Uploads({
         <ul className="uploads__list">
           {uploadList.map(({ fileName, savedAt, conversion }) => (
             <li key={fileName} className="uploads__item">
-              <span className="reference uploads__file-name">{fileName}</span>
+              <span className="uploads__file-name">{fileName}</span>
               <span className="uploads__date">
                 {t('uploads.savedOn')} <DateText date={savedAt} />
               </span>

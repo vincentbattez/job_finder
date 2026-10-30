@@ -25,8 +25,6 @@ import { LocaleSwitcher } from './components/locale-switcher.tsx';
 import { LocaleProvider, useLocale } from './i18n.tsx';
 import { englishUrlOf } from './redirects.ts';
 
-import './legacy-components.css';
-
 // An English route reached with the French query of an older link moves for good to the English one.
 // Otherwise the menu's Candidates and the locale the whole page renders in (ADR-0012).
 export function loader({ request }: LoaderFunctionArgs) {

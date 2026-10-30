@@ -83,3 +83,10 @@
   padding: 0;
   list-style: none;
 }
+/* A sunken tray where the Postings, or the files of the Profile, will land */
+.page__empty {
+  padding: var(--space-lg);
+  border-radius: var(--radius-card);
+  background: var(--color-paper-2);
+  color: var(--color-ink-2);
+}

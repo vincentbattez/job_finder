@@ -34,7 +34,7 @@ function VersionFiles({
     );
   }
   if (documentList.length === 0) {
-    return <p className="missing">{t('noFile')}</p>;
+    return <p className="artifact-versions__missing">{t('noFile')}</p>;
   }
   return (
     <>
@@ -63,14 +63,16 @@ export function ArtifactVersions({
       <ModuleLaunch reference={reference} artifact={artifact} state={state} module={module} />
       {isEditable && <CopyCommand command={`jf edit ${reference} ${artifact}`} />}
       {versionList.length === 0 ? (
-        <p className="missing">{t('noVersion')}</p>
+        <p className="artifact-versions__missing">{t('noVersion')}</p>
       ) : (
         <ol className="artifact-versions__list">
           {versionList.map(({ version, isChoosable, documentList }) => (
             <li key={version.number}>
               <details open={version.isChosen}>
                 <summary>
-                  <span className="reference">{t('versionNumber', { versionNumber: version.number })}</span>
+                  <span className="artifact-versions__reference">
+                    {t('versionNumber', { versionNumber: version.number })}
+                  </span>
                   <StateBadge state={STATE_BY_VERSION_STATE[version.state]} />
                   {version.isChosen && (
                     <span className="badge" data-chosen>
@@ -78,7 +80,7 @@ export function ArtifactVersions({
                     </span>
                   )}
                   <InstructionsOrigin hasCandidateInstructions={version.hasCandidateInstructions} />
-                  <span className="date artifact-versions__date">
+                  <span className="artifact-versions__date">
                     <DateText date={version.createdAt} />
                   </span>
                 </summary>

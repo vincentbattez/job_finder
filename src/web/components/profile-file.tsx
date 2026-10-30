@@ -17,9 +17,7 @@ export function ProfileFile({
   const { t } = useTranslation('settings');
   return (
     <section className="profile-file" aria-labelledby={headingId}>
-      <h2 id={headingId} className="reference">
-        {fileName}
-      </h2>
+      <h2 id={headingId}>{fileName}</h2>
       <Form method="post" preventScrollReset>
         <input type="hidden" name="fileName" value={fileName} />
         <MarkdownEditor
