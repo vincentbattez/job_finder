@@ -4,7 +4,7 @@ import { createActions, type Actions } from '#/actions/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
+import { createFakeCanalNotification } from './fake-canal-notification.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 // A Fiche de poste found elsewhere than on the Sources the Veilles read
@@ -60,7 +60,7 @@ async function openActions(aiSession: ReturnType<typeof createFakeAiSession>) {
     dataDirectory,
     aiSession,
     fetch: createRecordedFetch().fetch,
-    notificationChannel: createFakeNotificationChannel(),
+    canalNotificationList: createFakeCanalNotification().canalNotificationList,
   });
 }
 

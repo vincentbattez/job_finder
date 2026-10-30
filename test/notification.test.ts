@@ -4,11 +4,8 @@ import { createActions } from '#/actions/index.ts';
 
 import { createDataDirectory, detectOffres } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
+import { createFakeCanalNotification, LEA_TARGET } from './fake-canal-notification.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
-
-// Léa's phone, as config.example.json names it
-const LEA_TARGET = 'notify.mobile_app_iphone_de_lea';
 
 // The two Béthune Offres, both in the Zone, and an attaché de justice Offre outside it, from the
 // responses recorded on 2026-10-29
@@ -26,11 +23,20 @@ afterEach(() => {
 // for the next one, on the feed as recorded
 async function detectBefore(referenceList: string[]) {
   const dataDirectory = createDataDirectory();
-  const notificationChannel = createFakeNotificationChannel();
+  const notificationChannel = createFakeCanalNotification();
   const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout(referenceList) } }).fetch;
-  const earlierActions = await createActions({ dataDirectory, fetch: earlierFetch, notificationChannel });
+  const earlierActions = await createActions({
+    dataDirectory,
+    fetch: earlierFetch,
+    canalNotificationList: notificationChannel.canalNotificationList,
+  });
+  await notificationChannel.saveFor(earlierActions);
   await earlierActions.detect();
-  const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch, notificationChannel });
+  const actions = await createActions({
+    dataDirectory,
+    fetch: createRecordedFetch().fetch,
+    canalNotificationList: notificationChannel.canalNotificationList,
+  });
   return { actions, notificationChannel };
 }
 
@@ -57,11 +63,11 @@ describe('the notification of a new Offre in the Zone', () => {
   });
 
   it('sends nothing on the first launch, which imports the Offres already online', async () => {
-    const notificationChannel = createFakeNotificationChannel();
+    const notificationChannel = createFakeCanalNotification();
     const actions = await createActions({
       dataDirectory: createDataDirectory(),
       fetch: createRecordedFetch().fetch,
-      notificationChannel,
+      canalNotificationList: notificationChannel.canalNotificationList,
     });
 
     await actions.detect();
@@ -117,13 +123,14 @@ describe('a notification that cannot be sent', () => {
     }).fetch;
     const earlierActions = await createActions({ dataDirectory, fetch: earlierFetch });
     await earlierActions.detect();
-    const notificationChannel = createFakeNotificationChannel({ errorMessage: ERROR_MESSAGE });
+    const notificationChannel = createFakeCanalNotification({ errorMessage: ERROR_MESSAGE });
     const actions = await createActions({
       dataDirectory,
       aiSession,
       fetch: createRecordedFetch().fetch,
-      notificationChannel,
+      canalNotificationList: notificationChannel.canalNotificationList,
     });
+    await notificationChannel.saveFor(actions);
 
     const detectionList = await actions.detect();
 
@@ -140,7 +147,7 @@ describe('a notification that cannot be sent', () => {
     const worker = await createActions({
       dataDirectory,
       aiSession,
-      notificationChannel: createFakeNotificationChannel(),
+      canalNotificationList: createFakeCanalNotification().canalNotificationList,
     });
     const jobList = await worker.runQueuedJobs();
     expect(jobList).toMatchObject([
@@ -161,8 +168,13 @@ describe('a notification that cannot be sent', () => {
     const dataDirectory = createDataDirectory();
     const earlierActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
     await earlierActions.detect();
-    const notificationChannel = createFakeNotificationChannel({ errorMessage: ERROR_MESSAGE });
-    const actions = await createActions({ dataDirectory, aiSession, notificationChannel });
+    const notificationChannel = createFakeCanalNotification({ errorMessage: ERROR_MESSAGE });
+    const actions = await createActions({
+      dataDirectory,
+      aiSession,
+      canalNotificationList: notificationChannel.canalNotificationList,
+    });
+    await notificationChannel.saveFor(actions);
     await actions.runModule({ module: 'recherche', reference: REFERENCE });
     await actions.runModule({ module: 'recherche', reference: OTHER_REFERENCE });
 

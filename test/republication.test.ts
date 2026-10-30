@@ -7,7 +7,7 @@ import { createActions, type Actions } from '#/actions/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
+import { createFakeCanalNotification } from './fake-canal-notification.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
 // The Boulogne parquet Poste, published as 2026-2231960 then again as 2026-2338409, both in Léa's
@@ -43,20 +43,21 @@ async function detectBeforeRepublication(aiSession = createFakeAiSession(), { is
     const configPath = path.join(dataDirectory, 'config.json');
     writeFileSync(configPath, readFileSync(configPath, 'utf8').replace('["Douai", "Amiens"]', '["Amiens"]'));
   }
-  const notificationChannel = createFakeNotificationChannel();
+  const notificationChannel = createFakeCanalNotification();
   const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout([REPUBLICATION_REFERENCE]) } });
   const earlierActions = await createActions({
     dataDirectory,
     aiSession,
     fetch: earlierFetch.fetch,
-    notificationChannel,
+    canalNotificationList: notificationChannel.canalNotificationList,
   });
+  await notificationChannel.saveFor(earlierActions);
   await earlierActions.detect();
   const actions = await createActions({
     dataDirectory,
     aiSession,
     fetch: createRecordedFetch().fetch,
-    notificationChannel,
+    canalNotificationList: notificationChannel.canalNotificationList,
   });
   return { actions, notificationChannel, dataDirectory };
 }
@@ -87,7 +88,7 @@ describe('a Republication detected', () => {
     const actions = await createActions({
       dataDirectory: createDataDirectory(),
       fetch: createRecordedFetch().fetch,
-      notificationChannel: createFakeNotificationChannel(),
+      canalNotificationList: createFakeCanalNotification().canalNotificationList,
     });
 
     await actions.detect();

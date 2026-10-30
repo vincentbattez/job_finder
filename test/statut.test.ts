@@ -157,7 +157,6 @@ it('refuses a reference shared by the Offres of two Candidats', async () => {
   const candidatList = ['lea', 'camille'].map((id) => ({
     id,
     name: id,
-    notification: { channel: 'home-assistant', service: `notify.mobile_app_${id}` },
     veilleList: [{ ...veille, id: `attache-de-justice-${id}` }],
   }));
   writeFileSync(path.join(dataDirectory, 'config.json'), JSON.stringify({ defaultDelayMonths: 6, candidatList }));

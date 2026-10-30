@@ -328,30 +328,50 @@ export const VISUALISATION_SCHEMA = z.object({ html: z.string() }).brand<'Domain
 
 export type Visualisation = z.infer<typeof VISUALISATION_SCHEMA>;
 
-// A Candidat's Connexion Home Assistant as the actions return it: whether a token is configured,
-// never the token, which is write-only (ADR-0006)
-export const CONNEXION_HOME_ASSISTANT_SCHEMA = z
-  .object({ url: z.string().nullable(), service: z.string().nullable(), isTokenConfigured: z.boolean() })
+// The Paramètres of a module of a family, as JSON: only the module's schema knows their shape (ADR-0010)
+export const PARAMETRES_SCHEMA = z.record(z.string(), z.json());
+
+export type Parametres = z.infer<typeof PARAMETRES_SCHEMA>;
+
+// A Paramètre as the front builds its field: typed in, secret, or chosen among what the module lists
+const PARAMETRE_SCHEMA = z
+  .object({
+    name: z.string(),
+    label: z.string(),
+    placeholder: z.string().nullable(),
+    type: z.enum(['text', 'url']),
+    isRequired: z.boolean(),
+    isSecret: z.boolean(),
+    hasChoices: z.boolean(),
+  })
   .brand<'Domain'>();
 
-export type ConnexionHomeAssistant = z.infer<typeof CONNEXION_HOME_ASSISTANT_SCHEMA>;
+// A module of the Canaux de notification, as its descriptor presents it to the Candidat (ADR-0010)
+export const CANAL_NOTIFICATION_MODULE_SCHEMA = z
+  .object({ id: z.string(), name: z.string(), parametreList: z.array(PARAMETRE_SCHEMA), isTestable: z.boolean() })
+  .brand<'Domain'>();
 
-// What reaching a Candidat's Home Assistant takes, token included. Its own brand keeps it out of the
-// values an action may return (src/actions/index.ts, ADR-0006); a null field falls back on .env.
-export const HOME_ASSISTANT_ACCESS_SCHEMA = z
-  .object({
-    candidatName: z.string(),
-    url: z.string().nullable(),
-    token: z.string().nullable(),
-    service: z.string().nullable(),
-  })
+export type CanalNotificationModule = z.infer<typeof CANAL_NOTIFICATION_MODULE_SCHEMA>;
+
+// A Candidat's Canal de notification as the actions return it: its module, null until chosen, and its
+// Paramètres, each secret one reduced to whether it is configured, since it is write-only (ADR-0006)
+export const CANAL_NOTIFICATION_SCHEMA = z
+  .object({ module: z.string().nullable(), parametres: PARAMETRES_SCHEMA, configuredSecretList: z.array(z.string()) })
+  .brand<'Domain'>();
+
+export type CanalNotification = z.infer<typeof CANAL_NOTIFICATION_SCHEMA>;
+
+// A Candidat's Canal de notification as saved, secret Paramètres included. Its own brand keeps it out
+// of the values an action may return (src/actions/index.ts, ADR-0006).
+export const SAVED_CANAL_NOTIFICATION_SCHEMA = z
+  .object({ candidatName: z.string(), module: z.string().nullable(), parametres: PARAMETRES_SCHEMA })
   .brand<'Secret'>();
 
-export type HomeAssistantAccess = z.infer<typeof HOME_ASSISTANT_ACCESS_SCHEMA>;
+export type SavedCanalNotification = z.infer<typeof SAVED_CANAL_NOTIFICATION_SCHEMA>;
 
-// A notify service of a Home Assistant, such as notify.mobile_app_iphone_de_lea, which pushes to a phone
-export const NOTIFY_SERVICE_SCHEMA = z.object({ service: z.string(), name: z.string() }).brand<'Domain'>();
+// One of the values a module offers for a Paramètre, with what the Candidat reads
+export const PARAMETRE_CHOICE_SCHEMA = z.object({ value: z.string(), label: z.string() }).brand<'Domain'>();
 
-export type NotifyService = z.infer<typeof NOTIFY_SERVICE_SCHEMA>;
+export type ParametreChoice = z.infer<typeof PARAMETRE_CHOICE_SCHEMA>;
 
 export type DomainValue = z.$brand<'Domain'>;

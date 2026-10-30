@@ -41,7 +41,7 @@
 .module-launch button,
 .detection button,
 .edition button,
-.connexion button {
+.canal button {
   min-height: 40px;
   padding: 0 var(--space-sm);
   border: var(--rule-hair) solid var(--color-muted);
@@ -56,14 +56,14 @@
 .candidat-menu select:hover,
 .command button:hover,
 .edition button:hover,
-.connexion button:hover:enabled {
+.canal button:hover:enabled {
   background: var(--color-paper-2);
 }
 .candidat-menu button,
 .module-launch button,
 .detection button,
 .edition .button--primary,
-.connexion .button--primary {
+.canal .button--primary {
   border-color: transparent;
   background: var(--color-accent);
   color: var(--color-accent-ink);
@@ -72,13 +72,13 @@
 .module-launch button:hover:enabled,
 .detection button:hover:enabled,
 .edition .button--primary:hover,
-.connexion .button--primary:hover:enabled {
+.canal .button--primary:hover:enabled {
   background: var(--color-accent-deep);
 }
 /* A module missing an input, an Artefact en cours, a Détection running: the button waits */
 .module-launch button:disabled,
 .detection button:disabled,
-.connexion button:disabled {
+.canal button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -1060,31 +1060,31 @@ a:active {
   margin-top: var(--space-xs);
 }
 
-/* The Connexion Home Assistant: each field, then the button that tries it and what it answered */
-.connexion,
-.connexion form {
+/* The Canal de notification: each field, then the button that tries it and what it answered */
+.canal,
+.canal form {
   display: grid;
   gap: var(--space-md);
   min-width: 0;
 }
-.connexion h2 {
+.canal h2 {
   font: 600 var(--text-md) / 1.4 var(--font-body);
 }
-.connexion > p {
+.canal > p {
   color: var(--color-ink-2);
 }
-.connexion form {
+.canal form {
   max-width: 32rem;
 }
-.connexion__field {
+.canal__field {
   display: grid;
   gap: var(--space-xs);
   min-width: 0;
   color: var(--color-ink-2);
   font: 500 var(--text-sm) / 1.4 var(--font-body);
 }
-.connexion__field input,
-.connexion__field select {
+.canal__field input,
+.canal__field select {
   min-width: 0;
   min-height: 40px;
   padding: 0 var(--space-sm);
@@ -1096,26 +1096,26 @@ a:active {
   color: var(--color-ink);
   font: 400 var(--text-sm) / 1.4 var(--font-outlier);
 }
-.connexion__field input:focus-visible,
-.connexion__field select:focus-visible {
+.canal__field input:focus-visible,
+.canal__field select:focus-visible {
   outline-color: var(--color-focus);
 }
 /* Write-only, the token never shows again: only whether one is saved (ADR-0006) */
-.connexion__configured {
+.canal__configured {
   color: var(--color-success);
   font-weight: 600;
 }
-.connexion__step {
+.canal__step {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-xs) var(--space-sm);
   font-size: var(--text-sm);
 }
-.connexion__step [role='status'] {
+.canal__step [role='status'] {
   color: var(--color-success);
 }
-.connexion__step [role='alert'] {
+.canal__step [role='alert'] {
   flex-basis: 100%;
   color: var(--color-error);
 }

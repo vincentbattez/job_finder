@@ -6,6 +6,7 @@ import { createActions } from '#/actions/index.ts';
 import type { IHeadlessSession } from '#/ai-session/acl/claude-code.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { FAKE_HOME_ASSISTANT_TOKEN } from './fake-home-assistant.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 // Fills the data folder of the front's e2e tests, which playwright.config.ts names in
@@ -18,8 +19,8 @@ import { createRecordedFetch } from './recorded-http.ts';
 // correct), Versailles 2026-2409178 (two Recherches), Rennes 2026-2420931 (a Recherche, ready for
 // its Lettre) and Narbonne 2026-2412591 (a Recherche en échec). Sacha, Noé, Inès, Malo and Rose, without
 // Veille either, each have their Profil changed by one e2e test only, which writes it first; Sacha
-// also has the Consignes the e2e tests change. Yanis and Zoé each have their Connexion Home Assistant
-// changed by one e2e test only. Léa's Offre
+// also has the Consignes the e2e tests change. Léa, Camille and Sacha have their Canal de notification
+// through the fake Home Assistant; Yanis and Zoé each have theirs changed by one e2e test only. Léa's Offre
 // 2026-2409247 has a Recherche made with the default Consignes, then one made with hers.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 // The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
@@ -32,17 +33,14 @@ const VERSAILLES_REFERENCE = '2026-2409178';
 const RENNES_REFERENCE = '2026-2420931';
 const NARBONNE_REFERENCE = '2026-2412591';
 const CONSIGNES_REFERENCE = '2026-2409247';
-// Notify services of the fake Home Assistant (test/fake-home-assistant.ts)
-function notificationTo(service: string) {
-  return { channel: 'home-assistant', service: `notify.${service}` };
-}
+// Where playwright.config.ts started the fake Home Assistant
+const FAKE_HOME_ASSISTANT_URL = process.env.FAKE_HOME_ASSISTANT_URL ?? '';
 const CONFIG = {
   defaultDelayMonths: 6,
   candidatList: [
     {
       id: 'lea',
       name: 'Léa',
-      notification: notificationTo('mobile_app_iphone_de_lea'),
       veilleList: [
         {
           id: 'attache-de-justice-hauts-de-france',
@@ -52,8 +50,8 @@ const CONFIG = {
         },
       ],
     },
-    { id: 'camille', name: 'Camille', notification: notificationTo('mobile_app_pixel_de_camille'), veilleList: [] },
-    { id: 'sacha', name: 'Sacha', notification: notificationTo('mobile_app_iphone_de_sacha'), veilleList: [] },
+    { id: 'camille', name: 'Camille', veilleList: [] },
+    { id: 'sacha', name: 'Sacha', veilleList: [] },
     { id: 'noe', name: 'Noé', veilleList: [] },
     { id: 'ines', name: 'Inès', veilleList: [] },
     { id: 'malo', name: 'Malo', veilleList: [] },
@@ -129,6 +127,18 @@ const actions = await createActions({
       createFakeAiSession(RUN_BY_VERSION[versionOf(session)] ?? {}).runHeadless(session),
   },
 });
+// A notify service of the fake Home Assistant (test/fake-home-assistant.ts) for each phone
+for (const [candidatId, service] of [
+  ['lea', 'notify.mobile_app_iphone_de_lea'],
+  ['camille', 'notify.mobile_app_pixel_de_camille'],
+  ['sacha', 'notify.mobile_app_iphone_de_sacha'],
+]) {
+  await actions.saveCanalNotification({
+    candidatId,
+    canal: 'home-assistant',
+    parametres: { url: FAKE_HOME_ASSISTANT_URL, token: FAKE_HOME_ASSISTANT_TOKEN, service },
+  });
+}
 await actions.detect();
 await actions.runModule({ module: 'recherche', reference: BETHUNE_REFERENCE });
 await actions.runModule({ module: 'recherche', reference: BETHUNE_REFERENCE });

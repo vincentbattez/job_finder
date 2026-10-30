@@ -7,7 +7,7 @@ import {
   composeRepublicationNotification,
   composeRepublicationPostuleeNotification,
   type INotification,
-} from '#/modules/notification/index.ts';
+} from '#/notification/index.ts';
 import { findRepublishedOffre } from '#/republication/index.ts';
 import { hasBeenPostulee } from '#/statut/index.ts';
 

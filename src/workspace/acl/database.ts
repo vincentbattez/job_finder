@@ -9,27 +9,26 @@ import { z } from 'zod/v4';
 
 import {
   CANDIDAT_SCHEMA,
-  CONNEXION_HOME_ASSISTANT_SCHEMA,
-  HOME_ASSISTANT_ACCESS_SCHEMA,
   JOB_SCHEMA,
   OFFRE_SCHEMA,
   PROFIL_JOB_SCHEMA,
   QUEUED_JOB_SCHEMA,
+  SAVED_CANAL_NOTIFICATION_SCHEMA,
   VEILLE_SCHEMA,
   VERSION_SCHEMA,
   type Artefact,
   type Candidat,
-  type ConnexionHomeAssistant,
   type FicheDePoste,
-  type HomeAssistantAccess,
   type Job,
   type Lieu,
   type ListedOffre,
   type Module,
   type Offre,
+  type Parametres,
   type PieceFileName,
   type ProfilJob,
   type QueuedJob,
+  type SavedCanalNotification,
   type Source,
   type Statut,
   type Veille,
@@ -133,36 +132,28 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
       return z.array(CANDIDAT_SCHEMA).parse(await prisma.candidat.findMany({ orderBy: { name: 'asc' } }));
     },
 
-    // Never the token: what an action may return (ADR-0006)
-    async readConnexionHomeAssistant({ id }: Candidat): Promise<ConnexionHomeAssistant> {
-      const connexion = await prisma.connexionHomeAssistant.findUnique({ where: { candidatId: id } });
-      return CONNEXION_HOME_ASSISTANT_SCHEMA.parse({
-        url: connexion?.url ?? null,
-        service: connexion?.service ?? null,
-        isTokenConfigured: (connexion?.token ?? null) !== null,
-      });
-    },
-
-    // The token included, for the notification channel only, never for an action to return (ADR-0006)
-    async findHomeAssistantAccess(candidatId: string): Promise<HomeAssistantAccess> {
-      const candidat = await prisma.candidat.findUniqueOrThrow({
+    // Secret Paramètres included, for the actions to reduce or send, never to return (ADR-0006)
+    async findCanalNotification(candidatId: string): Promise<SavedCanalNotification> {
+      const { name, canalNotification } = await prisma.candidat.findUniqueOrThrow({
         where: { id: candidatId },
-        include: { connexionHomeAssistant: true },
+        include: { canalNotification: true },
       });
-      const { url = null, token = null, service = null } = candidat.connexionHomeAssistant ?? {};
-      return HOME_ASSISTANT_ACCESS_SCHEMA.parse({ candidatName: candidat.name, url, token, service });
+      return SAVED_CANAL_NOTIFICATION_SCHEMA.parse({
+        candidatName: name,
+        module: canalNotification?.module ?? null,
+        parametres: canalNotification?.parametres ?? {},
+      });
     },
 
-    // A field left undefined keeps its saved value: the front never gets the token back to resend it
-    async saveConnexionHomeAssistant(
-      { id }: Candidat,
-      { url, token, service }: { url: string; token: string | undefined; service: string | undefined },
-    ): Promise<void> {
-      const data = { url, ...(token !== undefined && { token }), ...(service !== undefined && { service }) };
-      await prisma.connexionHomeAssistant.upsert({
-        where: { candidatId: id },
-        create: { candidatId: id, ...data },
-        update: data,
+    // The Paramètres replace the saved ones as a whole: the actions merge them first (ADR-0010)
+    async saveCanalNotification(
+      candidatId: string,
+      { module, parametres }: { module: string; parametres: Parametres },
+    ) {
+      await prisma.canalNotification.upsert({
+        where: { candidatId },
+        create: { candidatId, module, parametres },
+        update: { module, parametres },
       });
     },
 
@@ -407,19 +398,6 @@ export function openDatabase(databasePath: string, defaultDelayMonths: number) {
         ),
         ...veilleList.map((veille) =>
           prisma.veille.upsert({ where: { id: veille.id }, create: veille, update: veille }),
-        ),
-        // The notify service the config used to hold seeds a Candidat's first Connexion, then the
-        // database wins (ADR-0006)
-        ...config.candidatList.flatMap(({ id, notification }) =>
-          notification === undefined
-            ? []
-            : [
-                prisma.connexionHomeAssistant.upsert({
-                  where: { candidatId: id },
-                  create: { candidatId: id, service: notification.service },
-                  update: {},
-                }),
-              ],
         ),
       ]);
     },

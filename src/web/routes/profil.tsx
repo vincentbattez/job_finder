@@ -3,7 +3,7 @@ import { redirect, useActionData, useLoaderData, type ActionFunctionArgs, type L
 import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidat } from '#/web/candidat.server.ts';
-import { ConnexionHomeAssistantForm } from '#/web/components/connexion-home-assistant.tsx';
+import { CanalNotificationForm } from '#/web/components/canal-notification.tsx';
 import { CopyCommand } from '#/web/components/copy-command.tsx';
 import { FaitsForm } from '#/web/components/faits-form.tsx';
 import { Pieces } from '#/web/components/pieces.tsx';
@@ -16,7 +16,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
     profilFileList: candidat === null ? [] : await ACTIONS.listProfilFiles({ candidatId: candidat.id }),
     pieceList: candidat === null ? [] : await ACTIONS.listPieces({ candidatId: candidat.id }),
     rubriqueList: candidat === null ? [] : await ACTIONS.readFaits({ candidatId: candidat.id }),
-    connexion: candidat === null ? null : await ACTIONS.readConnexionHomeAssistant({ candidatId: candidat.id }),
+    canal: candidat === null ? null : await ACTIONS.readCanalNotification({ candidatId: candidat.id }),
+    canalModuleList: await ACTIONS.listCanauxNotification(),
   };
 }
 
@@ -88,7 +89,7 @@ export function meta() {
 }
 
 export default function Profil() {
-  const { candidat, profilFileList, pieceList, rubriqueList, connexion } = useLoaderData<typeof loader>();
+  const { candidat, profilFileList, pieceList, rubriqueList, canal, canalModuleList } = useLoaderData<typeof loader>();
   const refusal = useActionData<typeof action>()?.refusal ?? null;
   return (
     <main className="container page">
@@ -134,7 +135,7 @@ export default function Profil() {
             key={profilFileList.map(({ fileName }) => fileName).join('/')}
             error={refusal?.isCreation === true ? refusal.message : null}
           />
-          {connexion !== null && <ConnexionHomeAssistantForm connexion={connexion} />}
+          {canal !== null && <CanalNotificationForm canal={canal} moduleList={canalModuleList} />}
         </>
       )}
     </main>

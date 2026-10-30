@@ -1,6 +1,7 @@
 import { cpSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 import { describe, expect, it } from 'vitest';
 
@@ -18,16 +19,23 @@ function writeConfig(dataDirectory: string, config: object): void {
 }
 
 function candidatConfig(id: string, name: string): object {
-  return { id, name, notification: { channel: 'home-assistant', service: `notify.mobile_app_${id}` }, veilleList: [] };
+  return { id, name, veilleList: [] };
 }
 
 const PRISMA_DIRECTORY = path.join(import.meta.dirname, '..', 'prisma');
 const FIRST_MIGRATION = '20261029133617_init';
+// The last migration before the Canaux de notification, which turned each Connexion Home Assistant
+// into one (ADR-0010)
+const CONNEXION_HOME_ASSISTANT_MIGRATION = '20261030090736_job_profil';
 
-// The database the first jf left, migrated through a config that only knows the first migration
-function writeFirstMigrationDatabase(dataDirectory: string): void {
+// The database an older jf left, migrated through a config that only knows the migrations up to the
+// given one
+function writeOlderDatabase(dataDirectory: string, lastMigration = FIRST_MIGRATION): string {
   const prismaDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-prisma-'));
-  for (const fileName of [FIRST_MIGRATION, 'migration_lock.toml']) {
+  const migrationList = readdirSync(path.join(PRISMA_DIRECTORY, 'migrations')).filter(
+    (fileName) => fileName <= lastMigration || fileName === 'migration_lock.toml',
+  );
+  for (const fileName of migrationList) {
     cpSync(path.join(PRISMA_DIRECTORY, 'migrations', fileName), path.join(prismaDirectory, 'migrations', fileName), {
       recursive: true,
     });
@@ -41,6 +49,7 @@ function writeFirstMigrationDatabase(dataDirectory: string): void {
   const configPath = path.join(prismaDirectory, 'prisma.config.ts');
   writeFileSync(configPath, `export default ${JSON.stringify(config)};`);
   migrateDeploy(databasePath, configPath);
+  return databasePath;
 }
 
 function listLeaProfilFiles(dataDirectory: string): string[] {
@@ -90,14 +99,42 @@ describe('actions', () => {
   it('brings the database an older jf left up to date', async () => {
     const dataDirectory = createEmptyDataDirectory();
     writeConfig(dataDirectory, { defaultDelayMonths: 6, candidatList: [candidatConfig('lea', 'Léa')] });
-    writeFirstMigrationDatabase(dataDirectory);
+    writeOlderDatabase(dataDirectory);
 
     const actions = await createActions({ dataDirectory });
 
-    // The Connexion Home Assistant came with a later migration
-    expect(await actions.readConnexionHomeAssistant({ candidatId: 'lea' })).toMatchObject({
-      service: 'notify.mobile_app_lea',
+    // The Canaux de notification came with a later migration
+    expect(await actions.readCanalNotification({ candidatId: 'lea' })).toEqual({
+      module: null,
+      parametres: {},
+      configuredSecretList: [],
     });
+  });
+
+  // The main checkout migrates the real data/: Léa keeps her Connexion, nothing to type again
+  it('turns the Connexion Home Assistant of each Candidat into their Canal de notification, without loss', async () => {
+    const dataDirectory = createEmptyDataDirectory();
+    writeConfig(dataDirectory, { defaultDelayMonths: 6, candidatList: [candidatConfig('lea', 'Léa')] });
+    const database = new DatabaseSync(writeOlderDatabase(dataDirectory, CONNEXION_HOME_ASSISTANT_MIGRATION));
+    database.exec(`INSERT INTO Candidat (id, name) VALUES ('lea', 'Léa');
+      INSERT INTO ConnexionHomeAssistant (candidatId, url, token, service)
+      VALUES ('lea', 'https://domotique.example', 'jeton-de-lea', 'notify.mobile_app_iphone_de_lea');`);
+    database.close();
+
+    const actions = await createActions({ dataDirectory });
+
+    expect(await actions.readCanalNotification({ candidatId: 'lea' })).toEqual({
+      module: 'home-assistant',
+      parametres: { url: 'https://domotique.example', service: 'notify.mobile_app_iphone_de_lea' },
+      configuredSecretList: ['token'],
+    });
+    const migrated = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { readOnly: true });
+    expect(
+      migrated.prepare("SELECT json_extract(parametres, '$.token') AS token FROM CanalNotification").get(),
+    ).toEqual({
+      token: 'jeton-de-lea',
+    });
+    migrated.close();
   });
 
   it('refuses to list the Offres of an unknown Candidat', async () => {

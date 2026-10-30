@@ -1,4 +1,4 @@
-import { copyFileSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -7,7 +7,7 @@ import { inject } from 'vitest';
 import { createActions } from '#/actions/index.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
+import { createFakeCanalNotification } from './fake-canal-notification.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 const EXAMPLE_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.example.json');
@@ -23,29 +23,25 @@ export function createMigratedDataDirectory(): string {
 }
 
 // A temporary data folder, never data/, with the example config: Léa follows the attaché de justice
-// Offres, her Zone the courts of appeal of Douai and Amiens. Her notify service is in the config, as
-// in data/config.json before the Connexion Home Assistant moved to the database (ADR-0006).
+// Offres, her Zone the courts of appeal of Douai and Amiens. She has no Canal de notification yet.
 export function createDataDirectory(): string {
   const dataDirectory = createMigratedDataDirectory();
-  const config = readFileSync(EXAMPLE_CONFIG_PATH, 'utf8').replace(
-    '"name": "Léa",',
-    '"name": "Léa",\n      "notification": { "channel": "home-assistant", "service": "notify.mobile_app_iphone_de_lea" },',
-  );
-  writeFileSync(path.join(dataDirectory, 'config.json'), config);
+  copyFileSync(EXAMPLE_CONFIG_PATH, path.join(dataDirectory, 'config.json'));
   return dataDirectory;
 }
 
 // The Offres already online, imported by a first Détection on the responses recorded on 2026-10-29,
-// with the fakes of every external boundary
+// with the fakes of every external boundary; Léa's Canal de notification is the fake one
 export async function detectOffres(aiSession = createFakeAiSession()) {
   const dataDirectory = createDataDirectory();
-  const notificationChannel = createFakeNotificationChannel();
+  const notificationChannel = createFakeCanalNotification();
   const actions = await createActions({
     dataDirectory,
     aiSession,
     fetch: createRecordedFetch().fetch,
-    notificationChannel,
+    canalNotificationList: notificationChannel.canalNotificationList,
   });
+  await notificationChannel.saveFor(actions);
   await actions.detect();
   return { actions, dataDirectory, notificationChannel };
 }

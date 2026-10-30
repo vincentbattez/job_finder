@@ -4,12 +4,13 @@ import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
 import { LIEU_SCHEMA, type Candidat, type Lieu, type Offre } from '#/domain/index.ts';
 import { createApiGeo } from '#/geo/acl/api-geo.ts';
 import { createPieceConversion } from '#/modules/conversion/index.ts';
-import { HOME_ASSISTANT, type INotification, type INotificationChannel } from '#/modules/notification/index.ts';
 import { createImportSource } from '#/modules/source-import/index.ts';
 import { createPepSource } from '#/modules/source-pep/index.ts';
+import type { ICanalNotification, INotification } from '#/notification/index.ts';
 import { messageOf } from '#/text/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
+import { CANAL_NOTIFICATION_LIST } from './modules.ts';
 import { createJobRunner } from './run-job.ts';
 
 const CANDIDAT_INPUT_SCHEMA = z.object({ candidatId: z.string() });
@@ -22,7 +23,8 @@ export interface IActionsOption {
   dataDirectory: string;
   aiSession?: IAiSession;
   fetch?: typeof globalThis.fetch;
-  notificationChannel?: INotificationChannel;
+  // The modules a Candidat chooses their Canal de notification from: the registry, or a fake one
+  canalNotificationList?: readonly ICanalNotification[];
 }
 
 // What the actions of every feature share: the data folder, the external boundaries, which the
@@ -31,7 +33,7 @@ export async function openContext({
   dataDirectory,
   aiSession = CLAUDE_CODE,
   fetch,
-  notificationChannel = HOME_ASSISTANT,
+  canalNotificationList = CANAL_NOTIFICATION_LIST,
 }: IActionsOption) {
   const workspace = await openWorkspace(dataDirectory);
   const apiGeo = createApiGeo(fetch);
@@ -66,10 +68,32 @@ export async function openContext({
     return lieu ?? LIEU_SCHEMA.parse({ city, region: null, latitude: null, longitude: null });
   }
 
+  // A module of the family by its identifier, as saved or as the Candidat picked it (ADR-0010)
+  function findCanalNotificationModule(moduleId: string): ICanalNotification {
+    const module = canalNotificationList.find(({ description: { id } }) => id === moduleId);
+    if (module === undefined) {
+      throw new Error(
+        `Canal de notification inconnu : ${moduleId}. En choisir un autre dans la section Notifications du Profil.`,
+      );
+    }
+    return module;
+  }
+
+  // Through the Canal the Candidat saved, with its saved Paramètres
+  async function sendNotification(candidatId: string, notification: INotification): Promise<void> {
+    const { candidatName, module, parametres } = await workspace.findCanalNotification(candidatId);
+    if (module === null) {
+      throw new Error(
+        `Aucun Canal de notification pour ${candidatName} : en choisir un dans la section Notifications de son Profil.`,
+      );
+    }
+    await findCanalNotificationModule(module).send(parametres, notification);
+  }
+
   // A notification not sent undoes and skips nothing: it comes back as the failure to report
   async function notify(offre: Offre, notification: INotification): Promise<string | undefined> {
     try {
-      await notificationChannel.send(await workspace.findHomeAssistantAccess(offre.candidatId), notification);
+      await sendNotification(offre.candidatId, notification);
       return undefined;
     } catch (error) {
       const reason = messageOf(error);
@@ -84,7 +108,9 @@ export async function openContext({
     importSource: createImportSource(aiSession),
     pieceConversion: createPieceConversion(aiSession),
     runJob: createJobRunner(workspace, aiSession),
-    notificationChannel,
+    canalNotificationList,
+    findCanalNotificationModule,
+    sendNotification,
     findCandidat,
     findOffre,
     locate,
