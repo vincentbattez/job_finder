@@ -3,8 +3,7 @@ import path from 'node:path';
 
 import { expect, test } from '@playwright/test';
 
-// The fake Claude of test/e2e-actions.server.ts extracts this Job Description: a city outside
-// Hauts-de-France, whose Postings the region filter of the map counts
+// The fake Claude of test/e2e-actions.server.ts extracts this Job Description, in Grenoble
 const JOB_DESCRIPTION = readFileSync(
   path.join(import.meta.dirname, '..', 'test', 'fixtures', 'import', 'greffier-grenoble.md'),
   'utf8',
@@ -17,13 +16,17 @@ const FILE_NAME = 'greffier-grenoble.md';
 // reads the state again every two seconds
 const READY_TIMEOUT_MS = 15_000;
 
+// Hugo's Postings, which this test alone adds (test/seed-front.ts): until the worker reads its city,
+// an imported Posting has no point on the map, which another test would see on Léa's
+const CANDIDATE_NAME = 'Hugo';
+
 test('imports a Job Description dropped on the Postings: it shows at once, then the worker reads its fields and runs its Research', async ({
   page,
 }) => {
   // The tiles of the map come from OpenStreetMap over the internet: its points show without them
   await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
   await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Léa');
+  await page.getByRole('combobox', { name: 'Candidat' }).selectOption(CANDIDATE_NAME);
   await page.getByRole('button', { name: 'Choisir' }).click();
   // The drop needs React, which enables the field once it runs
   await expect(page.getByLabel('Importer une Fiche de poste')).toBeEnabled();

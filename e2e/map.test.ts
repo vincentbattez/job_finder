@@ -1,7 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
 // test/seed-front.ts locates Léa's Postings through API Géo's recorded responses, and gives the three
-// Melun Postings, whose Deadline passed in the summer of 2026, a status each
+// Melun Postings, whose Deadline passed in the summer of 2026, a status each. No e2e test adds a
+// Posting to her: she keeps the 80 the Detection found, an Archived one aside.
+const LEA_POSTING_COUNT = 80;
 const BETHUNE_TITLE = 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE';
 
 async function chooseLea(page: Page) {
@@ -31,10 +33,8 @@ test.describe('map of the Postings', () => {
   test('shows a point per Posting of the list', async ({ page }) => {
     await chooseLea(page);
 
-    // Other tests may add Postings to the shared data: the list tells how many there are now
-    const postingCount = (await page.getByRole('row').count()) - 1;
-    expect(postingCount).toBeGreaterThanOrEqual(80);
-    await expect(findPoints(page)).toHaveCount(postingCount);
+    await expect(page.getByRole('row')).toHaveCount(1 + LEA_POSTING_COUNT);
+    await expect(findPoints(page)).toHaveCount(LEA_POSTING_COUNT);
   });
 
   test('opens the Posting page on a click on its point', async ({ page }) => {
