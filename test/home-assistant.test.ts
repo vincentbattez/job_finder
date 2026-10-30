@@ -56,7 +56,7 @@ describe('the Notification Channel Home Assistant of a Candidate', () => {
         parameterList: [
           expect.objectContaining({
             name: 'url',
-            label: { fr: 'Adresse de Home Assistant', en: 'Home Assistant address' },
+            label: 'notificationHomeAssistant:urlLabel',
             type: 'url',
             isRequired: true,
             isSecret: false,

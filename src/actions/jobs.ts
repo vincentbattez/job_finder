@@ -2,7 +2,7 @@ import { setTimeout } from 'node:timers/promises';
 
 import { z } from 'zod/v4';
 
-import { DEFAULT_LOCALE, tFor } from '#/domain/catalogue/i18n.ts';
+import { defaultErrorTranslator, tFor } from '#/domain/catalogue/i18n.ts';
 import type { Job, QueuedJob } from '#/domain/index.ts';
 import { composeResearchReadyNotification } from '#/notification/index.ts';
 import { messageOf } from '#/text/index.ts';
@@ -45,7 +45,7 @@ export function createJobActions(context: ActionContext) {
         const job = await workspace.findJob(jobId);
         // Before the job is found, no Candidate tells the locale: the default one
         if (job === null) {
-          throw new Error(tFor(DEFAULT_LOCALE, 'error')('unknownJob', { jobId }));
+          throw new Error(defaultErrorTranslator()('unknownJob', { jobId }));
         }
         if (job.state === 'done' || job.state === 'failed') {
           return job;

@@ -1,7 +1,8 @@
 import { addResources } from '#/domain/catalogue/i18n.ts';
 
-// What Home Assistant's failures tell the Candidate, in each locale. It stays in the module's folder,
-// the only place allowed to name Home Assistant (ADR-0010), as an i18next namespace of its own (ADR-0012).
+// What the Home Assistant Channel tells the Candidate, in each locale: its failures and the texts of
+// its Parameters. It stays in the module's folder, the only place allowed to name Home Assistant
+// (ADR-0010), as an i18next namespace of its own (ADR-0012).
 const COPY_EN = {
   notConfigured:
     'Home Assistant is not configured: enter its address and a long-lived access token in the Notifications section of the Profile.',
@@ -15,6 +16,12 @@ const COPY_EN = {
     'Home Assistant did not give the list of its services (HTTP {{status}}): check that the address of the Notification Channel is that of Home Assistant.',
   notificationRefused:
     'Home Assistant refused the notification to {{service}} (HTTP {{status}}): check the notification service of the Channel.',
+  urlLabel: 'Home Assistant address',
+  // On the LAN, Home Assistant serves plain http by default (ADR-0002)
+  urlPlaceholder: 'http://homeassistant.local:8123',
+  tokenLabel: 'Long-lived access token',
+  tokenPlaceholder: 'Home Assistant → Profile → Security',
+  serviceLabel: 'Notification service',
 };
 
 const ADDRESS_ADVICE = "vérifier que l'adresse du Canal de notification est bien celle de Home Assistant.";
@@ -30,6 +37,11 @@ const COPY_FR: typeof COPY_EN = {
   noServiceList: `Home Assistant n'a pas donné la liste de ses services (HTTP {{status}}) : ${ADDRESS_ADVICE}`,
   notificationRefused:
     'Home Assistant a refusé la notification vers {{service}} (HTTP {{status}}) : vérifier le service de notification du Canal.',
+  urlLabel: 'Adresse de Home Assistant',
+  urlPlaceholder: 'http://homeassistant.local:8123',
+  tokenLabel: 'Jeton d’accès longue durée',
+  tokenPlaceholder: 'Home Assistant → Profil → Sécurité',
+  serviceLabel: 'Service de notification',
 };
 
 export const COPY_NAMESPACE = 'notificationHomeAssistant';

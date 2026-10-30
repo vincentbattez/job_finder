@@ -44,9 +44,6 @@ overrides:
   - filename: GLOSSARY.md
     ignoreRegExpList:
       - '/^_Formerly_:.*$/gm'
-  - filename: src/modules/**
-    ignoreRegExpList:
-      - "/\\bfr: *(['\"`])(?:\\\\.|(?!\\1)[^\\\\\\n])*\\1/gu"
   # A test drives the French locale and Léa's French content: French is allowed in its string and
   # regex literals, never in its identifiers, comments or test names
   - filename: ['test/**', 'e2e/**', '**/*.test.ts']

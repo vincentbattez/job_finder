@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useFetcher, type FetcherWithComponents } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
-import { useLocale } from '#/web/i18n.tsx';
 
 import { PARAMETER_FIELD_PREFIX, ParameterField } from './parameter-field.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
@@ -66,7 +65,7 @@ function Step({
 
 // A Parameter chosen among what the module lists, such as a service of the Channel
 function ChoiceField({
-  parameter: { name, label: labelByLocale },
+  parameter: { name, label },
   savedValue,
   form,
   isHydrated,
@@ -78,7 +77,6 @@ function ChoiceField({
 }>) {
   const fetcher = useFetcher<IOutcome>();
   const { t } = useTranslation('settings');
-  const label = labelByLocale[useLocale()];
   const valueList = fetcher.data?.choiceList?.map(({ value }) => value) ?? (savedValue === '' ? [] : [savedValue]);
   return (
     <>

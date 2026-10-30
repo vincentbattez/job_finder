@@ -10,7 +10,7 @@ import { readCandidate, rememberLocale } from '#/web/candidate.server.ts';
 export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
   const locale = parseLocale(formData.get('locale'));
-  // The buttons only send the tool’s locales: anything else is a forged request, refused as is
+  // The buttons only send the tool's locales: anything else is a forged request, refused as is
   if (locale === null) {
     return data(null, { status: 400 });
   }

@@ -1,23 +1,25 @@
 import { z } from 'zod/v4';
 
+import { textKeyOf } from '#/domain/catalogue/i18n.ts';
 import { parameter } from '#/parameter/index.ts';
 import { defineSource } from '#/source/index.ts';
 import { wordListOf } from '#/text/index.ts';
 
 import { readFeed, readJobDescription } from './acl/talent-soft.ts';
+import { COPY_NAMESPACE } from './copy.ts';
 import { createTitleMatcher } from './title.ts';
 
 // The title is searched as the Source publishes it, in French, whatever the Candidate's locale
 const TITLE_PARAMETER = parameter(z.string().min(1), {
-  label: { fr: 'Titre recherché', en: 'Searched title' },
-  placeholder: { fr: 'attaché de justice', en: 'attaché de justice' },
+  label: textKeyOf(COPY_NAMESPACE, 'titleLabel'),
+  placeholder: textKeyOf(COPY_NAMESPACE, 'titlePlaceholder'),
 });
 
 // The Zone is told in courts of appeal: the Hauts-de-France are exactly those of Douai and Amiens
 // (ADR-0001)
 const COURT_OF_APPEAL_LIST_PARAMETER = parameter(z.array(z.string().min(1)).min(1), {
-  label: { fr: 'Cours d’appel de la Zone', en: 'Courts of appeal of the Zone' },
-  placeholder: { fr: 'Douai', en: 'Douai' },
+  label: textKeyOf(COPY_NAMESPACE, 'courtOfAppealListLabel'),
+  placeholder: textKeyOf(COPY_NAMESPACE, 'courtOfAppealListPlaceholder'),
   type: 'list',
 });
 

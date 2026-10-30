@@ -1,7 +1,7 @@
 import { z } from 'zod/v4';
 
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { DEFAULT_LOCALE, localeOf, tFor } from '#/domain/catalogue/i18n.ts';
+import { defaultErrorTranslator, localeOf, tFor } from '#/domain/catalogue/i18n.ts';
 import { LOCATION_SCHEMA, type Candidate, type Locale, type Location, type Posting } from '#/domain/index.ts';
 import { createApiGeo } from '#/geo/acl/api-geo.ts';
 import { createUploadConversion } from '#/modules/conversion/index.ts';
@@ -50,7 +50,7 @@ export async function openContext({
     const { candidateId } = CANDIDATE_INPUT_SCHEMA.parse(rawInput);
     const candidate = await workspace.findCandidate(candidateId);
     if (candidate === null) {
-      throw new Error(tFor(DEFAULT_LOCALE, 'error')('unknownCandidate', { candidateId }));
+      throw new Error(defaultErrorTranslator()('unknownCandidate', { candidateId }));
     }
     return candidate;
   }
@@ -64,11 +64,11 @@ export async function openContext({
   async function findPosting(reference: string): Promise<Posting> {
     const [posting, ...otherPostingList] = await workspace.findPostings(reference);
     if (posting === undefined) {
-      throw new Error(tFor(DEFAULT_LOCALE, 'error')('unknownPosting', { reference }));
+      throw new Error(defaultErrorTranslator()('unknownPosting', { reference }));
     }
     // Two Candidates may follow the same Source: a reference alone then names several Postings
     if (otherPostingList.length > 0) {
-      throw new Error(tFor(DEFAULT_LOCALE, 'error')('ambiguousPosting', { reference }));
+      throw new Error(defaultErrorTranslator()('ambiguousPosting', { reference }));
     }
     return posting;
   }

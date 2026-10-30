@@ -1,6 +1,6 @@
-import { createInstance, type FlatNamespace, type i18n } from 'i18next';
+import { createInstance, type FlatNamespace, type i18n, type ParseKeys, type ResourceNamespaceMap } from 'i18next';
 
-import type { Locale } from '#/domain/index.ts';
+import { LOCALE_LIST, type Locale } from '#/domain/locale.ts';
 
 import { CLI_EN } from './en/cli.ts';
 import { COMMON_EN } from './en/common.ts';
@@ -76,9 +76,8 @@ function createI18n(locale: Locale): i18n {
   return instance;
 }
 
-const LOCALE_LIST = ['fr', 'en'] as const satisfies readonly Locale[];
-
-const I18N_BY_LOCALE: Record<Locale, i18n> = { fr: createI18n('fr'), en: createI18n('en') };
+// Created on first use, from the one list of the Locales
+const I18N_BY_LOCALE = new Map<Locale, i18n>();
 
 // The one rule of every entry point: the locale of the Candidate the page, the command or the message
 // is for; without one, the locale the visitor chose (the front's cookie), else French
@@ -88,22 +87,51 @@ export function localeOf(candidate: { locale: Locale } | null | undefined, chose
 
 // The instance the front renders a locale with (react-i18next's I18nextProvider)
 export function i18nOf(locale: Locale): i18n {
-  return I18N_BY_LOCALE[locale];
+  const existingInstance = I18N_BY_LOCALE.get(locale);
+  if (existingInstance !== undefined) {
+    return existingInstance;
+  }
+  const instance = createI18n(locale);
+  I18N_BY_LOCALE.set(locale, instance);
+  return instance;
 }
 
 // The t function of an area in a locale, out of React: a route's meta, a loader, an action, the CLI, a
 // notification. A module's own namespace counts too, once it added its resources.
 export function tFor<Namespace extends FlatNamespace>(locale: Locale, namespace: Namespace) {
-  return I18N_BY_LOCALE[locale].getFixedT(locale, namespace);
+  return i18nOf(locale).getFixedT(locale, namespace);
 }
+
+export type ErrorTranslator = ReturnType<typeof tFor<'error'>>;
+
+// The error messages raised before any Candidate is known, or about what every Candidate shares
+export function defaultErrorTranslator(): ErrorTranslator {
+  return tFor(DEFAULT_LOCALE, 'error');
+}
+
+type ModuleNamespace = Extract<keyof ResourceNamespaceMap, string>;
 
 // A module's copy stays in its folder, the only place allowed to name it (ADR-0010): the module adds
 // it as a namespace of its own when loaded, and types it by augmenting i18next's ResourceNamespaceMap
-export function addResources<Resource extends object>(
-  namespace: string,
-  resourceByLocale: Record<Locale, Resource>,
+export function addResources<Namespace extends ModuleNamespace>(
+  namespace: Namespace,
+  resourceByLocale: Record<Locale, ResourceNamespaceMap[Namespace]>,
 ): void {
   for (const locale of LOCALE_LIST) {
-    I18N_BY_LOCALE[locale].addResourceBundle(locale, namespace, resourceByLocale[locale]);
+    i18nOf(locale).addResourceBundle(locale, namespace, resourceByLocale[locale]);
   }
+}
+
+// A text of a module that crosses to the front as data, such as a Parameter's label: the key of its
+// own namespace, checked here, where the module declares it
+export function textKeyOf<Namespace extends ModuleNamespace>(
+  namespace: Namespace,
+  key: Extract<ParseKeys<Namespace>, string>,
+): string {
+  return `${namespace}:${key}`;
+}
+
+// The text such a key names, in a locale; the key itself if no module added it
+export function textOf(locale: Locale, textKey: string): string {
+  return i18nOf(locale).t(textKey, { defaultValue: textKey });
 }

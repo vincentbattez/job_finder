@@ -1,22 +1,17 @@
 import { z } from 'zod/v4';
 
-import {
-  PARAMETER_SCHEMA,
-  PARAMETERS_SCHEMA,
-  type Locale,
-  type LocalizedText,
-  type Parameter,
-  type Parameters,
-} from '#/domain/index.ts';
+import { textOf } from '#/domain/catalogue/i18n.ts';
+import { PARAMETER_SCHEMA, PARAMETERS_SCHEMA, type Locale, type Parameter, type Parameters } from '#/domain/index.ts';
 
 // How each family of interchangeable modules declares its Parameters, so that the front builds its
 // form from the descriptor of a module (ADR-0010)
 
 // How the front shows a Parameter: a list takes several values, such as the courts of appeal of a
-// Zone. A secret one is write-only: no action returns it (ADR-0006).
+// Zone. A secret one is write-only: no action returns it (ADR-0006). Its texts are keys of the
+// module's namespace (textKeyOf).
 interface IParameterMeta {
-  label: LocalizedText;
-  placeholder?: LocalizedText;
+  label: string;
+  placeholder?: string;
   type?: 'text' | 'url' | 'list';
   isSecret?: boolean;
 }
@@ -104,5 +99,6 @@ export function labelOf(
   parameterName: PropertyKey | undefined,
   locale: Locale,
 ): string {
-  return parameterList.find(({ name }) => name === parameterName)?.label[locale] ?? String(parameterName);
+  const label = parameterList.find(({ name }) => name === parameterName)?.label;
+  return label === undefined ? String(parameterName) : textOf(locale, label);
 }

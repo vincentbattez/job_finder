@@ -1,12 +1,24 @@
 import { z } from 'zod/v4';
 
 import type { Actions } from '#/actions/index.ts';
+import { addResources, textKeyOf } from '#/domain/catalogue/i18n.ts';
 import { defineNotificationChannel, type INotification } from '#/notification/index.ts';
 import { parameter } from '#/parameter/index.ts';
 
 interface ISentNotification extends INotification {
   target: string;
 }
+
+// The words of the fake Channel, in its own namespace as a real module's (ADR-0010, ADR-0012)
+const COPY_EN = { targetLabel: 'Target' };
+
+declare module 'i18next' {
+  interface ResourceNamespaceMap {
+    fakeNotificationChannel: typeof COPY_EN;
+  }
+}
+
+addResources('fakeNotificationChannel', { en: COPY_EN, fr: { targetLabel: 'Cible' } });
 
 // Léa's phone, the target of the fake Channel the tests save for her
 export const LEA_TARGET = 'notify.mobile_app_iphone_de_lea';
@@ -17,7 +29,9 @@ export const LEA_TARGET = 'notify.mobile_app_iphone_de_lea';
 // registry; saveFor saves it as a Candidate's Channel.
 export function createFakeNotificationChannel({ errorMessage }: { errorMessage?: string } = {}) {
   const sentList: ISentNotification[] = [];
-  const targetParameter = parameter(z.string(), { label: { fr: 'Cible', en: 'Target' } });
+  const targetParameter = parameter(z.string(), {
+    label: textKeyOf('fakeNotificationChannel', 'targetLabel'),
+  });
   const module = defineNotificationChannel({
     id: 'faux',
     name: 'Faux Canal',

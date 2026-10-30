@@ -21,11 +21,8 @@ ignorePaths:
 includeRegExpList:
   - '/(?!)/'
 overrides:
-  # The fr label of a module's Parameter or Notification Channel field
-  - filename: src/modules/**
-    includeRegExpList:
-      - "/(?<=\\bfr: *)(['\"`])(?:\\\\.|(?!\\1)[^\\\\\\n])*\\1/gu"
-  # A module's copy file holds its copy in both locales, in its string literals (ADR-0010)
+  # A module's copy file holds its copy in both locales, its Parameter labels included, in its string
+  # literals (ADR-0010)
   - filename: src/modules/*/copy.ts
     language: en,fr
     includeRegExpList:

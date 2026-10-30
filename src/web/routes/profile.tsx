@@ -19,6 +19,7 @@ import { NotificationChannelForm } from '#/web/components/notification-channel.t
 import { ProfileFile, ProfileFileCreation } from '#/web/components/profile-file.tsx';
 import { Uploads } from '#/web/components/uploads.tsx';
 import { Watches } from '#/web/components/watches.tsx';
+import { translateParameters } from '#/web/parameters.server.ts';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { candidate, locale } = await readCandidate(request);
@@ -29,9 +30,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
     uploadList: candidate === null ? [] : await ACTIONS.listUploads({ candidateId: candidate.id }),
     sectionList: candidate === null ? [] : await ACTIONS.readFacts({ candidateId: candidate.id }),
     channel: candidate === null ? null : await ACTIONS.readNotificationChannel({ candidateId: candidate.id }),
-    channelModuleList: await ACTIONS.listNotificationChannels(),
+    channelModuleList: translateParameters(await ACTIONS.listNotificationChannels(), locale),
     watchList: candidate === null ? [] : await ACTIONS.listWatches({ candidateId: candidate.id }),
-    sourceList: await ACTIONS.listSources(),
+    sourceList: translateParameters(await ACTIONS.listSources(), locale),
   };
 }
 

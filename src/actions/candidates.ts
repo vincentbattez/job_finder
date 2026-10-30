@@ -1,6 +1,6 @@
 import { z } from 'zod/v4';
 
-import { DEFAULT_LOCALE, tFor } from '#/domain/catalogue/i18n.ts';
+import { DEFAULT_LOCALE, defaultErrorTranslator, tFor, type ErrorTranslator } from '#/domain/catalogue/i18n.ts';
 import {
   DEFAULT_DEADLINE_PERIOD_SCHEMA,
   LOCALE_SCHEMA,
@@ -28,17 +28,15 @@ const LOCALE_INPUT_SCHEMA = z.object({ locale: LOCALE_SCHEMA });
 // A field of the front arrives as text
 const DEFAULT_DEADLINE_PERIOD_INPUT_SCHEMA = z.object({ months: z.union([z.string(), z.number()]) });
 
-type ErrorT = ReturnType<typeof tFor<'error'>>;
-
 // The identifier and the name come from the front: checked before anything is saved
-function parseCandidateId(id: string, t: ErrorT): string {
+function parseCandidateId(id: string, t: ErrorTranslator): string {
   if (!CANDIDATE_ID_PATTERN.test(id)) {
     throw new Error(t('invalidCandidateId', { candidateId: id }));
   }
   return id;
 }
 
-function parseName(name: string, t: ErrorT): string {
+function parseName(name: string, t: ErrorTranslator): string {
   const trimmedName = name.trim();
   if (trimmedName === '') {
     throw new Error(t('emptyCandidateName'));
@@ -50,7 +48,7 @@ function parseMonths(typedMonths: string | number): number {
   const months = Number(typedMonths);
   if (!Number.isSafeInteger(months) || months < 1) {
     // Shared by every Candidate: in the default locale
-    throw new Error(tFor(DEFAULT_LOCALE, 'error')('invalidDefaultDeadlinePeriod'));
+    throw new Error(defaultErrorTranslator()('invalidDefaultDeadlinePeriod'));
   }
   return months;
 }

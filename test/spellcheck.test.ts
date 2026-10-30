@@ -42,11 +42,6 @@ function moduleCopy({ name = 'COPY_FR', comment = 'What the module tells', label
   return `// ${comment}\nconst ${name} = { unreachable: '${label}' };\n`;
 }
 
-// A module's Parameter label, in both locales
-function moduleLabel({ fr = 'Titre recherché', en = 'Searched title' }): string {
-  return `export const TITLE = { label: { fr: '${fr}', en: '${en}' } };\n`;
-}
-
 // The command a configuration file runs, as written there
 function commandOf(filePath: string, pattern: RegExp): string {
   const command = pattern.exec(readFileSync(path.join(ROOT_DIRECTORY, filePath), 'utf8'))?.[1];
@@ -108,12 +103,11 @@ describe('spellcheck', () => {
     expect(isSpelledRight('src/modules/pep/copy.ts', moduleCopy({ comment: 'Les offres du candidat' }))).toBe(false);
   });
 
-  it('checks the fr label of a module with the French dictionary, and nothing else of it in French', () => {
-    expect(isSpelledRight('src/modules/pep/index.ts', moduleLabel({}))).toBe(true);
-    expect(isSpelledRight('src/modules/pep/index.ts', moduleLabel({ fr: 'Titre recherchéé' }))).toBe(false);
-    expect(isSpelledRight('src/modules/pep/index.ts', moduleLabel({ fr: 'Searched title' }))).toBe(false);
-    expect(isSpelledRight('src/modules/pep/index.ts', moduleLabel({ en: 'Enregistrer la lettre' }))).toBe(false);
-    expect(isSpelledRight('src/modules/pep/index.ts', `// Le libellé\n${moduleLabel({})}`)).toBe(false);
+  it('keeps the French of a module in its copy file, its Parameter labels included', () => {
+    expect(isSpelledRight('src/modules/pep/copy.ts', moduleCopy({ label: 'Titre recherché' }))).toBe(true);
+    expect(isSpelledRight('src/modules/pep/copy.ts', moduleCopy({ label: 'Titre recherchéé' }))).toBe(false);
+    const inlineLabel = "export const TITLE = { label: { fr: 'Enregistrer la lettre', en: 'Save the Letter' } };\n";
+    expect(isSpelledRight('src/modules/pep/index.ts', inlineLabel)).toBe(false);
   });
 
   it('lets the redirects match a former French name, never use one elsewhere', () => {
@@ -141,7 +135,9 @@ describe('spellcheck', () => {
   it.each(WIRING_LIST)('runs both passes in $name', ({ command }) => {
     expect(runInSandbox(command, 'src/actions/fixture.ts', 'export const candidateList = [];\n')).toBe(0);
     expect(runInSandbox(command, 'src/actions/fixture.ts', 'export const listeCandidats = [];\n')).not.toBe(0);
-    expect(runInSandbox(command, 'src/modules/pep/index.ts', moduleLabel({}))).toBe(0);
-    expect(runInSandbox(command, 'src/modules/pep/index.ts', moduleLabel({ fr: 'Titre recherchéé' }))).not.toBe(0);
+    expect(runInSandbox(command, 'src/modules/pep/copy.ts', moduleCopy({}))).toBe(0);
+    expect(runInSandbox(command, 'src/modules/pep/copy.ts', moduleCopy({ label: 'Le site est injoignabl.' }))).not.toBe(
+      0,
+    );
   });
 });

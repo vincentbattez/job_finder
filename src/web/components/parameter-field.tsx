@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
 import type { Actions } from '#/actions/index.ts';
-import { useLocale } from '#/web/i18n.tsx';
 
 type Parameter = Awaited<ReturnType<Actions['listSources']>>[number]['parameterList'][number];
 
@@ -19,7 +18,7 @@ function valueOf(value: unknown): string {
 // A Parameter typed in, the field built from the descriptor of its module (ADR-0010). A secret one
 // always starts empty: it is write-only, and left empty it keeps the saved one (ADR-0006).
 export function ParameterField({
-  parameter: { name, label: labelByLocale, placeholder: placeholderByLocale, type, isRequired, isSecret },
+  parameter: { name, label, placeholder: placeholderOrNull, type, isRequired, isSecret },
   savedValue,
   className,
   isConfigured = false,
@@ -32,10 +31,8 @@ export function ParameterField({
   secretReference?: (input: HTMLInputElement | null) => void;
 }>) {
   const { t } = useTranslation('settings');
-  const locale = useLocale();
-  // The module gives its words in each locale, from its own folder (ADR-0010)
-  const label = labelByLocale[locale];
-  const placeholder = placeholderByLocale?.[locale] ?? '';
+  // The loader read the module's texts in the locale (translateParameters)
+  const placeholder = placeholderOrNull ?? '';
   const fieldName = `${PARAMETER_FIELD_PREFIX}${name}`;
   if (isSecret) {
     return (

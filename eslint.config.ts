@@ -104,7 +104,7 @@ export default defineConfig(
   {
     // The example address of a Home Assistant is one on the LAN, which serves plain http by default
     // (ADR-0002); no request goes to it
-    files: ['src/modules/notification-home-assistant/index.ts'],
+    files: ['src/modules/notification-home-assistant/copy.ts'],
     rules: { 'sonarjs/no-clear-text-protocols': 'off' },
   },
   {

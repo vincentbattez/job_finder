@@ -1,11 +1,13 @@
 import { z } from 'zod/v4';
 
+import { LOCALE_LIST, type Locale } from './locale.ts';
+
+export type { Locale } from './locale.ts';
+
 // The brand marks a value parsed by a domain schema, so that a raw row cannot pass for one
 // (ADR-0005); an enum stays unbranded, so that its literals can be written in the code
-// The language a Candidate reads the interface in (src/domain/catalogue/)
-export const LOCALE_SCHEMA = z.enum(['fr', 'en']);
-
-export type Locale = z.infer<typeof LOCALE_SCHEMA>;
+// The language a Candidate reads the interface in (src/domain/locale.ts, ADR-0012)
+export const LOCALE_SCHEMA = z.enum(LOCALE_LIST);
 
 // The language of a locale, in which the interactive sessions talk with the Candidate
 export const LANGUAGE_BY_LOCALE = { fr: 'French', en: 'English' } satisfies Record<Locale, string>;
@@ -347,19 +349,14 @@ export const VISUALIZATION_SCHEMA = z.object({ html: z.string() }).brand<'Domain
 
 export type Visualization = z.infer<typeof VISUALIZATION_SCHEMA>;
 
-// The words a module gives in each locale, from its own folder rather than from the catalogue, which
-// may not name it (ADR-0010)
-const LOCALIZED_TEXT_SCHEMA = z.object({ fr: z.string(), en: z.string() });
-
-export type LocalizedText = z.infer<typeof LOCALIZED_TEXT_SCHEMA>;
-
 // A Parameter as the front builds its field: typed in, a list of values, secret, or chosen among what
-// the module lists
+// the module lists. Its label and placeholder are i18next keys of the module's own namespace, whose
+// copy stays in its folder (ADR-0010, ADR-0012).
 export const PARAMETER_SCHEMA = z
   .object({
     name: z.string(),
-    label: LOCALIZED_TEXT_SCHEMA,
-    placeholder: LOCALIZED_TEXT_SCHEMA.nullable(),
+    label: z.string(),
+    placeholder: z.string().nullable(),
     type: z.enum(['text', 'url', 'list']),
     isRequired: z.boolean(),
     isSecret: z.boolean(),

@@ -1,26 +1,27 @@
 import { z } from 'zod/v4';
 
+import { textKeyOf } from '#/domain/catalogue/i18n.ts';
 import { defineNotificationChannel } from '#/notification/index.ts';
 import { parameter } from '#/parameter/index.ts';
 
 import { callNotifyService, checkConnection, listNotifyServices } from './acl/home-assistant.ts';
+import { COPY_NAMESPACE } from './copy.ts';
 
 const URL_PARAMETER = parameter(z.url(), {
-  label: { fr: 'Adresse de Home Assistant', en: 'Home Assistant address' },
+  label: textKeyOf(COPY_NAMESPACE, 'urlLabel'),
   type: 'url',
-  // On the LAN, Home Assistant serves plain http by default (ADR-0002)
-  placeholder: { fr: 'http://homeassistant.local:8123', en: 'http://homeassistant.local:8123' },
+  placeholder: textKeyOf(COPY_NAMESPACE, 'urlPlaceholder'),
 });
 
 const TOKEN_PARAMETER = parameter(z.string().min(1), {
-  label: { fr: 'Jeton d’accès longue durée', en: 'Long-lived access token' },
-  placeholder: { fr: 'Home Assistant → Profil → Sécurité', en: 'Home Assistant → Profile → Security' },
+  label: textKeyOf(COPY_NAMESPACE, 'tokenLabel'),
+  placeholder: textKeyOf(COPY_NAMESPACE, 'tokenPlaceholder'),
   isSecret: true,
 });
 
 // One of the notify services of the Home Assistant, such as notify.mobile_app_iphone_de_lea
 const SERVICE_PARAMETER = parameter(z.string().startsWith('notify.'), {
-  label: { fr: 'Service de notification', en: 'Notification service' },
+  label: textKeyOf(COPY_NAMESPACE, 'serviceLabel'),
 });
 
 // A Notification Channel through the Candidate's own Home Assistant: one of its notify services
