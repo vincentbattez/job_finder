@@ -263,6 +263,8 @@ const VERSION_DOCUMENTS_SCHEMA = z.object({
 // What the front shows of an Artifact at a glance
 const STATE_SCHEMA = z.enum(['absent', 'in_progress', 'ready', 'failed']);
 
+export type State = z.infer<typeof STATE_SCHEMA>;
+
 const ARTIFACT_VERSIONS_SCHEMA = z.object({
   artifact: ARTIFACT_SCHEMA,
   // En cours from the moment its job is queued, then that of its latest Version; absent before any

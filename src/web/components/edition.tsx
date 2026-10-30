@@ -1,6 +1,8 @@
 import { Fragment, useState } from 'react';
 import { Form } from 'react-router';
 
+import { useCatalogue } from '#/web/catalogue.ts';
+
 import type { Status } from './badge.tsx';
 import { CopyMarkdown } from './copy-command.tsx';
 import { MarkdownEditor } from './markdown-editor.tsx';
@@ -29,6 +31,7 @@ export function ArtifactDocument({
   isModifiable,
 }: Readonly<IArtifactDocument>) {
   const [editedMarkdown, setEditedMarkdown] = useState(markdown);
+  const { posting: copy } = useCatalogue();
   return (
     <figure className="document">
       <figcaption className="reference">{fileName}</figcaption>
@@ -36,18 +39,18 @@ export function ArtifactDocument({
         <Form method="post" action={`/postings/${reference}/${artifact}/document`} preventScrollReset>
           <input type="hidden" name="fileName" value={fileName} />
           <MarkdownEditor
-            label="Markdown"
+            label={copy.documentLabel}
             name="markdown"
             defaultValue={markdown}
-            placeholder={'# Titre\n\nLe texte du document, en Markdown'}
+            placeholder={copy.documentPlaceholder}
             onChange={setEditedMarkdown}
           />
           <div className="edition">
             <button type="submit" className="button--primary">
-              Enregistrer
+              {copy.save}
             </button>
             <CopyMarkdown markdown={editedMarkdown} />
-            {editedMarkdown !== markdown && <p role="status">Modifications non enregistrées</p>}
+            {editedMarkdown !== markdown && <p role="status">{copy.unsavedChanges}</p>}
           </div>
         </Form>
       ) : (
@@ -67,19 +70,14 @@ export function ChooseButton({
   artifact,
   number,
 }: Readonly<{ reference: string; artifact: string; number: number }>) {
+  const { posting: copy } = useCatalogue();
   return (
     <Form method="post" action={`/postings/${reference}/${artifact}/chosen`} preventScrollReset className="edition">
       <input type="hidden" name="number" value={number} />
-      <button type="submit">Retenir cette Version</button>
+      <button type="submit">{copy.chooseVersion}</button>
     </Form>
   );
 }
-
-const STATUS_BUTTON_LABEL_BY_STATUS: Record<Status, string> = {
-  to_apply: 'Remettre À traiter',
-  applied: 'Marquer comme Postulée',
-  archived: 'Archiver',
-};
 
 // A button for each status the action lets the Posting move to. Applied is never undone and freezes
 // the Chosen Letter, the one sent: it takes a second click, without a browser dialog.
@@ -88,6 +86,7 @@ export function StatusButtons({
   nextStatusList,
 }: Readonly<{ reference: string; nextStatusList: Status[] }>) {
   const [isConfirming, setIsConfirming] = useState(false);
+  const { posting: copy } = useCatalogue();
   const isHydrated = useIsHydrated();
   return (
     <Form method="post" action={`/postings/${reference}/status`} preventScrollReset className="edition">
@@ -95,14 +94,14 @@ export function StatusButtons({
         if (status !== 'applied') {
           return (
             <button key={status} type="submit" name="status" value={status}>
-              {STATUS_BUTTON_LABEL_BY_STATUS[status]}
+              {copy.statusButtonLabelByStatus[status]}
             </button>
           );
         }
         return isConfirming ? (
           <Fragment key={status}>
             <button type="submit" name="status" value={status} className="button--primary">
-              Confirmer : Postulée
+              {copy.confirmApplied}
             </button>
             <button
               type="button"
@@ -110,7 +109,7 @@ export function StatusButtons({
                 setIsConfirming(false);
               }}
             >
-              Annuler
+              {copy.cancel}
             </button>
           </Fragment>
         ) : (
@@ -123,13 +122,11 @@ export function StatusButtons({
               setIsConfirming(true);
             }}
           >
-            {STATUS_BUTTON_LABEL_BY_STATUS[status]}
+            {copy.statusButtonLabelByStatus[status]}
           </button>
         );
       })}
-      {nextStatusList.includes('applied') && (
-        <p>Une fois Postulée, la Lettre retenue ne change plus : c’est celle envoyée.</p>
-      )}
+      {nextStatusList.includes('applied') && <p>{copy.appliedFreezesLetter}</p>}
     </Form>
   );
 }

@@ -55,8 +55,6 @@ export interface IPostingDetail {
   recipients: IRecipients | null;
 }
 
-const NON_PRECISE = <span className="missing">Non précisé</span>;
-
 // A mail written in free text, as Avesnes publishes it, stays as published rather than a broken link
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 
@@ -69,7 +67,8 @@ export function PostingDetail({
   const { posting, jobDescription, artifactList, recipients } = detail;
   const TITLE_TAG = isPage ? 'h1' : 'h3';
   const PART_TAG = isPage ? 'h2' : 'h4';
-  const { common } = useCatalogue();
+  const { common, posting: copy } = useCatalogue();
+  const missingContact = <span className="missing">{copy.missingContact}</span>;
   const artifactsId = useId();
   const contactsId = useId();
   const recipientsId = useId();
@@ -85,19 +84,19 @@ export function PostingDetail({
           <p>{[posting.workplace, posting.employer].filter(Boolean).join(', ')}</p>
           <dl className="posting-detail__facts">
             <div>
-              <dt>Référence</dt>
+              <dt>{copy.referenceTerm}</dt>
               <dd className="reference">
                 {posting.url === null ? posting.reference : <a href={posting.url}>{posting.reference}</a>}
               </dd>
             </div>
             <div>
-              <dt>Publiée le</dt>
+              <dt>{copy.publishedAtTerm}</dt>
               <dd className="date">
                 <DateText date={posting.publishedAt} />
               </dd>
             </div>
             <div>
-              <dt>Date limite</dt>
+              <dt>{copy.deadlineTerm}</dt>
               <dd className="date">
                 <DateText date={posting.deadline} />
               </dd>
@@ -107,7 +106,7 @@ export function PostingDetail({
           {children}
         </header>
         <section className="posting-detail__part" aria-labelledby={artifactsId}>
-          <PART_TAG id={artifactsId}>Artefacts</PART_TAG>
+          <PART_TAG id={artifactsId}>{copy.artifactsHeading}</PART_TAG>
           <ul className="artifact-list">
             {artifactList.map(({ artifact, state }) => (
               <li key={artifact} data-artifact={artifact}>
@@ -120,40 +119,40 @@ export function PostingDetail({
       </div>
       <div className="posting-detail__column">
         <section className="posting-detail__part" aria-labelledby={contactsId}>
-          <PART_TAG id={contactsId}>Contacts</PART_TAG>
+          <PART_TAG id={contactsId}>{copy.contactsHeading}</PART_TAG>
           <dl className="posting-detail__contacts">
             <div>
-              <dt>Mail de candidature</dt>
+              <dt>{copy.contactLabelByField.applicationEmail}</dt>
               <dd>
                 {posting.applicationEmail !== null && EMAIL_PATTERN.test(posting.applicationEmail) ? (
                   <a href={`mailto:${posting.applicationEmail}`}>{posting.applicationEmail}</a>
                 ) : (
-                  (posting.applicationEmail ?? NON_PRECISE)
+                  (posting.applicationEmail ?? missingContact)
                 )}
               </dd>
             </div>
             <div>
-              <dt>Contact 1</dt>
-              <dd>{posting.contact1 ?? NON_PRECISE}</dd>
+              <dt>{copy.contactLabelByField.contact1}</dt>
+              <dd>{posting.contact1 ?? missingContact}</dd>
             </div>
             <div>
-              <dt>Contact 2</dt>
-              <dd>{posting.contact2 ?? NON_PRECISE}</dd>
+              <dt>{copy.contactLabelByField.contact2}</dt>
+              <dd>{posting.contact2 ?? missingContact}</dd>
             </div>
           </dl>
         </section>
         <section className="posting-detail__part" aria-labelledby={recipientsId}>
-          <PART_TAG id={recipientsId}>Destinataires recommandés</PART_TAG>
+          <PART_TAG id={recipientsId}>{copy.recipientsHeading}</PART_TAG>
           {recipients === null ? (
-            <p className="missing">La Lettre les recommande, une fois produite.</p>
+            <p className="missing">{copy.noRecipients}</p>
           ) : (
             <Recipients recipients={recipients} />
           )}
         </section>
         <section className="posting-detail__part" aria-labelledby={jobDescriptionId}>
-          <PART_TAG id={jobDescriptionId}>Fiche de poste</PART_TAG>
+          <PART_TAG id={jobDescriptionId}>{copy.jobDescriptionHeading}</PART_TAG>
           <details className="posting-detail__job-description">
-            <summary>Lire la Fiche de poste</summary>
+            <summary>{copy.readJobDescription}</summary>
             <Markdown markdown={jobDescription} />
           </details>
         </section>

@@ -170,3 +170,19 @@ await actions.importJobDescription({
   markdown: '# Court clerk – Lille judicial court\n\nApply by 30 November 2026.\n',
 });
 await actions.runQueuedJobs();
+
+// Oliver reads it in English too, and has his Posting's Status changed by e2e/locale.test.ts only:
+// imported the same way, then given a Research
+await actions.createCandidate({ id: 'oliver', name: 'Oliver', locale: 'en' });
+const { posting: oliverPosting } = await actions.importJobDescription({
+  candidateId: 'oliver',
+  fileName: 'registry-officer-douai.md',
+  markdown: '# Registry officer – Douai court of appeal\n\nApply by 15 December 2026.\n',
+});
+await actions.runQueuedJobs();
+// Its reference comes from its content: versionOf names its Version from its first characters
+RUN_BY_VERSION[`${oliverPosting.reference.slice(0, BETHUNE_REFERENCE.length)} research v1`] = researchRun(
+  'Research: the Douai court of appeal',
+);
+await actions.runModule({ module: 'research', reference: oliverPosting.reference });
+await actions.runQueuedJobs();
