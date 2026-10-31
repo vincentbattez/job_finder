@@ -4,12 +4,12 @@ import { useFetcher } from 'react-router';
 
 import type { ErrorCode } from '#/actions/index.ts';
 import { isPending } from '#/actions/state.ts';
+import { StateBadge, type State } from '#/web/components/badge.tsx';
+import { useIsHydrated } from '#/web/components/use-is-hydrated.ts';
+import { WorkerTask } from '#/web/components/worker-task.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
-import { StateBadge, type State } from './badge.tsx';
-import { useIsHydrated } from './use-is-hydrated.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
-import { WorkerTask } from './worker-task.tsx';
 
 // The worker runs the extraction in its own process (ADR-0003), so its state is read again until done,
 // and the page says when no worker moves it

@@ -1,32 +1,49 @@
-import { useId } from 'react';
+import { Fragment, useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { interviewSectionIdOf } from '#/actions/interview-section.ts';
 
 import { Badge, StateBadge } from './badge.tsx';
 import { CopyCommand } from './copy-command.tsx';
 import { DateText } from './date.tsx';
-import { ArtifactDocument, ChooseButton } from './edition.tsx';
 import { Markdown } from './markdown.tsx';
 import { InstructionsOrigin } from './module-instructions.tsx';
-import { ModuleLaunch } from './module-launch.tsx';
 import { STATE_BY_VERSION_STATE, type IArtifactVersions } from './posting-detail.tsx';
 
 import './artifact-versions.css';
 
 type VersionDocuments = IArtifactVersions['versionList'][number];
+type VersionDocument = VersionDocuments['documentList'][number];
+
+// What its Container hands in: the launch of the module, and for a Version its choice and its files
+interface IArtifactVersionsSlots {
+  launch: ReactNode;
+  renderChooseButton: (number: number) => ReactNode;
+  renderDocument: (document: VersionDocument) => ReactNode;
+}
 
 // A Visualization shows in a frame that runs none of its scripts: the page comes from an AI session
 function VersionFiles({
   reference,
+  interviewNumber,
   artifact,
   version,
   documentList,
-}: Readonly<Omit<VersionDocuments, 'isChoosable'> & { reference: string; artifact: IArtifactVersions['artifact'] }>) {
+  renderDocument,
+}: Readonly<
+  Omit<VersionDocuments, 'isChoosable'> &
+    Pick<IArtifactVersionsSlots, 'renderDocument'> & {
+      reference: string;
+      interviewNumber: number | null;
+      artifact: IArtifactVersions['artifact'];
+    }
+>) {
   const { t } = useTranslation('posting');
-  if (artifact === 'visualization' && version.state === 'ready') {
+  if (artifact === 'visualization' && interviewNumber !== null && version.state === 'ready') {
     return (
       <div className="artifact-versions__visualization">
         <iframe
-          src={`/postings/${reference}/visualization/${String(version.number)}`}
+          src={`/postings/${reference}/interviews/${String(interviewNumber)}/visualization/${String(version.number)}`}
           sandbox=""
           title={t('visualizationFrameTitle', { versionNumber: version.number })}
         />
@@ -39,40 +56,42 @@ function VersionFiles({
   return (
     <>
       {documentList.map((document) => (
-        <ArtifactDocument key={document.fileName} reference={reference} artifact={artifact} {...document} />
+        <Fragment key={document.fileName}>{renderDocument(document)}</Fragment>
       ))}
     </>
   );
 }
 
 // Every Version of an Artifact, oldest first: the Chosen Version opens, the others stay folded,
-// and so do the Instructions each was produced with, to compare two Versions
+// and so do the Instructions each was produced with, to compare two Versions. An Artifact of an
+// Interview has its section under that Interview, a heading a level below.
 export function ArtifactVersions({
   reference,
+  interviewNumber = null,
   artifact,
-  state,
-  failure,
-  notificationFailure,
-  module,
   isEditable,
   versionList,
-  workerFailure,
-}: Readonly<IArtifactVersions & { reference: string }>) {
+  launch,
+  renderChooseButton,
+  renderDocument,
+}: Readonly<
+  Pick<IArtifactVersions, 'artifact' | 'isEditable' | 'versionList'> &
+    IArtifactVersionsSlots & { reference: string; interviewNumber?: number | null }
+>) {
   const { t } = useTranslation('posting');
   const headingId = useId();
+  const HEADING_TAG = interviewNumber === null ? 'h2' : 'h4';
+  const editArgumentList = [reference, artifact, ...(interviewNumber === null ? [] : [String(interviewNumber)])];
   return (
-    <section className="artifact-versions" id={artifact} data-artifact={artifact} aria-labelledby={headingId}>
-      <h2 id={headingId}>{t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' })}</h2>
-      <ModuleLaunch
-        reference={reference}
-        artifact={artifact}
-        state={state}
-        failure={failure}
-        notificationFailure={notificationFailure}
-        module={module}
-        workerFailure={workerFailure}
-      />
-      {isEditable && <CopyCommand command={`jf edit ${reference} ${artifact}`} />}
+    <section
+      className="artifact-versions"
+      id={interviewNumber === null ? artifact : interviewSectionIdOf(interviewNumber, artifact)}
+      data-artifact={artifact}
+      aria-labelledby={headingId}
+    >
+      <HEADING_TAG id={headingId}>{t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' })}</HEADING_TAG>
+      {launch}
+      {isEditable && <CopyCommand command={`jf edit ${editArgumentList.join(' ')}`} />}
       {versionList.length === 0 ? (
         <p className="artifact-versions__missing">{t('noVersion')}</p>
       ) : (
@@ -91,12 +110,19 @@ export function ArtifactVersions({
                     <DateText date={version.createdAt} />
                   </span>
                 </summary>
-                {isChoosable && <ChooseButton reference={reference} artifact={artifact} number={version.number} />}
+                {isChoosable && renderChooseButton(version.number)}
                 <details className="artifact-versions__instructions">
                   <summary>{t('versionInstructions')}</summary>
                   <Markdown markdown={version.instructions} />
                 </details>
-                <VersionFiles reference={reference} artifact={artifact} version={version} documentList={documentList} />
+                <VersionFiles
+                  reference={reference}
+                  interviewNumber={interviewNumber}
+                  artifact={artifact}
+                  version={version}
+                  documentList={documentList}
+                  renderDocument={renderDocument}
+                />
               </details>
             </li>
           ))}

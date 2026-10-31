@@ -15,10 +15,11 @@ import { readCandidate } from '#/web/candidate.server.ts';
 import { CopyCommand } from '#/web/components/copy-command.tsx';
 import { EmptyState } from '#/web/components/empty-state.tsx';
 import { FactsForm } from '#/web/components/facts-form.tsx';
-import { NotificationChannelForm } from '#/web/components/notification-channel.tsx';
 import { ProfileFile, ProfileFileCreation } from '#/web/components/profile-file.tsx';
-import { Uploads } from '#/web/components/uploads.tsx';
-import { Watches } from '#/web/components/watches.tsx';
+import { NotificationChannelForm } from '#/web/containers/notification-channel.tsx';
+import { renderPostForm } from '#/web/containers/post-form.tsx';
+import { Uploads } from '#/web/containers/uploads.tsx';
+import { Watches } from '#/web/containers/watches.tsx';
 import { translateParameters } from '#/web/parameters.server.ts';
 import { relayAction, relayLoader } from '#/web/relay-action.server.ts';
 
@@ -130,7 +131,7 @@ export default function Profile() {
             <p>{t('profile.intro')}</p>
           </div>
           {/* Keyed by their content, so that a save of one shows in the other */}
-          <FactsForm key={JSON.stringify(sectionList)} sectionList={sectionList} />
+          <FactsForm key={JSON.stringify(sectionList)} sectionList={sectionList} renderForm={renderPostForm} />
           <Uploads uploadList={uploadList} />
           {profileFileList.length === 0 ? (
             <EmptyState>
@@ -144,6 +145,7 @@ export default function Profile() {
                 key={`${fileName}:${markdown}`}
                 fileName={fileName}
                 markdown={markdown}
+                renderForm={renderPostForm}
                 error={
                   refusal !== null && !refusal.isCreation && refusal.fileName === fileName ? refusal.message : null
                 }
@@ -154,6 +156,7 @@ export default function Profile() {
           <ProfileFileCreation
             key={profileFileList.map(({ fileName }) => fileName).join('/')}
             error={refusal?.isCreation === true ? refusal.message : null}
+            renderForm={renderPostForm}
           />
           <Watches watchList={watchList} sourceList={sourceList} />
           {channel !== null && <NotificationChannelForm channel={channel} moduleList={channelModuleList} />}

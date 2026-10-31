@@ -4,6 +4,8 @@ export const SETTINGS_EN = {
   // The top bar and the page shown when another fails
   layout: {
     navigationLabel: 'Pages',
+    homeLink: 'Home',
+    applicationsLink: 'Applications',
     postingsLink: 'Postings',
     profileLink: 'Profile',
     instructionsLink: 'Instructions',

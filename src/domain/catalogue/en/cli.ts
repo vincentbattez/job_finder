@@ -13,6 +13,7 @@ export const CLI_EN = {
   obsoleteConfig:
     '{{configPath}} is no longer read: its content is in the database, and the Candidates, their Watches and the Default Deadline Period are now set in the front. Delete it.',
   unreadableFile: 'Cannot read the file {{filePath}} ({{reason}}). Check its path.',
+  fileWriteFailed: 'Cannot write the file {{filePath}} ({{reason}}). Check that its folder is writable.',
 
   // A Posting on one line. The Source gives the Deadline as a day, at midnight UTC.
   deadline: '{{deadline, datetime(timeZone: UTC)}}',
@@ -32,6 +33,7 @@ export const CLI_EN = {
   noPosting: 'No Posting for {{candidateName}}: “jf detect” looks for new Postings.',
   artifactQuestion: 'Artifact to edit',
   chosenVersionLabel: '{{artifactLabel}} (v{{number}}, chosen)',
+  chosenInterviewVersionLabel: '{{artifactLabel}} of Interview {{interviewNumber}} (v{{number}}, chosen)',
   noArtifact: 'Posting {{reference}} has no Artifact to edit: “jf run research {{reference}}” produces its Research.',
 
   // jf candidates, jf list
@@ -61,12 +63,13 @@ export const CLI_EN = {
 
   // jf run
   runDescription:
-    'Queues a new Version of an Artifact, which the worker produces with Claude Code; --wait waits for the end: jf run research|letter|brief|visualization <posting> [--wait]',
-  runUsage: 'Usage: jf run <module> <posting> [--wait], for example jf run research 2026-2445600.',
+    'Queues a new Version of an Artifact, which the worker produces with Claude Code; --wait waits for the end: jf run research|letter|portrait|brief|visualization <posting> [<interview>] [--wait]',
+  runUsage:
+    'Usage: jf run <module> <posting> [<interview>] [--wait], for example jf run research 2026-2445600, or jf run brief 2026-2445600 1 for the Interview Brief of Interview 1.',
   queued: '{{module}} of Posting {{reference}} queued (job {{jobId}}).\n',
   runQueued: 'The worker will produce it. “{{versionsCommand}}” follows its Versions.\n',
   runWaiting: 'Waiting for the worker (lpm worker service): Claude Code may take several minutes…\n',
-  runFailed: '{{name}} failed ({{errorCode}}):\n{{log}}\nRun it again: jf run {{module}} {{reference}}',
+  runFailed: '{{name}} failed ({{errorCode}}):\n{{log}}\nRun it again: {{command}}',
   runReady: '{{name}} ready and chosen. “{{versionsCommand}}” lists its Versions.\n',
 
   // jf recipients
@@ -82,8 +85,10 @@ export const CLI_EN = {
   justification: 'Justification: {{text}}',
 
   // jf versions, jf choose
-  versionsDescription: 'Lists the Versions of an Artifact: jf versions <posting> research',
-  versionsUsage: 'Usage: jf versions <posting> <artifact>, for example jf versions 2026-2445600 research.',
+  versionsDescription:
+    'Lists the Versions of an Artifact: jf versions <posting> research, or jf versions <posting> brief <interview> for an Artifact of an Interview',
+  versionsUsage:
+    'Usage: jf versions <posting> <artifact> [<interview>], for example jf versions 2026-2445600 research, or jf versions 2026-2445600 brief 1.',
   versionStateLabelByState: { running: 'in progress', ready: 'ready', failed: 'failed' },
   lastJobFailed: 'Last launch failed ({{errorCode}}):\n{{log}}\n',
   lastJobStalled: 'Last launch not moving ({{errorCode}}):\n{{message}}\n',
@@ -91,24 +96,30 @@ export const CLI_EN = {
   candidateInstructions: 'Candidate’s Instructions',
   defaultInstructions: 'Default Instructions',
   createdAt: '{{createdAt, datetime(dateStyle: short; timeStyle: medium; timeZone: Europe/Paris)}}',
-  chooseDescription: 'Changes the Chosen Version of an Artifact: jf choose <posting> research <version>',
-  chooseUsage: 'Usage: jf choose <posting> <artifact> <version>, for example jf choose 2026-2445600 research 2.',
+  chooseDescription:
+    'Changes the Chosen Version of an Artifact: jf choose <posting> research <version>, or jf choose <posting> brief <version> <interview>',
+  chooseUsage:
+    'Usage: jf choose <posting> <artifact> <version> [<interview>], for example jf choose 2026-2445600 research 2, or jf choose 2026-2445600 brief 2 1.',
   versionChosen: '{{artifact}} {{version}} chosen for Posting {{reference}}.\n',
 
-  // jf apply, jf archive, jf to-apply
+  // jf apply, jf hired, jf rejected, jf in-progress, jf archive, jf unarchive
   statusCommandDescription: '{{description}}: jf {{name}} <posting>',
   statusUsage: 'Usage: jf {{name}} <posting>. “jf list <candidate>” lists the Postings.',
   statusChanged: '{{reference}}: {{statusLabel}}\n',
-  applyDescription:
-    'Moves a Posting to Applied, with or without a Letter, which freezes its Letter for good; moves an Applied then Archived Posting back to Applied',
-  archiveDescription: 'Moves a Posting to Archived, Applied or not',
-  toApplyDescription: 'Moves an Archived Posting that was never Applied back to To Apply',
+  applyDescription: 'Moves a Posting to Applied, with or without a Letter, which freezes its Letter for good',
+  hiredDescription: 'Marks an Application Hired: the Candidate gets the job',
+  rejectedDescription: 'Marks an Application Rejected: the employer did not pick the Candidate',
+  inProgressDescription: 'Puts a Hired or Rejected Application back In progress, which is Applied',
+  archiveDescription: 'Archives a Posting, whatever its Status, which it keeps',
+  unarchiveDescription: 'Unarchives a Posting, which finds its Status as it was',
+  postingArchived: '{{reference}}: Archived\n',
+  postingUnarchived: '{{reference}}: no longer Archived\n',
 
   // jf profile, jf edit
   profileDescription: 'Completes the Profile of a Candidate with Claude Code: jf profile <candidate>',
   profileUsage: 'Usage: jf profile <candidate>. “jf candidates” lists the Candidates.',
   editDescription:
-    'Edits an Artifact with Claude Code, Posting and Artifact offered if missing: jf edit [<posting> [<artifact>]]',
+    'Edits an Artifact with Claude Code, Posting and Artifact offered if missing: jf edit [<posting> [<artifact> [<interview>]]]',
 
   // jf instructions
   instructionsDescription:
@@ -120,6 +131,29 @@ export const CLI_EN = {
   typeInstructions: 'Type or paste the Instructions, then Ctrl-D:\n',
   instructionsReplaced: '{{module}} will follow these Candidate’s Instructions in its next Versions.\n',
   instructionsDeleted: '{{module}} goes back to its default Instructions.\n',
+
+  // jf notes
+  notesDescription:
+    'Shows or replaces (read on the standard input) the Notes of a Posting, whatever its Status: jf notes <posting> [replace]',
+  notesUsage: 'Usage: jf notes <posting> [replace]. “jf list <candidate>” lists the Postings.',
+  typeNotes: 'Type or paste the Notes in Markdown, then Ctrl-D:\n',
+  notesReplaced: 'Notes of {{reference}} saved.\n',
+  // jf interviews
+  interviewsDescription:
+    'Lists the Interviews of an Application by date, or adds, edits or deletes one, the start in Paris time: jf interviews <posting> [add | edit <number> | delete <number>] [--start 2026-11-19T14:00] [--duration <minutes>] [--place <place>] [--interviewers <text>]',
+  interviewsUsage:
+    'Usage: jf interviews <posting> [add --start 2026-11-19T14:00 | edit <number> | delete <number>] [--duration <minutes>] [--place <place>] [--interviewers <text>]. “jf interviews <posting>” lists the numbers.',
+  noInterview: 'No Interview for {{reference}}.\n',
+  interviewMinutes: '{{minutes}} min',
+  interviewAdded: 'Interview added to {{reference}}.\n',
+  interviewEdited: 'Interview {{number}} of {{reference}} saved.\n',
+  interviewDeleted: 'Interview {{number}} of {{reference}} deleted.\n',
+  // jf ical
+  icalDescription:
+    'Writes the iCal file of an Interview in the current folder, its links on the address of the front: jf ical <posting> <interview> [--origin http://mac-mini.local:5180]',
+  icalUsage:
+    'Usage: jf ical <posting> <interview> [--origin <address of the front>]. “jf interviews <posting>” lists the numbers.',
+  icalWritten: 'iCal file written: {{filePath}}\n',
 
   // The worker, in lpm logs worker
   workerReady: 'Worker ready: it runs the queued jobs, one at a time.\n',

@@ -1,32 +1,23 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { findOverflowing } from './overflow.ts';
+
 // The front runs on the data that test/seed-front.ts made through the actions, with the HTTP of
 // the PEP Source recorded on 2026-10-29: Léa follows the attaché de justice Postings, Camille has
 // no Watch
 const BETHUNE_TITLE = 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE';
 
+// The menu leads to the home of the Candidate chosen, then their Postings open at /postings
 async function chooseCandidate(page: Page, name: string) {
+  await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption(name);
   await page.getByRole('button', { name: 'Choisir' }).click();
-}
-
-// Léa reads the front on her phone through the VPN (ADR-0002). overflow-x: clip hides a horizontal
-// scrollbar, so the check is that nothing runs past the right edge, where it would be cut off. The
-// map lays its tiles and points out past its edges and clips them: only the map itself counts. On a
-// cold dev server the stylesheet may apply after the page shows: the check polls until it does.
-function findOverflowing(page: Page): Promise<string[]> {
-  return page.locator('body').evaluate((body) =>
-    [...body.querySelectorAll('*')]
-      .filter((element) => element.parentElement?.closest('.leaflet-container') === null)
-      .filter((element) => element.getBoundingClientRect().right > body.ownerDocument.documentElement.clientWidth)
-      .map((element) => element.outerHTML.slice(0, 80)),
-  );
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Bonjour ${name}`);
+  await page.goto('/postings');
 }
 
 test.describe('Postings of a Candidate', () => {
   test('lists the Postings of the Candidate chosen in the menu', async ({ page }) => {
-    await page.goto('/');
-
     await chooseCandidate(page, 'Léa');
 
     const row = page.getByRole('row', { name: /2026-2445600/ });
@@ -44,11 +35,10 @@ test.describe('Postings of a Candidate', () => {
   });
 
   test('remembers the chosen Candidate on the next visit', async ({ page }) => {
-    await page.goto('/');
     await chooseCandidate(page, 'Camille');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Camille');
 
-    await page.goto('/');
+    await page.goto('/postings');
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Camille');
     await expect(page.getByRole('combobox', { name: 'Candidat' })).toHaveValue('camille');
@@ -56,7 +46,6 @@ test.describe('Postings of a Candidate', () => {
   });
 
   test('opens a Posting with its Job Description and its raw contacts', async ({ page }) => {
-    await page.goto('/');
     await chooseCandidate(page, 'Léa');
 
     await page.getByRole('link', { name: BETHUNE_TITLE }).click();
@@ -110,7 +99,8 @@ test.describe('Postings of a Candidate', () => {
       'draft.md',
       'letter.md',
     ]);
-    await expect(page.getByRole('region', { name: 'Fiche d’entretien' })).toContainText('Aucune Version');
+    // The Interview Brief belongs to an Interview, which a To Apply Posting has none of
+    await expect(page.getByRole('region', { name: 'Fiche d’entretien' })).toHaveCount(0);
   });
 
   test('copies the jf edit command of an Artifact', async ({ page, context }) => {
@@ -131,7 +121,6 @@ test.describe('Postings of a Candidate', () => {
 
   test('fits a phone screen, the list as the Posting page', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/');
     await chooseCandidate(page, 'Léa');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Léa');
 
@@ -145,7 +134,7 @@ test.describe('Postings of a Candidate', () => {
   });
 
   test('asks who is there before showing any Posting', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/postings');
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Qui consulte ses Offres ?');
     await expect(page.getByRole('table')).toHaveCount(0);

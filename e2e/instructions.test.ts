@@ -6,7 +6,7 @@ async function openInstructionsOfSacha(page: Page) {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Sacha');
   await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Sacha');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Sacha');
   await page.getByRole('link', { name: 'Consignes', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Consignes de Sacha');
 }
@@ -18,6 +18,7 @@ test.describe('Instructions of a Candidate', () => {
     await expect(page.getByRole('heading', { level: 2 })).toHaveText([
       'Recherche',
       'Lettre',
+      'Portrait',
       'Fiche d’entretien',
       'Visualisation',
     ]);
@@ -26,7 +27,7 @@ test.describe('Instructions of a Candidate', () => {
     await expect(letter.getByRole('textbox')).toHaveValue(/^Écris une lettre de motivation d'une page/);
     // The fixed part of every prompt holds this rule: no field of the page carries it
     const textboxList = await page.getByRole('textbox').all();
-    expect(textboxList).toHaveLength(4);
+    expect(textboxList).toHaveLength(5);
     for (const textbox of textboxList) {
       await expect(textbox).not.toHaveValue(/N'invente jamais un fait/);
     }

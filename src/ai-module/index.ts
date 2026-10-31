@@ -1,4 +1,4 @@
-import { JOB_DESCRIPTION_FILE_NAME, type Artifact, type Locale, type Posting } from '#/domain/index.ts';
+import { JOB_DESCRIPTION_FILE_NAME, type Artifact, type Interview, type Locale, type Posting } from '#/domain/index.ts';
 
 // An Artifact is written for the employer: in the language of the Job Description, whatever the
 // Candidate's locale and the language of their Instructions (spec #65). Each fixed part states it.
@@ -6,12 +6,27 @@ export function describeArtifactLanguage(artifactName: string): string {
   return `Write the ${artifactName} in the language of the Job Description, \`${JOB_DESCRIPTION_FILE_NAME}\`, whatever the language of this prompt and of the Candidate's Instructions.`;
 }
 
+// A Chosen Version the module reads: of its Posting, of its Interview or of a previous one (interviewNumber),
+// or of another Posting
+export interface IReadVersion {
+  reference: string;
+  artifact: Artifact;
+  // The number of the Interview the Version is attached to, null for a Version of the Posting
+  interviewNumber: number | null;
+  directory: string;
+  filePath: string;
+}
+
 // The output folder is relative to the Posting's folder, where the session runs; what it reads is
 // named by absolute paths
 export interface IPromptInput {
   posting: Posting;
+  // The Interview it prepares, for a module attached to one; null otherwise
+  interview: Interview | null;
+  // The Notes of the Posting, for a module that reads them; null otherwise
+  notes: string | null;
   outputDirectory: string;
-  readVersionList: { reference: string; artifact: Artifact; directory: string; filePath: string }[];
+  readVersionList: IReadVersion[];
   profileDirectory: string;
 }
 
@@ -33,10 +48,18 @@ export interface IAiModule {
   composePrompt(input: IPromptInput): string;
   // Runs once the files are valid, before the Version is ready
   completeVersion?(versionDirectory: string): void;
-  // The Artifacts of the Posting the module reads: it refuses to run until each has a Chosen Version
+  // Whether its Versions are attached to an Interview, numbered and chosen per Interview, rather than
+  // to the Posting: it then runs for a given Interview
+  isAttachedToInterview?: boolean;
+  // The Artifacts the module reads: it refuses to run until each has a Chosen Version. Each is looked up
+  // where it is attached: on the Posting (Research, Letter) or on the Interview the module runs for.
   requiredArtifactList?: readonly Artifact[];
-  // The Artifacts of the Posting the module also reads, when they have a Chosen Version
+  // The Artifacts the module also reads, when they have a Chosen Version, looked up the same way
   optionalArtifactList?: readonly Artifact[];
+  // The Artifacts whose Chosen Version it reads on each Interview of the Posting before its own
+  previousInterviewArtifactList?: readonly Artifact[];
+  // Whether it reads the Notes of the Posting
+  isReadingNotes?: boolean;
   // Whether the module reads the Profile of the Candidate
   isReadingProfile?: boolean;
   // Whether it reads the Chosen Artifacts of the Posting that a Repost publishes again

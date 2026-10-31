@@ -15,6 +15,10 @@
     --tint: var(--p-tue);
   }
 
+  .module-instructions[data-artifact='portrait'] {
+    --tint: var(--p-thu);
+  }
+
   .module-instructions[data-artifact='interview_brief'] {
     --tint: var(--p-wed);
   }

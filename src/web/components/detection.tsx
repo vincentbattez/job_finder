@@ -1,11 +1,6 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useState, type ReactNode, type Ref } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useFetcher } from 'react-router';
-
-import type { IRefusal } from '#/web/failure.ts';
-
-import { useIsHydrated } from './use-is-hydrated.ts';
-import { useRevalidateWhile } from './use-revalidate-while.ts';
+import { Link } from 'react-router';
 
 import './detection.css';
 
@@ -234,20 +229,25 @@ export function DetectionResult({ detection }: Readonly<{ detection: IRecordedDe
   );
 }
 
-// Runs a Detection of the Candidate's Watches without waiting for the daily one. While any Detection
-// runs, the front's or the daily one, its progress replaces the button and the page reads it again;
-// then its verdict stays, as the last Detection, until the next one (#63).
+// While any Detection runs, the front's or the daily one, its progress replaces the button its
+// Container hands in; then its verdict stays, as the last Detection, until the next one (#63)
 export function Detection({
   overview,
-}: Readonly<{ overview: { running: IRecordedDetection | null; last: IRecordedDetection | null } }>) {
-  const fetcher = useFetcher<IRefusal>();
-  const isHydrated = useIsHydrated();
-  const { t } = useTranslation('posting');
-  const panelReference = useRef<HTMLDivElement>(null);
-  const { running, last } = overview;
+  isStarting,
+  error,
+  runForm,
+  ref,
+}: Readonly<{
+  overview: { running: IRecordedDetection | null; last: IRecordedDetection | null };
   // Between the click and the reload of the page, the Detection is already starting
-  const isRunning = running !== null || fetcher.state !== 'idle';
-  useRevalidateWhile(running !== null);
+  isStarting: boolean;
+  error: string | null | undefined;
+  runForm: ReactNode;
+  ref: Ref<HTMLDivElement>;
+}>) {
+  const { t } = useTranslation('posting');
+  const { running, last } = overview;
+  const isRunning = running !== null || isStarting;
   let announcement = '';
   if (isRunning) {
     announcement = t('detection.announceRunning', { step: t(`detection.stepByStep.${currentStepOf(running)}`) });
@@ -256,7 +256,7 @@ export function Detection({
   }
   return (
     // Focused when the button that started it goes away, so the focus stays on the page
-    <div className="detection" ref={panelReference} tabIndex={-1}>
+    <div className="detection" ref={ref} tabIndex={-1}>
       <p role="status" aria-live="polite" className="visually-hidden">
         {announcement}
       </p>
@@ -264,20 +264,10 @@ export function Detection({
         <DetectionProgress detection={running} />
       ) : (
         <>
-          <fetcher.Form
-            method="post"
-            action="/detect"
-            onSubmit={() => {
-              panelReference.current?.focus();
-            }}
-          >
-            <button className="button button--primary" type="submit" disabled={!isHydrated}>
-              {last?.error == null ? t('detection.run') : t('detection.runAgain')}
-            </button>
-          </fetcher.Form>
-          {fetcher.data?.error != null && (
+          {runForm}
+          {error != null && (
             <p role="alert" className="detection__error">
-              {fetcher.data.error}
+              {error}
             </p>
           )}
           {last === null ? (

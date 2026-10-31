@@ -15,7 +15,6 @@ test.describe('French routes', () => {
       englishPath: '/postings/2026-2445600/interview_brief/document',
     },
     { frenchPath: '/offres/2026-2445600/recherche/retenue', englishPath: '/postings/2026-2445600/research/chosen' },
-    { frenchPath: '/offres/2026-2445600/visualisation/1', englishPath: '/postings/2026-2445600/visualization/1' },
   ]) {
     test(`redirects ${frenchPath} permanently to ${englishPath}`, async ({ page }) => {
       const response = await page.request.get(`${frenchPath}?from=bookmark`, { maxRedirects: 0 });
@@ -33,6 +32,14 @@ test.describe('French routes', () => {
 
     expect(response.status()).toBe(301);
     expect(response.headers().location).toBe('/?city=Melun&region=%C3%8Ele-de-France&archived=on');
+  });
+
+  // The Posting list moved from the home to /postings: a filter saved before keeps filtering there
+  test('redirects a filter of the Posting list saved on the home permanently to /postings', async ({ page }) => {
+    const response = await page.request.get('/?city=Melun&archived=on', { maxRedirects: 0 });
+
+    expect(response.status()).toBe(301);
+    expect(response.headers().location).toBe('/postings?city=Melun&archived=on');
   });
 
   test('opens the English page from a French link', async ({ page }) => {

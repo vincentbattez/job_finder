@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useFetcher } from 'react-router';
 
-import { DropZone } from './drop-zone.tsx';
+import { DropZone } from '#/web/components/drop-zone.tsx';
 
 // The shape of the import action: the job of the extraction, with its Posting
 interface IImport {

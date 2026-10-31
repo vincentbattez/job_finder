@@ -27,14 +27,17 @@ describe('an error', () => {
     const { actions } = await detectPostings();
 
     await expect(actions[call]({ reference: REFERENCE, artifact: 'lettr', number: '1' })).rejects.toThrow(
-      'Artefact inconnu : lettr. Artefacts : research, letter, brief, visualization.',
+      'Artefact inconnu : lettr. Artefacts : research, letter, portrait, brief, visualization.',
     );
   });
 
   it('takes the alias of an Artifact, as jf run does', async () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
 
-    expect(await actions.listVersions({ reference: REFERENCE, artifact: 'brief' })).toEqual([]);
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: '', interviewers: '' });
+
+    expect(await actions.listVersions({ reference: REFERENCE, artifact: 'brief', interview: 1 })).toEqual([]);
   });
 
   it('tells where to find the Versions of an Artifact when one is unknown', async () => {
@@ -151,10 +154,10 @@ async function createEmma() {
 describe('an error for an English-speaking Candidate', () => {
   it('refuses a Status the Posting cannot move to, in English', async () => {
     const { actions, reference } = await createEmma();
-    await actions.changeStatus({ reference, status: 'archived' });
+    await actions.changeStatus({ reference, status: 'applied' });
 
-    await expect(actions.changeStatus({ reference, status: 'applied' })).rejects.toThrow(
-      `Posting ${reference} is Archived: it can only move to To Apply.`,
+    await expect(actions.changeStatus({ reference, status: 'to_apply' })).rejects.toThrow(
+      `Posting ${reference} was Applied: it never goes back to To Apply, since its Chosen Letter is the one sent.`,
     );
   });
 
@@ -170,7 +173,7 @@ describe('an error for an English-speaking Candidate', () => {
     const { actions, reference } = await createEmma();
 
     await expect(actions.listVersions({ reference, artifact: 'lettr' })).rejects.toThrow(
-      'Unknown Artifact: lettr. Artifacts: research, letter, brief, visualization.',
+      'Unknown Artifact: lettr. Artifacts: research, letter, portrait, brief, visualization.',
     );
   });
 

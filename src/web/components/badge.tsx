@@ -6,22 +6,45 @@ import type { State } from '#/actions/state.ts';
 
 import './badge.css';
 
-// The statuses as the actions give them
+// The stored Status, as the actions give it
 export type Status = Awaited<ReturnType<Actions['listPostings']>>[number]['status'];
+
+// The Status as the actions compute it, Invited or Interviewed from the Interviews (ADR-0009)
+export type Step = Awaited<ReturnType<Actions['listPostings']>>[number]['step'];
+
+// What the badge and the map read of a Posting
+interface IShownPosting {
+  step: Step;
+  isExpired: boolean;
+  archivedAt: Date | null;
+}
 
 // Expired comes from the Deadline, whatever the status (GLOSSARY.md). The badge and the map
 // show it only in place of To Apply: an Applied Posting stays green past its Deadline.
-export function showStatus(status: Status, isExpired: boolean): Status | 'expired' {
-  return status === 'to_apply' && isExpired ? 'expired' : status;
+export function showStatus({ step, isExpired }: Pick<IShownPosting, 'step' | 'isExpired'>): Step | 'expired' {
+  return step === 'to_apply' && isExpired ? 'expired' : step;
 }
 
-export function StatusBadge({ status, isExpired }: Readonly<{ status: Status; isExpired: boolean }>) {
+// Archived is a mark beside the Status, which it keeps (ADR-0007): its own badge, next to the Status one
+export function ArchivedBadge() {
   const { t } = useTranslation();
-  const shownStatus = showStatus(status, isExpired);
   return (
-    <span className="badge" data-status={shownStatus}>
-      {shownStatus === 'expired' ? t('expired') : t(`statusLabelByStatus.${shownStatus}`)}
+    <span className="badge" data-archived="">
+      {t('archived')}
     </span>
+  );
+}
+
+export function StatusBadge(posting: Readonly<IShownPosting>) {
+  const { t } = useTranslation();
+  const shownStatus = showStatus(posting);
+  return (
+    <>
+      <span className="badge" data-status={shownStatus}>
+        {shownStatus === 'expired' ? t(shownStatus) : t(`statusLabelByStatus.${shownStatus}`)}
+      </span>
+      {posting.archivedAt !== null && <ArchivedBadge />}
+    </>
   );
 }
 

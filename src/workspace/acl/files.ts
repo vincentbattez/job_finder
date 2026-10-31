@@ -65,6 +65,11 @@ export function deleteFile(filePath: string, { isMissingAllowed = false } = {}):
   rmSync(filePath, { force: isMissingAllowed });
 }
 
+// A folder and all it holds; one that does not exist is already the outcome
+export function deleteDirectory(directory: string): void {
+  rmSync(directory, { recursive: true, force: true });
+}
+
 export function moveDirectory(from: string, to: string): void {
   renameSync(from, to);
 }

@@ -20,9 +20,22 @@
     white-space: nowrap;
   }
 
-  .badge[data-status='applied'] {
+  /* Invited and Interviewed are In progress too: the tint of Applied, the label tells the step */
+  .badge[data-status='applied'],
+  .badge[data-status='invited'],
+  .badge[data-status='interviewed'] {
     --badge-ink: var(--color-status-applied);
     --badge-soft: var(--color-status-applied-soft);
+  }
+
+  .badge[data-status='hired'] {
+    --badge-ink: var(--color-status-hired);
+    --badge-soft: var(--color-status-hired-soft);
+  }
+
+  .badge[data-status='rejected'] {
+    --badge-ink: var(--color-status-rejected);
+    --badge-soft: var(--color-status-rejected-soft);
   }
 
   .badge[data-status='expired'] {
@@ -30,7 +43,7 @@
     --badge-soft: var(--color-status-expired-soft);
   }
 
-  .badge[data-status='archived'] {
+  .badge[data-archived] {
     --badge-ink: var(--color-status-archived);
     --badge-soft: var(--color-status-archived-soft);
   }
@@ -56,7 +69,7 @@
   }
 
   /* What steps back keeps its place: a dashed rim instead of a fill */
-  .badge:is([data-status='archived'], [data-state='absent']) {
+  .badge:is([data-archived], [data-state='absent']) {
     border-style: dashed;
     border-color: var(--color-muted);
   }

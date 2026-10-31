@@ -492,6 +492,52 @@ function findControlsOfASingleFile(projectDirectory: string): string[] {
   );
 }
 
+// Only a Container reads data or runs an action; a Dumb only displays its props (ADR-0008). Each way
+// a component reaches the data or the actions, which a Dumb of src/web/components never takes: it
+// receives what a Container read, and the forms a Container posts through a slot, never an import.
+const CONTAINER_ONLY_ACCESS_LIST = [
+  {
+    name: 'the front actions',
+    pattern: /['"][^'"]*\.server(?:\.tsx?)?['"]/,
+    exampleList: ["import { ACTIONS } from '#/web/acl/actions.server.ts';"],
+  },
+  {
+    name: 'a Container',
+    pattern: /['"][^'"]*\/containers\/[^'"]*['"]/,
+    exampleList: ["import { ModuleLaunch } from '#/web/containers/module-launch.tsx';"],
+  },
+  ...['useLoaderData', 'useRouteLoaderData', 'useActionData', 'useFetcher', 'useSubmit', 'useRevalidator'].map(
+    (hook) => ({
+      name: hook,
+      pattern: new RegExp(String.raw`\b${hook}s?\b`),
+      exampleList: [`import { ${hook} } from 'react-router';`],
+    }),
+  ),
+  // A form that posts runs an action, even a plain one; a search form only navigates, like a link
+  {
+    name: 'a form that posts',
+    pattern: /\bmethod[\s:={]*['"`]post['"`]/i,
+    exampleList: ['export const Save = () => <form method="post" />;', "submit(data, { method: 'post' });"],
+  },
+];
+
+const CONTAINER_DIRECTORY = 'src/web/containers';
+
+function findDataAccessInDumbs(projectDirectory: string): string[] {
+  const filePathList = globSync(`${COMPONENT_DIRECTORY}/**/*.{ts,tsx}`, {
+    cwd: projectDirectory,
+    exclude: ['**/*.test.{ts,tsx}'],
+  });
+  return sortedList(
+    filePathList.flatMap((filePath) => {
+      const content = readFileSync(path.join(projectDirectory, filePath), 'utf8');
+      return CONTAINER_ONLY_ACCESS_LIST.filter(({ pattern }) => pattern.test(content)).map(
+        ({ name }) => `${filePath} uses ${name}, which only a Container of ${CONTAINER_DIRECTORY} may (ADR-0008)`,
+      );
+    }),
+  );
+}
+
 // The one file allowed to build an Error: every failure of src/ comes from the catalogue of codes
 const CODED_ERROR_PATH = 'src/domain/coded-error.ts';
 // An Error class, built or called: Error, TypeError, a class of its own
@@ -922,6 +968,41 @@ describe('architecture', () => {
 
   it('reads data/config.json only to import it once', () => {
     expect(findConfigReadsOutsideImport(ROOT_DIRECTORY)).toEqual([]);
+  });
+
+  it('catches a Dumb reading data or running an action', () => {
+    const exampleList = CONTAINER_ONLY_ACCESS_LIST.flatMap(({ name, exampleList: accessExampleList }) =>
+      accessExampleList.map((example) => ({ name, example })),
+    );
+    const fileContentByPath = Object.fromEntries(
+      exampleList.flatMap(({ example }, index) => [
+        [`${COMPONENT_DIRECTORY}/dumb-${String(index)}.tsx`, example],
+        [`${CONTAINER_DIRECTORY}/container-${String(index)}.tsx`, example],
+        [`${FRONT_DIRECTORY}/routes/route-${String(index)}.tsx`, example],
+      ]),
+    );
+    const projectDirectory = path.dirname(
+      createProject({
+        ...fileContentByPath,
+        // A search form only navigates, and a Dumb may name the types of the actions
+        [`${COMPONENT_DIRECTORY}/filters.tsx`]:
+          'import { Form } from \'react-router\';\nexport const Filters = () => <Form role="search" />;\n',
+        [`${COMPONENT_DIRECTORY}/badge.tsx`]: "import type { Actions } from '#/actions/index.ts';\n",
+      }),
+    );
+
+    expect(findDataAccessInDumbs(projectDirectory)).toEqual(
+      sortedList(
+        exampleList.map(
+          ({ name }, index) =>
+            `${COMPONENT_DIRECTORY}/dumb-${String(index)}.tsx uses ${name}, which only a Container of ${CONTAINER_DIRECTORY} may (ADR-0008)`,
+        ),
+      ),
+    );
+  });
+
+  it('has the Dumbs only display their props', () => {
+    expect(findDataAccessInDumbs(ROOT_DIRECTORY)).toEqual([]);
   });
 
   it('catches a stylesheet over 200 lines', () => {

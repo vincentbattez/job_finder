@@ -1,6 +1,5 @@
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Form } from 'react-router';
 
 import { Badge } from './badge.tsx';
 import { ButtonRow } from './button-row.tsx';
@@ -28,13 +27,15 @@ export function InstructionsOrigin({ hasCandidateInstructions }: Readonly<{ hasC
 }
 
 // The route remounts it when the Instructions change hands, so the editor shows those in effect; the
-// fixed part of the prompt stays in the code, out of reach (ADR-0003)
+// fixed part of the prompt stays in the code, out of reach (ADR-0003). Its Container hands in the
+// form that saves them.
 export function ModuleInstructions({
   module,
   defaultInstructions,
   candidateInstructions,
   error,
-}: Readonly<IModuleInstructions & { error: string | null }>) {
+  renderForm,
+}: Readonly<IModuleInstructions & { error: string | null; renderForm: (fieldList: ReactNode) => ReactNode }>) {
   const { t } = useTranslation('settings');
   const headingId = useId();
   const hasCandidateInstructions = candidateInstructions !== null;
@@ -47,30 +48,32 @@ export function ModuleInstructions({
           {hasCandidateInstructions ? t('instructions.candidateBadge') : t('instructions.defaultOrigin')}
         </Badge>
       </div>
-      <Form method="post" preventScrollReset>
-        <input type="hidden" name="module" value={module} />
-        <MarkdownEditor
-          name="instructions"
-          label={hasCandidateInstructions ? t('instructions.candidateLabel') : t('instructions.defaultLabel')}
-          defaultValue={candidateInstructions ?? defaultInstructions}
-          placeholder={t('instructions.placeholder')}
-          onChange={setEditedInstructions}
-        />
-        <ButtonRow>
-          <button type="submit" name="intent" value="save" className="button button--primary">
-            {t('instructions.save')}
-          </button>
-          {hasCandidateInstructions && (
-            <button className="button" type="submit" name="intent" value="delete">
-              {t('instructions.backToDefault')}
+      {renderForm(
+        <>
+          <input type="hidden" name="module" value={module} />
+          <MarkdownEditor
+            name="instructions"
+            label={hasCandidateInstructions ? t('instructions.candidateLabel') : t('instructions.defaultLabel')}
+            defaultValue={candidateInstructions ?? defaultInstructions}
+            placeholder={t('instructions.placeholder')}
+            onChange={setEditedInstructions}
+          />
+          <ButtonRow>
+            <button type="submit" name="intent" value="save" className="button button--primary">
+              {t('instructions.save')}
             </button>
-          )}
-          {editedInstructions !== (candidateInstructions ?? defaultInstructions) && (
-            <p role="status">{t('unsavedChanges')}</p>
-          )}
-          {error !== null && <p role="alert">{error}</p>}
-        </ButtonRow>
-      </Form>
+            {hasCandidateInstructions && (
+              <button className="button" type="submit" name="intent" value="delete">
+                {t('instructions.backToDefault')}
+              </button>
+            )}
+            {editedInstructions !== (candidateInstructions ?? defaultInstructions) && (
+              <p role="status">{t('unsavedChanges')}</p>
+            )}
+            {error !== null && <p role="alert">{error}</p>}
+          </ButtonRow>
+        </>,
+      )}
       {hasCandidateInstructions && (
         <details className="module-instructions__default">
           <summary>{t('instructions.showDefault')}</summary>

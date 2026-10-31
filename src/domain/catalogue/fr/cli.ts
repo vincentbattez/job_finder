@@ -14,6 +14,8 @@ export const CLI_FR: typeof CLI_EN = {
   obsoleteConfig:
     "{{configPath}} n'est plus lu : son contenu est en base, et les Candidats, leurs Veilles et le Délai par défaut se règlent désormais dans le front. Le supprimer.",
   unreadableFile: 'Impossible de lire le fichier {{filePath}} ({{reason}}). Vérifier son chemin.',
+  fileWriteFailed:
+    'Impossible d’écrire le fichier {{filePath}} ({{reason}}). Vérifier que son dossier est accessible en écriture.',
 
   deadline: '{{deadline, datetime(timeZone: UTC)}}',
   inZone: 'Zone',
@@ -31,6 +33,7 @@ export const CLI_FR: typeof CLI_EN = {
   noPosting: 'Aucune Offre pour {{candidateName}} : « jf detect » cherche les nouvelles Offres.',
   artifactQuestion: 'Artefact à modifier',
   chosenVersionLabel: '{{artifactLabel}} (v{{number}}, retenue)',
+  chosenInterviewVersionLabel: "{{artifactLabel}} de l'Entretien {{interviewNumber}} (v{{number}}, retenue)",
   noArtifact:
     "L'Offre {{reference}} n'a aucun Artefact à modifier : « jf run research {{reference}} » produit sa Recherche.",
 
@@ -57,12 +60,13 @@ export const CLI_FR: typeof CLI_EN = {
   extracted: '{{postingLine}}\nSa Recherche est en file : « jf versions {{reference}} research » la suit.\n',
 
   runDescription:
-    "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run research|letter|brief|visualization <offre> [--wait]",
-  runUsage: 'Usage : jf run <module> <offre> [--wait], par exemple jf run research 2026-2445600.',
+    "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run research|letter|portrait|brief|visualization <offre> [<entretien>] [--wait]",
+  runUsage:
+    "Usage : jf run <module> <offre> [<entretien>] [--wait], par exemple jf run research 2026-2445600, ou jf run brief 2026-2445600 1 pour la Fiche d'entretien de l'Entretien 1.",
   queued: "{{module}} de l'Offre {{reference}} en file (job {{jobId}}).\n",
   runQueued: 'Le worker la produira. « {{versionsCommand}} » suit ses Versions.\n',
   runWaiting: 'Attente du worker (service lpm worker) : Claude Code peut prendre plusieurs minutes…\n',
-  runFailed: '{{name}} en échec ({{errorCode}}) :\n{{log}}\nRelancer : jf run {{module}} {{reference}}',
+  runFailed: '{{name}} en échec ({{errorCode}}) :\n{{log}}\nRelancer : {{command}}',
   runReady: '{{name}} prête et retenue. « {{versionsCommand}} » liste ses Versions.\n',
 
   recipientsDescription: 'Affiche à qui adresser la candidature, selon la Lettre retenue : jf recipients <offre>',
@@ -75,8 +79,10 @@ export const CLI_FR: typeof CLI_EN = {
   salutation: "Formule d'appel : {{text}}",
   justification: 'Justification : {{text}}',
 
-  versionsDescription: "Liste les Versions d'un Artefact : jf versions <offre> research",
-  versionsUsage: 'Usage : jf versions <offre> <artifact>, par exemple jf versions 2026-2445600 research.',
+  versionsDescription:
+    "Liste les Versions d'un Artefact : jf versions <offre> research, ou jf versions <offre> brief <entretien> pour un Artefact d'un Entretien",
+  versionsUsage:
+    'Usage : jf versions <offre> <artifact> [<entretien>], par exemple jf versions 2026-2445600 research, ou jf versions 2026-2445600 brief 1.',
   versionStateLabelByState: { running: 'en cours', ready: 'prête', failed: 'en échec' },
   lastJobFailed: 'Dernier lancement en échec ({{errorCode}}) :\n{{log}}\n',
   lastJobStalled: "Dernier lancement à l'arrêt ({{errorCode}}) :\n{{message}}\n",
@@ -84,22 +90,28 @@ export const CLI_FR: typeof CLI_EN = {
   candidateInstructions: 'Consignes du Candidat',
   defaultInstructions: 'Consignes par défaut',
   createdAt: '{{createdAt, datetime(dateStyle: short; timeStyle: medium; timeZone: Europe/Paris)}}',
-  chooseDescription: "Change la Version retenue d'un Artefact : jf choose <offre> research <version>",
-  chooseUsage: 'Usage : jf choose <offre> <artifact> <version>, par exemple jf choose 2026-2445600 research 2.',
+  chooseDescription:
+    "Change la Version retenue d'un Artefact : jf choose <offre> research <version>, ou jf choose <offre> brief <version> <entretien>",
+  chooseUsage:
+    'Usage : jf choose <offre> <artifact> <version> [<entretien>], par exemple jf choose 2026-2445600 research 2, ou jf choose 2026-2445600 brief 2 1.',
   versionChosen: "{{artifact}} {{version}} retenue pour l'Offre {{reference}}.\n",
 
   statusCommandDescription: '{{description}} : jf {{name}} <offre>',
   statusUsage: 'Usage : jf {{name}} <offre>. « jf list <candidat> » liste les Offres.',
   statusChanged: '{{reference}} : {{statusLabel}}\n',
-  applyDescription:
-    'Passe une Offre en Postulée, avec ou sans Lettre, ce qui fige sa Lettre pour de bon ; remet en Postulée une Offre Postulée puis Archivée',
-  archiveDescription: 'Passe une Offre en Archivée, Postulée ou non',
-  toApplyDescription: "Remet À traiter une Offre Archivée qui n'a jamais été Postulée",
+  applyDescription: 'Passe une Offre en Postulée, avec ou sans Lettre, ce qui fige sa Lettre pour de bon',
+  hiredDescription: 'Marque une Candidature Obtenue : le Candidat a le poste',
+  rejectedDescription: "Marque une Candidature Refusée : l'employeur n'a pas retenu le Candidat",
+  inProgressDescription: 'Remet En cours, soit Postulée, une Candidature Obtenue ou Refusée',
+  archiveDescription: 'Archive une Offre, quel que soit son Statut, qu’elle garde',
+  unarchiveDescription: 'Désarchive une Offre, qui retrouve son Statut tel qu’il était',
+  postingArchived: '{{reference}} : Archivée\n',
+  postingUnarchived: '{{reference}} : plus Archivée\n',
 
   profileDescription: "Complète le Profil d'un Candidat avec Claude Code : jf profile <candidat>",
   profileUsage: 'Usage : jf profile <candidat>. « jf candidates » liste les Candidats.',
   editDescription:
-    'Modifie un Artefact avec Claude Code, Offre et Artefact proposés si absents : jf edit [<offre> [<artifact>]]',
+    'Modifie un Artefact avec Claude Code, Offre et Artefact proposés si absents : jf edit [<offre> [<artifact> [<entretien>]]]',
 
   instructionsDescription:
     "Montre, remplace (lues sur l'entrée standard) ou supprime les Consignes d'un module : jf instructions <candidat> [<module> [default|replace|delete]]",
@@ -110,6 +122,26 @@ export const CLI_FR: typeof CLI_EN = {
   typeInstructions: 'Tapez ou collez les Consignes, puis Ctrl-D :\n',
   instructionsReplaced: '{{module}} suivra ces Consignes du Candidat dans ses prochaines Versions.\n',
   instructionsDeleted: '{{module}} revient à ses Consignes par défaut.\n',
+
+  notesDescription:
+    "Montre ou remplace (lues sur l'entrée standard) les Notes d'une Offre, quel que soit son Statut : jf notes <offre> [replace]",
+  notesUsage: 'Usage : jf notes <offre> [replace]. « jf list <candidat> » liste les Offres.',
+  typeNotes: 'Tapez ou collez les Notes en Markdown, puis Ctrl-D :\n',
+  notesReplaced: 'Notes de {{reference}} enregistrées.\n',
+  interviewsDescription:
+    "Liste les Entretiens d'une Candidature par date, ou en ajoute, modifie ou supprime un, le début à l'heure de Paris : jf interviews <offre> [add | edit <numéro> | delete <numéro>] [--start 2026-11-19T14:00] [--duration <minutes>] [--place <lieu>] [--interviewers <texte>]",
+  interviewsUsage:
+    'Usage : jf interviews <offre> [add --start 2026-11-19T14:00 | edit <numéro> | delete <numéro>] [--duration <minutes>] [--place <lieu>] [--interviewers <texte>]. « jf interviews <offre> » liste les numéros.',
+  noInterview: 'Aucun Entretien pour {{reference}}.\n',
+  interviewMinutes: '{{minutes}} min',
+  interviewAdded: 'Entretien ajouté à {{reference}}.\n',
+  interviewEdited: 'Entretien {{number}} de {{reference}} enregistré.\n',
+  interviewDeleted: 'Entretien {{number}} de {{reference}} supprimé.\n',
+  icalDescription:
+    'Écrit le fichier iCal d’un Entretien dans le dossier courant, ses liens sur l’adresse du front : jf ical <offre> <entretien> [--origin http://mac-mini.local:5180]',
+  icalUsage:
+    'Usage : jf ical <offre> <entretien> [--origin <adresse du front>]. « jf interviews <offre> » liste les numéros.',
+  icalWritten: 'Fichier iCal écrit : {{filePath}}\n',
 
   workerReady: 'Worker prêt : il lance les jobs en file, un à la fois.\n',
   jobFailed: 'en échec : {{firstLine}}',

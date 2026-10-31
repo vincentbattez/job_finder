@@ -5,6 +5,9 @@ Choosable
 repost
 reposted
 reposts
+unarchive
+unarchived
+unarchives
 unarchiving
 
 # Tools and their APIs
@@ -31,6 +34,24 @@ vitest
 vincentbattez
 wordmark
 worktrees
+
+# The iCal format (RFC 5545)
+ical
+BYDAY
+BYMONTH
+CALSCALE
+DTEND
+DTSTAMP
+DTSTART
+PRODID
+RRULE
+TZNAME
+TZOFFSETFROM
+TZOFFSETTO
+VALARM
+VCALENDAR
+VEVENT
+VTIMEZONE
 
 # The feed of the Source PEP (ADR-0001)
 ashx

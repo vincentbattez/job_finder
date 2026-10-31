@@ -3,10 +3,13 @@ import { useLoaderData, type LoaderFunctionArgs, type MetaArgs } from 'react-rou
 import { localeOf, tFor } from '#/actions/i18n.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
-import { ArtifactVersions } from '#/web/components/artifact-versions.tsx';
-import { StatusButtons } from '#/web/components/edition.tsx';
-import { ExtractionLaunch } from '#/web/components/extraction-launch.tsx';
 import { PostingDetail } from '#/web/components/posting-detail.tsx';
+import { ArtifactVersions } from '#/web/containers/artifact-versions.tsx';
+import { ArchiveButton } from '#/web/containers/edition.tsx';
+import { ExtractionLaunch } from '#/web/containers/extraction-launch.tsx';
+import { Interviews } from '#/web/containers/interviews.tsx';
+import { Notes } from '#/web/containers/notes.tsx';
+import { OutcomeSelector } from '#/web/containers/outcome-selector.tsx';
 import { relayLoader } from '#/web/relay-action.server.ts';
 
 export function loader({ params, request }: LoaderFunctionArgs) {
@@ -29,9 +32,21 @@ export default function Posting() {
   return (
     <main className="container page">
       <PostingDetail detail={detail} isPage>
-        <StatusButtons reference={detail.posting.reference} nextStatusList={detail.nextStatusList} />
+        <OutcomeSelector
+          reference={detail.posting.reference}
+          status={detail.posting.status}
+          statusChoiceList={detail.statusChoiceList}
+        />
+        <ArchiveButton reference={detail.posting.reference} isArchived={detail.posting.archivedAt !== null} />
         {detail.extraction !== null && <ExtractionLaunch reference={detail.posting.reference} {...detail.extraction} />}
       </PostingDetail>
+      <Notes reference={detail.posting.reference} notes={detail.posting.notes} />
+      <Interviews
+        reference={detail.posting.reference}
+        posting={detail.posting}
+        hasApplication={detail.hasApplication}
+        interviewList={detail.interviewList}
+      />
       {detail.artifactList.map((artifactVersions) => (
         <ArtifactVersions key={artifactVersions.artifact} reference={detail.posting.reference} {...artifactVersions} />
       ))}

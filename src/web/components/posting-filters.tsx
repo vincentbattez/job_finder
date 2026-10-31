@@ -1,12 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { Form, useSearchParams } from 'react-router';
 
-import type { Status } from './badge.tsx';
-
 import './posting-filters.css';
 
 interface IFilteredPosting {
-  status: Status;
+  archivedAt: Date | null;
   city: string | null;
   region: string | null;
 }
@@ -21,7 +19,7 @@ export function filterPostings<T extends IFilteredPosting>(postingList: T[], sea
     (posting) =>
       (city === '' || posting.city === city) &&
       (region === '' || posting.region === region) &&
-      (isArchivedShown || posting.status !== 'archived'),
+      (isArchivedShown || posting.archivedAt === null),
   );
 }
 

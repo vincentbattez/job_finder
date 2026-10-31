@@ -204,7 +204,39 @@ await actions.runQueuedJobs();
 await actions.deleteInstructions({ candidateId: 'lea', module: 'research' });
 
 await actions.changeStatus({ reference: '2026-2285305', status: 'applied' });
-await actions.changeStatus({ reference: '2026-2290529', status: 'archived' });
+// The Applications whose outcome e2e/edition.test.ts changes, one with JS and one without
+await actions.changeStatus({ reference: '2026-2448056', status: 'applied' });
+await actions.changeStatus({ reference: '2026-2448209', status: 'applied' });
+// The Applications whose Interviews e2e/interviews.test.ts adds, edits and deletes, one with JS and one
+// without
+await actions.changeStatus({ reference: '2026-2448213', status: 'applied' });
+await actions.changeStatus({ reference: '2026-2448215', status: 'applied' });
+await actions.archive({ reference: '2026-2290529' });
+// The Applications in progress whose outcome e2e/home.test.ts changes from their row: one with JS, with an
+// upcoming Interview and Notes, and one without JS
+await actions.changeStatus({ reference: '2026-2448220', status: 'applied' });
+await actions.addInterview({
+  reference: '2026-2448220',
+  start: '2030-01-15T10:00',
+  place: 'Tribunal judiciaire',
+  interviewers: 'Mme Durand',
+});
+await actions.saveNotes({ reference: '2026-2448220', notes: '# Appel du greffe\n\nRappeler **lundi**.\n' });
+await actions.changeStatus({ reference: '2026-2448225', status: 'applied' });
+// One Posting per section of /applications for e2e/applications.test.ts, out of the Hauts-de-France and of
+// Melun, which e2e/map.test.ts counts: Hired, two Rejected whose outcome it changes from their row (with JS and
+// without), an Archived Application and a Posting archived without one
+for (const [reference, status] of [
+  ['2026-2289933', 'hired'],
+  ['2026-2315264', 'rejected'],
+  ['2026-2399015', 'rejected'],
+  ['2026-2340735', 'applied'],
+]) {
+  await actions.changeStatus({ reference, status: 'applied' });
+  await actions.changeStatus({ reference, status });
+}
+await actions.archive({ reference: '2026-2340735' });
+await actions.archive({ reference: '2026-2380466' });
 
 // Emma reads the interface in English (e2e/locale.test.ts). Her one Posting, imported, keeps the name
 // of its file: the fake Claude of the seed reads none of its fields, so it has no Deadline.

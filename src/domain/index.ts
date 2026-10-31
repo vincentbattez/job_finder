@@ -88,9 +88,33 @@ export const LOCATION_SCHEMA = z.object(LOCATION_SHAPE).brand<'Domain'>();
 
 export type Location = z.infer<typeof LOCATION_SCHEMA>;
 
-export const STATUS_SCHEMA = z.enum(['to_apply', 'applied', 'archived']);
+// The stored Status: Invited and Interviewed are computed from the Interviews, never stored (ADR-0009)
+export const STATUS_SCHEMA = z.enum(['to_apply', 'applied', 'hired', 'rejected']);
 
 export type Status = z.infer<typeof STATUS_SCHEMA>;
+
+// The Status as read: the stored one, Applied showing as Invited or Interviewed from its Interviews
+// (ADR-0009)
+const STEP_SCHEMA = z.enum(['to_apply', 'applied', 'invited', 'interviewed', 'hired', 'rejected']);
+
+export type Step = z.infer<typeof STEP_SCHEMA>;
+
+// An Interview of an Application, numbered per Posting like a Version. Its start is an instant, which the
+// Candidate types and reads in Paris time; editCount grows at each edit, so a calendar updates the event
+// rather than duplicating it.
+const INTERVIEW_SHAPE = {
+  id: z.int(),
+  number: z.int(),
+  startAt: z.date(),
+  durationMinutes: z.int().positive(),
+  place: z.string(),
+  interviewers: z.string(),
+  editCount: z.int(),
+};
+
+export const INTERVIEW_SCHEMA = z.object(INTERVIEW_SHAPE).brand<'Domain'>();
+
+export type Interview = z.infer<typeof INTERVIEW_SCHEMA>;
 
 // Another Posting of the Candidate, named by its reference
 const LINKED_POSTING_SCHEMA = z.object({ reference: z.string() });
@@ -113,8 +137,16 @@ export const POSTING_SCHEMA = z
     contact1: z.string().nullable(),
     contact2: z.string().nullable(),
     status: STATUS_SCHEMA,
+    // Computed on read from its Interviews and the time, never stored (ADR-0009)
+    step: STEP_SCHEMA,
     // When it was first marked Applied, null if never
     appliedAt: z.date().nullable(),
+    // When its Status last changed, null if never
+    statusChangedAt: z.date().nullable(),
+    // When the Candidate archived it, null while they follow it: a mark beside the Status (ADR-0007)
+    archivedAt: z.date().nullable(),
+    // Free Markdown the Candidate keeps on it, whatever its Status; empty by default
+    notes: z.string(),
     isInZone: z.boolean(),
     isExpired: z.boolean(),
     // The Posting it publishes again, and the Postings that publish it again
@@ -124,6 +156,47 @@ export const POSTING_SCHEMA = z
   .brand<'Domain'>();
 
 export type Posting = z.infer<typeof POSTING_SCHEMA>;
+
+// An Application as its row shows it, on the home and on /applications
+export const APPLICATION_SCHEMA = z
+  .object({
+    posting: POSTING_SCHEMA,
+    // What the outcome selector offers, beside the Status the Posting has
+    statusChoiceList: z.array(STATUS_SCHEMA),
+    // The next Interview, else the last one once none is upcoming; null without any
+    nextInterview: INTERVIEW_SCHEMA.nullable(),
+    hasUpcomingInterview: z.boolean(),
+    interviewCount: z.int(),
+    // The first lines of the Notes, as plain text
+    notesExcerpt: z.string(),
+    // The last time it moved: its Status changed, it was archived or an Interview took place
+    lastChangeAt: z.date(),
+  })
+  .brand<'Domain'>();
+
+export type Application = z.infer<typeof APPLICATION_SCHEMA>;
+
+// The sections of /applications, in the order it shows them: an Archived one leaves its outcome's section
+export const APPLICATION_SECTION_NAME_SCHEMA = z.enum([
+  'in_progress',
+  'hired',
+  'rejected',
+  'archived',
+  'archived_without_application',
+]);
+
+export type ApplicationSectionName = z.infer<typeof APPLICATION_SECTION_NAME_SCHEMA>;
+
+// A section of /applications and its rows, the most recently changed first, the most recently archived
+// first in the Archived ones
+export const APPLICATION_SECTION_SCHEMA = z
+  .object({
+    section: APPLICATION_SECTION_NAME_SCHEMA,
+    applicationList: z.array(APPLICATION_SCHEMA),
+  })
+  .brand<'Domain'>();
+
+export type ApplicationSection = z.infer<typeof APPLICATION_SECTION_SCHEMA>;
 
 // What a Detection found for one Watch, why each notification it could not send failed, and why
 // its Postings stay off the map, API Géo being down. On the first launch, the Postings already
@@ -199,7 +272,7 @@ export const DETECTION_OVERVIEW_SCHEMA = z
 
 export type DetectionOverview = z.infer<typeof DETECTION_OVERVIEW_SCHEMA>;
 
-export const ARTIFACT_SCHEMA = z.enum(['research', 'letter', 'interview_brief', 'visualization']);
+export const ARTIFACT_SCHEMA = z.enum(['research', 'letter', 'portrait', 'interview_brief', 'visualization']);
 
 export type Artifact = z.infer<typeof ARTIFACT_SCHEMA>;
 
@@ -210,17 +283,24 @@ export const MODULE_INSTRUCTIONS_SCHEMA = z
 
 export type ModuleInstructions = z.infer<typeof MODULE_INSTRUCTIONS_SCHEMA>;
 
+// The Interview a Version is attached to, by its number on the Posting; null for a Version of the Posting
+const VERSION_INTERVIEW_SCHEMA = z.object({ number: z.int() }).nullable();
+
 // A Version that another Version read as input, of its own Posting or of another one
 const READ_VERSION_SCHEMA = z.object({
   artifact: ARTIFACT_SCHEMA,
   number: z.int(),
   posting: z.object({ reference: z.string() }),
+  interview: VERSION_INTERVIEW_SCHEMA,
 });
 
 // Each launch of a module creates a new Version, which keeps the Instructions it was produced with
-// and the Versions it read
+// and the Versions it read. Its number counts the Versions of its Artifact on its Interview, for an
+// Artifact attached to one, else on its Posting.
 export const VERSION_SCHEMA = z
   .object({
+    id: z.int(),
+    interview: VERSION_INTERVIEW_SCHEMA,
     artifact: ARTIFACT_SCHEMA,
     number: z.int(),
     isChosen: z.boolean(),
@@ -247,6 +327,8 @@ export const JOB_SCHEMA = z
     id: z.int(),
     module: MODULE_SCHEMA,
     posting: POSTING_SCHEMA,
+    // The Interview it prepares, for a module attached to one
+    interview: INTERVIEW_SCHEMA.nullable(),
     state: JOB_STATE_SCHEMA,
     log: z.string(),
     // The code of the catalogue a failed job failed under (ADR-0015)
@@ -378,14 +460,22 @@ const ARTIFACT_VERSIONS_SCHEMA = z.object({
   versionList: z.array(VERSION_DOCUMENTS_SCHEMA),
 });
 
+// An Interview on the Posting page, with every Version of each Artifact attached to it
+const INTERVIEW_DETAIL_SCHEMA = z.object({ ...INTERVIEW_SHAPE, artifactList: z.array(ARTIFACT_VERSIONS_SCHEMA) });
+
 // What the Posting page shows: the Posting with its raw contacts, its Job Description, every
 // Version of each Artifact with its files, and the recipients its Chosen Letter recommends
 export const POSTING_DETAIL_SCHEMA = z
   .object({
     posting: POSTING_SCHEMA,
-    // The statuses the Posting can move to, a button each
-    nextStatusList: z.array(STATUS_SCHEMA),
+    // What the outcome selector offers, beside the Status the Posting has
+    statusChoiceList: z.array(STATUS_SCHEMA),
+    // Whether it has an Application, which alone gets Interviews; they come by date, each with the
+    // Artifacts attached to it
+    hasApplication: z.boolean(),
+    interviewList: z.array(INTERVIEW_DETAIL_SCHEMA),
     jobDescription: z.string(),
+    // The Artifacts attached to the Posting
     artifactList: z.array(ARTIFACT_VERSIONS_SCHEMA),
     recipients: RECIPIENTS_SCHEMA.nullable(),
     // That of its latest extraction job, null for a Posting that was not imported; the log says why
@@ -461,6 +551,11 @@ export type Extraction = z.infer<typeof EXTRACTION_SCHEMA>;
 export const VISUALIZATION_SCHEMA = z.object({ html: z.string() }).brand<'Domain'>();
 
 export type Visualization = z.infer<typeof VISUALIZATION_SCHEMA>;
+
+// The iCal file of an Interview, which the front serves for download and jf ical writes
+export const ICAL_FILE_SCHEMA = z.object({ fileName: z.string(), text: z.string() }).brand<'Domain'>();
+
+export type IcalFile = z.infer<typeof ICAL_FILE_SCHEMA>;
 
 // A Parameter as the front builds its field: typed in, a list of values, secret, or chosen among what
 // the module lists. Its label and placeholder are i18next keys of the module's own namespace, whose

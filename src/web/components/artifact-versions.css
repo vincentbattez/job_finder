@@ -15,6 +15,10 @@
     --tint: var(--p-tue);
   }
 
+  .artifact-versions[data-artifact='portrait'] {
+    --tint: var(--p-thu);
+  }
+
   .artifact-versions[data-artifact='interview_brief'] {
     --tint: var(--p-wed);
   }

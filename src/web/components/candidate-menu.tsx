@@ -1,7 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { useFetcher } from 'react-router';
-
-import type { IRefusal } from '#/web/failure.ts';
 
 import './candidate-menu.css';
 
@@ -10,15 +7,15 @@ interface ICandidate {
   name: string;
 }
 
-// A plain form, so the choice also works before React hydrates the page; a refusal shows beside it
+// The choice of the Candidate who reads, inside the form of its Container; a refusal shows beside it
 export function CandidateMenu({
   candidateList,
   candidate,
-}: Readonly<{ candidateList: ICandidate[]; candidate: ICandidate | null }>) {
+  error,
+}: Readonly<{ candidateList: ICandidate[]; candidate: ICandidate | null; error: string | null | undefined }>) {
   const { t } = useTranslation('settings');
-  const fetcher = useFetcher<IRefusal>();
   return (
-    <fetcher.Form method="post" action="/candidate" className="candidate-menu">
+    <div className="candidate-menu">
       <label htmlFor="candidate">{t('menu.candidateLabel')}</label>
       <select
         className="button candidate-menu__select"
@@ -41,7 +38,7 @@ export function CandidateMenu({
       <button className="button button--primary" type="submit">
         {t('menu.choose')}
       </button>
-      {fetcher.data?.error !== undefined && <p role="alert">{fetcher.data.error}</p>}
-    </fetcher.Form>
+      {error !== undefined && <p role="alert">{error}</p>}
+    </div>
   );
 }

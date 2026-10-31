@@ -20,8 +20,8 @@ import {
 } from 'react-router';
 
 import { readCandidate } from './candidate.server.ts';
-import { CandidateMenu } from './components/candidate-menu.tsx';
-import { LocaleSwitcher } from './components/locale-switcher.tsx';
+import { CandidateMenu } from './containers/candidate-menu.tsx';
+import { LocaleSwitcher } from './containers/locale-switcher.tsx';
 import { isLoaderFailure } from './failure.ts';
 import { LocaleProvider, useLocale } from './i18n.tsx';
 import { englishUrlOf } from './redirects.ts';
@@ -75,8 +75,10 @@ function Page({ children }: Readonly<{ children: ReactNode }>) {
             </Link>
             <nav className="topbar__nav" aria-label={t('layout.navigationLabel')}>
               <NavLink to="/" end>
-                {t('layout.postingsLink')}
+                {t('layout.homeLink')}
               </NavLink>
+              <NavLink to="/applications">{t('layout.applicationsLink')}</NavLink>
+              <NavLink to="/postings">{t('layout.postingsLink')}</NavLink>
               <NavLink to="/profile">{t('layout.profileLink')}</NavLink>
               <NavLink to="/instructions">{t('layout.instructionsLink')}</NavLink>
               <NavLink to="/candidates">{t('layout.candidatesLink')}</NavLink>

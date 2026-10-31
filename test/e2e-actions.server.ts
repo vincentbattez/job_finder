@@ -20,7 +20,7 @@ if (!dataDirectory.startsWith(tmpdir())) {
   throw new Error(`JF_DATA_DIRECTORY doit être un dossier temporaire, pas « ${dataDirectory} ».`);
 }
 
-// What the fake Claude writes for each module, whatever the Posting: a Research, an
+// What the fake Claude writes for each module, whatever the Posting: a Research, a Portrait, an
 // Interview Brief and its Visualization in their format, and a Letter whose recipients come from no
 // field of the Posting, so they hold for any of them
 const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
@@ -48,6 +48,9 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
       justification: 'Aucun champ de l’Offre ne donne d’adresse.',
     }),
   },
+  portrait: {
+    'portrait.md': '# Portrait factice\n\nMme Durand, juge des enfants ([justice.fr](https://www.justice.fr/)).\n',
+  },
   interview_brief: {
     'interview-brief.md': [
       '# Fiche d’entretien factice',
@@ -73,7 +76,8 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
 // Long enough for the front to show the Artifact in progress before it is ready
 const SESSION_DURATION_MS = 1000;
 
-// A session's module is the Artifact its Version folder belongs to: <posting>/<artifact>/v<n>. The
+// A session's module is the Artifact its Version folder belongs to: <posting>/<artifact>/v<n>, or
+// <posting>/interviews/<number>/<artifact>/v<n> for an Artifact of an Interview. The
 // extraction of an imported Posting writes in a folder of its own, <posting>/extraction
 // (src/modules/source-import), and the conversion of an Upload in profile/uploads/.conversion/<upload>
 // (src/workspace).

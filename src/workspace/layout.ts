@@ -4,6 +4,7 @@ import { ARTIFACT_RENAME_LIST } from '#/domain/artifact-rename.ts';
 import { codedError } from '#/domain/coded-error.ts';
 
 import { migrateObsoleteConfig } from './acl/config.ts';
+import { deleteDirectory } from './acl/files.ts';
 import { kindOf, listEntries, moveEntry } from './acl/layout.ts';
 
 interface ILayoutStep {
@@ -46,6 +47,11 @@ const LAYOUT_STEP_LIST: ILayoutStep[] = [
   },
 ];
 
+// The Interview Brief and the Visualization of a Posting, which the migration version_interview deleted
+// from the database: they belong to an Interview now, in its own folder. The step can go once every
+// data/ is migrated.
+const OBSOLETE_ENTRY_LIST = ['candidates/*/postings/*/interview_brief', 'candidates/*/postings/*/visualization'];
+
 // The names of a folder a segment of a step matches, each with what its `*` stands for
 function matchSegment(directory: string, segment: string): { name: string; wildcard: string }[] {
   if (!segment.includes('*')) {
@@ -75,8 +81,16 @@ function expandStep(dataDirectory: string, { from, to }: ILayoutStep): ILayoutSt
   return pairList;
 }
 
-// Moves the French layout of the data folder to the English one, before anything reads it. Unknown
-// entries stay as they are; a known one is moved, never copied, and never over its English
+// Each obsolete entry of the data folder, with all it holds; one already gone is the same outcome
+function deleteObsoleteEntries(dataDirectory: string): void {
+  const entryList = OBSOLETE_ENTRY_LIST.flatMap((entry) => expandStep(dataDirectory, { from: entry, to: entry }));
+  for (const { from } of entryList) {
+    deleteDirectory(path.join(dataDirectory, from));
+  }
+}
+
+// Moves the French layout of the data folder to the English one, before anything reads it, then
+// deletes the obsolete entries. Unknown entries stay as they are; a known one is moved, never copied, and never over its English
 // counterpart: both at once is the Candidate's to merge (#65).
 export function migrateLayout(dataDirectory: string): void {
   for (const step of LAYOUT_STEP_LIST) {
@@ -98,5 +112,6 @@ export function migrateLayout(dataDirectory: string): void {
       moveEntry(fromPath, toPath);
     }
   }
+  deleteObsoleteEntries(dataDirectory);
   migrateObsoleteConfig(dataDirectory);
 }

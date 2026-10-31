@@ -4,13 +4,13 @@ import { z } from 'zod/v4';
 
 import { codedError } from '#/domain/coded-error.ts';
 import {
-  ARTIFACT_SCHEMA,
   ARTIFACT_STATE_SCHEMA,
   POSTING_DETAIL_SCHEMA,
   VISUALIZATION_SCHEMA,
   type Artifact,
   type ArtifactState,
   type Candidate,
+  type Interview,
   type Job,
   type Locale,
   type Posting,
@@ -21,15 +21,29 @@ import {
 } from '#/domain/index.ts';
 import { LETTER_MODULE } from '#/modules/letter/index.ts';
 import { VISUALIZATION_MODULE } from '#/modules/visualization/index.ts';
-import { listNextStatuses } from '#/status/index.ts';
+import { hasBeenApplied, listStatusChoices } from '#/status/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
 import { ARTIFACT_INPUT_SCHEMA, REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
 import { assertArtifactModifiable, assertChoosable, assertDocumentModifiable, isAccepted } from './edition.ts';
-import { describeModule, findChosenVersion, parseArtifact } from './run-job.ts';
+import {
+  commandOf,
+  describeModule,
+  findChosenVersion,
+  findTarget,
+  listTargetArtifacts,
+  parseArtifact,
+  type ITarget,
+} from './run-job.ts';
 import { findJobStall } from './stalled-job.ts';
 
-const VISUALIZATION_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
+const VISUALIZATION_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({
+  interview: z.coerce.number().int(),
+  number: z.coerce.number().int(),
+});
+
+// The latest Postings of the home: enough to see at a glance what just arrived
+const LATEST_POSTING_COUNT = 6;
 
 const STATE_BY_VERSION_STATE = { running: 'in_progress', ready: 'ready', failed: 'failed' } as const;
 const STATE_BY_JOB_STATE = { queued: 'queued', running: 'in_progress', done: 'ready', failed: 'failed' } as const;
@@ -44,14 +58,17 @@ async function findWorkerFailure(workspace: Workspace, job: Job, locale: Locale)
 
 async function findArtifactState(
   workspace: Workspace,
-  posting: Posting,
+  { posting, interview }: ITarget,
   artifact: Artifact,
   jobList: Job[],
   locale: Locale,
 ): Promise<ArtifactState> {
-  const versionList = await workspace.listVersions(posting, artifact);
+  const versionList = await workspace.listVersions(posting, artifact, interview);
   const lastVersion = versionList.at(-1);
-  const lastJob = jobList.findLast(({ module }) => module === artifact);
+  // Those of its Interview only, for an Artifact attached to one
+  const lastJob = jobList.findLast(
+    (job) => job.module === artifact && (job.interview?.id ?? null) === (interview?.id ?? null),
+  );
   const isJobLatest =
     lastJob !== undefined && (lastJob.version === null || lastJob.version.number === lastVersion?.number);
   if (!isJobLatest) {
@@ -75,23 +92,45 @@ async function findArtifactState(
 
 export function createPostingActions({ workspace, findCandidate, findPosting, findLocale }: ActionContext) {
   async function findRecipients(posting: Posting): Promise<Recipients | null> {
-    const version = await findChosenVersion(workspace, posting, 'letter');
+    const version = await findChosenVersion(workspace, { posting, interview: null }, 'letter');
     return version === undefined ? null : LETTER_MODULE.readRecipients(workspace.versionDirectoryOf(posting, version));
   }
 
-  function readDetailVersion(posting: Posting, version: Version, locale: Locale) {
+  // Every Version of each Artifact attached to the target, the Posting or one of its Interviews
+  async function readArtifactList(target: ITarget, jobList: Job[], locale: Locale) {
+    const { posting, interview } = target;
+    return Promise.all(
+      listTargetArtifacts(target).map(async (artifact) => {
+        const versionList = await workspace.listVersions(posting, artifact, interview);
+        const chosenVersion = versionList.find(({ isChosen }) => isChosen);
+        return {
+          artifact,
+          // A queued job has no Version yet, while the worker runs another one (ADR-0003), and a
+          // claimed job has none until the worker starts it: the job tells its state
+          ...(await findArtifactState(workspace, target, artifact, jobList, locale)),
+          module: await describeModule(workspace, target, artifact, locale),
+          isEditable: isAccepted(() => {
+            assertArtifactModifiable(target, artifact, chosenVersion, locale);
+          }),
+          versionList: versionList.map((version) => readDetailVersion(target, version, locale)),
+        };
+      }),
+    );
+  }
+
+  function readDetailVersion(target: ITarget, version: Version, locale: Locale) {
     const { artifact, number, isChosen } = version;
     return {
       version,
       isChoosable:
         !isChosen &&
         isAccepted(() => {
-          assertChoosable(posting, artifact, version, number, locale);
+          assertChoosable(target, artifact, version, number, locale);
         }),
-      documentList: workspace.readVersionDocuments(posting, version).map((document) => ({
+      documentList: workspace.readVersionDocuments(target.posting, version).map((document) => ({
         ...document,
         isModifiable: isAccepted(() => {
-          assertDocumentModifiable(posting, artifact, version, document.fileName, locale);
+          assertDocumentModifiable(target, artifact, version, document.fileName, locale);
         }),
       })),
     };
@@ -114,34 +153,31 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
       return workspace.listPostings(candidate.id);
     },
 
+    // What the home shows of what just arrived, as tiles and on the map
+    async listLatestPostings(rawInput: unknown): Promise<Posting[]> {
+      const candidate = await findCandidate(rawInput);
+      return workspace.listLatestPostings(candidate.id, LATEST_POSTING_COUNT);
+    },
+
     async readPosting(rawInput: unknown): Promise<PostingDetail> {
       const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
       const locale = await findLocale(posting.candidateId);
       const jobList = await workspace.listJobs(posting);
       const extractionJob = jobList.findLast(({ module }) => module === 'extraction');
-      const artifactList = await Promise.all(
-        ARTIFACT_SCHEMA.options.map(async (artifact) => {
-          const versionList = await workspace.listVersions(posting, artifact);
-          const chosenVersion = await findChosenVersion(workspace, posting, artifact);
-          return {
-            artifact,
-            // A queued job has no Version yet, while the worker runs another one (ADR-0003), and a
-            // claimed job has none until the worker starts it: the job tells its state
-            ...(await findArtifactState(workspace, posting, artifact, jobList, locale)),
-            module: await describeModule(workspace, posting, artifact, locale),
-            isEditable: isAccepted(() => {
-              assertArtifactModifiable(posting, artifact, chosenVersion, locale);
-            }),
-            versionList: versionList.map((version) => readDetailVersion(posting, version, locale)),
-          };
-        }),
-      );
+      const interviewList = await workspace.listInterviews(posting);
       return POSTING_DETAIL_SCHEMA.parse({
         posting,
-        nextStatusList: listNextStatuses(posting),
+        statusChoiceList: listStatusChoices(posting),
+        hasApplication: hasBeenApplied(posting),
+        interviewList: await Promise.all(
+          interviewList.map(async (interview: Interview) => ({
+            ...interview,
+            artifactList: await readArtifactList({ posting, interview }, jobList, locale),
+          })),
+        ),
         jobDescription: workspace.readJobDescription(posting, locale),
-        artifactList,
+        artifactList: await readArtifactList({ posting, interview: null }, jobList, locale),
         recipients: await findRecipients(posting),
         extraction:
           extractionJob === undefined
@@ -155,30 +191,37 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
       });
     },
 
+    // Those of the Interview named, for an Artifact attached to one
     async listVersions(rawInput: unknown): Promise<Version[]> {
-      const { reference, artifact } = ARTIFACT_INPUT_SCHEMA.parse(rawInput);
+      const { reference, artifact, interview } = ARTIFACT_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
-      return workspace.listVersions(posting, parseArtifact(artifact, await findLocale(posting.candidateId)));
+      const locale = await findLocale(posting.candidateId);
+      const parsedArtifact = parseArtifact(artifact, locale);
+      const target = await findTarget(workspace, posting, parsedArtifact, interview, locale);
+      return workspace.listVersions(posting, parsedArtifact, target.interview);
     },
 
     // What jf versions prints under the Versions: the reason the last job failed, even before its
     // Version, or makes no progress
     async readArtifactState(rawInput: unknown): Promise<ArtifactState> {
-      const { reference, artifact } = ARTIFACT_INPUT_SCHEMA.parse(rawInput);
+      const { reference, artifact, interview } = ARTIFACT_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
       const locale = await findLocale(posting.candidateId);
       const parsedArtifact = parseArtifact(artifact, locale);
-      return findArtifactState(workspace, posting, parsedArtifact, await workspace.listJobs(posting), locale);
+      const target = await findTarget(workspace, posting, parsedArtifact, interview, locale);
+      return findArtifactState(workspace, target, parsedArtifact, await workspace.listJobs(posting), locale);
     },
 
     async readVisualization(rawInput: unknown): Promise<Visualization> {
-      const { reference, number } = VISUALIZATION_INPUT_SCHEMA.parse(rawInput);
+      const { reference, interview: interviewNumber, number } = VISUALIZATION_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
       const locale = await findLocale(posting.candidateId);
-      const versionList = await workspace.listVersions(posting, 'visualization');
+      const { interview } = await findTarget(workspace, posting, 'visualization', interviewNumber, locale);
+      const versionList = await workspace.listVersions(posting, 'visualization', interview);
       const version = versionList.find((entry) => entry.number === number);
       if (version === undefined) {
-        throw codedError('unknown_version', { reference, artifact: 'visualization', number }, { locale });
+        const command = commandOf(['versions', reference, 'visualization'], interview);
+        throw codedError('unknown_version', { reference, artifact: 'visualization', number, command }, { locale });
       }
       const html = workspace.readTextFile(
         path.join(workspace.versionDirectoryOf(posting, version), VISUALIZATION_MODULE.fileName),

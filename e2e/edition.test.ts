@@ -1,9 +1,12 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 // These journeys change data, each on its own Posting that test/seed-front.ts prepared: Bastia has a
 // Research and a Letter, Versailles two Research. The read tests keep Béthune 2026-2445600.
 const BASTIA_REFERENCE = '2026-2426147';
 const VERSAILLES_REFERENCE = '2026-2409178';
+// Applications the seed marks Applied, whose outcome these tests change: one with JS, one without
+const OUTCOME_REFERENCE = '2026-2448056';
+const OUTCOME_WITHOUT_JS_REFERENCE = '2026-2448209';
 
 const CORRECTED_LETTER = 'Madame la Première présidente,\n\nTitulaire d’un master 2 de droit privé obtenu en 2025.\n';
 
@@ -64,4 +67,43 @@ test('changes the Chosen Version of an Artifact', async ({ page }) => {
   ]);
   // The editor follows the Chosen Version
   await expect(research.getByRole('textbox', { name: 'Markdown' })).toHaveValue(/^# Recherche première/);
+});
+
+// Puts the Application back In progress first, whatever a run stopped halfway left it at
+async function changeOutcome(page: Page, reference: string) {
+  const response = await page.request.post(`/postings/${reference}/status`, { form: { status: 'applied' } });
+  expect(response.ok()).toBe(true);
+  await page.goto(`/postings/${reference}`);
+  return {
+    statusBadge: page.locator('.posting-detail__title .badge'),
+    outcome: page.getByRole('group', { name: 'Issue de la Candidature' }),
+  };
+}
+
+test('marks an Application Hired, then Rejected, then back In progress', async ({ page }) => {
+  const { statusBadge, outcome } = await changeOutcome(page, OUTCOME_REFERENCE);
+  await expect(statusBadge).toHaveText('Postulée');
+  await expect(outcome.getByRole('button', { name: 'En cours' })).toHaveAttribute('aria-pressed', 'true');
+
+  await outcome.getByRole('button', { name: 'Obtenue' }).click();
+  await expect(statusBadge).toHaveText('Obtenue');
+  await outcome.getByRole('button', { name: 'Refusée' }).click();
+  await expect(statusBadge).toHaveText('Refusée');
+  await expect(outcome.getByRole('button', { name: 'Refusée' })).toHaveAttribute('aria-pressed', 'true');
+  await outcome.getByRole('button', { name: 'En cours' }).click();
+
+  await expect(statusBadge).toHaveText('Postulée');
+  await expect(page.getByRole('button', { name: 'Marquer comme Postulée' })).toHaveCount(0);
+});
+
+test.describe('outcome selector before React runs', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('marks an Application Hired through a plain form', async ({ page }) => {
+    const { statusBadge, outcome } = await changeOutcome(page, OUTCOME_WITHOUT_JS_REFERENCE);
+
+    await outcome.getByRole('button', { name: 'Obtenue' }).click();
+
+    await expect(statusBadge).toHaveText('Obtenue');
+  });
 });

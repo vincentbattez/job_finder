@@ -35,11 +35,15 @@ export const POSTING_FR: typeof POSTING_EN = {
   noCc: 'Aucune',
   salutationTerm: 'Formule d’appel',
 
-  statusButtonLabelByStatus: {
-    to_apply: 'Remettre À traiter',
-    applied: 'Marquer comme Postulée',
-    archived: 'Archiver',
+  markApplied: 'Marquer comme Postulée',
+  outcomeLabel: 'Issue de la Candidature',
+  outcomeLabelByStatus: {
+    applied: 'En cours',
+    hired: 'Obtenue',
+    rejected: 'Refusée',
   },
+  archive: 'Archiver',
+  unarchive: 'Désarchiver',
   confirmApplied: 'Confirmer : Postulée',
   cancel: 'Annuler',
   appliedFreezesLetter: 'Une fois Postulée, la Lettre retenue ne change plus : c’est celle envoyée.',
@@ -47,6 +51,8 @@ export const POSTING_FR: typeof POSTING_EN = {
   // Every Artifact is feminine in French: la Recherche, la Lettre, la Fiche d’entretien, la Visualisation
   launchArtifact: 'Lancer la {{artifactLabel}}',
   relaunchArtifact: 'Relancer la {{artifactLabel}}',
+  launchArtifact_portrait: 'Lancer le {{artifactLabel}}',
+  relaunchArtifact_portrait: 'Relancer le {{artifactLabel}}',
   extractionLabel: 'Champs relevés par Claude',
   relaunchExtraction: 'Relancer l’extraction',
 
@@ -67,6 +73,53 @@ export const POSTING_FR: typeof POSTING_EN = {
   copiedCommand: 'Copiée',
   copyMarkdown: 'Copier le Markdown',
   copiedMarkdown: 'Copié',
+
+  notes: {
+    heading: 'Notes',
+    label: 'Notes en Markdown',
+    placeholder:
+      '# Appel du service\n\nCe que vous apprenez sur cette Offre, en Markdown : un appel, le retour d’un entretien…',
+    save: 'Enregistrer les Notes',
+  },
+
+  interviews: {
+    heading: 'Entretiens',
+    applyFirst: 'Un Entretien appartient à une Candidature : marquer l’Offre Postulée pour en ajouter un.',
+    noInterview: 'Aucun Entretien pour l’instant.',
+    title: 'Entretien {{number}}',
+    start: 'Début',
+    duration: 'Durée (minutes)',
+    minutes: '{{minutes}} min',
+    place: 'Lieu',
+    interviewers: 'Interlocuteurs',
+    interviewersPlaceholder: 'Nom, fonction, ce que vous savez d’eux',
+    startPlaceholder: '2026-11-19T14:00',
+    placePlaceholder: 'Salle 3 du tribunal, ou en visioconférence',
+    newInterview: 'Nouvel Entretien',
+    add: 'Ajouter l’Entretien',
+    edit: 'Modifier l’Entretien {{number}}',
+    save: 'Enregistrer l’Entretien',
+    delete: 'Supprimer l’Entretien {{number}}',
+    deleteForGood: 'Supprimer définitivement l’Entretien {{number}}',
+    ical: 'Ajouter à l’agenda (iCal)',
+    next: 'Prochain Entretien',
+    last: 'Dernier Entretien',
+    count_one: '{{count}} Entretien',
+    count_other: '{{count}} Entretiens',
+  },
+
+  applicationRow: {
+    lastChangeAt: 'Dernier changement le',
+    notesExcerpt: 'Notes',
+  },
+
+  ical: {
+    summary: 'Entretien · {{title}} · {{employer}}',
+    summaryWithoutEmployer: 'Entretien · {{title}}',
+    officialAd: 'Annonce officielle',
+    postingPage: 'Page Job Finder',
+    link: '{{label}} : {{url}}',
+  },
 
   detection: {
     run: 'Lancer une Détection',

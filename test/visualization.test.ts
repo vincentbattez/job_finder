@@ -50,14 +50,19 @@ function visualizationRun(html = VISUALIZATION) {
   return { fileByName: { 'visualization.html': html } };
 }
 
+// Léa's Postings, her Béthune Posting Applied with a first Interview, which the Visualization prepares
 async function detectPostings(aiSession: ReturnType<typeof createFakeAiSession>) {
   const { actions, dataDirectory } = await detectRecordedPostings(aiSession);
+  await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+  await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: 'Béthune', interviewers: '' });
   return { actions, postingDirectory: path.join(dataDirectory, LEA_POSTINGS_PATH, POSTING_DIRECTORY_NAME) };
 }
 
-// Launching a module queues its job, which the worker runs (ADR-0003)
+// Launching a module queues its job, which the worker runs (ADR-0003); the Research belongs to the
+// Posting, the Interview Brief and the Visualization to its first Interview
 async function runModule(actions: Actions, module: string) {
-  const { id } = await actions.runModule({ module, reference: REFERENCE });
+  const interview = module === 'research' ? undefined : 1;
+  const { id } = await actions.runModule({ module, reference: REFERENCE, interview });
   await actions.runQueuedJobs();
   return actions.followJob({ jobId: id });
 }
@@ -78,7 +83,7 @@ describe('visualization', () => {
     await runModule(actions, 'research');
     await runModule(actions, 'brief');
     await runModule(actions, 'brief');
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'interview_brief', number: 1 });
+    await actions.chooseVersion({ reference: REFERENCE, artifact: 'interview_brief', interview: 1, number: 1 });
 
     const job = await runModule(actions, 'visualization');
     await runModule(actions, 'visualization');
@@ -88,18 +93,21 @@ describe('visualization', () => {
       artifact: 'visualization',
       number: 1,
       state: 'ready',
-      inputList: [{ artifact: 'interview_brief', number: 1, posting: { reference: REFERENCE } }],
+      interview: { number: 1 },
+      inputList: [
+        { artifact: 'interview_brief', number: 1, posting: { reference: REFERENCE }, interview: { number: 1 } },
+      ],
     });
-    expect(readFileSync(path.join(postingDirectory, 'visualization/v1/visualization.html'), 'utf8')).toBe(
+    expect(readFileSync(path.join(postingDirectory, 'interviews/1/visualization/v1/visualization.html'), 'utf8')).toBe(
       VISUALIZATION,
     );
     const session = aiSession.headlessSessionList.at(-1);
     // The Interview Brief is in the folder of the Posting, the session's own
     expect(session?.readDirectoryList).toEqual([]);
     expect(session?.fixedPrompt).toContain(
-      `\`${path.join(postingDirectory, 'interview_brief/v1/interview-brief.md')}\``,
+      `\`${path.join(postingDirectory, 'interviews/1/interview_brief/v1/interview-brief.md')}\``,
     );
-    const versionList = await actions.listVersions({ reference: REFERENCE, artifact: 'visualization' });
+    const versionList = await actions.listVersions({ reference: REFERENCE, artifact: 'visualization', interview: 1 });
     expect(versionList.map(({ number, isChosen }) => ({ number, isChosen }))).toEqual([
       { number: 1, isChosen: false },
       { number: 2, isChosen: true },
@@ -114,7 +122,7 @@ describe('visualization', () => {
     expect(fixedPrompt).toContain('same content as the Interview Brief, laid out: add no fact');
     expect(fixedPrompt).toContain('No JavaScript');
     expect(instructions).toBe(VISUALIZATION_DEFAULT_INSTRUCTIONS);
-    const [version] = await actions.listVersions({ reference: REFERENCE, artifact: 'visualization' });
+    const [version] = await actions.listVersions({ reference: REFERENCE, artifact: 'visualization', interview: 1 });
     expect(version?.instructions).toBe(VISUALIZATION_DEFAULT_INSTRUCTIONS);
   });
 
@@ -123,10 +131,10 @@ describe('visualization', () => {
     await runModule(actions, 'research');
     await runModule(actions, 'brief');
 
-    const launch = actions.runModule({ module: 'visualization', reference: REFERENCE });
+    const launch = actions.runModule({ module: 'visualization', reference: REFERENCE, interview: 1 });
 
     await expect(launch).rejects.toThrow(
-      "L'Offre 2026-2445600 n'a pas de Fiche d’entretien retenue, sur laquelle s'appuie la Visualisation. La produire d'abord : jf run interview_brief 2026-2445600.",
+      "L'Offre 2026-2445600 n'a pas de Fiche d’entretien retenue, sur laquelle s'appuie la Visualisation. La produire d'abord : jf run interview_brief 2026-2445600 1.",
     );
     expect(await actions.runQueuedJobs()).toEqual([]);
   });
@@ -135,17 +143,17 @@ describe('visualization', () => {
     {
       problem: 'is not an HTML page',
       html: "# Fiche d'entretien\n\n## À réviser\n",
-      log: "Le fichier visualization/v1/visualization.html est mal formé : ce n'est pas une page HTML complète, de « <!DOCTYPE html> » à « </html> ».",
+      log: "Le fichier interviews/1/visualization/v1/visualization.html est mal formé : ce n'est pas une page HTML complète, de « <!DOCTYPE html> » à « </html> ».",
     },
     {
       problem: 'is cut short',
       html: VISUALIZATION.replace('</html>', ''),
-      log: "Le fichier visualization/v1/visualization.html est mal formé : ce n'est pas une page HTML complète, de « <!DOCTYPE html> » à « </html> ».",
+      log: "Le fichier interviews/1/visualization/v1/visualization.html est mal formé : ce n'est pas une page HTML complète, de « <!DOCTYPE html> » à « </html> ».",
     },
     {
       problem: 'holds a script',
       html: VISUALIZATION.replace('</body>', '<script src="https://cdn.example.org/mermaid.js"></script></body>'),
-      log: "Le fichier visualization/v1/visualization.html est mal formé : il contient un script, que le front n'exécute pas.",
+      log: "Le fichier interviews/1/visualization/v1/visualization.html est mal formé : il contient un script, que le front n'exécute pas.",
     },
   ])('fails the Version of a file that $problem', async ({ html, log }) => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, BRIEF_RUN, visualizationRun(html));
@@ -166,7 +174,9 @@ describe('correcting a Visualization', () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, BRIEF_RUN, visualizationRun());
     const { actions } = await produceVisualization(aiSession);
 
-    await expect(actions.openArtifact({ reference: REFERENCE, artifact: 'visualization' })).rejects.toThrow(
+    await expect(
+      actions.openArtifact({ reference: REFERENCE, artifact: 'visualization', interview: 1 }),
+    ).rejects.toThrow(
       "La Visualisation ne se modifie pas à la main : elle reprend la Fiche d'entretien retenue. Corrigez celle-ci, puis relancez la Visualisation de l'Offre 2026-2445600.",
     );
     expect(aiSession.interactiveSessionList).toEqual([]);
@@ -175,11 +185,13 @@ describe('correcting a Visualization', () => {
   it('shows the Visualization on the Posting page without a jf edit command, nor any file to correct', async () => {
     const { actions } = await produceVisualization(createFakeAiSession(RESEARCH_RUN, BRIEF_RUN, visualizationRun()));
 
-    const { artifactList } = await actions.readPosting({ reference: REFERENCE });
+    const { artifactList: postingArtifactList, interviewList } = await actions.readPosting({ reference: REFERENCE });
 
+    const artifactList = [...postingArtifactList, ...(interviewList[0]?.artifactList ?? [])];
     expect(Object.fromEntries(artifactList.map(({ artifact, isEditable }) => [artifact, isEditable]))).toEqual({
       research: true,
       letter: false,
+      portrait: false,
       interview_brief: true,
       visualization: false,
     });
@@ -208,8 +220,12 @@ describe('reading a Visualization', () => {
     await runModule(actions, 'visualization');
     await runModule(actions, 'visualization');
 
-    expect(await actions.readVisualization({ reference: REFERENCE, number: '1' })).toEqual({ html: VISUALIZATION });
-    expect(await actions.readVisualization({ reference: REFERENCE, number: '2' })).toEqual({ html: otherPage });
+    expect(await actions.readVisualization({ reference: REFERENCE, interview: '1', number: '1' })).toEqual({
+      html: VISUALIZATION,
+    });
+    expect(await actions.readVisualization({ reference: REFERENCE, interview: '1', number: '2' })).toEqual({
+      html: otherPage,
+    });
   });
 
   it.each([
@@ -217,7 +233,7 @@ describe('reading a Visualization', () => {
       case: 'an unknown Version',
       number: '2',
       error:
-        "Version inconnue : visualization v2 de l'Offre 2026-2445600. « jf versions 2026-2445600 visualization » liste ses Versions.",
+        "Version inconnue : visualization v2 de l'Offre 2026-2445600. « jf versions 2026-2445600 visualization 1 » liste ses Versions.",
     },
     {
       case: 'a Version without its page',
@@ -230,6 +246,6 @@ describe('reading a Visualization', () => {
     await runModule(actions, 'brief');
     await runModule(actions, 'visualization');
 
-    await expect(actions.readVisualization({ reference: REFERENCE, number })).rejects.toThrow(error);
+    await expect(actions.readVisualization({ reference: REFERENCE, interview: '1', number })).rejects.toThrow(error);
   });
 });

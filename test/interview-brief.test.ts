@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -16,6 +16,21 @@ const INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.interview_b
 const REFERENCE = '2026-2445600';
 const POSTING_DIRECTORY_NAME =
   '2026-2445600-attache-de-justice-affecte-aupres-des-magistrats-du-siege-tribunal-pour-enfants-tj-bethune';
+
+// Her first round with the court's HR, then the job-specific interview with a judge
+const HR_INTERVIEW = {
+  start: '2026-11-19T14:00',
+  durationMinutes: 45,
+  place: 'Tribunal judiciaire, Béthune',
+  interviewers: 'Mme Durand, responsable RH de la cour d’appel',
+};
+const JUDGE_INTERVIEW = {
+  start: '2026-12-03T10:00',
+  place: 'Visioconférence',
+  interviewers: 'M. Lefebvre, juge des enfants',
+};
+
+const NOTES = '# Appel du greffe\n\nLe premier tour porte sur la motivation.\n';
 
 const RESEARCH_RUN = {
   fileByName: {
@@ -60,8 +75,12 @@ function briefRun(markdown = INTERVIEW_BRIEF) {
   return { fileByName: { 'interview-brief.md': markdown } };
 }
 
-async function detectPostings(aiSession: ReturnType<typeof createFakeAiSession>) {
+// Léa's Postings, her Béthune Posting Applied with a Chosen Research, and its first Interview
+async function applyWithInterview(aiSession: ReturnType<typeof createFakeAiSession>) {
   const { actions, dataDirectory } = await detectRecordedPostings(aiSession);
+  await runModule(actions, 'research');
+  await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+  await actions.addInterview({ reference: REFERENCE, ...HR_INTERVIEW });
   return {
     actions,
     dataDirectory,
@@ -70,38 +89,98 @@ async function detectPostings(aiSession: ReturnType<typeof createFakeAiSession>)
 }
 
 // Launching a module queues its job, which the worker runs (ADR-0003)
-async function runModule(actions: Actions, module: string) {
-  const { id } = await actions.runModule({ module, reference: REFERENCE });
+async function runModule(actions: Actions, module: string, interview?: number) {
+  const { id } = await actions.runModule({ module, reference: REFERENCE, interview });
   await actions.runQueuedJobs();
   return actions.followJob({ jobId: id });
 }
 
 describe('interview brief', () => {
-  it('produces a new Version at each launch of jf run brief, the latest one chosen', async () => {
+  it('produces a new Version at each launch on an Interview, in its folder, the latest one chosen', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, briefRun(), briefRun());
-    const { actions, postingDirectory } = await detectPostings(aiSession);
-    await runModule(actions, 'research');
+    const { actions, postingDirectory } = await applyWithInterview(aiSession);
 
-    const job = await runModule(actions, 'brief');
-    await runModule(actions, 'brief');
+    const job = await runModule(actions, 'brief', 1);
+    await runModule(actions, 'brief', 1);
 
-    expect(job).toMatchObject({ module: 'interview_brief', state: 'done' });
-    expect(job.version).toMatchObject({ artifact: 'interview_brief', number: 1, state: 'ready' });
-    expect(readFileSync(path.join(postingDirectory, 'interview_brief/v1/interview-brief.md'), 'utf8')).toBe(
-      INTERVIEW_BRIEF,
-    );
-    const versionList = await actions.listVersions({ reference: REFERENCE, artifact: 'interview_brief' });
+    expect(job).toMatchObject({ module: 'interview_brief', state: 'done', interview: { number: 1 } });
+    expect(job.version).toMatchObject({
+      artifact: 'interview_brief',
+      number: 1,
+      state: 'ready',
+      interview: { number: 1 },
+    });
+    expect(
+      readFileSync(path.join(postingDirectory, 'interviews/1/interview_brief/v1/interview-brief.md'), 'utf8'),
+    ).toBe(INTERVIEW_BRIEF);
+    const versionList = await actions.listVersions({ reference: REFERENCE, artifact: 'interview_brief', interview: 1 });
     expect(versionList.map(({ number, isChosen }) => ({ number, isChosen }))).toEqual([
       { number: 1, isChosen: false },
       { number: 2, isChosen: true },
     ]);
   });
 
-  it('refuses to run without a Chosen Research, before queuing anything', async () => {
-    const { actions } = await detectPostings(createFakeAiSession({ isSuccess: false }));
-    await runModule(actions, 'research');
+  // A first HR round and a job-specific interview are not prepared the same way (spec #45, story 39)
+  it('numbers and chooses its Versions per Interview', async () => {
+    const aiSession = createFakeAiSession(RESEARCH_RUN, briefRun(), briefRun(), briefRun());
+    const { actions } = await applyWithInterview(aiSession);
+    await actions.addInterview({ reference: REFERENCE, ...JUDGE_INTERVIEW });
+    await runModule(actions, 'brief', 1);
+    await runModule(actions, 'brief', 1);
+    const judgeJob = await runModule(actions, 'brief', 2);
 
-    const launch = actions.runModule({ module: 'brief', reference: REFERENCE });
+    await actions.chooseVersion({ reference: REFERENCE, artifact: 'interview_brief', interview: 1, number: 1 });
+
+    expect(judgeJob.version).toMatchObject({ number: 1, interview: { number: 2 } });
+    const { interviewList } = await actions.readPosting({ reference: REFERENCE });
+    expect(
+      interviewList.map(({ number, artifactList }) => ({
+        number,
+        chosenList: artifactList.map(({ artifact, versionList }) => ({
+          artifact,
+          chosen: versionList.filter(({ version }) => version.isChosen).map(({ version }) => version.number),
+        })),
+      })),
+    ).toEqual([
+      {
+        number: 1,
+        chosenList: [
+          { artifact: 'portrait', chosen: [] },
+          { artifact: 'interview_brief', chosen: [1] },
+          { artifact: 'visualization', chosen: [] },
+        ],
+      },
+      {
+        number: 2,
+        chosenList: [
+          { artifact: 'portrait', chosen: [] },
+          { artifact: 'interview_brief', chosen: [1] },
+          { artifact: 'visualization', chosen: [] },
+        ],
+      },
+    ]);
+  });
+
+  it('shows with the Portrait, apart from the Artifacts of the Posting, the Research and the Letter', async () => {
+    const { actions } = await applyWithInterview(createFakeAiSession(RESEARCH_RUN));
+
+    const { artifactList, interviewList } = await actions.readPosting({ reference: REFERENCE });
+
+    expect(artifactList.map(({ artifact }) => artifact)).toEqual(['research', 'letter']);
+    expect(
+      interviewList.map(({ artifactList: interviewArtifactList }) =>
+        interviewArtifactList.map(({ artifact }) => artifact),
+      ),
+    ).toEqual([['portrait', 'interview_brief', 'visualization']]);
+  });
+
+  it('refuses to run without a Chosen Research, before queuing anything', async () => {
+    const { actions } = await detectRecordedPostings(createFakeAiSession({ isSuccess: false }));
+    await runModule(actions, 'research');
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await actions.addInterview({ reference: REFERENCE, ...HR_INTERVIEW });
+
+    const launch = actions.runModule({ module: 'brief', reference: REFERENCE, interview: 1 });
 
     await expect(launch).rejects.toThrow(
       "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Fiche d’entretien. La produire d'abord : jf run research 2026-2445600.",
@@ -109,17 +188,39 @@ describe('interview brief', () => {
     expect(await actions.runQueuedJobs()).toEqual([]);
   });
 
+  it.each([
+    { case: 'without an Interview', interview: undefined, code: 'interview_required' },
+    { case: 'on an Interview the Posting does not have', interview: 2, code: 'unknown_interview' },
+  ])('refuses to run $case', async ({ interview, code }) => {
+    const { actions } = await applyWithInterview(createFakeAiSession(RESEARCH_RUN));
+
+    await expect(actions.runModule({ module: 'brief', reference: REFERENCE, interview })).rejects.toMatchObject({
+      code,
+    });
+    expect(await actions.runQueuedJobs()).toEqual([]);
+  });
+
+  it('refuses an Interview for the Research, which belongs to the Posting', async () => {
+    const { actions } = await applyWithInterview(createFakeAiSession(RESEARCH_RUN));
+
+    await expect(actions.runModule({ module: 'research', reference: REFERENCE, interview: 1 })).rejects.toMatchObject({
+      code: 'interview_not_expected',
+    });
+  });
+
   // The interview comes once the Letter is sent: the Interview Brief prepares the questions on it
   it('reads the Job Description, the Chosen Research, the Profile and the Chosen Letter, the one sent', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, RESEARCH_RUN, LETTER_RUN, briefRun());
-    const { actions, dataDirectory, postingDirectory } = await detectPostings(aiSession);
+    const { actions, dataDirectory } = await detectRecordedPostings(aiSession);
+    const postingDirectory = path.join(dataDirectory, LEA_POSTINGS_PATH, POSTING_DIRECTORY_NAME);
     await runModule(actions, 'research');
     await runModule(actions, 'research');
     await actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: 1 });
     await runModule(actions, 'letter');
     await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await actions.addInterview({ reference: REFERENCE, ...HR_INTERVIEW });
 
-    const { version } = await runModule(actions, 'brief');
+    const { version } = await runModule(actions, 'brief', 1);
 
     const profileDirectory = path.join(dataDirectory, 'candidates/lea/profile');
     const session = aiSession.headlessSessionList.at(-1);
@@ -130,34 +231,75 @@ describe('interview brief', () => {
     expect(session?.fixedPrompt).toContain(`\`${profileDirectory}\``);
     expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'letter/v1/letter.md')}\``);
     expect(version?.inputList).toEqual([
-      { artifact: 'research', number: 1, posting: { reference: REFERENCE } },
-      { artifact: 'letter', number: 1, posting: { reference: REFERENCE } },
+      { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
+      { artifact: 'letter', number: 1, posting: { reference: REFERENCE }, interview: null },
     ]);
   });
 
   it('runs without a Letter, and tells the session there is none', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, briefRun());
-    const { actions, dataDirectory } = await detectPostings(aiSession);
-    await runModule(actions, 'research');
+    const { actions, dataDirectory } = await applyWithInterview(aiSession);
 
-    const { state, version } = await runModule(actions, 'brief');
+    const { state, version } = await runModule(actions, 'brief', 1);
 
     expect(state).toBe('done');
     const session = aiSession.headlessSessionList.at(-1);
     expect(session?.readDirectoryList).toEqual([path.join(dataDirectory, 'candidates/lea/profile')]);
     expect(session?.fixedPrompt).toContain('The Candidate has no Letter for this Posting');
     expect(session?.fixedPrompt).not.toContain('letter.md');
-    expect(version?.inputList).toEqual([{ artifact: 'research', number: 1, posting: { reference: REFERENCE } }]);
+    expect(version?.inputList).toEqual([
+      { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
+    ]);
   });
 });
 
 describe('the prompt of the Interview Brief', () => {
+  it('holds the Interview, the Notes and the Chosen Interview Brief of the previous round', async () => {
+    const aiSession = createFakeAiSession(RESEARCH_RUN, briefRun(), briefRun(), briefRun());
+    const { actions, postingDirectory } = await applyWithInterview(aiSession);
+    await actions.addInterview({ reference: REFERENCE, ...JUDGE_INTERVIEW });
+    await actions.saveNotes({ reference: REFERENCE, notes: NOTES });
+    await runModule(actions, 'brief', 1);
+    await runModule(actions, 'brief', 1);
+    await actions.chooseVersion({ reference: REFERENCE, artifact: 'interview_brief', interview: 1, number: 1 });
+
+    const { version } = await runModule(actions, 'brief', 2);
+
+    const fixedPrompt = aiSession.headlessSessionList.at(-1)?.fixedPrompt;
+    expect(fixedPrompt).toContain('Interview 2 of this Posting');
+    expect(fixedPrompt).toContain('2026-12-03 10:00, Paris time; duration: 60 minutes');
+    expect(fixedPrompt).toContain('Visioconférence');
+    expect(fixedPrompt).toContain('M. Lefebvre, juge des enfants');
+    expect(fixedPrompt).toContain('Le premier tour porte sur la motivation.');
+    expect(fixedPrompt).toContain(
+      `The Chosen Interview Brief of the previous Interview 1: \`${path.join(postingDirectory, 'interviews/1/interview_brief/v1/interview-brief.md')}\``,
+    );
+    expect(fixedPrompt).not.toContain('interviews/1/interview_brief/v2');
+    expect(version?.inputList).toEqual([
+      { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
+      { artifact: 'interview_brief', number: 1, posting: { reference: REFERENCE }, interview: { number: 1 } },
+    ]);
+  });
+
+  it('reads no Interview Brief for the first round, nor the later ones', async () => {
+    const aiSession = createFakeAiSession(RESEARCH_RUN, briefRun(), briefRun());
+    const { actions } = await applyWithInterview(aiSession);
+    await actions.addInterview({ reference: REFERENCE, ...JUDGE_INTERVIEW });
+    await runModule(actions, 'brief', 2);
+
+    await runModule(actions, 'brief', 1);
+
+    const fixedPrompt = aiSession.headlessSessionList.at(-1)?.fixedPrompt;
+    expect(fixedPrompt).toContain('2026-11-19 14:00, Paris time; duration: 45 minutes');
+    expect(fixedPrompt).toContain('no previous Interview Brief');
+    expect(fixedPrompt).toContain('The Candidate keeps no Notes on this Posting.');
+  });
+
   it('asks for an Interview Brief organized to revise and train, without inventing a fact on the Candidate', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, briefRun());
-    const { actions } = await detectPostings(aiSession);
-    await runModule(actions, 'research');
+    const { actions } = await applyWithInterview(aiSession);
 
-    const { version } = await runModule(actions, 'brief');
+    const { version } = await runModule(actions, 'brief', 1);
 
     const { fixedPrompt, instructions } = aiSession.headlessSessionList[1] ?? {};
     // The plan is the default Instructions': the Candidate's own may organize the Interview Brief otherwise
@@ -165,6 +307,7 @@ describe('the prompt of the Interview Brief', () => {
       expect(instructions).toContain(`## ${section}`);
       expect(fixedPrompt).not.toContain(`## ${section}`);
     }
+    expect(instructions).toContain('Adapte le discours aux Interlocuteurs');
     expect(fixedPrompt).toContain('level 1 heading');
     expect(fixedPrompt).toContain('Never invent a fact about the Candidate');
     expect(fixedPrompt).toContain('`[à compléter : …]`');
@@ -175,12 +318,11 @@ describe('the prompt of the Interview Brief', () => {
   it("replaces the default Instructions with the Candidate's own, keeping the fixed part", async () => {
     const instructions = 'Dix questions au plus, sans moyens mnémotechniques en images.\n';
     const aiSession = createFakeAiSession(RESEARCH_RUN, briefRun());
-    const { actions, dataDirectory } = await detectPostings(aiSession);
+    const { actions, dataDirectory } = await applyWithInterview(aiSession);
     mkdirSync(path.join(dataDirectory, 'candidates/lea/instructions'));
     writeFileSync(path.join(dataDirectory, 'candidates/lea/instructions/interview_brief.md'), instructions);
-    await runModule(actions, 'research');
 
-    const { version } = await runModule(actions, 'brief');
+    const { version } = await runModule(actions, 'brief', 1);
 
     expect(aiSession.headlessSessionList[1]?.instructions).toBe(instructions);
     expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain('Never invent a fact about the Candidate');
@@ -189,10 +331,9 @@ describe('the prompt of the Interview Brief', () => {
 
   it('accepts an Interview Brief organized otherwise, as Instructions of the Candidate may ask', async () => {
     const tenQuestions = '# Fiche d’entretien\n\n## Dix questions\n\n- Pourquoi ce poste ?\n';
-    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, briefRun(tenQuestions)));
-    await runModule(actions, 'research');
+    const { actions } = await applyWithInterview(createFakeAiSession(RESEARCH_RUN, briefRun(tenQuestions)));
 
-    const { state, version } = await runModule(actions, 'brief');
+    const { state, version } = await runModule(actions, 'brief', 1);
 
     expect(state).toBe('done');
     expect(version?.state).toBe('ready');
@@ -200,25 +341,23 @@ describe('the prompt of the Interview Brief', () => {
 
   it('fails the Version of an Interview Brief without a title', async () => {
     const withoutTitle = INTERVIEW_BRIEF.replace(/^# .*\n/, '');
-    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, briefRun(withoutTitle)));
-    await runModule(actions, 'research');
+    const { actions } = await applyWithInterview(createFakeAiSession(RESEARCH_RUN, briefRun(withoutTitle)));
 
-    const { state, version, log } = await runModule(actions, 'brief');
+    const { state, version, log } = await runModule(actions, 'brief', 1);
 
     expect(state).toBe('failed');
     expect(version?.state).toBe('failed');
     expect(log).toContain(
-      'Le fichier interview_brief/v1/interview-brief.md est mal formé : il ne commence pas par un titre de niveau 1 (« # »).',
+      'Le fichier interviews/1/interview_brief/v1/interview-brief.md est mal formé : il ne commence pas par un titre de niveau 1 (« # »).',
     );
   });
 });
 
 // A correction modifies the Chosen Version in place (spec « Versions »)
 describe('correcting the Interview Brief', () => {
-  it('saves the correction made in the front editor in the Chosen Version', async () => {
-    const { actions, postingDirectory } = await detectPostings(createFakeAiSession(RESEARCH_RUN, briefRun()));
-    await runModule(actions, 'research');
-    await runModule(actions, 'brief');
+  it('saves the correction made in the front editor in the Chosen Version of its Interview', async () => {
+    const { actions, postingDirectory } = await applyWithInterview(createFakeAiSession(RESEARCH_RUN, briefRun()));
+    await runModule(actions, 'brief', 1);
     const corrected = INTERVIEW_BRIEF.replace(
       "[à compléter : diplôme et année d'obtention]",
       'master 2 de droit privé',
@@ -227,32 +366,78 @@ describe('correcting the Interview Brief', () => {
     await actions.saveDocument({
       reference: REFERENCE,
       artifact: 'interview_brief',
+      interview: '1',
       fileName: 'interview-brief.md',
       markdown: corrected,
     });
 
-    const { artifactList } = await actions.readPosting({ reference: REFERENCE });
-    const brief = artifactList.find(({ artifact }) => artifact === 'interview_brief');
+    const { interviewList } = await actions.readPosting({ reference: REFERENCE });
+    const brief = interviewList[0]?.artifactList.find(({ artifact }) => artifact === 'interview_brief');
     expect(brief?.versionList.map(({ documentList }) => documentList)).toEqual([
       [{ fileName: 'interview-brief.md', markdown: corrected, isModifiable: true }],
     ]);
-    expect(readFileSync(path.join(postingDirectory, 'interview_brief/v1/interview-brief.md'), 'utf8')).toBe(corrected);
+    expect(
+      readFileSync(path.join(postingDirectory, 'interviews/1/interview_brief/v1/interview-brief.md'), 'utf8'),
+    ).toBe(corrected);
   });
 
-  it('opens jf edit on the Chosen Version', async () => {
+  it('opens jf edit on the Chosen Version of its Interview', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, briefRun(), briefRun());
-    const { actions, postingDirectory } = await detectPostings(aiSession);
-    await runModule(actions, 'research');
-    await runModule(actions, 'brief');
-    await runModule(actions, 'brief');
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'interview_brief', number: 1 });
+    const { actions, postingDirectory } = await applyWithInterview(aiSession);
+    await runModule(actions, 'brief', 1);
+    await runModule(actions, 'brief', 1);
+    await actions.chooseVersion({ reference: REFERENCE, artifact: 'interview_brief', interview: 1, number: 1 });
 
-    await actions.openArtifact({ reference: REFERENCE, artifact: 'interview_brief' });
+    await actions.openArtifact({ reference: REFERENCE, artifact: 'interview_brief', interview: 1 });
 
     const [session] = aiSession.interactiveSessionList;
     expect(session?.directory).toBe(postingDirectory);
     expect(session?.prompt).toContain('You help Léa modify the Interview Brief of Posting 2026-2445600');
-    expect(session?.prompt).toContain('`interview_brief/v1/`');
+    expect(session?.prompt).toContain('`interviews/1/interview_brief/v1/`');
     expect(session?.prompt).not.toContain('interview_brief/v2');
+  });
+
+  it('is offered by jf edit with its Interview', async () => {
+    const { actions } = await applyWithInterview(createFakeAiSession(RESEARCH_RUN, briefRun()));
+    await runModule(actions, 'brief', 1);
+
+    const versionList = await actions.listChosenVersions({ reference: REFERENCE });
+
+    expect(versionList.map(({ artifact, interview }) => ({ artifact, interview }))).toEqual([
+      { artifact: 'research', interview: null },
+      { artifact: 'interview_brief', interview: { number: 1 } },
+    ]);
+  });
+});
+
+// Story 24: an Interview entered by mistake goes with all it prepared
+describe('deleting an Interview', () => {
+  it('deletes its Versions, their jobs and their files, and leaves the other Interviews and the Posting', async () => {
+    const aiSession = createFakeAiSession(RESEARCH_RUN, briefRun(), briefRun());
+    const { actions, postingDirectory } = await applyWithInterview(aiSession);
+    await actions.addInterview({ reference: REFERENCE, ...JUDGE_INTERVIEW });
+    await runModule(actions, 'brief', 1);
+    await runModule(actions, 'brief', 2);
+
+    await actions.deleteInterview({ reference: REFERENCE, number: 1 });
+
+    expect(existsSync(path.join(postingDirectory, 'interviews/1'))).toBe(false);
+    expect(existsSync(path.join(postingDirectory, 'interviews/2/interview_brief/v1/interview-brief.md'))).toBe(true);
+    expect(existsSync(path.join(postingDirectory, 'research/v1/research.md'))).toBe(true);
+    const { interviewList, artifactList } = await actions.readPosting({ reference: REFERENCE });
+    expect(interviewList.map(({ number }) => number)).toEqual([2]);
+    expect(artifactList.find(({ artifact }) => artifact === 'research')?.state).toBe('ready');
+    await expect(actions.followJob({ jobId: 2 })).rejects.toMatchObject({ code: 'unknown_job' });
+    expect(await actions.followJob({ jobId: 3 })).toMatchObject({ state: 'done', interview: { number: 2 } });
+  });
+
+  it('gives its number back, with no Version, to the next Interview added', async () => {
+    const { actions } = await applyWithInterview(createFakeAiSession(RESEARCH_RUN, briefRun()));
+    await runModule(actions, 'brief', 1);
+
+    await actions.deleteInterview({ reference: REFERENCE, number: 1 });
+    await actions.addInterview({ reference: REFERENCE, ...JUDGE_INTERVIEW });
+
+    expect(await actions.listVersions({ reference: REFERENCE, artifact: 'interview_brief', interview: 1 })).toEqual([]);
   });
 });

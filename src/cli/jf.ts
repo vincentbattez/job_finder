@@ -5,7 +5,8 @@ import { parseArgs } from 'node:util';
 import { DEFAULT_LOCALE, localeOf, tFor, type Locale } from '#/actions/i18n.ts';
 import { codedError, createActions, formatError, type Actions } from '#/actions/index.ts';
 
-import { readTextFile } from './acl/files.ts';
+import { readTextFile, writeTextFile } from './acl/files.ts';
+import { findDefaultOrigin } from './acl/origin.ts';
 
 const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
 
@@ -20,12 +21,20 @@ type Posting = Awaited<ReturnType<Actions['listPostings']>>[number];
 type Recipients = Awaited<ReturnType<Actions['readRecipients']>>;
 type ModuleInstructions = Awaited<ReturnType<Actions['listInstructions']>>[number];
 
+// The fields of an Interview jf interviews takes as options, any left out keeping its value on an edit
+interface IInterviewOption {
+  start?: string | undefined;
+  durationMinutes?: string | undefined;
+  place?: string | undefined;
+  interviewers?: string | undefined;
+}
+
 interface ICommand {
   describe: (t: Cli) => string;
   run: (
     actions: Actions,
     argumentList: string[],
-    option: { isWaiting: boolean; isAutomation: boolean },
+    option: { isWaiting: boolean; isAutomation: boolean; interview: IInterviewOption; origin: string | undefined },
   ) => Promise<void>;
 }
 
@@ -58,13 +67,18 @@ function formatAddress({ email, source }: Recipients['ccList'][number], t: Cli):
 
 function formatPosting(posting: Posting, t: Cli): string {
   const { repostOf, repostList, deadline } = posting;
-  const statusLabel = t(`statusLabelByStatus.${posting.status}`, { ns: 'common' });
+  // The Status as computed, then Expired and Archived beside it, which they leave as it is
+  const statusLabelList = [
+    t(`statusLabelByStatus.${posting.step}`, { ns: 'common' }),
+    ...(posting.isExpired ? [t('expired', { ns: 'common' })] : []),
+    ...(posting.archivedAt === null ? [] : [t('archived', { ns: 'common' })]),
+  ];
   return [
     posting.reference,
     posting.title,
     posting.workplace ?? '—',
     deadline === null ? '—' : t('deadline', { deadline }),
-    posting.isExpired ? `${statusLabel}, ${t('expired', { ns: 'common' })}` : statusLabel,
+    statusLabelList.join(', '),
     posting.isInZone ? t('inZone') : t('outOfZone'),
     // The link of a Repost, both ways, only on the Postings that have one
     ...(repostOf === null ? [] : [t('repostOf', { reference: repostOf.reference })]),
@@ -152,10 +166,11 @@ async function chooseReference(actions: Actions, terminal: Terminal): Promise<st
   return posting.reference;
 }
 
-// From a list, unless given: the Candidate has no reference to remember
-async function chooseArtifact(actions: Actions, [givenReference, givenArtifact]: string[]) {
+// From a list, unless given: the Candidate has no reference to remember. An Artifact of an Interview
+// takes its number last.
+async function chooseArtifact(actions: Actions, [givenReference, givenArtifact, givenInterview]: string[]) {
   if (givenReference !== undefined && givenArtifact !== undefined) {
-    return { reference: givenReference, artifact: givenArtifact };
+    return { reference: givenReference, artifact: givenArtifact, interview: givenInterview };
   }
   const terminal = openTerminal();
   try {
@@ -165,21 +180,26 @@ async function chooseArtifact(actions: Actions, [givenReference, givenArtifact]:
     const version = await choose(terminal, locale, {
       question: t('artifactQuestion'),
       itemList: await actions.listChosenVersions({ reference }),
-      label: ({ artifact, number }) =>
-        t('chosenVersionLabel', { artifactLabel: t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' }), number }),
+      label: ({ artifact, number, interview }) => {
+        const artifactLabel = t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' });
+        return interview === null
+          ? t('chosenVersionLabel', { artifactLabel, number })
+          : t('chosenInterviewVersionLabel', { artifactLabel, number, interviewNumber: interview.number });
+      },
       emptyError: () => codedError('no_artifact', { reference }, { locale }),
     });
-    return { reference, artifact: version.artifact };
+    return { reference, artifact: version.artifact, interview: version.interview?.number };
   } finally {
     // Claude Code takes the terminal next
     terminal.close();
   }
 }
 
-// Typed or redirected from a file: the Instructions end with the input (Ctrl-D in a terminal)
-async function readStandardInput(t: Cli): Promise<string> {
+// Typed or redirected from a file: the Markdown ends with the input (Ctrl-D in a terminal), the
+// invitation only shown in a terminal
+async function readStandardInput(invitation: string): Promise<string> {
   if (process.stdin.isTTY) {
-    process.stderr.write(t('typeInstructions'));
+    process.stderr.write(invitation);
   }
   let text = '';
   for await (const chunk of process.stdin) {
@@ -209,7 +229,11 @@ async function runInstructionsOperation(
       return;
     }
     case 'replace': {
-      await actions.saveInstructions({ candidateId, module, instructions: await readStandardInput(t) });
+      await actions.saveInstructions({
+        candidateId,
+        module,
+        instructions: await readStandardInput(t('typeInstructions')),
+      });
       process.stdout.write(t('instructionsReplaced', { module }));
       return;
     }
@@ -221,6 +245,25 @@ async function runInstructionsOperation(
     default: {
       throw codedError('unknown_operation', { operation }, { locale });
     }
+  }
+}
+
+// One line per Interview, by date: its number, its start in Paris, its duration, its place and its
+// Interviewers on one line
+async function printInterviews(actions: Actions, reference: string, t: Cli): Promise<void> {
+  const interviewList = await actions.listInterviews({ reference });
+  if (interviewList.length === 0) {
+    process.stdout.write(t('noInterview', { reference }));
+  }
+  for (const { number, startAt, durationMinutes, place, interviewers } of interviewList) {
+    const columnList = [
+      `#${String(number)}`,
+      t('dateTime', { ns: 'common', date: startAt }),
+      t('interviewMinutes', { minutes: durationMinutes }),
+      place === '' ? '—' : place,
+      interviewers === '' ? '—' : interviewers.replaceAll('\n', ' / '),
+    ];
+    process.stdout.write(`${columnList.join('\t')}\n`);
   }
 }
 
@@ -336,15 +379,20 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
   },
   run: {
     describe: (t) => t('runDescription'),
-    run: async (actions, [module, reference], { isWaiting }) => {
+    run: async (actions, [module, reference, interview], { isWaiting }) => {
       if (module === undefined || reference === undefined) {
         throw codedError('run_usage');
       }
-      const queuedJob = await actions.runModule({ module, reference });
+      const queuedJob = await actions.runModule({ module, reference, interview });
       const locale = await localeOfPosting(actions, reference);
       const t = tFor(locale, 'cli');
       // jf versions takes the Artifact, which the module of jf run brief is not named after
-      const versionsCommand = `jf versions ${reference} ${queuedJob.module}`;
+      const versionsCommand = [
+        'jf versions',
+        reference,
+        queuedJob.module,
+        ...(interview === undefined ? [] : [interview]),
+      ].join(' ');
       process.stdout.write(t('queued', { module, reference, jobId: queuedJob.id }));
       if (!isWaiting) {
         process.stdout.write(t('runQueued', { versionsCommand }));
@@ -354,7 +402,8 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       const { state, version, log, errorCode } = await actions.followJob({ jobId: queuedJob.id });
       const name = version === null ? module : `${module} v${String(version.number)}`;
       if (state === 'failed') {
-        throw codedError('run_failed', { name, log, module, reference, errorCode }, { locale });
+        const command = ['jf run', module, reference, ...(interview === undefined ? [] : [interview])].join(' ');
+        throw codedError('run_failed', { name, log, command, errorCode }, { locale });
       }
       process.stdout.write(t('runReady', { name, versionsCommand }));
     },
@@ -381,11 +430,11 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
   },
   versions: {
     describe: (t) => t('versionsDescription'),
-    run: async (actions, [reference, artifact]) => {
+    run: async (actions, [reference, artifact, interview]) => {
       if (reference === undefined || artifact === undefined) {
         throw codedError('versions_usage');
       }
-      const versionList = await actions.listVersions({ reference, artifact });
+      const versionList = await actions.listVersions({ reference, artifact, interview });
       const t = await cliOfPosting(actions, reference);
       for (const { number, state, isChosen, hasCandidateInstructions, createdAt } of versionList) {
         const columnList = [
@@ -399,7 +448,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       }
       // Without --wait, the reason of a failed job is read here, even one that failed before its
       // Version, and why a queued or running one makes no progress (#41)
-      const { failure, workerFailure } = await actions.readArtifactState({ reference, artifact });
+      const { failure, workerFailure } = await actions.readArtifactState({ reference, artifact, interview });
       if (failure !== null) {
         process.stdout.write(t('lastJobFailed', { errorCode: failure.errorCode ?? '—', log: failure.log }));
       }
@@ -410,18 +459,41 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
   },
   choose: {
     describe: (t) => t('chooseDescription'),
-    run: async (actions, [reference, artifact, version]) => {
+    run: async (actions, [reference, artifact, version, interview]) => {
       if (reference === undefined || artifact === undefined || version === undefined) {
         throw codedError('choose_usage');
       }
-      await actions.chooseVersion({ reference, artifact, number: version.replace(/^v/, '') });
+      await actions.chooseVersion({ reference, artifact, number: version.replace(/^v/, ''), interview });
       const t = await cliOfPosting(actions, reference);
       process.stdout.write(t('versionChosen', { artifact, version, reference }));
     },
   },
   apply: changeStatusCommand('applied', 'apply', (t) => t('applyDescription')),
-  archive: changeStatusCommand('archived', 'archive', (t) => t('archiveDescription')),
-  'to-apply': changeStatusCommand('to_apply', 'to-apply', (t) => t('toApplyDescription')),
+  hired: changeStatusCommand('hired', 'hired', (t) => t('hiredDescription')),
+  rejected: changeStatusCommand('rejected', 'rejected', (t) => t('rejectedDescription')),
+  'in-progress': changeStatusCommand('applied', 'in-progress', (t) => t('inProgressDescription')),
+  archive: {
+    describe: (t) => t('statusCommandDescription', { description: t('archiveDescription'), name: 'archive' }),
+    run: async (actions, [reference]) => {
+      if (reference === undefined) {
+        throw codedError('status_usage', { name: 'archive' });
+      }
+      await actions.archive({ reference });
+      const t = await cliOfPosting(actions, reference);
+      process.stdout.write(t('postingArchived', { reference }));
+    },
+  },
+  unarchive: {
+    describe: (t) => t('statusCommandDescription', { description: t('unarchiveDescription'), name: 'unarchive' }),
+    run: async (actions, [reference]) => {
+      if (reference === undefined) {
+        throw codedError('status_usage', { name: 'unarchive' });
+      }
+      await actions.unarchive({ reference });
+      const t = await cliOfPosting(actions, reference);
+      process.stdout.write(t('postingUnarchived', { reference }));
+    },
+  },
   profile: {
     describe: (t) => t('profileDescription'),
     run: async (actions, [candidateId]) => {
@@ -451,6 +523,70 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       await runInstructionsOperation(actions, locale, { ...instructions, candidateId }, operation);
     },
   },
+  // The same Markdown editing as jf instructions: shown, or replaced by the standard input
+  notes: {
+    describe: (t) => t('notesDescription'),
+    run: async (actions, [reference, operation]) => {
+      if (reference === undefined || (operation !== undefined && operation !== 'replace')) {
+        throw codedError('notes_usage');
+      }
+      const t = await cliOfPosting(actions, reference);
+      if (operation === undefined) {
+        const { posting } = await actions.readPosting({ reference });
+        process.stdout.write(posting.notes);
+        return;
+      }
+      await actions.saveNotes({ reference, notes: await readStandardInput(t('typeNotes')) });
+      process.stdout.write(t('notesReplaced', { reference }));
+    },
+  },
+  // Numbered per Posting, listed by date; the start is typed in Paris time, as on the front
+  interviews: {
+    describe: (t) => t('interviewsDescription'),
+    run: async (actions, [reference, operation, number], { interview }) => {
+      if (reference === undefined) {
+        throw codedError('interviews_usage');
+      }
+      const t = await cliOfPosting(actions, reference);
+      switch (operation) {
+        case undefined: {
+          await printInterviews(actions, reference, t);
+          return;
+        }
+        case 'add': {
+          await actions.addInterview({ reference, place: '', interviewers: '', ...interview });
+          process.stdout.write(t('interviewAdded', { reference }));
+          return;
+        }
+        case 'edit': {
+          await actions.editInterview({ reference, number, ...interview });
+          process.stdout.write(t('interviewEdited', { reference, number }));
+          return;
+        }
+        case 'delete': {
+          await actions.deleteInterview({ reference, number });
+          process.stdout.write(t('interviewDeleted', { reference, number }));
+          return;
+        }
+        default: {
+          throw codedError('interviews_usage');
+        }
+      }
+    },
+  },
+  // Written where the Candidate stands, its links on the address of the front
+  ical: {
+    describe: (t) => t('icalDescription'),
+    run: async (actions, [reference, number], { origin = findDefaultOrigin() }) => {
+      if (reference === undefined || number === undefined) {
+        throw codedError('ical_usage');
+      }
+      const locale = await localeOfPosting(actions, reference);
+      const { fileName, text } = await actions.readIcalFile({ reference, number, origin });
+      writeTextFile(fileName, text, locale);
+      process.stdout.write(tFor(locale, 'cli')('icalWritten', { filePath: path.resolve(fileName) }));
+    },
+  },
   edit: {
     describe: (t) => t('editDescription'),
     run: async (actions, argumentList) => {
@@ -478,7 +614,18 @@ function composeHelp(t: Cli): string {
 
 async function run(): Promise<void> {
   const { values, positionals: positionalList } = parseArgs({
-    options: { help: { type: 'boolean', short: 'h' }, wait: { type: 'boolean' }, automation: { type: 'boolean' } },
+    options: {
+      help: { type: 'boolean', short: 'h' },
+      wait: { type: 'boolean' },
+      automation: { type: 'boolean' },
+      // The fields of an Interview, for jf interviews
+      start: { type: 'string' },
+      duration: { type: 'string' },
+      place: { type: 'string' },
+      interviewers: { type: 'string' },
+      // The address of the front the links of jf ical start with
+      origin: { type: 'string' },
+    },
     allowPositionals: true,
   });
   const [commandName, ...argumentList] = positionalList;
@@ -499,6 +646,16 @@ async function run(): Promise<void> {
   await command.run(actions, argumentList, {
     isWaiting: values.wait === true,
     isAutomation: values.automation === true,
+    origin: values.origin,
+    // Only those given: an edit keeps the others
+    interview: Object.fromEntries(
+      Object.entries({
+        start: values.start,
+        durationMinutes: values.duration,
+        place: values.place,
+        interviewers: values.interviewers,
+      }).filter(([, value]) => value !== undefined),
+    ),
   });
 }
 

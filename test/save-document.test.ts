@@ -226,11 +226,14 @@ describe('saving a correction', () => {
   // The Visualization is regenerated from the Interview Brief, never corrected (spec « Modules IA »)
   it('refuses to correct a Visualization by hand', async () => {
     const actions = await detectPostings();
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: '', interviewers: '' });
 
     await expect(
       actions.saveDocument({
         reference: REFERENCE,
         artifact: 'visualization',
+        interview: 1,
         fileName: 'visualization.md',
         markdown: '',
       }),

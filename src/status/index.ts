@@ -1,6 +1,6 @@
 import { tFor } from '#/domain/catalogue/i18n.ts';
 import { codedError } from '#/domain/coded-error.ts';
-import type { Locale, Posting, Status } from '#/domain/index.ts';
+import type { Interview, Locale, Posting, Status, Step } from '#/domain/index.ts';
 
 // What the status rules read of a Posting
 type PostingStatus = Pick<Posting, 'reference' | 'status' | 'appliedAt'>;
@@ -35,49 +35,71 @@ export function isExpired(
   return lastDay !== undefined && FRANCE_DAY_FORMAT.format(now) > lastDay;
 }
 
-// Applied once, even if Archived since: the Candidate sent its Chosen Letter. A Posting Applied
-// before appliedAt existed has none.
+const MINUTE_MS = 60_000;
+
+// When an Interview ends, its start plus its duration
+export function findInterviewEnd({ startAt, durationMinutes }: Pick<Interview, 'startAt' | 'durationMinutes'>): Date {
+  return new Date(startAt.getTime() + durationMinutes * MINUTE_MS);
+}
+
+// Taken place once its start plus its duration has passed: an Interview in progress is still to come
+export function hasTakenPlace(interview: Pick<Interview, 'startAt' | 'durationMinutes'>, now: Date): boolean {
+  return findInterviewEnd(interview).getTime() <= now.getTime();
+}
+
+// Computed, never stored, since it depends on the time (ADR-0009): an outcome wins over the Interviews,
+// and an Application with none stays Applied
+export function findStep(
+  { status }: Pick<Posting, 'status'>,
+  interviewList: readonly Pick<Interview, 'startAt' | 'durationMinutes'>[],
+  now: Date,
+): Step {
+  if (status !== 'applied' || interviewList.length === 0) {
+    return status;
+  }
+  return interviewList.every((interview) => hasTakenPlace(interview, now)) ? 'interviewed' : 'invited';
+}
+
+// Applied once, even if Archived since: the Candidate sent its Chosen Letter, and its Application
+// started. A Posting Applied before appliedAt existed has none.
 export function hasBeenApplied({ status, appliedAt }: Pick<Posting, 'status' | 'appliedAt'>): boolean {
-  return status === 'applied' || appliedAt !== null;
+  return status !== 'to_apply' || appliedAt !== null;
 }
 
 // When a Posting moving to the status was first Applied: its Chosen Letter, the one sent, stays
 // frozen from then on
 export function findAppliedAt(posting: Pick<Posting, 'status' | 'appliedAt'>, status: Status, now: Date): Date | null {
-  return posting.appliedAt ?? (status === 'applied' || hasBeenApplied(posting) ? now : null);
+  return posting.appliedAt ?? (status !== 'to_apply' || hasBeenApplied(posting) ? now : null);
 }
 
-// The statuses a Posting can move to. Applied is never undone, since the Chosen Letter was sent: a
-// Applied Posting can be Archived, and comes back from Archived as Applied, never To Apply.
-export function listNextStatuses(posting: Pick<Posting, 'status' | 'appliedAt'>): Status[] {
-  switch (posting.status) {
-    case 'to_apply': {
-      return ['applied', 'archived'];
-    }
-    case 'applied': {
-      return ['archived'];
-    }
-    case 'archived': {
-      return [hasBeenApplied(posting) ? 'applied' : 'to_apply'];
-    }
-  }
+// The outcomes of an Application, In progress being Applied: the Candidate moves freely between them
+const APPLICATION_STATUS_LIST: Status[] = ['applied', 'hired', 'rejected'];
+
+// What the outcome selector offers besides the Status the Posting has, Archived or not (ADR-0007):
+// Applied on a To Apply Posting, then the other outcomes of its Application. Applied is never undone,
+// since the Chosen Letter was sent.
+export function listStatusChoices(posting: Pick<Posting, 'status' | 'appliedAt'>): Status[] {
+  return hasBeenApplied(posting) ? APPLICATION_STATUS_LIST.filter((status) => status !== posting.status) : ['applied'];
 }
 
 // Moving to the status it already has changes nothing
 export function assertStatusChange(posting: PostingStatus, status: Status, locale: Locale): void {
-  const nextStatusList = listNextStatuses(posting);
-  if (status === posting.status || nextStatusList.includes(status)) {
+  const choiceList = listStatusChoices(posting);
+  if (status === posting.status || choiceList.includes(status)) {
     return;
+  }
+  if (hasBeenApplied(posting)) {
+    throw codedError('status_change_after_applied', { reference: posting.reference }, { locale });
   }
   const t = tFor(locale, 'error');
   const tCommon = tFor(locale, 'common');
-  const nextLabelList = nextStatusList.map((nextStatus) => tCommon(`statusLabelByStatus.${nextStatus}`));
+  const nextLabelList = choiceList.map((choice) => tCommon(`statusLabelByStatus.${choice}`));
   const values = {
     reference: posting.reference,
     statusLabel: tCommon(`statusLabelByStatus.${posting.status}`),
     nextLabels: nextLabelList.join(t('orSeparator')),
   };
-  throw codedError(hasBeenApplied(posting) ? 'status_change_after_applied' : 'status_change', values, { locale });
+  throw codedError('status_change', values, { locale });
 }
 
 // Once the Posting was Applied, the Chosen Letter is the one sent, even once the Posting is Archived

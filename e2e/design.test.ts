@@ -10,7 +10,16 @@ test.describe('design system page', () => {
   test('shows a badge for each status of a Posting', async ({ page }) => {
     const section = page.getByRole('region', { name: 'Statuts d’une Offre' });
 
-    await expect(section.getByRole('listitem')).toHaveText(['À traiter', 'Postulée', 'Expirée', 'Archivée']);
+    await expect(section.getByRole('listitem')).toHaveText([
+      'À traiter',
+      'Postulée',
+      'Convoquée',
+      'Entretien passé',
+      'Obtenue',
+      'Refusée',
+      'Expirée',
+      'Archivée',
+    ]);
   });
 
   test('shows a badge for each state of an Artifact', async ({ page }) => {

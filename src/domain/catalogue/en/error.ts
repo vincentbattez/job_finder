@@ -60,9 +60,19 @@ export const ERROR_EN = {
   // Statuses
   statusChange: 'Posting {{reference}} is {{statusLabel}}: it can only move to {{nextLabels}}.',
   statusChangeAfterApplied:
-    'Posting {{reference}} is {{statusLabel}}: it can only move to {{nextLabels}}, since Applied is never undone: its Chosen Letter is the one sent.',
+    'Posting {{reference}} was Applied: it never goes back to To Apply, since its Chosen Letter is the one sent.',
   letterFrozen:
     'Posting {{reference}} was Applied: its Chosen Letter is frozen as sent. It is no longer edited, regenerated or replaced by another Version.',
+
+  // Interviews
+  interviewWithoutApplication:
+    'Posting {{reference}} is To Apply: mark it Applied first, an Interview belongs to its Application.',
+  unknownInterview:
+    'Posting {{reference}} has no Interview {{number}}. “jf interviews {{reference}}” lists its Interviews.',
+  interviewRequired:
+    'The {{artifactLabel}} prepares an Interview: name its number after the other arguments. “jf interviews {{reference}}” lists the Interviews of Posting {{reference}}.',
+  interviewNotExpected:
+    'The {{artifactLabel}} belongs to Posting {{reference}}, not to one of its Interviews: name no Interview number.',
 
   // Modules, jobs and Versions
   workerNotRunning:
@@ -75,7 +85,7 @@ export const ERROR_EN = {
   missingArtifactForFront:
     'Posting {{reference}} has no Chosen {{missingLabel}}, which the {{moduleLabel}} relies on: start the {{missingLabel}} first.',
   missingArtifactForCli:
-    'Posting {{reference}} has no Chosen {{missingLabel}}, which the {{moduleLabel}} relies on. Produce it first: jf run {{missingArtifact}} {{reference}}.',
+    'Posting {{reference}} has no Chosen {{missingLabel}}, which the {{moduleLabel}} relies on. Produce it first: {{command}}.',
   missingOutput: 'The expected file {{outputPath}} is missing.',
   emptyOutput: 'The expected file {{outputPath}} is empty.',
   malformedOutput: 'The file {{outputPath}} is malformed: {{formatError}}.',
@@ -85,11 +95,11 @@ export const ERROR_EN = {
   visualizationNotEditable:
     'The Visualization is not edited by hand: it follows the Chosen Interview Brief. Correct that one, then run the Visualization of Posting {{reference}} again.',
   noChosenVersionToEdit:
-    'Posting {{reference}} has no Chosen Version of {{artifact}} to edit: “jf run {{artifact}} {{reference}}” produces one.',
+    'Posting {{reference}} has no Chosen Version of {{artifact}} to edit: “{{command}}” produces one.',
   draftNotEditable:
     'The Draft is never edited: it keeps what the AI wrote. Correct the Letter of Posting {{reference}}.',
   unknownVersion:
-    'Unknown Version: {{artifact}} v{{number}} of Posting {{reference}}. “jf versions {{reference}} {{artifact}}” lists its Versions.',
+    'Unknown Version: {{artifact}} v{{number}} of Posting {{reference}}. “{{command}}” lists its Versions.',
   versionFailed:
     'Version {{artifact}} v{{number}} of Posting {{reference}} is failed: only a ready Version can be chosen.',
   versionRunning:

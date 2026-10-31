@@ -10,6 +10,7 @@ import { createRecordedFetch } from './recorded-http.ts';
 // Léa's, in French
 const INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.interview_brief;
 const LETTER_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.letter;
+const PORTRAIT_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.portrait;
 const RESEARCH_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.research;
 const VISUALIZATION_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.visualization;
 
@@ -40,6 +41,7 @@ describe('instructions', () => {
     expect(instructionsList).toEqual([
       { module: 'research', defaultInstructions: RESEARCH_DEFAULT_INSTRUCTIONS, candidateInstructions: null },
       { module: 'letter', defaultInstructions: LETTER_DEFAULT_INSTRUCTIONS, candidateInstructions: null },
+      { module: 'portrait', defaultInstructions: PORTRAIT_DEFAULT_INSTRUCTIONS, candidateInstructions: null },
       {
         module: 'interview_brief',
         defaultInstructions: INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS,
@@ -62,6 +64,7 @@ describe('instructions', () => {
         defaultInstructions: LETTER_DEFAULT_INSTRUCTIONS,
         candidateInstructions: 'Une lettre très courte.\n',
       },
+      { module: 'portrait', defaultInstructions: PORTRAIT_DEFAULT_INSTRUCTIONS, candidateInstructions: null },
       {
         module: 'interview_brief',
         defaultInstructions: INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS,
@@ -92,7 +95,7 @@ describe('instructions', () => {
       },
     ]);
     await expect(actions.readInstructions({ candidateId: 'lea', module: 'lettr' })).rejects.toThrow(
-      'Module inconnu : lettr. Modules : research, letter, brief, visualization.',
+      'Module inconnu : lettr. Modules : research, letter, portrait, brief, visualization.',
     );
   });
 
@@ -136,8 +139,9 @@ describe('instructions', () => {
 
     await expect(
       actions.saveInstructions({ candidateId: 'lea', module: 'inconnu', instructions: 'Courte.\n' }),
-    ).rejects.toThrow('Module inconnu : inconnu. Modules : research, letter, brief, visualization.');
+    ).rejects.toThrow('Module inconnu : inconnu. Modules : research, letter, portrait, brief, visualization.');
     expect(await actions.listInstructions({ candidateId: 'lea' })).toMatchObject([
+      { candidateInstructions: null },
       { candidateInstructions: null },
       { candidateInstructions: null },
       { candidateInstructions: null },

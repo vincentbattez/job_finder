@@ -42,19 +42,27 @@ export const POSTING_EN = {
   noCc: 'None',
   salutationTerm: 'Salutation',
 
-  // The Status buttons
-  statusButtonLabelByStatus: {
-    to_apply: 'Back to To Apply',
-    applied: 'Mark as Applied',
-    archived: 'Archive',
-  } satisfies Record<Status, string>,
+  // The outcome selector: Applied on a To Apply Posting, then the outcomes of its Application
+  markApplied: 'Mark as Applied',
+  outcomeLabel: 'Outcome of the Application',
+  outcomeLabelByStatus: {
+    applied: 'In progress',
+    hired: 'Hired',
+    rejected: 'Rejected',
+  } satisfies Record<Exclude<Status, 'to_apply'>, string>,
+  // The Archived mark, beside the outcome selector (ADR-0007)
+  archive: 'Archive',
+  unarchive: 'Unarchive',
   confirmApplied: 'Confirm: Applied',
   cancel: 'Cancel',
   appliedFreezesLetter: 'Once Applied, the Chosen Letter no longer changes: it is the one sent.',
 
   // The launch of a module or of the extraction
+  // The context is the Artifact: French names some of them in the masculine, such as the Portrait
   launchArtifact: 'Run the {{artifactLabel}}',
   relaunchArtifact: 'Run the {{artifactLabel}} again',
+  launchArtifact_portrait: 'Run the {{artifactLabel}}',
+  relaunchArtifact_portrait: 'Run the {{artifactLabel}} again',
   extractionLabel: 'Fields read by Claude',
   relaunchExtraction: 'Run the extraction again',
 
@@ -77,6 +85,57 @@ export const POSTING_EN = {
   copiedCommand: 'Copied',
   copyMarkdown: 'Copy the Markdown',
   copiedMarkdown: 'Copied',
+
+  // The Notes of the Posting, whatever its Status
+  notes: {
+    heading: 'Notes',
+    label: 'Notes in Markdown',
+    placeholder:
+      '# Call to the department\n\nWhat you learn about this Posting: a call, the feedback from an interview…',
+    save: 'Save the Notes',
+  },
+
+  // The Interviews of an Application, one per round, by date
+  interviews: {
+    heading: 'Interviews',
+    applyFirst: 'An Interview belongs to an Application: mark the Posting Applied to add one.',
+    noInterview: 'No Interview yet.',
+    title: 'Interview {{number}}',
+    start: 'Start',
+    duration: 'Duration (minutes)',
+    minutes: '{{minutes}} min',
+    place: 'Place',
+    interviewers: 'Interviewers',
+    interviewersPlaceholder: 'Name, role, what you know about them',
+    startPlaceholder: '2026-11-19T14:00',
+    placePlaceholder: 'Room 3 of the court, or by video',
+    newInterview: 'New Interview',
+    add: 'Add the Interview',
+    edit: 'Edit Interview {{number}}',
+    save: 'Save the Interview',
+    delete: 'Delete Interview {{number}}',
+    deleteForGood: 'Delete Interview {{number}} for good',
+    ical: 'Add to calendar (iCal)',
+    next: 'Next Interview',
+    last: 'Last Interview',
+    count_one: '{{count}} Interview',
+    count_other: '{{count}} Interviews',
+  },
+
+  // An Application row, on the home and on /applications
+  applicationRow: {
+    lastChangeAt: 'Last change',
+    notesExcerpt: 'Notes',
+  },
+
+  // The iCal file of an Interview: the event in the calendar and the links its description gives
+  ical: {
+    summary: 'Interview · {{title}} · {{employer}}',
+    summaryWithoutEmployer: 'Interview · {{title}}',
+    officialAd: 'Official ad',
+    postingPage: 'Job Finder page',
+    link: '{{label}}: {{url}}',
+  },
 
   // The tools of the Posting list: the Detection, the import, the filters and the map
   // The Detection beside the name of the list: the last one, then its progress while one runs (#63)

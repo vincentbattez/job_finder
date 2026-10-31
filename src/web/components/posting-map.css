@@ -46,8 +46,20 @@
   }
 
   .posting-map__point[data-status='applied'],
+  .posting-map__point[data-status='invited'],
+  .posting-map__point[data-status='interviewed'],
   .posting-map__key[data-status='applied'] {
     --point: var(--color-status-applied);
+  }
+
+  .posting-map__point[data-status='hired'],
+  .posting-map__key[data-status='hired'] {
+    --point: var(--color-status-hired-soft);
+  }
+
+  .posting-map__point[data-status='rejected'],
+  .posting-map__key[data-status='rejected'] {
+    --point: var(--color-status-rejected);
   }
 
   .posting-map__point[data-status='expired'],
@@ -55,8 +67,12 @@
     --point: var(--color-status-expired);
   }
 
-  .posting-map__point[data-status='archived'],
-  .posting-map__key[data-status='archived']::before {
+  /* Archived keeps the fill of its status, inside the dashed rim of what steps back */
+  .posting-map__point[data-archived] {
+    border: 2px dashed var(--color-muted);
+  }
+
+  .posting-map__key[data-archived]::before {
     border: 2px dashed var(--color-muted);
     background: var(--color-status-archived-soft);
   }

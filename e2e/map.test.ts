@@ -2,14 +2,17 @@ import { expect, test, type Page } from '@playwright/test';
 
 // test/seed-front.ts locates Léa's Postings through API Géo's recorded responses, and gives the three
 // Melun Postings, whose Deadline passed in the summer of 2026, a status each. No e2e test adds a
-// Posting to her: she keeps the 80 the Detection found, an Archived one aside.
-const LEA_POSTING_COUNT = 80;
+// Posting to her: she keeps the 81 the Detection found, three Archived aside (one of them for
+// e2e/map.test.ts, two for e2e/applications.test.ts).
+const LEA_POSTING_COUNT = 78;
 const BETHUNE_TITLE = 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE';
 
 async function chooseLea(page: Page) {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Léa');
   await page.getByRole('button', { name: 'Choisir' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Léa');
+  await page.goto('/postings');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Léa');
 }
 
@@ -76,11 +79,14 @@ test.describe('map of the Postings', () => {
     await page.getByRole('button', { name: 'Filtrer' }).click();
 
     await expect(findPoints(page)).toHaveCount(3);
-    await expect(findPoints(page).and(page.getByRole('button', { name: /2026-2290529/ }))).toHaveAttribute(
-      'data-status',
-      'archived',
-    );
-    await expect(page.getByRole('row', { name: /2026-2290529/ })).toHaveCount(1);
+    // Archived is a mark beside the status, which the point keeps (ADR-0007)
+    const archivedPoint = findPoints(page).and(page.getByRole('button', { name: /2026-2290529/ }));
+    await expect(archivedPoint).toHaveAttribute('data-archived', '');
+    await expect(archivedPoint).not.toHaveAttribute('data-status', 'archived');
+    await expect(page.getByRole('row', { name: /2026-2290529/ }).locator('.badge')).toHaveText([
+      /À traiter|Expirée/,
+      'Archivée',
+    ]);
   });
 
   test('filters the list and the map by region, then by city', async ({ page }) => {

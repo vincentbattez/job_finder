@@ -27,6 +27,7 @@ const RUN_BY_ARTIFACT: Record<Artifact, { fileByName: Record<string, string> }> 
       }),
     },
   },
+  portrait: { fileByName: { 'portrait.md': '# Portrait : M. Lefebvre\n\nJuge des enfants à Béthune.\n' } },
   interview_brief: {
     fileByName: {
       'interview-brief.md': [
@@ -42,6 +43,28 @@ const RUN_BY_ARTIFACT: Record<Artifact, { fileByName: Record<string, string> }> 
     fileByName: { 'visualization.html': '<!DOCTYPE html><html lang="fr"><body><h1>PAS</h1></body></html>\n' },
   },
 };
+
+// The Artifacts attached to an Interview, which run once the Posting is Applied and has one
+const INTERVIEW_ARTIFACT_LIST: readonly Artifact[] = ['portrait', 'interview_brief', 'visualization'];
+
+// Launches a module where its Artifact is attached: on the Posting, or on its first Interview
+async function runModule(actions: Actions, module: Artifact) {
+  const interview = INTERVIEW_ARTIFACT_LIST.includes(module) ? 1 : undefined;
+  await actions.runModule({ module, reference: REFERENCE, interview });
+  await actions.runQueuedJobs();
+}
+
+// The Artifacts of the Posting, then those of its first Interview, as the Posting page reads them
+async function readArtifactList(actions: Actions) {
+  const { artifactList, interviewList } = await actions.readPosting({ reference: REFERENCE });
+  return [...artifactList, ...(interviewList[0]?.artifactList ?? [])];
+}
+
+// The Posting Applied, with a first Interview: its Letter is frozen from then on
+async function addInterview(actions: Actions) {
+  await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+  await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: 'Béthune', interviewers: '' });
+}
 
 // What a failed session says, which the Candidate reads as the reason
 const FAILED_RUN = { isSuccess: false, log: 'Claude Code a atteint la limite de son abonnement.' };
@@ -69,10 +92,12 @@ async function failModule(module: Artifact | 'extraction') {
     createFakeAiSession(...previousList.map((artifact) => RUN_BY_ARTIFACT[artifact]), FAILED_RUN),
   );
   for (const artifact of [...previousList, module]) {
-    await actions.runModule({ module: artifact, reference: REFERENCE });
-    await actions.runQueuedJobs();
+    if (artifact === INTERVIEW_ARTIFACT_LIST[0]) {
+      await addInterview(actions);
+    }
+    await runModule(actions, artifact);
   }
-  const { artifactList } = await actions.readPosting({ reference: REFERENCE });
+  const artifactList = await readArtifactList(actions);
   const { state, failure } = artifactList.find(({ artifact }) => artifact === module) ?? {};
   return { state, failure };
 }
@@ -143,7 +168,7 @@ describe('the failure of a module', () => {
 });
 
 async function readStateByArtifact(actions: Actions) {
-  const { artifactList } = await actions.readPosting({ reference: REFERENCE });
+  const artifactList = await readArtifactList(actions);
   return Object.fromEntries(artifactList.map(({ artifact, state }) => [artifact, state]));
 }
 
@@ -156,12 +181,7 @@ describe('the state of each Artifact on the Posting page', () => {
     const queued = await readStateByArtifact(actions);
     await actions.runQueuedJobs();
 
-    expect(before).toEqual({
-      research: 'absent',
-      letter: 'absent',
-      interview_brief: 'absent',
-      visualization: 'absent',
-    });
+    expect(before).toEqual({ research: 'absent', letter: 'absent' });
     expect(queued).toMatchObject({ research: 'queued', letter: 'absent' });
     expect(await readStateByArtifact(actions)).toMatchObject({ research: 'ready', letter: 'absent' });
   });
@@ -181,25 +201,28 @@ describe('the state of each Artifact on the Posting page', () => {
 });
 
 async function readModuleByArtifact(actions: Actions) {
-  const { artifactList } = await actions.readPosting({ reference: REFERENCE });
+  const artifactList = await readArtifactList(actions);
   return Object.fromEntries(artifactList.map(({ artifact, module }) => [artifact, module]));
 }
 
 describe('the modules the Posting page offers', () => {
   it('offers a module for each Artifact a module produces, held back while an input it needs is missing', async () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
+    const toApply = await readModuleByArtifact(actions);
+    await addInterview(actions);
     const before = await readModuleByArtifact(actions);
 
-    await actions.runModule({ module: 'research', reference: REFERENCE });
-    await actions.runQueuedJobs();
+    await runModule(actions, 'research');
 
+    // An Interview Brief prepares an Interview, which only an Application has
+    expect(Object.keys(toApply)).toEqual(['research', 'letter']);
     // In the words of the front, beside the button of the missing Artifact: no command to type
-    expect(before).toEqual({
+    expect(Object.keys(before)).toEqual(['research', 'letter', 'portrait', 'interview_brief', 'visualization']);
+    expect(before).toMatchObject({
       research: { refusal: null },
-      letter: {
-        refusal:
-          "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Lettre : lancez d'abord la Recherche.",
-      },
+      letter: { refusal: /a été Postulée : sa Lettre retenue est figée/ },
+      // The Portrait reads the Research when there is one, and runs without it
+      portrait: { refusal: null },
       interview_brief: {
         refusal:
           "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Fiche d’entretien : lancez d'abord la Recherche.",
@@ -211,8 +234,14 @@ describe('the modules the Posting page offers', () => {
     });
     expect(await readModuleByArtifact(actions)).toMatchObject({
       research: { refusal: null },
-      letter: { refusal: null },
       interview_brief: { refusal: null },
+    });
+    expect(toApply).toEqual({
+      research: { refusal: null },
+      letter: {
+        refusal:
+          "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Lettre : lancez d'abord la Recherche.",
+      },
     });
   });
 
@@ -221,7 +250,7 @@ describe('the modules the Posting page offers', () => {
     await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runQueuedJobs();
 
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await addInterview(actions);
 
     expect(await readModuleByArtifact(actions)).toMatchObject({
       research: { refusal: null },

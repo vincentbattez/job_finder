@@ -42,12 +42,8 @@ describe('the Posting page', () => {
 
     const { artifactList } = await actions.readPosting({ reference: REFERENCE });
 
-    expect(artifactList.map(({ artifact }) => artifact)).toEqual([
-      'research',
-      'letter',
-      'interview_brief',
-      'visualization',
-    ]);
+    // The Interview Brief and the Visualization are attached to an Interview, which a To Apply Posting lacks
+    expect(artifactList.map(({ artifact }) => artifact)).toEqual(['research', 'letter']);
     expect(artifactList[0]?.versionList).toMatchObject([
       {
         version: { number: 1, state: 'ready', isChosen: true },

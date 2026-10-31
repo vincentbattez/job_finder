@@ -6,6 +6,8 @@ test('shows the Posting list in English to a Candidate with the en locale', asyn
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Emma');
   await page.getByRole('button', { name: 'Choisir' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Emma');
+  await page.goto('/postings');
 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Postings');
   await expect(page).toHaveTitle('Postings · Job Finder');
@@ -26,7 +28,7 @@ async function chooseEmma(page: Page) {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Emma');
   await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Postings');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Emma');
 }
 
 test('shows the menu and the Profile in English to a Candidate with the en locale', async ({ page }) => {
@@ -34,6 +36,8 @@ test('shows the menu and the Profile in English to a Candidate with the en local
   await expect(page.getByRole('combobox', { name: 'Candidate' })).toHaveValue('emma');
   await expect(page.getByRole('button', { name: 'Choose' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Pages' }).getByRole('link')).toHaveText([
+    'Home',
+    'Applications',
     'Postings',
     'Profile',
     'Instructions',
@@ -98,6 +102,8 @@ test('shows the tools of the Posting list in English to a Candidate with the en 
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Emma');
   await page.getByRole('button', { name: 'Choisir' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Emma');
+  await page.goto('/postings');
 
   // A Detection another test runs hides the button behind its progress, in English too (ADR-0014)
   await expect(
@@ -117,20 +123,22 @@ test('shows the tools of the Posting list in English to a Candidate with the en 
 });
 
 // Oliver reads the interface in English too, and owns the one Posting this test changes
-// (test/seed-front.ts): imported, its fields unread, with a Research. Archived and put back To
-// Apply, it ends as it started; Applied, which is never undone, is only asked, then cancelled.
+// (test/seed-front.ts): imported, its fields unread, with a Research. Archived then unarchived
+// back to To Apply, it ends as it started; Applied, which is never undone, is only asked, then cancelled.
 test('takes a Candidate with the en locale through a Posting and its Status in English', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Oliver');
   await page.getByRole('button', { name: 'Choisir' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Oliver');
+  await page.goto('/postings');
   await page.getByRole('checkbox', { name: 'Show the Archived' }).check();
   await page.getByRole('button', { name: 'Filter' }).click();
   await page.getByRole('link', { name: 'registry-officer-douai.md' }).click();
   const statusBadge = page.locator('.posting-detail__title .badge');
-  const backToApply = page.getByRole('button', { name: 'Back to To Apply' });
+  const unarchive = page.getByRole('button', { name: 'Unarchive' });
   // Left Archived by a run stopped halfway
-  if (await backToApply.isVisible()) {
-    await backToApply.click();
+  if (await unarchive.isVisible()) {
+    await unarchive.click();
   }
   await expect(statusBadge).toHaveText('To Apply');
 
@@ -150,8 +158,6 @@ test('takes a Candidate with the en locale through a Posting and its Status in E
   await expect(page.getByRole('region', { name: 'Artifacts' }).getByRole('listitem')).toHaveText([
     'ResearchReady',
     'LetterAbsent',
-    'Interview BriefAbsent',
-    'VisualizationAbsent',
   ]);
   await expect(page.getByRole('region', { name: 'Contacts' }).getByRole('definition')).toHaveText([
     'Not specified',
@@ -178,7 +184,8 @@ test('takes a Candidate with the en locale through a Posting and its Status in E
   await page.getByRole('button', { name: 'Mark as Applied' }).click();
   await page.getByRole('button', { name: 'Cancel' }).click();
   await page.getByRole('button', { name: 'Archive' }).click();
-  await expect(statusBadge).toHaveText('Archived');
-  await backToApply.click();
-  await expect(statusBadge).toHaveText('To Apply');
+  await expect(statusBadge).toHaveText(['To Apply', 'Archived']);
+  await expect(page.getByRole('button', { name: 'Mark as Applied' })).toBeVisible();
+  await unarchive.click();
+  await expect(statusBadge).toHaveText(['To Apply']);
 });

@@ -52,6 +52,12 @@ const INPUT_BY_ACTION: Record<string, object> = {
   saveDefaultDeadlinePeriod: { months: 6 },
   saveWatch: LEA_WATCH,
   deleteWatch: { watchId: LEA_WATCH_ID },
+  saveNotes: { notes: '# Appel du greffe\n' },
+  // The Posting is Applied by changeStatus first, which runs before: an Interview needs an Application
+  addInterview: { start: '2026-11-19T14:00', place: 'Béthune', interviewers: 'Mme Durand' },
+  readIcalFile: { origin: 'https://10.8.0.1:5180' },
+  // The Visualization belongs to the Interview added above
+  readVisualization: { interview: 1 },
 };
 
 type ActionMap = Record<string, (rawInput: unknown) => Promise<unknown>>;
@@ -139,7 +145,13 @@ async function saveChannel(module: INotificationChannel, parameters: Record<stri
   await actions.saveNotificationChannel({ candidateId: 'lea', channel: id, parameters });
   await actions.detect();
   for (const artifactModule of Object.keys(RUN_BY_MODULE)) {
-    await actions.runModule({ module: artifactModule, reference: REFERENCE });
+    // The Interview Brief and the Visualization prepare an Interview, which only an Application has
+    const interview = artifactModule === 'interview_brief' || artifactModule === 'visualization' ? 1 : undefined;
+    if (artifactModule === 'interview_brief') {
+      await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+      await actions.addInterview({ reference: REFERENCE, ...INPUT_BY_ACTION.addInterview });
+    }
+    await actions.runModule({ module: artifactModule, reference: REFERENCE, interview });
     await actions.runQueuedJobs();
   }
   const secretSet = new Set(parameterList.filter(({ isSecret }) => isSecret).map(({ name }) => name));
@@ -150,7 +162,7 @@ async function saveChannel(module: INotificationChannel, parameters: Record<stri
     artifact: 'research',
     number: 1,
     jobId: 1,
-    status: 'to_apply',
+    status: 'applied',
     fileName: 'research.md',
     markdown: '# Research\n',
     instructions: 'Citer chaque source.',

@@ -152,7 +152,7 @@ describe('the Repost of an Applied Posting out of the Zone', () => {
       isOutOfZone: true,
     });
     await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
-    await actions.changeStatus({ reference: REFERENCE, status: 'archived' });
+    await actions.archive({ reference: REFERENCE });
 
     await actions.detect();
 

@@ -148,8 +148,8 @@ describe('letter', () => {
     expect(version?.inputList).toHaveLength(2);
     expect(version?.inputList).toEqual(
       expect.arrayContaining([
-        { artifact: 'research', number: 1, posting: { reference: REFERENCE } },
-        { artifact: 'letter', number: 1, posting: { reference: SENT_REFERENCE } },
+        { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
+        { artifact: 'letter', number: 1, posting: { reference: SENT_REFERENCE }, interview: null },
       ]),
     );
   });

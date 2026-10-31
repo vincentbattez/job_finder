@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { assertLetterModifiable, isExpired } from './index.ts';
+import { assertLetterModifiable, assertStatusChange, findStep, isExpired, listStatusChoices } from './index.ts';
 
 // A Deadline is a calendar day, stored at midnight UTC as the Source gives it; the day is over
 // at midnight in France
@@ -70,12 +70,6 @@ describe('Chosen Letter of a Posting', () => {
     }).toThrow(/L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/);
   });
 
-  it('stays frozen once the Applied Posting is Archived', () => {
-    expect(() => {
-      assertLetterModifiable({ reference: '2026-2445600', status: 'archived', appliedAt: new Date() }, 'fr');
-    }).toThrow(/a été Postulée/);
-  });
-
   // Applied before the tool kept the date
   it('is frozen for an Applied Posting without a date', () => {
     expect(() => {
@@ -83,9 +77,122 @@ describe('Chosen Letter of a Posting', () => {
     }).toThrow(/a été Postulée/);
   });
 
-  it.each(['to_apply', 'archived'] as const)('can still change while the Posting, never Applied, is %s', (status) => {
+  it('can still change while the Posting was never Applied', () => {
     expect(() => {
-      assertLetterModifiable({ reference: '2026-2445600', status, appliedAt: null }, 'fr');
+      assertLetterModifiable({ reference: '2026-2445600', status: 'to_apply', appliedAt: null }, 'fr');
     }).not.toThrow();
+  });
+});
+
+// The selector offers only these: Applied on a To Apply Posting, then the other two of In progress
+// (Applied), Hired and Rejected on an Application
+describe('Status choices of a Posting', () => {
+  it.each([
+    { status: 'to_apply', appliedAt: null, expectedList: ['applied'] },
+    { status: 'applied', appliedAt: new Date(), expectedList: ['hired', 'rejected'] },
+    { status: 'hired', appliedAt: new Date(), expectedList: ['applied', 'rejected'] },
+    { status: 'rejected', appliedAt: new Date(), expectedList: ['applied', 'hired'] },
+  ] as const)('are $expectedList from $status', ({ status, appliedAt, expectedList }) => {
+    expect(listStatusChoices({ status, appliedAt })).toEqual(expectedList);
+  });
+});
+
+describe('Status change of a Posting', () => {
+  const APPLIED_AT = new Date('2026-10-29T12:00:00Z');
+
+  it.each([
+    { from: 'to_apply', to: 'applied' },
+    { from: 'applied', to: 'hired' },
+    { from: 'applied', to: 'rejected' },
+    { from: 'hired', to: 'rejected' },
+    { from: 'rejected', to: 'hired' },
+    { from: 'hired', to: 'applied' },
+    { from: 'rejected', to: 'applied' },
+    { from: 'hired', to: 'hired' },
+  ] as const)('allows $from to $to', ({ from, to }) => {
+    const posting = { reference: '2026-2445600', status: from, appliedAt: from === 'to_apply' ? null : APPLIED_AT };
+
+    expect(() => {
+      assertStatusChange(posting, to, 'fr');
+    }).not.toThrow();
+  });
+
+  // An outcome only comes once the Application started
+  it.each(['hired', 'rejected'] as const)('refuses To Apply to %s', (status) => {
+    expect(() => {
+      assertStatusChange({ reference: '2026-2445600', status: 'to_apply', appliedAt: null }, status, 'en');
+    }).toThrow('Posting 2026-2445600 is To Apply: it can only move to Applied.');
+  });
+
+  // The Chosen Letter was sent: an Application never goes back to To Apply, whatever its outcome
+  it.each(['applied', 'hired', 'rejected'] as const)('refuses %s back to To Apply', (status) => {
+    expect(() => {
+      assertStatusChange({ reference: '2026-2445600', status, appliedAt: APPLIED_AT }, 'to_apply', 'en');
+    }).toThrow('Posting 2026-2445600 was Applied: it never goes back to To Apply');
+  });
+});
+
+// Invited and Interviewed are computed from the Interviews and the time, never stored (ADR-0009). An
+// Interview has taken place once its start plus its duration has passed.
+describe('Step of a Posting', () => {
+  const NOW = new Date('2026-11-19T13:00:00Z');
+
+  function interviewOf(startAt: string, durationMinutes = 60) {
+    return { startAt: new Date(startAt), durationMinutes };
+  }
+
+  it.each([
+    { case: 'a To Apply Posting', status: 'to_apply', interviewList: [], expected: 'to_apply' },
+    { case: 'an Applied Posting without an Interview', status: 'applied', interviewList: [], expected: 'applied' },
+    {
+      case: 'an Applied Posting with an upcoming Interview',
+      status: 'applied',
+      interviewList: [interviewOf('2026-11-20T08:00:00Z')],
+      expected: 'invited',
+    },
+    {
+      case: 'an Applied Posting whose Interview is in progress',
+      status: 'applied',
+      interviewList: [interviewOf('2026-11-19T12:30:00Z')],
+      expected: 'invited',
+    },
+    {
+      case: 'an Applied Posting whose Interview of 90 minutes ends right now',
+      status: 'applied',
+      interviewList: [interviewOf('2026-11-19T11:30:00Z', 90)],
+      expected: 'interviewed',
+    },
+    {
+      case: 'an Applied Posting whose Interview ended a minute ago',
+      status: 'applied',
+      interviewList: [interviewOf('2026-11-19T11:59:00Z')],
+      expected: 'interviewed',
+    },
+    {
+      case: 'an Applied Posting with a past round and an upcoming one',
+      status: 'applied',
+      interviewList: [interviewOf('2026-11-05T09:00:00Z'), interviewOf('2026-11-26T09:00:00Z')],
+      expected: 'invited',
+    },
+    {
+      case: 'an Applied Posting whose rounds have all taken place',
+      status: 'applied',
+      interviewList: [interviewOf('2026-11-05T09:00:00Z'), interviewOf('2026-11-12T09:00:00Z')],
+      expected: 'interviewed',
+    },
+    {
+      case: 'a Hired Posting with an upcoming Interview',
+      status: 'hired',
+      interviewList: [interviewOf('2026-11-20T08:00:00Z')],
+      expected: 'hired',
+    },
+    {
+      case: 'a Rejected Posting whose Interviews have all taken place',
+      status: 'rejected',
+      interviewList: [interviewOf('2026-11-05T09:00:00Z')],
+      expected: 'rejected',
+    },
+  ] as const)('is $expected for $case', ({ status, interviewList, expected }) => {
+    expect(findStep({ status }, interviewList, NOW)).toBe(expected);
   });
 });

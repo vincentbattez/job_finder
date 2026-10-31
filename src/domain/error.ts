@@ -84,10 +84,20 @@ export const ERROR_CATALOGUE = {
   // Statuses
   // A Posting cannot move to this Status from its own
   status_change: 'error:statusChange',
-  // An Applied Posting cannot move to this Status, Applied being never undone
+  // An Applied Posting cannot go back to To Apply, Applied being never undone, Archived or not
   status_change_after_applied: 'error:statusChangeAfterApplied',
   // The Chosen Letter of an Applied Posting is frozen as sent
   letter_frozen: 'error:letterFrozen',
+
+  // Interviews
+  // An Interview is added to a To Apply Posting, which has no Application yet
+  interview_without_application: 'error:interviewWithoutApplication',
+  // The Posting has no Interview with this number
+  unknown_interview: 'error:unknownInterview',
+  // An Artifact attached to an Interview is named without one
+  interview_required: 'error:interviewRequired',
+  // An Artifact attached to the Posting is named with an Interview
+  interview_not_expected: 'error:interviewNotExpected',
 
   // Modules, jobs and Versions
   // No module has this name
@@ -216,6 +226,8 @@ export const ERROR_CATALOGUE = {
   unknown_command: 'cli:unknownCommand',
   // A file named on the command line cannot be read
   unreadable_file: 'cli:unreadableFile',
+  // The file a command writes in the current folder cannot be written
+  file_write_failed: 'cli:fileWriteFailed',
   // The Candidate closed the question without answering
   no_choice: 'cli:noChoice',
   // An answer that is none of the numbers offered
@@ -242,6 +254,9 @@ export const ERROR_CATALOGUE = {
   status_usage: 'cli:statusUsage',
   profile_usage: 'cli:profileUsage',
   instructions_usage: 'cli:instructionsUsage',
+  notes_usage: 'cli:notesUsage',
+  interviews_usage: 'cli:interviewsUsage',
+  ical_usage: 'cli:icalUsage',
 } satisfies Record<string, ErrorMessageKey>;
 
 export type ErrorCode = keyof typeof ERROR_CATALOGUE;
