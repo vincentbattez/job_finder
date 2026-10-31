@@ -220,7 +220,7 @@ export const ERROR_CATALOGUE = {
   channel_unreachable: 'error:moduleFailure',
   // The service of a Notification Channel refuses its credentials
   channel_token_refused: 'error:moduleFailure',
-  // The service of a Notification Channel answers with an HTTP error
+  // The service of a Notification Channel refuses the request, such as an HTTP error or an e-mail refused
   channel_status: 'error:moduleFailure',
 
   // The CLI
