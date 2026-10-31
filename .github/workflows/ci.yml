@@ -39,8 +39,8 @@ jobs:
         run: mise run test:unit
 
   # Two shards once the e2e became the slowest job (#115): each VM seeds its own data folder and
-  # starts its own servers, so each shard has its own Detection lock (ADR-0014); the serial Detection
-  # group stays whole, Playwright sharding by file
+  # starts its own servers, so each shard has its own Detection lock (ADR-0014). Playwright shards
+  # by test under fullyParallel, a serial describe counting as one: the Detection group stays whole
   e2e:
     runs-on: ubuntu-latest
     strategy:

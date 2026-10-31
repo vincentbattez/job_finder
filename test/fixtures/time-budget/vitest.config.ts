@@ -7,6 +7,6 @@ import { TimeBudgetReporter } from '../../time-budget-reporter.ts';
 export default defineConfig({
   test: {
     include: ['*.test.ts'],
-    reporters: [new TimeBudgetReporter({ testBudgetMs: 300, suiteBudgetMs: 60_000, slowTestList: [] })],
+    reporters: [new TimeBudgetReporter({ testBudgetMs: 300, suiteBudgetMs: 60_000, slowFileList: [] })],
   },
 });

@@ -6,7 +6,7 @@ interface ITestDuration {
   durationMs: number;
 }
 
-interface ISlowTest {
+interface ISlowFile {
   file: string;
   budgetMs: number;
   reason: string;
@@ -15,7 +15,7 @@ interface ISlowTest {
 interface ITimeBudget {
   testBudgetMs: number;
   suiteBudgetMs: number;
-  slowTestList: ISlowTest[];
+  slowFileList: ISlowFile[];
 }
 
 interface ITestRun {
@@ -26,7 +26,7 @@ interface ITestRun {
 
 // The files whose tests may take longer than the budget, each with its own budget and the reason.
 // A budget is about 1.5 times the slowest test seen in CI with both workers busy (#108).
-const SLOW_TEST_LIST: ISlowTest[] = [
+const SLOW_FILE_LIST: ISlowFile[] = [
   { file: 'test/spellcheck.test.ts', budgetMs: 20_000, reason: 'spawns scripts/spellcheck.sh, two cspell passes' },
   {
     file: 'test/actions.test.ts',
@@ -49,11 +49,11 @@ const SLOW_TEST_LIST: ISlowTest[] = [
 // Calibrated on the GitHub runner, 2 vCPU and both Vitest workers busy, which stretches every test
 // (#108). Per test: 1.5 times the slowest unlisted test seen there (3.9 s). Suite: 1.25 times the
 // slowest of three runs (142 s), the runner itself varying by about 30 % from one run to the next.
-const BUDGET: ITimeBudget = { testBudgetMs: 6000, suiteBudgetMs: 180_000, slowTestList: SLOW_TEST_LIST };
+const BUDGET: ITimeBudget = { testBudgetMs: 6000, suiteBudgetMs: 180_000, slowFileList: SLOW_FILE_LIST };
 
 export function findOverBudget({ testList, suiteMs }: ITestRun, budget: ITimeBudget): string[] {
   const budgetOf = (file: string) =>
-    budget.slowTestList.find((slowTest) => file === slowTest.file)?.budgetMs ?? budget.testBudgetMs;
+    budget.slowFileList.find((slowTest) => file === slowTest.file)?.budgetMs ?? budget.testBudgetMs;
   const violationList = testList
     .filter(({ file, durationMs }) => durationMs > budgetOf(file))
     .map(

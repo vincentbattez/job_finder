@@ -25,7 +25,7 @@ function runFixture(probeMs: number, { isCi }: { isCi: boolean }): { status: num
 const BUDGET = {
   testBudgetMs: 1000,
   suiteBudgetMs: 10_000,
-  slowTestList: [{ file: 'test/slow.test.ts', budgetMs: 5000, reason: 'spawns a CLI' }],
+  slowFileList: [{ file: 'test/slow.test.ts', budgetMs: 5000, reason: 'spawns a CLI' }],
 };
 
 // Each test and the whole run keep under a time budget, so the suite never drifts back to minutes
