@@ -23,3 +23,7 @@ None: this repo uses no labels. Triage state lives in open/closed status and the
 ### Domain docs
 
 Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+## Database access
+
+The live database is `data/job_finder.sqlite`; query it directly with `sqlite3`. Writes are allowed for data fixes, after a backup copy of the file.
