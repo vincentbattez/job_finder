@@ -75,6 +75,17 @@ export const POSTING_EN = {
   visualizationFrameTitle: 'Visualization v{{versionNumber}}',
   chooseVersion: 'Choose this Version',
 
+  // The Prompt a run started now would receive, beside the title of its Artifact
+  prompt: {
+    toggle: 'Prompt',
+    fixedPart: 'Fixed Part',
+    instructions: 'Instructions',
+    readVersions: 'Artifacts this Prompt reads',
+    noReadVersion: 'None: it reads only the Job Description and, for some, the Profile.',
+    readVersion: '{{reference}} · {{artifactLabel}} v{{versionNumber}}',
+    readVersionOfInterview: '{{reference}} · Interview {{interviewNumber}} · {{artifactLabel}} v{{versionNumber}}',
+  },
+
   // The editor of a file of the Chosen Version
   documentLabel: 'Markdown',
   documentPlaceholder: '# Title\n\nThe text of the document, in Markdown',

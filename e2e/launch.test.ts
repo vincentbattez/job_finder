@@ -76,4 +76,21 @@ test.describe('launching the modules of a Posting', () => {
       `Notification « Recherche prête » de l'Offre ${NOTIFICATION_FAILED_REFERENCE} non envoyée : `,
     );
   });
+
+  // Read only, on the Posting whose Research is ready: the Letter's Prompt reads it
+  test('unfolds beside the Letter the Prompt its launch would run, which links to the Research it reads', async ({
+    page,
+  }) => {
+    await page.goto(`/postings/${NOTIFICATION_FAILED_REFERENCE}`);
+    const letter = page.getByRole('region', { name: 'Lettre' });
+    const prompt = letter.locator('details', { has: page.locator('summary', { hasText: /^Prompt$/ }) });
+
+    await prompt.locator('summary').click();
+
+    await expect(prompt.getByRole('heading')).toHaveText(['Partie fixe', 'Consignes', 'Artefacts que lit ce Prompt']);
+    await expect(prompt.locator('pre').first()).toContainText('`letter/v<next>/draft.md`');
+    await prompt.getByRole('link', { name: `${NOTIFICATION_FAILED_REFERENCE} · Recherche v1` }).click();
+    await expect(page).toHaveURL(new RegExp(`/postings/${NOTIFICATION_FAILED_REFERENCE}#research$`));
+    await expect(page.getByRole('region', { name: 'Recherche' })).toBeInViewport();
+  });
 });

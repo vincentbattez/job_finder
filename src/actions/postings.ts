@@ -97,7 +97,7 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
   }
 
   // Every Version of each Artifact attached to the target, the Posting or one of its Interviews
-  async function readArtifactList(target: ITarget, jobList: Job[], locale: Locale) {
+  async function readArtifactList(target: ITarget, jobList: Job[], candidate: Candidate, locale: Locale) {
     const { posting, interview } = target;
     return Promise.all(
       listTargetArtifacts(target).map(async (artifact) => {
@@ -108,7 +108,7 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
           // A queued job has no Version yet, while the worker runs another one (ADR-0003), and a
           // claimed job has none until the worker starts it: the job tells its state
           ...(await findArtifactState(workspace, target, artifact, jobList, locale)),
-          module: await describeModule(workspace, target, artifact, locale),
+          module: await describeModule(workspace, target, artifact, candidate, locale),
           isEditable: isAccepted(() => {
             assertArtifactModifiable(target, artifact, chosenVersion, locale);
           }),
@@ -162,6 +162,7 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
     async readPosting(rawInput: unknown): Promise<PostingDetail> {
       const { reference } = REFERENCE_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
+      const candidate = await findCandidate({ candidateId: posting.candidateId });
       const locale = await findLocale(posting.candidateId);
       const jobList = await workspace.listJobs(posting);
       const extractionJob = jobList.findLast(({ module }) => module === 'extraction');
@@ -173,11 +174,11 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
         interviewList: await Promise.all(
           interviewList.map(async (interview: Interview) => ({
             ...interview,
-            artifactList: await readArtifactList({ posting, interview }, jobList, locale),
+            artifactList: await readArtifactList({ posting, interview }, jobList, candidate, locale),
           })),
         ),
         jobDescription: workspace.readJobDescription(posting, locale),
-        artifactList: await readArtifactList({ posting, interview: null }, jobList, locale),
+        artifactList: await readArtifactList({ posting, interview: null }, jobList, candidate, locale),
         recipients: await findRecipients(posting),
         extraction:
           extractionJob === undefined

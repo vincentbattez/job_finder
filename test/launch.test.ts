@@ -236,11 +236,12 @@ describe('the modules the Posting page offers', () => {
       research: { refusal: null },
       interview_brief: { refusal: null },
     });
-    expect(toApply).toEqual({
-      research: { refusal: null },
+    expect(toApply).toMatchObject({
+      research: { refusal: null, prompt: { readVersionList: [] } },
       letter: {
         refusal:
           "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Lettre : lancez d'abord la Recherche.",
+        prompt: null,
       },
     });
   });

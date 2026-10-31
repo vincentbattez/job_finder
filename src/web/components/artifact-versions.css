@@ -27,6 +27,18 @@
     --tint: var(--p-fri);
   }
 
+  /* The title floats so that the Prompt's button sits beside it (artifact-prompt.css) */
+  .artifact-versions__head {
+    display: flow-root;
+  }
+
+  /* As tall as the button beside it, the shared controls' 40px, so both share one center line */
+  .artifact-versions__title {
+    float: inline-start;
+    margin: 0;
+    line-height: 40px;
+  }
+
   .artifact-versions__missing {
     color: var(--color-muted);
     font-family: var(--font-body);

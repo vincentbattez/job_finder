@@ -223,4 +223,22 @@ describe('the Repost of a Posting not Applied', () => {
     expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'research/v1')}\``);
     expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'letter/v1')}\``);
   });
+
+  // The Prompt the Posting page shows beside the Research of the Repost
+  it('shows, beside its Research, the Chosen Artifacts of the Posting it publishes again', async () => {
+    const { actions } = await detectBeforeRepost(createFakeAiSession(RESEARCH_RUN, LETTER_RUN));
+    await actions.runModule({ module: 'research', reference: REFERENCE });
+    await actions.runQueuedJobs();
+    await actions.runModule({ module: 'letter', reference: REFERENCE });
+    await actions.runQueuedJobs();
+
+    await actions.detect();
+
+    const { artifactList } = await actions.readPosting({ reference: REPOST_REFERENCE });
+    const research = artifactList.find(({ artifact }) => artifact === 'research');
+    expect(research?.module.prompt?.readVersionList).toEqual([
+      { reference: REFERENCE, artifact: 'research', interviewNumber: null, number: 1 },
+      { reference: REFERENCE, artifact: 'letter', interviewNumber: null, number: 1 },
+    ]);
+  });
 });

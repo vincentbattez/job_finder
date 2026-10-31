@@ -261,10 +261,96 @@ export async function findInputs(workspace: Workspace, target: ITarget, module: 
   return { versionList, directoryList };
 }
 
-// The Posting page offers a module with the very checks of a launch
-export async function describeModule(workspace: Workspace, target: ITarget, artifact: Artifact, locale: Locale) {
+// What a module's session receives, shared by the runner and the preview so the preview never drifts; the
+// Fixed Part waits for the folder of the Version, which the runner creates after reading the inputs (ADR-0003)
+async function composeSession(
+  workspace: Workspace,
+  target: ITarget,
+  module: Artifact,
+  candidate: Candidate,
+  locale: Locale,
+) {
+  const { posting, interview } = target;
+  const aiModule = AI_MODULE_BY_ARTIFACT[module];
+  const { versionList: inputList, directoryList } = await findInputs(workspace, target, module, locale);
+  const candidateInstructions = workspace.readInstructions(posting.candidateId, module);
+  const postingDirectory = workspace.postingDirectoryOf(posting);
+  const readVersionList = inputList.map((input): IPromptReadVersion => {
+    const directory = workspace.versionDirectoryOf(input.posting, input.version);
+    const { fileName } = AI_MODULE_BY_ARTIFACT[input.version.artifact];
+    return {
+      reference: input.posting.reference,
+      artifact: input.version.artifact,
+      interviewNumber: input.version.interview?.number ?? null,
+      directory,
+      filePath: path.join(directory, fileName),
+    };
+  });
+  return {
+    inputList,
+    instructions: candidateInstructions ?? findDefaultInstructions(module, candidate),
+    hasCandidateInstructions: candidateInstructions !== null,
+    postingDirectory,
+    // The session runs in the folder of the Posting: only the folders outside it are added
+    readDirectoryList: [
+      ...directoryList,
+      ...readVersionList
+        .map(({ directory }) => directory)
+        .filter((directory) => path.relative(postingDirectory, directory).startsWith('..')),
+    ],
+    composeFixedPart: (outputDirectory: string): string =>
+      aiModule.composePrompt({
+        posting,
+        interview,
+        notes: aiModule.isReadingNotes === true ? posting.notes : null,
+        outputDirectory: path.relative(postingDirectory, outputDirectory),
+        readVersionList,
+        profileDirectory: workspace.profileDirectoryOf(posting.candidateId),
+      }),
+  };
+}
+
+// The number of the Version still to be created, which the preview cannot know before the run
+const NEXT_VERSION_PLACEHOLDER = '<next>';
+
+// The Prompt a run started now would receive, with the Versions it reads; none for a refused module
+async function previewPrompt(
+  workspace: Workspace,
+  target: ITarget,
+  module: Artifact,
+  candidate: Candidate,
+  locale: Locale,
+) {
+  const session = await composeSession(workspace, target, module, candidate, locale);
+  const outputDirectory = workspace.versionDirectoryOf(target.posting, {
+    interview: isAttachedToInterview(module) ? target.interview : null,
+    artifact: module,
+    number: NEXT_VERSION_PLACEHOLDER,
+  });
+  return {
+    fixedPart: session.composeFixedPart(outputDirectory),
+    instructions: session.instructions,
+    readVersionList: session.inputList.map(({ posting, version }) => ({
+      reference: posting.reference,
+      artifact: version.artifact,
+      interviewNumber: version.interview?.number ?? null,
+      number: version.number,
+    })),
+  };
+}
+
+// The Posting page offers a module with the very checks of a launch, and shows the Prompt it would run
+export async function describeModule(
+  workspace: Workspace,
+  target: ITarget,
+  artifact: Artifact,
+  candidate: Candidate,
+  locale: Locale,
+) {
   const refusal = await findRefusal(workspace, target, artifact, locale);
-  return { refusal: refusal === undefined ? null : wordRefusal(refusal, target, artifact, locale) };
+  return refusal === undefined
+    ? { refusal: null, prompt: await previewPrompt(workspace, target, artifact, candidate, locale) }
+    : { refusal: wordRefusal(refusal, target, artifact, locale), prompt: null };
 }
 
 // Why a job failed, which the notification of an automatic job tells: an Error Code and its message
@@ -305,49 +391,16 @@ export function createJobRunner(
   ): Promise<{ job: Job; version: Version; failure: JobFailure | undefined }> {
     const { posting, interview, module } = job;
     const aiModule = AI_MODULE_BY_ARTIFACT[module];
-    const { versionList: inputList, directoryList } = await findInputs(
-      workspace,
-      { posting, interview },
-      module,
-      locale,
-    );
-    const candidateInstructions = workspace.readInstructions(posting.candidateId, module);
     const candidate = await findCandidate({ candidateId: posting.candidateId });
-    const instructions = candidateInstructions ?? findDefaultInstructions(module, candidate);
-    const hasCandidateInstructions = candidateInstructions !== null;
+    const { inputList, instructions, hasCandidateInstructions, postingDirectory, readDirectoryList, composeFixedPart } =
+      await composeSession(workspace, { posting, interview }, module, candidate, locale);
     const version = await workspace.startJob(job, { instructions, hasCandidateInstructions, inputList });
-    const postingDirectory = workspace.postingDirectoryOf(posting);
     const outputDirectory = workspace.createVersionDirectory(posting, version);
-    const readVersionList = inputList.map((input): IPromptReadVersion => {
-      const directory = workspace.versionDirectoryOf(input.posting, input.version);
-      const { fileName } = AI_MODULE_BY_ARTIFACT[input.version.artifact];
-      return {
-        reference: input.posting.reference,
-        artifact: input.version.artifact,
-        interviewNumber: input.version.interview?.number ?? null,
-        directory,
-        filePath: path.join(directory, fileName),
-      };
-    });
-    const fixedPrompt = aiModule.composePrompt({
-      posting,
-      interview,
-      notes: aiModule.isReadingNotes === true ? posting.notes : null,
-      outputDirectory: path.relative(postingDirectory, outputDirectory),
-      readVersionList,
-      profileDirectory: workspace.profileDirectoryOf(posting.candidateId),
-    });
     const session = await aiSession.runHeadless({
-      fixedPrompt,
+      fixedPrompt: composeFixedPart(outputDirectory),
       instructions,
       directory: postingDirectory,
-      // The session runs in the folder of the Posting: only the folders outside it are added
-      readDirectoryList: [
-        ...directoryList,
-        ...readVersionList
-          .map(({ directory }) => directory)
-          .filter((directory) => path.relative(postingDirectory, directory).startsWith('..')),
-      ],
+      readDirectoryList,
       outputDirectory,
       locale,
     });
