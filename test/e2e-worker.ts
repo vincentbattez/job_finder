@@ -10,6 +10,8 @@ const POLL_INTERVAL_MS = 300;
 process.stdout.write('Worker ready: it runs the queued jobs, one at a time.\n');
 // Has no port to free at the next run: stops itself once the runner that started it is gone
 while (process.ppid !== 1) {
+  // Its fake sessions are short: a beat at each round tells the front it runs
+  await ACTIONS.beatWorker();
   await ACTIONS.runQueuedJobs();
   await setTimeout(POLL_INTERVAL_MS);
 }

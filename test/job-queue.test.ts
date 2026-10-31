@@ -1,8 +1,8 @@
 import path from 'node:path';
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createActions } from '#/actions/index.ts';
+import { createActions, type Actions } from '#/actions/index.ts';
 
 import { createDataDirectory, detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
@@ -16,6 +16,22 @@ const OTHER_REFERENCE = '2026-2445609';
 const OUT_OF_ZONE_REFERENCE = '2026-2215099';
 
 const RESEARCH = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
+
+const MINUTE_MS = 60_000;
+
+function moveClockBy(durationMs: number): void {
+  vi.setSystemTime(Date.now() + durationMs);
+}
+
+async function researchOf(actions: Actions, reference = REFERENCE) {
+  const { artifactList } = await actions.readPosting({ reference });
+  const research = artifactList.find(({ artifact }) => artifact === 'research');
+  return { state: research?.state, workerFailure: research?.workerFailure };
+}
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('the job queue', () => {
   it('queues the job of a module without launching Claude, and the worker runs it', async () => {
@@ -64,13 +80,15 @@ describe('the job queue', () => {
   it('follows a queued job until the worker has run it', async () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH));
     const queuedJob = await actions.runModule({ module: 'research', reference: REFERENCE });
+    await actions.beatWorker();
 
     const [followedJob] = await Promise.all([actions.followJob({ jobId: queuedJob.id }), actions.runQueuedJobs()]);
 
     expect(followedJob).toMatchObject({ id: queuedJob.id, state: 'done', version: { number: 1, state: 'ready' } });
   });
 
-  it('fails a job whose run throws, and goes on with the next one', async () => {
+  // A library exception, such as a full disk, reaches the Candidate under a code, in French
+  it('fails a job whose run throws, under the code of an unexpected error, and goes on with the next one', async () => {
     const aiSession = createFakeAiSession({ errorMessage: 'Disque plein.' }, RESEARCH);
     const { actions } = await detectPostings(aiSession);
     await actions.runModule({ module: 'research', reference: REFERENCE });
@@ -79,9 +97,135 @@ describe('the job queue', () => {
     const jobList = await actions.runQueuedJobs();
 
     expect(jobList).toMatchObject([
-      { posting: { reference: REFERENCE }, state: 'failed', log: 'Disque plein.', version: { state: 'failed' } },
+      {
+        posting: { reference: REFERENCE },
+        state: 'failed',
+        errorCode: 'unexpected',
+        log: 'Erreur inattendue : Disque plein.\nRelancer ; si elle revient, la signaler avec ce message.',
+        version: { state: 'failed' },
+      },
       { posting: { reference: OTHER_REFERENCE }, state: 'done', version: { state: 'ready' } },
     ]);
+  });
+
+  // A session that never returns would hold the queue: stopped, it fails its job only
+  it('fails a session stopped past its maximum duration under its code, and goes on with the next job', async () => {
+    const log = 'La session Claude Code a dépassé sa durée maximale (30 minutes) : elle a été arrêtée.';
+    const aiSession = createFakeAiSession({ errorCode: 'session_timed_out', log }, RESEARCH);
+    const { actions } = await detectPostings(aiSession);
+    await actions.runModule({ module: 'research', reference: REFERENCE });
+    await actions.runModule({ module: 'research', reference: OTHER_REFERENCE });
+
+    const jobList = await actions.runQueuedJobs();
+
+    expect(jobList).toMatchObject([
+      { posting: { reference: REFERENCE }, state: 'failed', errorCode: 'session_timed_out', log },
+      { posting: { reference: OTHER_REFERENCE }, state: 'done' },
+    ]);
+    const { failure } = await actions.readArtifactState({ reference: REFERENCE, artifact: 'research' });
+    expect(failure).toEqual({ errorCode: 'session_timed_out', log });
+  });
+
+  it('tells a queued job apart from a running one', async () => {
+    const aiSession = createFakeAiSession({ isInterrupted: true });
+    const { actions } = await detectPostings(aiSession);
+    await actions.runModule({ module: 'research', reference: REFERENCE });
+    await actions.runModule({ module: 'research', reference: OTHER_REFERENCE });
+    await actions.beatWorker();
+
+    expect(await researchOf(actions)).toEqual({ state: 'queued', workerFailure: null });
+    void actions.runQueuedJobs();
+    await vi.waitFor(() => {
+      expect(aiSession.headlessSessionList).toHaveLength(1);
+    });
+
+    expect(await researchOf(actions)).toEqual({ state: 'in_progress', workerFailure: null });
+    expect(await researchOf(actions, OTHER_REFERENCE)).toEqual({ state: 'queued', workerFailure: null });
+  });
+
+  // The worker never started, crashed, or was stopped by lpm stop: nothing else would tell
+  it('tells, on the Posting and to whoever follows the job, that no worker is running, and how to start it', async () => {
+    const { actions } = await detectPostings();
+    const job = await actions.runModule({ module: 'research', reference: REFERENCE });
+    await actions.beatWorker();
+
+    moveClockBy(2 * MINUTE_MS);
+
+    const message = `Le worker ne tourne pas : le job ${String(job.id)} n'avance pas. Le démarrer : « lpm service worker start -p job_finder », puis lire « lpm logs worker -p job_finder » s'il s'arrête encore.`;
+    expect(await researchOf(actions)).toEqual({
+      state: 'queued',
+      workerFailure: { errorCode: 'worker_not_running', message },
+    });
+    await expect(actions.followJob({ jobId: job.id })).rejects.toMatchObject({ code: 'worker_not_running', message });
+  });
+
+  it('tells that no worker is running when none ever started', async () => {
+    const { actions } = await detectPostings();
+    const job = await actions.runModule({ module: 'research', reference: REFERENCE });
+
+    await expect(actions.followJob({ jobId: job.id })).rejects.toMatchObject({ code: 'worker_not_running' });
+  });
+
+  it('stops following a job that runs past its maximum duration, the worker being stuck', async () => {
+    const aiSession = createFakeAiSession({ isInterrupted: true });
+    const { actions } = await detectPostings(aiSession);
+    const job = await actions.runModule({ module: 'research', reference: REFERENCE });
+    void actions.runQueuedJobs();
+    await vi.waitFor(() => {
+      expect(aiSession.headlessSessionList).toHaveLength(1);
+    });
+
+    moveClockBy(40 * MINUTE_MS);
+    await actions.beatWorker();
+
+    await expect(actions.followJob({ jobId: job.id })).rejects.toMatchObject({ code: 'job_overdue' });
+    await expect(actions.followJob({ jobId: job.id })).rejects.toThrow(/lpm service worker restart -p job_finder/);
+    expect(await researchOf(actions)).toMatchObject({ workerFailure: { errorCode: 'job_overdue' } });
+  });
+
+  // The job overdue is the running one: the job queued behind it waits, which says nothing of it
+  it('tells that a job is overdue under its Artifact only, and in jf versions', async () => {
+    const aiSession = createFakeAiSession(RESEARCH, { isInterrupted: true });
+    const { actions } = await detectPostings(aiSession);
+    await actions.runModule({ module: 'research', reference: REFERENCE });
+    await actions.runQueuedJobs();
+    await actions.runModule({ module: 'letter', reference: REFERENCE });
+    await actions.runModule({ module: 'interview_brief', reference: REFERENCE });
+    void actions.runQueuedJobs();
+    await vi.waitFor(() => {
+      expect(aiSession.headlessSessionList).toHaveLength(2);
+    });
+
+    moveClockBy(40 * MINUTE_MS);
+    await actions.beatWorker();
+
+    const { artifactList } = await actions.readPosting({ reference: REFERENCE });
+    expect(
+      artifactList.map(({ artifact, state, workerFailure }) => ({
+        artifact,
+        state,
+        errorCode: workerFailure?.errorCode ?? null,
+      })),
+    ).toEqual([
+      { artifact: 'research', state: 'ready', errorCode: null },
+      { artifact: 'letter', state: 'in_progress', errorCode: 'job_overdue' },
+      { artifact: 'interview_brief', state: 'queued', errorCode: null },
+      { artifact: 'visualization', state: 'absent', errorCode: null },
+    ]);
+    expect(await actions.readArtifactState({ reference: REFERENCE, artifact: 'letter' })).toMatchObject({
+      state: 'in_progress',
+      workerFailure: { errorCode: 'job_overdue', message: /lpm service worker restart/ },
+    });
+  });
+
+  it('tells in jf versions that no worker runs the last job of an Artifact', async () => {
+    const { actions } = await detectPostings();
+    await actions.runModule({ module: 'research', reference: REFERENCE });
+
+    expect(await actions.readArtifactState({ reference: REFERENCE, artifact: 'research' })).toMatchObject({
+      state: 'queued',
+      workerFailure: { errorCode: 'worker_not_running' },
+    });
   });
 
   it('fails the job a stopped worker left running, at its restart, and it can be launched again', async () => {
@@ -102,7 +246,9 @@ describe('the job queue', () => {
     await restartedWorker.runModule({ module: 'research', reference: REFERENCE });
     await restartedWorker.runQueuedJobs();
 
-    expect(failedJobList).toMatchObject([{ id: interruptedJob.id, state: 'failed', version: { number: 1 } }]);
+    expect(failedJobList).toMatchObject([
+      { id: interruptedJob.id, state: 'failed', errorCode: 'interrupted_job', version: { number: 1 } },
+    ]);
     expect(failedJobList[0]?.log).toMatch(/worker s'est arrêté/);
     const versionList = await restartedWorker.listVersions({ reference: REFERENCE, artifact: 'research' });
     expect(versionList.map(({ number, state, isChosen }) => ({ number, state, isChosen }))).toEqual([

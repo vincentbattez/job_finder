@@ -11,13 +11,13 @@ export const SETTINGS_FR: typeof SETTINGS_EN = {
     notFoundHint: 'Cette adresse ne mène à aucune page du front.',
     errorHeading: 'Cette page n’a pas pu s’afficher',
     errorHint: 'Rechargez la page. Si l’erreur revient, les journaux du front disent ce qui a échoué.',
+    errorCode: 'Code d’erreur : {{errorCode}}',
   },
   menu: {
     candidateLabel: 'Candidat',
     namePlaceholder: 'Votre nom',
     choose: 'Choisir',
   },
-  unknownIntent: 'Ce bouton ne fait rien : recharger la page.',
   unsavedChanges: 'Modifications non enregistrées',
   candidates: {
     pageTitle: 'Candidats · Job Finder',

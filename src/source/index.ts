@@ -1,6 +1,7 @@
 import type { z } from 'zod/v4';
 
 import { tFor } from '#/domain/catalogue/i18n.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import {
   SOURCE_MODULE_SCHEMA,
   type JobDescription,
@@ -81,11 +82,11 @@ export function defineSource<TShape extends ParameterShape>({
   // The front writes the Watches, in the Profile of their Candidate (ADR-0011)
   function parseParametersOf(watch: Watch, locale: Locale): ParametersOf<TShape> {
     return parameters.parse(watch.parameters, locale, (labelList) =>
-      tFor(locale, 'error')('watchParameters', {
-        watchId: watch.id,
-        sourceName: name,
-        labels: quoteLabels(labelList, locale),
-      }),
+      codedError(
+        'watch_parameters',
+        { watchId: watch.id, sourceName: name, labels: quoteLabels(labelList, locale) },
+        { locale },
+      ),
     );
   }
 
@@ -93,7 +94,7 @@ export function defineSource<TShape extends ParameterShape>({
     description,
     parseParameters: (rawParameters, locale) =>
       parameters.parseToSave(rawParameters, locale, (labelList) =>
-        tFor(locale, 'error')('sourceParameters', { sourceName: name, labels: quoteLabels(labelList, locale) }),
+        codedError('source_parameters', { sourceName: name, labels: quoteLabels(labelList, locale) }, { locale }),
       ),
     search: (watch, locale) => search(parseParametersOf(watch, locale), httpFetch, locale),
     readJobDescription: (reference, watch, locale) =>

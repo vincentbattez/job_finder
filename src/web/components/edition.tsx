@@ -1,6 +1,8 @@
 import { Fragment, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Form } from 'react-router';
+import { useFetcher } from 'react-router';
+
+import type { IRefusal } from '#/web/failure.ts';
 
 import type { Status } from './badge.tsx';
 import { ButtonRow } from './button-row.tsx';
@@ -12,7 +14,13 @@ import { useIsHydrated } from './use-is-hydrated.ts';
 import './edition.css';
 
 // What the Candidate changes from the Posting page. Each form posts to a route that relays to
-// an action, then comes back to the Posting page where it was (ADR-0003).
+// an action, then comes back to the Posting page where it was (ADR-0003). Through a fetcher, a
+// refusal comes back to the form, which shows it and keeps what was typed.
+
+function Refusal({ data }: Readonly<{ data: IRefusal | undefined }>) {
+  const error = data?.error ?? null;
+  return error === null ? null : <p role="alert">{error}</p>;
+}
 
 interface IArtifactDocument {
   reference: string;
@@ -34,11 +42,12 @@ export function ArtifactDocument({
 }: Readonly<IArtifactDocument>) {
   const [editedMarkdown, setEditedMarkdown] = useState(markdown);
   const { t } = useTranslation('posting');
+  const fetcher = useFetcher<IRefusal>();
   return (
     <figure className="edition__document">
       <figcaption>{fileName}</figcaption>
       {isModifiable ? (
-        <Form method="post" action={`/postings/${reference}/${artifact}/document`} preventScrollReset>
+        <fetcher.Form method="post" action={`/postings/${reference}/${artifact}/document`} preventScrollReset>
           <input type="hidden" name="fileName" value={fileName} />
           <MarkdownEditor
             label={t('documentLabel')}
@@ -53,8 +62,9 @@ export function ArtifactDocument({
             </button>
             <CopyMarkdown markdown={editedMarkdown} />
             {editedMarkdown !== markdown && <p role="status">{t('unsavedChanges')}</p>}
+            <Refusal data={fetcher.data} />
           </ButtonRow>
-        </Form>
+        </fetcher.Form>
       ) : (
         <>
           <Markdown markdown={markdown} />
@@ -73,15 +83,17 @@ export function ChooseButton({
   number,
 }: Readonly<{ reference: string; artifact: string; number: number }>) {
   const { t } = useTranslation('posting');
+  const fetcher = useFetcher<IRefusal>();
   return (
-    <Form method="post" action={`/postings/${reference}/${artifact}/chosen`} preventScrollReset>
+    <fetcher.Form method="post" action={`/postings/${reference}/${artifact}/chosen`} preventScrollReset>
       <input type="hidden" name="number" value={number} />
       <ButtonRow>
         <button className="button" type="submit">
           {t('chooseVersion')}
         </button>
+        <Refusal data={fetcher.data} />
       </ButtonRow>
-    </Form>
+    </fetcher.Form>
   );
 }
 
@@ -94,8 +106,9 @@ export function StatusButtons({
   const [isConfirming, setIsConfirming] = useState(false);
   const { t } = useTranslation('posting');
   const isHydrated = useIsHydrated();
+  const fetcher = useFetcher<IRefusal>();
   return (
-    <Form method="post" action={`/postings/${reference}/status`} preventScrollReset>
+    <fetcher.Form method="post" action={`/postings/${reference}/status`} preventScrollReset>
       <ButtonRow>
         {nextStatusList.map((status) => {
           if (status !== 'applied') {
@@ -135,7 +148,8 @@ export function StatusButtons({
           );
         })}
         {nextStatusList.includes('applied') && <p>{t('appliedFreezesLetter')}</p>}
+        <Refusal data={fetcher.data} />
       </ButtonRow>
-    </Form>
+    </fetcher.Form>
   );
 }

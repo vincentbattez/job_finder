@@ -4,6 +4,12 @@ export const ERROR_FR: typeof ERROR_EN = {
   quote: '« {{text}} »',
   orSeparator: ' ou ',
 
+  unexpected: 'Erreur inattendue : {{reason}}\nRelancer ; si elle revient, la signaler avec ce message.',
+  invalidInput: 'Saisie invalide :\n{{problem}}\nLa corriger, puis réessayer.',
+  invalidInputIssue: '« {{path}} » : {{message}}',
+  unknownIntent: 'Ce bouton ne fait rien : recharger la page.',
+  moduleFailure: '{{detail}}',
+
   dataLayoutMixed:
     "Le dossier de données mélange l'ancienne et la nouvelle disposition : « {{frenchPath}} » et « {{englishPath}} » existent tous deux. Fusionner le premier dans le second à la main, le supprimer, puis relancer.",
   dataLayoutUnexpected:
@@ -36,6 +42,7 @@ export const ERROR_FR: typeof ERROR_EN = {
   watchParameters:
     "La Veille {{watchId}} ne donne pas à la Source {{sourceName}} les Paramètres qu'elle attend : corriger {{labels}} dans le Profil de son Candidat.",
   sourceParameters: "La Source {{sourceName}} attend d'autres Paramètres : renseigner {{labels}}.",
+  notificationsNotSent: '{{failures}}',
 
   statusChange: "L'Offre {{reference}} est {{statusLabel}} : elle ne peut passer qu'en {{nextLabels}}.",
   statusChangeAfterApplied:
@@ -54,6 +61,10 @@ export const ERROR_FR: typeof ERROR_EN = {
   malformedOutput: 'Le fichier {{outputPath}} est mal formé : {{formatError}}.',
   notImported: "L'Offre {{reference}} n'a pas été importée : ses champs viennent de sa Source, sans extraction.",
   unknownJob: 'Job inconnu : {{jobId}}. Son numéro est celui que « jf run » ou « jf import » a affiché.',
+  workerNotRunning:
+    "Le worker ne tourne pas : le job {{jobId}} n'avance pas. Le démarrer : « lpm service worker start -p job_finder », puis lire « lpm logs worker -p job_finder » s'il s'arrête encore.",
+  jobOverdue:
+    'Le job {{jobId}} tourne depuis plus de {{minutes}} minutes, au-delà de sa durée maximale : le worker est bloqué. Le redémarrer : « lpm service worker restart -p job_finder », ce qui fait échouer le job ; puis relancer le module.',
   interruptedJob:
     "Interrompu : le worker s'est arrêté pendant ce job. Relancer le module en crée une nouvelle Version.",
   visualizationNotEditable:
@@ -93,7 +104,16 @@ export const ERROR_FR: typeof ERROR_EN = {
   conversionOverwrite:
     "« {{upload}} » se convertit en « {{fileName}} », que le Profil a déjà : il n'est pas écrasé. Supprimer ou renommer « {{fileName}} », puis relancer la conversion.",
 
+  sessionFailed: 'La session Claude Code a échoué : son journal dit pourquoi. Relancer le module.',
   sessionStopped: "Claude Code s'est arrêté (code {{exitCode}}) : {{output}}",
+  sessionTimedOut:
+    "La session Claude Code a dépassé sa durée maximale ({{minutes}} minutes) : elle a été arrêtée. Relancer le module ; si cela revient, « ssh {{host}} », puis lancer « claude » seul pour voir ce qu'il attend (connexion, limite d'usage, une question).",
+  claudeLoginRequired:
+    "Claude Code a refusé la session : il n'est plus connecté sur {{host}}. S'y reconnecter : « ssh {{host}} », lancer « claude » puis taper « /login », puis relancer le module.\n{{result}}",
+  claudeUsageLimit:
+    "Claude Code a atteint sa limite d'usage sur {{host}}. Relancer le module une fois la limite levée, à l'heure qu'il indique.\n{{result}}",
+  sessionKilled:
+    'Claude Code a été arrêté par le signal {{signal}} : son processus a été tué, ou la machine a manqué de mémoire. Relancer ; si cela revient, « ssh {{host}} », puis lancer « claude » seul pour lire son message.',
   sessionNotLaunched: "Impossible de lancer Claude Code ({{reason}}). Installer « claude » et s'y connecter.",
   interactiveSessionFailed:
     "La session Claude Code s'est arrêtée en erreur (code {{status}}). Relancer la commande ; si l'erreur revient, lancer « claude » seul pour lire son message.",
@@ -109,6 +129,16 @@ export const ERROR_FR: typeof ERROR_EN = {
   recipientsFormat: 'il ne suit pas le format demandé ({{detail}})',
   inventedAddress: "l'adresse {{email}} ne figure pas dans le champ {{field}} de l'Offre",
 
+  parameterUndeclared:
+    "Le Paramètre {{parameterName}} du module {{moduleName}} n'est pas déclaré avec parameter() : l'y déclarer ainsi dans le module.",
+
+  postingFolderNotMoved:
+    "Le dossier de l'Offre {{reference}} n'a pas pu suivre son nouveau titre, vers {{to}} : {{reason}}. L'Offre garde son titre : libérer cet emplacement, puis relancer l'extraction.",
+
   apiGeoUnreachable: 'API Géo est injoignable ({{url}}) : {{reason}}. Vérifier la connexion, puis relancer.',
   apiGeoStatus: 'API Géo a répondu HTTP {{status}} pour {{url}}. Relancer plus tard.',
+  apiGeoFormatChanged:
+    'API Géo a répondu dans un format inattendu pour {{url}} : {{problem}}. Son API a peut-être changé : le signaler, les Offres restent hors de la carte en attendant.',
+  postingsNotLocated:
+    'Offres enregistrées sans coordonnées, hors de la carte jusqu’à ce que la prochaine Détection les localise : {{reason}}',
 };

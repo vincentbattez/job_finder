@@ -1,6 +1,7 @@
 import { z } from 'zod/v4';
 
 import { textOf } from '#/domain/catalogue/i18n.ts';
+import { codedError, type CodedError } from '#/domain/coded-error.ts';
 import { PARAMETER_SCHEMA, PARAMETERS_SCHEMA, type Locale, type Parameter, type Parameters } from '#/domain/index.ts';
 
 // How each family of interchangeable modules declares its Parameters, so that the front builds its
@@ -38,8 +39,8 @@ function describeParameters(
   return Object.entries(parameterSchema.shape).map(([parameterName, schema]) => {
     const meta = PARAMETER_REGISTRY.get(schema);
     if (meta === undefined) {
-      // A mistake of the module's author, never of the Candidate: in English, as the code
-      throw new Error(`The ${parameterName} Parameter of the ${moduleName} module is not declared with parameter().`);
+      // A mistake of the module's author, never of the Candidate
+      throw codedError('parameter_undeclared', { parameterName, moduleName });
     }
     return PARAMETER_SCHEMA.parse({
       name: parameterName,
@@ -64,7 +65,7 @@ export function declareParameters<TShape extends ParameterShape>(
   const parameterList = describeParameters(moduleName, parameterSchema, choiceNameList);
   // The error a module gives when some Parameters are missing or wrong, given their labels in the
   // Candidate's locale
-  type MessageComposer = (labelList: string[]) => string;
+  type MessageComposer = (labelList: string[]) => CodedError;
 
   function parseWith<T extends z.ZodType>(
     schema: T,
@@ -75,7 +76,7 @@ export function declareParameters<TShape extends ParameterShape>(
     const result = schema.safeParse(rawParameters);
     if (!result.success) {
       const labelList = result.error.issues.map((issue) => labelOf(parameterList, issue.path[0], locale));
-      throw new Error(composeMessage([...new Set(labelList)]));
+      throw composeMessage([...new Set(labelList)]);
     }
     return result.data;
   }

@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 import { ARTIFACT_RENAME_LIST } from '#/domain/artifact-rename.ts';
-import { ERROR } from '#/domain/error.ts';
+import { codedError } from '#/domain/coded-error.ts';
 
 import { migrateObsoleteConfig } from './acl/config.ts';
 import { kindOf, listEntries, moveEntry } from './acl/layout.ts';
@@ -89,11 +89,11 @@ export function migrateLayout(dataDirectory: string): void {
         continue;
       }
       if (fromKind !== expectedKind) {
-        throw ERROR.dataLayoutUnexpected(fromPath);
+        throw codedError('data_layout_unexpected', { frenchPath: fromPath });
       }
       // Checked again: another process may have just moved it
       if (kindOf(toPath) !== null && kindOf(fromPath) !== null) {
-        throw ERROR.dataLayoutMixed(fromPath, toPath);
+        throw codedError('data_layout_mixed', { frenchPath: fromPath, englishPath: toPath });
       }
       moveEntry(fromPath, toPath);
     }

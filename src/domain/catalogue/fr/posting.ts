@@ -5,6 +5,7 @@ export const POSTING_FR: typeof POSTING_EN = {
   unreadPosting: 'Offre',
   stateLabelByState: {
     absent: 'Absent',
+    queued: 'En attente',
     in_progress: 'En cours',
     ready: 'Prêt',
     failed: 'En échec',

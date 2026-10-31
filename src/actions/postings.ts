@@ -2,12 +2,16 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-import { tFor } from '#/domain/catalogue/i18n.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import {
   ARTIFACT_SCHEMA,
+  ARTIFACT_STATE_SCHEMA,
   POSTING_DETAIL_SCHEMA,
   VISUALIZATION_SCHEMA,
+  type Artifact,
+  type ArtifactState,
   type Candidate,
+  type Job,
   type Locale,
   type Posting,
   type PostingDetail,
@@ -18,15 +22,56 @@ import {
 import { LETTER_MODULE } from '#/modules/letter/index.ts';
 import { VISUALIZATION_MODULE } from '#/modules/visualization/index.ts';
 import { listNextStatuses } from '#/status/index.ts';
+import type { Workspace } from '#/workspace/index.ts';
 
 import { ARTIFACT_INPUT_SCHEMA, REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
 import { assertArtifactModifiable, assertChoosable, assertDocumentModifiable, isAccepted } from './edition.ts';
 import { describeModule, findChosenVersion, parseArtifact } from './run-job.ts';
+import { findJobStall } from './stalled-job.ts';
 
 const VISUALIZATION_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
 
 const STATE_BY_VERSION_STATE = { running: 'in_progress', ready: 'ready', failed: 'failed' } as const;
-const STATE_BY_JOB_STATE = { queued: 'in_progress', running: 'in_progress', done: 'ready', failed: 'failed' } as const;
+const STATE_BY_JOB_STATE = { queued: 'queued', running: 'in_progress', done: 'ready', failed: 'failed' } as const;
+
+// The state of an Artifact follows its last job, unless a Version came after it: a job that failed
+// before creating its Version, refused by findInputs, is failed rather than the previous Version's state
+// Why the job makes no progress, in the Candidate's locale; null while it moves or once it is over
+async function findWorkerFailure(workspace: Workspace, job: Job, locale: Locale) {
+  const stall = await findJobStall(workspace, job, locale);
+  return stall === undefined ? null : { errorCode: stall.code, message: stall.message };
+}
+
+async function findArtifactState(
+  workspace: Workspace,
+  posting: Posting,
+  artifact: Artifact,
+  jobList: Job[],
+  locale: Locale,
+): Promise<ArtifactState> {
+  const versionList = await workspace.listVersions(posting, artifact);
+  const lastVersion = versionList.at(-1);
+  const lastJob = jobList.findLast(({ module }) => module === artifact);
+  const isJobLatest =
+    lastJob !== undefined && (lastJob.version === null || lastJob.version.number === lastVersion?.number);
+  if (!isJobLatest) {
+    return ARTIFACT_STATE_SCHEMA.parse({
+      state: lastVersion === undefined ? 'absent' : STATE_BY_VERSION_STATE[lastVersion.state],
+      failure: null,
+      notificationFailure: null,
+      workerFailure: null,
+    });
+  }
+  const { state, errorCode, log, notificationErrorCode, notificationFailure } = lastJob;
+  return ARTIFACT_STATE_SCHEMA.parse({
+    state: STATE_BY_JOB_STATE[state],
+    failure: state === 'failed' ? { errorCode, log } : null,
+    notificationFailure:
+      notificationErrorCode === null ? null : { errorCode: notificationErrorCode, message: notificationFailure ?? '' },
+    // That of this job only: a job overdue says nothing of the one queued behind it
+    workerFailure: await findWorkerFailure(workspace, lastJob, locale),
+  });
+}
 
 export function createPostingActions({ workspace, findCandidate, findPosting, findLocale }: ActionContext) {
   async function findRecipients(posting: Posting): Promise<Recipients | null> {
@@ -79,15 +124,11 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
         ARTIFACT_SCHEMA.options.map(async (artifact) => {
           const versionList = await workspace.listVersions(posting, artifact);
           const chosenVersion = await findChosenVersion(workspace, posting, artifact);
-          // A queued job has no Version yet, while the worker runs another one (ADR-0003), and a
-          // claimed job has none until the worker starts it: both are already in progress
-          const isPending = jobList.some(
-            ({ module, state }) => module === artifact && (state === 'queued' || state === 'running'),
-          );
-          const state = isPending ? 'running' : versionList.at(-1)?.state;
           return {
             artifact,
-            state: state === undefined ? 'absent' : STATE_BY_VERSION_STATE[state],
+            // A queued job has no Version yet, while the worker runs another one (ADR-0003), and a
+            // claimed job has none until the worker starts it: the job tells its state
+            ...(await findArtifactState(workspace, posting, artifact, jobList, locale)),
             module: await describeModule(workspace, posting, artifact, locale),
             isEditable: isAccepted(() => {
               assertArtifactModifiable(posting, artifact, chosenVersion, locale);
@@ -105,7 +146,12 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
         extraction:
           extractionJob === undefined
             ? null
-            : { state: STATE_BY_JOB_STATE[extractionJob.state], log: extractionJob.log },
+            : {
+                state: STATE_BY_JOB_STATE[extractionJob.state],
+                log: extractionJob.log,
+                errorCode: extractionJob.errorCode,
+                workerFailure: await findWorkerFailure(workspace, extractionJob, locale),
+              },
       });
     },
 
@@ -115,20 +161,30 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
       return workspace.listVersions(posting, parseArtifact(artifact, await findLocale(posting.candidateId)));
     },
 
+    // What jf versions prints under the Versions: the reason the last job failed, even before its
+    // Version, or makes no progress
+    async readArtifactState(rawInput: unknown): Promise<ArtifactState> {
+      const { reference, artifact } = ARTIFACT_INPUT_SCHEMA.parse(rawInput);
+      const posting = await findPosting(reference);
+      const locale = await findLocale(posting.candidateId);
+      const parsedArtifact = parseArtifact(artifact, locale);
+      return findArtifactState(workspace, posting, parsedArtifact, await workspace.listJobs(posting), locale);
+    },
+
     async readVisualization(rawInput: unknown): Promise<Visualization> {
       const { reference, number } = VISUALIZATION_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
-      const t = tFor(await findLocale(posting.candidateId), 'error');
+      const locale = await findLocale(posting.candidateId);
       const versionList = await workspace.listVersions(posting, 'visualization');
       const version = versionList.find((entry) => entry.number === number);
       if (version === undefined) {
-        throw new Error(t('unknownVersion', { reference, artifact: 'visualization', number }));
+        throw codedError('unknown_version', { reference, artifact: 'visualization', number }, { locale });
       }
       const html = workspace.readTextFile(
         path.join(workspace.versionDirectoryOf(posting, version), VISUALIZATION_MODULE.fileName),
       );
       if (html === null) {
-        throw new Error(t('visualizationWithoutPage', { reference, number }));
+        throw codedError('visualization_without_page', { reference, number }, { locale });
       }
       return VISUALIZATION_SCHEMA.parse({ html });
     },
@@ -138,7 +194,7 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
       const posting = await findPosting(reference);
       const recipients = await findRecipients(posting);
       if (recipients === null) {
-        throw new Error(tFor(await findLocale(posting.candidateId), 'error')('noChosenLetter', { reference }));
+        throw codedError('no_chosen_letter', { reference }, { locale: await findLocale(posting.candidateId) });
       }
       return recipients;
     },

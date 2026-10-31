@@ -1,6 +1,8 @@
 import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ErrorCode } from '#/actions/index.ts';
+
 import { StateBadge, StatusBadge, type State } from './badge.tsx';
 import { DateText } from './date.tsx';
 import { Markdown } from './markdown.tsx';
@@ -23,6 +25,12 @@ export const STATE_BY_VERSION_STATE: Record<VersionState, State> = {
 export interface IArtifactVersions {
   artifact: Artifact;
   state: State;
+  // Why its last job failed: the code and the log, which starts with the code's message
+  failure: { errorCode: ErrorCode | null; log: string } | null;
+  // Why the notification of its last job, such as « Research ready », was not sent
+  notificationFailure: { errorCode: ErrorCode; message: string } | null;
+  // Why its last job, queued or running, does not move: the worker is stopped or stuck
+  workerFailure: { errorCode: ErrorCode; message: string } | null;
   // The module that produces the Artifact, and why it cannot run now
   module: { refusal: string | null };
   // Given by the action: jf edit opens its Chosen Version

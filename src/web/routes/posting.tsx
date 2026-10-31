@@ -7,13 +7,16 @@ import { ArtifactVersions } from '#/web/components/artifact-versions.tsx';
 import { StatusButtons } from '#/web/components/edition.tsx';
 import { ExtractionLaunch } from '#/web/components/extraction-launch.tsx';
 import { PostingDetail } from '#/web/components/posting-detail.tsx';
+import { relayLoader } from '#/web/relay-action.server.ts';
 
-export async function loader({ params, request }: LoaderFunctionArgs) {
-  const [{ candidate, locale }, detail] = await Promise.all([
-    readCandidate(request),
-    ACTIONS.readPosting({ reference: params.reference }),
-  ]);
-  return { candidate, locale, detail };
+export function loader({ params, request }: LoaderFunctionArgs) {
+  return relayLoader(request, async () => {
+    const [{ candidate, locale }, detail] = await Promise.all([
+      readCandidate(request),
+      ACTIONS.readPosting({ reference: params.reference }),
+    ]);
+    return { candidate, locale, detail };
+  });
 }
 
 export function meta({ loaderData }: MetaArgs<typeof loader>) {

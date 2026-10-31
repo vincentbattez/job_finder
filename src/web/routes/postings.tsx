@@ -10,16 +10,19 @@ import { JobDescriptionImport } from '#/web/components/job-description-import.ts
 import { filterPostings, PostingFilters } from '#/web/components/posting-filters.tsx';
 import { PostingList } from '#/web/components/posting-list.tsx';
 import { PostingMap } from '#/web/components/posting-map.tsx';
+import { relayLoader } from '#/web/relay-action.server.ts';
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  const { candidate, locale } = await readCandidate(request);
-  return {
-    candidate,
-    // meta runs outside React: it translates in the locale the loader gives it (ADR-0012)
-    locale,
-    postingList: candidate === null ? [] : await ACTIONS.listPostings({ candidateId: candidate.id }),
-    detection: candidate === null ? null : await ACTIONS.followDetection({ candidateId: candidate.id }),
-  };
+export function loader({ request }: LoaderFunctionArgs) {
+  return relayLoader(request, async () => {
+    const { candidate, locale } = await readCandidate(request);
+    return {
+      candidate,
+      // meta runs outside React: it translates in the locale the loader gives it (ADR-0012)
+      locale,
+      postingList: candidate === null ? [] : await ACTIONS.listPostings({ candidateId: candidate.id }),
+      detection: candidate === null ? null : await ACTIONS.followDetection({ candidateId: candidate.id }),
+    };
+  });
 }
 
 export function meta({ loaderData }: MetaArgs<typeof loader>) {

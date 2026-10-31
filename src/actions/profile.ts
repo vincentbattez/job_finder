@@ -1,6 +1,6 @@
 import { z } from 'zod/v4';
 
-import { tFor } from '#/domain/catalogue/i18n.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import { PROFILE_FILE_NAME_SCHEMA, type Candidate, type MarkdownFile, type ProfileFileName } from '#/domain/index.ts';
 import { composeProfilePrompt } from '#/profile/prompt.ts';
 
@@ -15,7 +15,7 @@ const NEW_PROFILE_FILE_INPUT_SCHEMA = PROFILE_FILE_NAME_INPUT_SCHEMA.extend({ ma
 function parseProfileFileName(fileName: string, candidate: Candidate): ProfileFileName {
   const result = PROFILE_FILE_NAME_SCHEMA.safeParse(fileName);
   if (!result.success) {
-    throw new Error(tFor(candidate.locale, 'error')('invalidProfileFileName', { fileName }));
+    throw codedError('invalid_profile_file_name', { fileName }, { locale: candidate.locale });
   }
   return result.data;
 }
@@ -27,12 +27,10 @@ export function createProfileActions({ workspace, aiSession, findCandidate }: Ac
 
   function assertHasProfileFile(candidate: Candidate, fileName: ProfileFileName): void {
     if (!hasProfileFile(candidate, fileName)) {
-      throw new Error(
-        tFor(candidate.locale, 'error')('missingProfileFile', {
-          candidateName: candidate.name,
-          fileName,
-          candidateId: candidate.id,
-        }),
+      throw codedError(
+        'missing_profile_file',
+        { candidateName: candidate.name, fileName, candidateId: candidate.id },
+        { locale: candidate.locale },
       );
     }
   }
@@ -57,8 +55,10 @@ export function createProfileActions({ workspace, aiSession, findCandidate }: Ac
       const input = NEW_PROFILE_FILE_INPUT_SCHEMA.parse(rawInput);
       const fileName = parseProfileFileName(input.fileName, candidate);
       if (hasProfileFile(candidate, fileName)) {
-        throw new Error(
-          tFor(candidate.locale, 'error')('duplicateProfileFile', { candidateName: candidate.name, fileName }),
+        throw codedError(
+          'duplicate_profile_file',
+          { candidateName: candidate.name, fileName },
+          { locale: candidate.locale },
         );
       }
       workspace.saveProfileFile(candidate.id, fileName, input.markdown);

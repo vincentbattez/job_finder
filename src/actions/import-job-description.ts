@@ -3,6 +3,7 @@ import { z } from 'zod/v4';
 import type { Job } from '#/domain/index.ts';
 
 import type { ActionContext } from './context.ts';
+import { createTolerantLocator } from './locator.ts';
 
 const IMPORT_INPUT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string() });
 
@@ -19,22 +20,26 @@ export async function runExtraction(
     workspace.readJobDescription(posting, locale),
     locale,
   );
-  // A Job Description without a title keeps the name of its file: nothing is invented
-  const location = await locate(city, locale);
-  const filledPosting = await workspace.fillPosting(posting, {
-    title: title ?? posting.title,
-    jobDescription,
-    location,
-  });
+  // A Job Description without a title keeps the name of its file: nothing is invented. API Géo down
+  // leaves it off the map, as a Detection does, until the next Detection locates it
+  const locator = createTolerantLocator(locate);
+  const location = await locator.locate(city, locale);
+  const filledPosting = await workspace.fillPosting(
+    posting,
+    { title: title ?? posting.title, jobDescription, location },
+    locale,
+  );
   // Imported by the Candidate, it gets its Research whatever the Zone
-  await workspace.createJob(filledPosting, 'research');
-  return { job: await workspace.finishJobWithoutVersion(job, { log: session.log, sessionId: session.sessionId }) };
+  await workspace.createJob(filledPosting, 'research', { isAutomatic: true });
+  const log = [session.log, locator.failureFor(locale)].filter((line) => line !== null && line !== '').join('\n');
+  return { job: await workspace.finishJobWithoutVersion(job, { log, sessionId: session.sessionId }) };
 }
 
 export function createImportActions({ workspace, importSource, findCandidate, locate }: ActionContext) {
   return {
     // The worker reads the fields of the Job Description (ADR-0003); importing the same file again
-    // gives back its job, without another Posting nor another job
+    // gives back its job, without another Posting nor another job, unless that job failed: giving it
+    // back would announce an extraction queued while nothing runs, so it is queued again
     async importJobDescription(rawInput: unknown): Promise<Job> {
       const candidate = await findCandidate(rawInput);
       const { fileName, markdown } = IMPORT_INPUT_SCHEMA.parse(rawInput);
@@ -44,6 +49,9 @@ export function createImportActions({ workspace, importSource, findCandidate, lo
       if (importedPosting !== undefined) {
         const jobList = await workspace.listJobs(importedPosting);
         const extractionJob = jobList.findLast(({ module }) => module === 'extraction');
+        if (extractionJob?.state === 'failed') {
+          return workspace.createJob(importedPosting, 'extraction');
+        }
         if (extractionJob !== undefined) {
           return extractionJob;
         }

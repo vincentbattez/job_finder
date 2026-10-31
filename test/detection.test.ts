@@ -8,9 +8,16 @@ import { createActions, type Actions } from '#/actions/index.ts';
 import type { Detection, Posting } from '#/domain/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
+import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { LEA_WATCH_ID } from './lea.ts';
-import { createRecordedFetch, DSJ_FEED_URL, readRecordedFile } from './recorded-http.ts';
+import {
+  createRecordedFetch,
+  DSJ_FEED_URL,
+  feedWithout,
+  fetchWithApiGeoDown,
+  readRecordedFile,
+} from './recorded-http.ts';
 
 // Every attaché de justice offer of the DSJ feed recorded on 2026-10-29, counted by hand from its
 // titles, « (e) » and « .e » forms included
@@ -311,6 +318,45 @@ describe('a first launch cut off mid-way', () => {
   });
 });
 
+// The two Béthune Postings, both in the Zone, read in this order: the second one's page fails
+const SAVED_BEFORE_CUT_REFERENCE = '2026-2445600';
+const CUT_REFERENCE = '2026-2445609';
+
+describe('a second Detection cut off mid-way', () => {
+  // Saved, they are known from now on: a notification lost now would never come at the next Detection
+  it('notifies the Postings saved before the cut, then fails', async () => {
+    const dataDirectory = createDataDirectory();
+    const notificationChannel = createFakeNotificationChannel();
+    const earlierActions = await createActions({
+      dataDirectory,
+      fetch: createRecordedFetch({
+        [DSJ_FEED_URL]: { body: feedWithout([SAVED_BEFORE_CUT_REFERENCE, CUT_REFERENCE]) },
+      }).fetch,
+      notificationChannelList: notificationChannel.notificationChannelList,
+    });
+    await notificationChannel.saveFor(earlierActions);
+    await earlierActions.detect();
+    const actions = await createActions({
+      dataDirectory,
+      fetch: createRecordedFetch({
+        'https://place-ep-recrute.talent-soft.com/offre-de-emploi/emploi_2445609.aspx': { body: '', status: 500 },
+      }).fetch,
+      notificationChannelList: notificationChannel.notificationChannelList,
+    });
+
+    await expect(actions.detect()).rejects.toThrow(/HTTP 500/);
+
+    expect(
+      notificationChannel.sentList.map(({ title, message }) => `${title}: ${message.split('\n', 1).join('')}`),
+    ).toEqual([
+      'Nouvelle Offre dans la Zone: Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE',
+    ]);
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(postingList.map(({ reference }) => reference)).toContain(SAVED_BEFORE_CUT_REFERENCE);
+    expect(postingList.map(({ reference }) => reference)).not.toContain(CUT_REFERENCE);
+  });
+});
+
 const BETHUNE_API_GEO_URL =
   'https://geo.api.gouv.fr/communes?nom=B%C3%A9thune&fields=nom,centre,region&boost=population&limit=5';
 
@@ -339,6 +385,78 @@ describe('a city API Géo does not know', () => {
   });
 });
 
+// The two Béthune Postings, both in the Zone, published after a first Detection
+const BETHUNE_REFERENCE_LIST = ['2026-2445600', '2026-2445609'];
+
+const RESEARCH = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
+
+describe('a detection while API Géo is down', () => {
+  it.each([
+    { failure: 'unreachable' as const, report: /\[api_geo_unreachable\] API Géo est injoignable/ },
+    { failure: 500, report: /\[api_geo_status\] API Géo a répondu HTTP 500/ },
+  ])(
+    'saves its Postings without coordinates, queues their Research, notifies, and reports the outage when API Géo is $failure',
+    async ({ failure, report }) => {
+      const dataDirectory = createDataDirectory();
+      const notificationChannel = createFakeNotificationChannel();
+      const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout(BETHUNE_REFERENCE_LIST) } });
+      const earlierActions = await createActions({ dataDirectory, fetch: earlierFetch.fetch });
+      await earlierActions.detect();
+      const aiSession = createFakeAiSession(RESEARCH, RESEARCH);
+      const option = { dataDirectory, aiSession, notificationChannelList: notificationChannel.notificationChannelList };
+      const actions = await createActions({ ...option, fetch: fetchWithApiGeoDown(failure) });
+      await notificationChannel.saveFor(actions);
+
+      const detectionList = await actions.detect();
+
+      expect(detectionList[0]?.newPostingList.map(({ reference }) => reference)).toEqual(BETHUNE_REFERENCE_LIST);
+      expect(detectionList[0]?.locationFailure).toMatch(report);
+      expect(detectionList[0]?.locationFailure).toMatch(/prochaine Détection/);
+      const postingList = await actions.listPostings({ candidateId: 'lea' });
+      expect(postingList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
+        city: 'Béthune',
+        latitude: null,
+        longitude: null,
+      });
+      expect(notificationChannel.sentList).toHaveLength(BETHUNE_REFERENCE_LIST.length);
+      const { last } = await actions.followDetection({ candidateId: 'lea' });
+      expect(last).toMatchObject({ error: null, watchList: [{ step: 'done' }] });
+      expect(last?.watchList[0]?.locationFailure).toMatch(report);
+      const jobList = await actions.runQueuedJobs();
+      expect(jobList.map((job) => ('posting' in job ? `${job.module} ${job.posting.reference}` : job.module))).toEqual(
+        BETHUNE_REFERENCE_LIST.map((reference) => `research ${reference}`),
+      );
+
+      const nextActions = await createActions({ ...option, fetch: createRecordedFetch().fetch });
+      const nextDetectionList = await nextActions.detect();
+
+      expect(nextDetectionList[0]?.locationFailure).toBeNull();
+      const locatedList = await nextActions.listPostings({ candidateId: 'lea' });
+      expect(locatedList.filter(({ latitude }) => latitude === null)).toEqual([]);
+      expect(locatedList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
+        city: 'Béthune',
+        latitude: 50.5299,
+      });
+    },
+  );
+
+  it.each([
+    { format: 'a page instead of JSON', body: '<html>Maintenance</html>' },
+    { format: 'JSON of another shape', body: '{"communes":[]}' },
+  ])('gives a catalogue code and a French message when API Géo answers $format', async ({ body }) => {
+    const actions = await createActions({
+      dataDirectory: createDataDirectory(),
+      fetch: createRecordedFetch({ [BETHUNE_API_GEO_URL]: { body } }).fetch,
+    });
+
+    const detectionList = await actions.detect();
+
+    expect(detectionList[0]?.locationFailure).toMatch(
+      /\[api_geo_format_changed\] API Géo a répondu dans un format inattendu/,
+    );
+  });
+});
+
 describe('a detection that fails visibly', () => {
   it.each([
     {
@@ -361,13 +479,6 @@ describe('a detection that fails visibly', () => {
     const actions = await createActions({ dataDirectory: createDataDirectory(), fetch: recordedFetch.fetch });
 
     await expect(actions.detect()).rejects.toThrow(message);
-  });
-
-  it('stops when API Géo answers an HTTP error', async () => {
-    const recordedFetch = createRecordedFetch({ [BETHUNE_API_GEO_URL]: { body: '', status: 503 } });
-    const actions = await createActions({ dataDirectory: createDataDirectory(), fetch: recordedFetch.fetch });
-
-    await expect(actions.detect()).rejects.toThrow(/API Géo a répondu HTTP 503/);
   });
 });
 

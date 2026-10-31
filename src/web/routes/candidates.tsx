@@ -10,20 +10,22 @@ import {
 } from 'react-router';
 
 import { localeOf, tFor } from '#/actions/i18n.ts';
-import { messageOf } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { SettingsPanel, SettingsStep } from '#/web/components/settings-panel.tsx';
+import { relayAction, relayLoader } from '#/web/relay-action.server.ts';
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  const { candidate, locale } = await readCandidate(request);
-  return {
-    candidate,
-    locale,
-    candidateList: await ACTIONS.listCandidates(),
-    defaultDeadlinePeriod: await ACTIONS.readDefaultDeadlinePeriod(),
-    obsoleteConfig: await ACTIONS.findObsoleteConfig(),
-  };
+export function loader({ request }: LoaderFunctionArgs) {
+  return relayLoader(request, async () => {
+    const { candidate, locale } = await readCandidate(request);
+    return {
+      candidate,
+      locale,
+      candidateList: await ACTIONS.listCandidates(),
+      defaultDeadlinePeriod: await ACTIONS.readDefaultDeadlinePeriod(),
+      obsoleteConfig: await ACTIONS.findObsoleteConfig(),
+    };
+  });
 }
 
 // Any visitor of the front creates or renames a Candidate and sets the Default Deadline Period; no Candidate is
@@ -34,25 +36,27 @@ export async function action({ request }: ActionFunctionArgs) {
     const value = formData.get(name);
     return typeof value === 'string' ? value : null;
   });
-  try {
-    switch (intent) {
-      case 'create': {
-        await ACTIONS.createCandidate({ id: formData.get('id'), name: formData.get('name') });
-        break;
+  return relayAction(
+    request,
+    async () => {
+      switch (intent) {
+        case 'create': {
+          await ACTIONS.createCandidate({ id: formData.get('id'), name: formData.get('name') });
+          break;
+        }
+        case 'rename': {
+          await ACTIONS.renameCandidate({ candidateId, name: formData.get('name') });
+          break;
+        }
+        case 'default-deadline-period': {
+          await ACTIONS.saveDefaultDeadlinePeriod({ months: formData.get('months') });
+          break;
+        }
       }
-      case 'rename': {
-        await ACTIONS.renameCandidate({ candidateId, name: formData.get('name') });
-        break;
-      }
-      case 'default-deadline-period': {
-        await ACTIONS.saveDefaultDeadlinePeriod({ months: formData.get('months') });
-        break;
-      }
-    }
-  } catch (error) {
-    return { refusal: { intent, candidateId, message: messageOf(error) } };
-  }
-  return redirect('/candidates');
+      return redirect('/candidates');
+    },
+    (message) => ({ refusal: { intent, candidateId, message } }),
+  );
 }
 
 export function meta({ loaderData }: MetaArgs<typeof loader>) {

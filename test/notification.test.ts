@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { createActions } from '#/actions/index.ts';
 
@@ -16,13 +16,9 @@ const OUT_OF_ZONE_REFERENCE = '2026-2215099';
 
 const RESEARCH = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
-
 // A first Detection on the feed as it was before the given Postings were published, then the actions
 // for the next one, on the feed as recorded
-async function detectBefore(referenceList: string[]) {
+async function detectBefore(referenceList: string[], aiSession = createFakeAiSession()) {
   const dataDirectory = createDataDirectory();
   const notificationChannel = createFakeNotificationChannel();
   const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout(referenceList) } }).fetch;
@@ -35,6 +31,7 @@ async function detectBefore(referenceList: string[]) {
   await earlierActions.detect();
   const actions = await createActions({
     dataDirectory,
+    aiSession,
     fetch: createRecordedFetch().fetch,
     notificationChannelList: notificationChannel.notificationChannelList,
   });
@@ -102,7 +99,7 @@ describe('the notification of a Research ready', () => {
     ]);
   });
 
-  it('sends nothing for a Research that failed', async () => {
+  it('sends nothing for a Research launched by hand that failed: whoever launched it sees it', async () => {
     const { actions, notificationChannel } = await detectPostings(createFakeAiSession({ isSuccess: false }, {}));
     await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runModule({ module: 'research', reference: OTHER_REFERENCE });
@@ -110,6 +107,101 @@ describe('the notification of a Research ready', () => {
     await actions.runQueuedJobs();
 
     expect(notificationChannel.sentList).toEqual([]);
+  });
+});
+
+// No one waits in front of the screen for a job the Detection or an extraction queued: its failure
+// warns the Candidate, or they would think it still runs (CODING_STANDARDS “Visible failure”)
+describe('the notification of a Research queued automatically that failed', () => {
+  it('tells the Candidate which Posting has its Research failed, why, and to relaunch it from its page', async () => {
+    const { actions, notificationChannel } = await detectBefore([REFERENCE], createFakeAiSession({ isSuccess: false }));
+    await actions.detect();
+    notificationChannel.sentList.length = 0;
+
+    const jobList = await actions.runQueuedJobs();
+
+    expect(jobList).toMatchObject([{ module: 'research', posting: { reference: REFERENCE }, state: 'failed' }]);
+    expect(notificationChannel.sentList).toEqual([
+      {
+        target: LEA_TARGET,
+        title: 'Recherche en échec',
+        message:
+          'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE\n' +
+          'Tribunal Judiciaire de Béthune\n' +
+          'La session Claude Code a échoué : son journal dit pourquoi. Relancer le module.\n' +
+          `Relancer la Recherche depuis la page de l'Offre ${REFERENCE}.`,
+      },
+    ]);
+  });
+
+  it('tells the Candidate why, in the code of the failure, when the launch of the session throws', async () => {
+    const { actions, notificationChannel } = await detectBefore(
+      [REFERENCE],
+      createFakeAiSession({ errorMessage: 'spawn claude ENOENT' }),
+    );
+    await actions.detect();
+    notificationChannel.sentList.length = 0;
+
+    await actions.runQueuedJobs();
+
+    expect(notificationChannel.sentList).toEqual([
+      {
+        target: LEA_TARGET,
+        title: 'Recherche en échec',
+        message:
+          'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE\n' +
+          'Tribunal Judiciaire de Béthune\n' +
+          'Erreur inattendue : spawn claude ENOENT\n' +
+          'Relancer ; si elle revient, la signaler avec ce message.\n' +
+          `Relancer la Recherche depuis la page de l'Offre ${REFERENCE}.`,
+      },
+    ]);
+  });
+
+  it('tells the Candidate when the Research queued after the extraction of an imported Job Description failed', async () => {
+    const extraction = {
+      title: 'Greffier placé – Tribunal judiciaire de Lille',
+      employer: null,
+      workplace: null,
+      city: null,
+      deadline: null,
+      applicationEmail: null,
+      contact1: null,
+      contact2: null,
+    };
+    const notificationChannel = createFakeNotificationChannel();
+    const actions = await createActions({
+      dataDirectory: createDataDirectory(),
+      aiSession: createFakeAiSession(
+        { fileByName: { 'extraction.json': JSON.stringify(extraction) } },
+        { isSuccess: false },
+      ),
+      fetch: createRecordedFetch().fetch,
+      notificationChannelList: notificationChannel.notificationChannelList,
+    });
+    await notificationChannel.saveFor(actions);
+    const { posting } = await actions.importJobDescription({
+      candidateId: 'lea',
+      fileName: 'greffier-lille.md',
+      markdown: '# Greffier placé – Tribunal judiciaire de Lille\n',
+    });
+
+    const jobList = await actions.runQueuedJobs();
+
+    expect(jobList).toMatchObject([
+      { module: 'extraction', state: 'done' },
+      { module: 'research', state: 'failed' },
+    ]);
+    expect(notificationChannel.sentList).toEqual([
+      {
+        target: LEA_TARGET,
+        title: 'Recherche en échec',
+        message:
+          'Greffier placé – Tribunal judiciaire de Lille\nJuridiction non précisée\n' +
+          'La session Claude Code a échoué : son journal dit pourquoi. Relancer le module.\n' +
+          `Relancer la Recherche depuis la page de l'Offre ${posting.reference}.`,
+      },
+    ]);
   });
 });
 
@@ -158,13 +250,9 @@ describe('a notification that cannot be sent', () => {
     expect(jobList).toHaveLength(2);
   });
 
-  // lpm never restarts a stopped worker: the failure goes to its log, lpm logs worker
-  it('never stops the worker, which logs it and goes on with the queue, each Research staying ready', async () => {
-    const stderrList: string[] = [];
-    vi.spyOn(process.stderr, 'write').mockImplementation((text) => {
-      stderrList.push(String(text));
-      return true;
-    });
+  // A failure written only to the worker's log, lpm logs worker, would be seen by no one: it stays on
+  // the job, whose Posting page shows it (CODING_STANDARDS “Visible failure”)
+  it('never stops the worker, which goes on with the queue, each Research staying ready with its notification failure', async () => {
     const aiSession = createFakeAiSession(RESEARCH, RESEARCH);
     const dataDirectory = createDataDirectory();
     const earlierActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
@@ -185,10 +273,44 @@ describe('a notification that cannot be sent', () => {
       { posting: { reference: REFERENCE }, state: 'done', version: { state: 'ready' } },
       { posting: { reference: OTHER_REFERENCE }, state: 'done', version: { state: 'ready' } },
     ]);
-    expect(stderrList).toEqual([
-      `Notification « Recherche prête » de l'Offre ${REFERENCE} non envoyée : ${ERROR_MESSAGE}\n`,
-      `Notification « Recherche prête » de l'Offre ${OTHER_REFERENCE} non envoyée : ${ERROR_MESSAGE}\n`,
-    ]);
+    const detail = await actions.readPosting({ reference: REFERENCE });
+    expect(detail.artifactList.find(({ artifact }) => artifact === 'research')).toMatchObject({
+      state: 'ready',
+      failure: null,
+      notificationFailure: {
+        errorCode: 'notification_not_sent',
+        message: `Notification « Recherche prête » de l'Offre ${REFERENCE} non envoyée : ${ERROR_MESSAGE}`,
+      },
+    });
+  });
+
+  it('forgets the notification failure of a Research once it is relaunched and notified', async () => {
+    const dataDirectory = createDataDirectory();
+    const earlierActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
+    await earlierActions.detect();
+    const failingChannel = createFakeNotificationChannel({ errorMessage: ERROR_MESSAGE });
+    const failingActions = await createActions({
+      dataDirectory,
+      aiSession: createFakeAiSession(RESEARCH),
+      notificationChannelList: failingChannel.notificationChannelList,
+    });
+    await failingChannel.saveFor(failingActions);
+    await failingActions.runModule({ module: 'research', reference: REFERENCE });
+    await failingActions.runQueuedJobs();
+    const actions = await createActions({
+      dataDirectory,
+      aiSession: createFakeAiSession(RESEARCH),
+      notificationChannelList: createFakeNotificationChannel().notificationChannelList,
+    });
+
+    await actions.runModule({ module: 'research', reference: REFERENCE });
+    await actions.runQueuedJobs();
+
+    const detail = await actions.readPosting({ reference: REFERENCE });
+    expect(detail.artifactList.find(({ artifact }) => artifact === 'research')).toMatchObject({
+      state: 'ready',
+      notificationFailure: null,
+    });
   });
 });
 

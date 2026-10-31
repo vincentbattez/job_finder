@@ -6,6 +6,7 @@ import { z } from 'zod/v4';
 // sessions last a second (test/e2e-actions.server.ts).
 const LETTER_REFERENCE = '2026-2420931';
 const FAILED_RESEARCH_REFERENCE = '2026-2412591';
+const NOTIFICATION_FAILED_REFERENCE = '2026-2445609';
 
 // The worker takes the job, then its session lasts a second, and the Posting page reads the state again
 // every two seconds
@@ -23,7 +24,8 @@ test.describe('launching the modules of a Posting', () => {
 
     await letter.getByRole('button', { name: 'Lancer la Lettre' }).click();
 
-    await expect(letter.getByRole('status')).toHaveText('En cours');
+    // Queued until the worker takes the job, which its session then runs
+    await expect(letter.getByRole('status')).toHaveText(/^(?:En attente|En cours)$/);
     await expect(letter.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
     await expect(letter.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
     await expect(letter.locator('figcaption')).toHaveText(['draft.md', 'letter.md']);
@@ -35,12 +37,17 @@ test.describe('launching the modules of a Posting', () => {
     const research = page.getByRole('region', { name: 'Recherche' });
     const letter = page.getByRole('region', { name: 'Lettre' });
     await expect(research.getByRole('status')).toHaveText('En échec');
+    // The reason the fake worker's session gave, after the message of its code
+    await expect(research.getByRole('alert')).toHaveText(
+      'La session Claude Code a échoué : son journal dit pourquoi. Relancer le module.\nClaude Code a atteint la limite de son abonnement.',
+    );
     await expect(letter).toContainText(`L'Offre ${FAILED_RESEARCH_REFERENCE} n'a pas de Recherche retenue`);
     await expect(letter.getByRole('button', { name: 'Lancer la Lettre' })).toBeDisabled();
 
     await research.getByRole('button', { name: 'Relancer la Recherche' }).click();
 
     await expect(research.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
+    await expect(research.getByRole('alert')).toHaveCount(0);
     await expect(research.locator('li > details > summary')).toHaveText([/^v1\s*En échec/, /^v2\s*Prêt\s*Retenue/]);
     await expect(letter.getByRole('button', { name: 'Lancer la Lettre' })).toBeEnabled();
     await expect(letter).not.toContainText("n'a pas de Recherche retenue");
@@ -57,5 +64,16 @@ test.describe('launching the modules of a Posting', () => {
         message:
           'ATTACHE(E) DE JUSTICE - affecté(e) auprès des magistrats du siège - TJ NARBONNE\nTRIBUNAL JUDICIAIRE DE NARBONNE',
       });
+  });
+
+  // Read only: Léa was not warned her Research is ready, which the seed's refused token caused
+  test('shows by a ready Research why its notification was not sent', async ({ page }) => {
+    await page.goto(`/postings/${NOTIFICATION_FAILED_REFERENCE}`);
+    const research = page.getByRole('region', { name: 'Recherche' });
+
+    await expect(research.getByRole('status')).toHaveText('Prêt');
+    await expect(research.getByRole('alert')).toContainText(
+      `Notification « Recherche prête » de l'Offre ${NOTIFICATION_FAILED_REFERENCE} non envoyée : `,
+    );
   });
 });

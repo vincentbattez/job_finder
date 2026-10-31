@@ -1,12 +1,22 @@
-// The messages of the errors a Candidate reads, each saying what to do. Those of a coded error
-// (src/domain/error.ts) are keyed by its code, in camelCase; #39 keys the others once their codes exist.
+// The messages of the errors a Candidate reads, each saying what to do: the catalogue of the codes
+// (src/domain/error.ts) names the key of each, and the texts a message embeds
 export const ERROR_EN = {
   // A name the message quotes, such as each label of a list
   quote: '“{{text}}”',
   // Between the Statuses a Posting can move to
   orSeparator: ' or ',
 
-  // The coded errors
+  // What reaches the Candidate of a failure our code did not foresee, or of an input not as expected
+  unexpected: 'Unexpected error: {{reason}}\nRun again; if it comes back, report it with this message.',
+  invalidInput: 'Invalid input:\n{{problem}}\nCorrect it, then try again.',
+  // One input to correct, by its name, and what is wrong with it
+  invalidInputIssue: '“{{path}}”: {{message}}',
+  // A button whose form is older than the page's code
+  unknownIntent: 'This button does nothing: reload the page.',
+  // A module's failure, worded in its own copy (ADR-0010)
+  moduleFailure: '{{detail}}',
+
+  // The data folder
   dataLayoutMixed:
     'The data folder mixes the old layout and the new one: “{{frenchPath}}” and “{{englishPath}}” both exist. Merge the first into the second by hand, delete it, then start again.',
   dataLayoutUnexpected:
@@ -44,6 +54,8 @@ export const ERROR_EN = {
   watchParameters:
     'The Watch {{watchId}} does not give the {{sourceName}} Source the Parameters it expects: correct {{labels}} in the Profile of its Candidate.',
   sourceParameters: 'The {{sourceName}} Source expects other Parameters: fill in {{labels}}.',
+  // Each notification not sent, one per line
+  notificationsNotSent: '{{failures}}',
 
   // Statuses
   statusChange: 'Posting {{reference}} is {{statusLabel}}: it can only move to {{nextLabels}}.',
@@ -53,6 +65,10 @@ export const ERROR_EN = {
     'Posting {{reference}} was Applied: its Chosen Letter is frozen as sent. It is no longer edited, regenerated or replaced by another Version.',
 
   // Modules, jobs and Versions
+  workerNotRunning:
+    'The worker is not running: job {{jobId}} is not moving. Start it: “lpm service worker start -p job_finder”, then read “lpm logs worker -p job_finder” if it stops again.',
+  jobOverdue:
+    'Job {{jobId}} has been running for over {{minutes}} minutes, past its maximum duration: the worker is stuck. Restart it: “lpm service worker restart -p job_finder”, which fails the job; then run the module again.',
   unknownModule: 'Unknown module: {{name}}. Modules: {{names}}.',
   unknownArtifact: 'Unknown Artifact: {{name}}. Artifacts: {{names}}.',
   // The front shows it beside the button of the missing Artifact, the CLI with the command that lifts it
@@ -103,7 +119,16 @@ export const ERROR_EN = {
     '“{{upload}}” converts into “{{fileName}}”, which the Profile already has: it is not overwritten. Delete or rename “{{fileName}}”, then run the conversion again.',
 
   // The AI sessions and what they write
+  sessionFailed: 'The Claude Code session failed: its log says why. Run the module again.',
   sessionStopped: 'Claude Code stopped (code {{exitCode}}): {{output}}',
+  sessionTimedOut:
+    'The Claude Code session ran past its maximum duration ({{minutes}} minutes) and was stopped. Run the module again; if it comes back, “ssh {{host}}”, then run “claude” alone to see what it waits for (login, usage limit, a question).',
+  claudeLoginRequired:
+    'Claude Code refused the session: it is no longer logged in on {{host}}. Log back in: “ssh {{host}}”, run “claude” then type “/login”, then run the module again.\n{{result}}',
+  claudeUsageLimit:
+    'Claude Code has reached its usage limit on {{host}}. Run the module again once the limit is lifted, at the time it gives.\n{{result}}',
+  sessionKilled:
+    'Claude Code was stopped by the signal {{signal}}: its process was killed, or the machine ran out of memory. Try again; if it comes back, “ssh {{host}}”, then run “claude” alone to read its message.',
   sessionNotLaunched: 'Claude Code could not be launched ({{reason}}). Install “claude” and log in to it.',
   interactiveSessionFailed:
     'The Claude Code session stopped on an error (code {{status}}). Run the command again; if the error comes back, run “claude” alone to read its message.',
@@ -119,7 +144,20 @@ export const ERROR_EN = {
   recipientsFormat: 'it does not follow the requested format ({{detail}})',
   inventedAddress: 'the address {{email}} is not in the field {{field}} of the Posting',
 
+  // A mistake of a module's author, never of the Candidate
+  parameterUndeclared:
+    'The {{parameterName}} Parameter of the {{moduleName}} module is not declared with parameter(): declare it so in the module.',
+
+  // The folder of a Posting kept its name while the extraction read a new title
+  postingFolderNotMoved:
+    'The folder of Posting {{reference}} could not follow its new title, toward {{to}}: {{reason}}. The Posting keeps its title: free this location, then run the extraction again.',
+
   // API Géo, which places the Postings on the map
   apiGeoUnreachable: 'API Géo is unreachable ({{url}}): {{reason}}. Check the connection, then run again.',
   apiGeoStatus: 'API Géo answered HTTP {{status}} for {{url}}. Run again later.',
+  apiGeoFormatChanged:
+    'API Géo answered in an unexpected format for {{url}}: {{problem}}. Its API may have changed: report it, the Postings stay off the map meanwhile.',
+  // Stored on a Detection that went on while API Géo was down, which placed nothing on the map
+  postingsNotLocated:
+    'Postings saved without coordinates, off the map until the next Detection locates them: {{reason}}',
 };

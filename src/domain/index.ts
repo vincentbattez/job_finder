@@ -1,6 +1,8 @@
 import { z } from 'zod/v4';
 
+import { ERROR_CODE_SCHEMA } from './error.ts';
 import { LOCALE_LIST, type Locale } from './locale.ts';
+import { STATE_LIST } from './state.ts';
 
 export type { Locale } from './locale.ts';
 
@@ -123,8 +125,9 @@ export const POSTING_SCHEMA = z
 
 export type Posting = z.infer<typeof POSTING_SCHEMA>;
 
-// What a Detection found for one Watch, and why each notification it could not send failed. On
-// the first launch, the Postings already online are imported without triggering anything.
+// What a Detection found for one Watch, why each notification it could not send failed, and why
+// its Postings stay off the map, API Géo being down. On the first launch, the Postings already
+// online are imported without triggering anything.
 export const DETECTION_SCHEMA = z
   .object({
     watchId: z.string(),
@@ -133,6 +136,7 @@ export const DETECTION_SCHEMA = z
     newPostingList: z.array(POSTING_SCHEMA),
     nearMissList: z.array(LISTED_POSTING_SCHEMA),
     notificationFailureList: z.array(z.string()),
+    locationFailure: z.string().nullable(),
   })
   .brand<'Domain'>();
 
@@ -163,6 +167,7 @@ const DETECTION_WATCH_SCHEMA = z
     newPostingList: z.array(DETECTED_POSTING_SCHEMA),
     nearMissList: z.array(DETECTED_POSTING_SCHEMA),
     notificationFailureList: z.array(z.string()),
+    locationFailure: z.string().nullable(),
   })
   .brand<'Domain'>();
 
@@ -244,7 +249,16 @@ export const JOB_SCHEMA = z
     posting: POSTING_SCHEMA,
     state: JOB_STATE_SCHEMA,
     log: z.string(),
+    // The code of the catalogue a failed job failed under (ADR-0015)
+    errorCode: ERROR_CODE_SCHEMA.nullable(),
+    // Queued by the Detection or by an extraction: no one waits for it, so its failure is notified
+    isAutomatic: z.boolean(),
+    // The notification of the job that could not be sent, its code and its message (ADR-0015)
+    notificationErrorCode: ERROR_CODE_SCHEMA.nullable(),
+    notificationFailure: z.string().nullable(),
     sessionId: z.string().nullable(),
+    // When the worker claimed it, null while it is queued
+    startedAt: z.date().nullable(),
     version: VERSION_SCHEMA.nullable(),
   })
   .brand<'Domain'>();
@@ -318,15 +332,44 @@ const VERSION_DOCUMENTS_SCHEMA = z.object({
   documentList: z.array(DOCUMENT_SCHEMA),
 });
 
-// What the front shows of an Artifact at a glance
-const STATE_SCHEMA = z.enum(['absent', 'in_progress', 'ready', 'failed']);
+// What the front shows of an Artifact at a glance: queued while its job waits for the worker, in
+// progress once the worker runs it
+const STATE_SCHEMA = z.enum(STATE_LIST);
 
-export type State = z.infer<typeof STATE_SCHEMA>;
+export type { State } from './state.ts';
+
+// Why the last job of an Artifact failed: the code of the catalogue it failed under, and its log, which
+// starts with the code's message (ADR-0015)
+const JOB_FAILURE_SCHEMA = z.object({ errorCode: ERROR_CODE_SCHEMA.nullable(), log: z.string() }).brand<'Domain'>();
+
+// The code of a notification not sent, and its message, which names the notification and why
+const NOTIFICATION_FAILURE_SCHEMA = z.object({ errorCode: ERROR_CODE_SCHEMA, message: z.string() }).brand<'Domain'>();
+
+// Why a queued or running job makes no progress, the worker being stopped or stuck: its code and its
+// message, which says how to start it again
+const WORKER_FAILURE_SCHEMA = z.object({ errorCode: ERROR_CODE_SCHEMA, message: z.string() }).brand<'Domain'>();
+
+const ARTIFACT_STATE_SHAPE = {
+  // That of its last job, from the moment it is queued, unless a Version came after it; then that of
+  // its latest Version; absent before any
+  state: STATE_SCHEMA,
+  // Why its last job failed, null unless the state is that of a failed job
+  failure: JOB_FAILURE_SCHEMA.nullable(),
+  // Why the notification of its last job was not sent, such as « Research ready »: the Candidate
+  // was not warned
+  notificationFailure: NOTIFICATION_FAILURE_SCHEMA.nullable(),
+  // Why its last job, queued or running, makes no progress; null while it moves or once it is over
+  workerFailure: WORKER_FAILURE_SCHEMA.nullable(),
+};
+
+// Where an Artifact stands, as jf versions reads it
+export const ARTIFACT_STATE_SCHEMA = z.object(ARTIFACT_STATE_SHAPE).brand<'Domain'>();
+
+export type ArtifactState = z.infer<typeof ARTIFACT_STATE_SCHEMA>;
 
 const ARTIFACT_VERSIONS_SCHEMA = z.object({
   artifact: ARTIFACT_SCHEMA,
-  // In progress from the moment its job is queued, then that of its latest Version; absent before any
-  state: STATE_SCHEMA,
+  ...ARTIFACT_STATE_SHAPE,
   // The module that produces it: why it cannot run now, null when it can
   module: z.object({ refusal: z.string().nullable() }),
   // Whether jf edit opens it now: it has a Chosen Version, and is neither a Visualization nor the
@@ -346,8 +389,15 @@ export const POSTING_DETAIL_SCHEMA = z
     artifactList: z.array(ARTIFACT_VERSIONS_SCHEMA),
     recipients: RECIPIENTS_SCHEMA.nullable(),
     // That of its latest extraction job, null for a Posting that was not imported; the log says why
-    // it failed
-    extraction: z.object({ state: STATE_SCHEMA, log: z.string() }).nullable(),
+    // it failed, workerFailure why it makes no progress
+    extraction: z
+      .object({
+        state: STATE_SCHEMA,
+        log: z.string(),
+        errorCode: ERROR_CODE_SCHEMA.nullable(),
+        workerFailure: WORKER_FAILURE_SCHEMA.nullable(),
+      })
+      .nullable(),
   })
   .brand<'Domain'>();
 
@@ -385,9 +435,16 @@ export const UPLOAD_CONVERSION_SCHEMA = z
 
 export type UploadConversion = z.infer<typeof UPLOAD_CONVERSION_SCHEMA>;
 
-// How a headless AI session ended: its id, to resume it, and what it said, kept as the job's log
+// How a headless AI session ended: its id, to resume it, and what it said, kept as the job's log. A
+// failure the AI tool itself names (stopped, killed, refused) has its code, and its log starts with
+// the code's message; any other failure has none (ADR-0015).
 export const SESSION_RESULT_SCHEMA = z
-  .object({ isSuccess: z.boolean(), sessionId: z.string().nullable(), log: z.string() })
+  .object({
+    isSuccess: z.boolean(),
+    sessionId: z.string().nullable(),
+    log: z.string(),
+    errorCode: ERROR_CODE_SCHEMA.nullable(),
+  })
   .brand<'Domain'>();
 
 export type SessionResult = z.infer<typeof SESSION_RESULT_SCHEMA>;

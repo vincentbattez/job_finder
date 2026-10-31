@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { tFor } from '#/domain/catalogue/i18n.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import {
   JOB_DESCRIPTION_FILE_NAME,
   type Artifact,
@@ -12,7 +12,7 @@ import {
   type UploadFileName,
   type Version,
 } from '#/domain/index.ts';
-import { wordListOf } from '#/text/index.ts';
+import { messageOf, wordListOf } from '#/text/index.ts';
 
 import { findObsoleteConfig, readObsoleteConfig } from './acl/config.ts';
 import { openDatabase, type INewCandidate, type INewPosting } from './acl/database.ts';
@@ -166,14 +166,27 @@ export async function openWorkspace(dataDirectory: string) {
       return database.createPosting(newPosting);
     },
 
-    // The folder of a Posting is named after its title: it follows a new title
+    // The folder of a Posting is named after its title: it follows a new title. Moved before the
+    // database is updated, and moved back if the update fails, so that both always agree.
     async fillPosting(
       posting: Posting,
       fields: { title: string; jobDescription: JobDescription; location: Location },
+      locale: Locale,
     ): Promise<Posting> {
-      const filledPosting = await database.fillPosting(posting, fields);
-      moveDirectory(postingDirectoryOf(posting), postingDirectoryOf(filledPosting));
-      return filledPosting;
+      const directory = postingDirectoryOf(posting);
+      const titledDirectory = postingDirectoryOf({ ...posting, title: fields.title });
+      try {
+        moveDirectory(directory, titledDirectory);
+      } catch (error) {
+        const values = { reference: posting.reference, to: titledDirectory, reason: messageOf(error) };
+        throw codedError('posting_folder_not_moved', values, { locale, cause: error });
+      }
+      try {
+        return await database.fillPosting(posting, fields);
+      } catch (error) {
+        moveDirectory(titledDirectory, directory);
+        throw error;
+      }
     },
 
     // The locale of the Candidate of the Posting, in which a missing file is told
@@ -181,7 +194,7 @@ export async function openWorkspace(dataDirectory: string) {
       const filePath = path.join(postingDirectoryOf(posting), JOB_DESCRIPTION_FILE_NAME);
       const jobDescription = readTextFile(filePath);
       if (jobDescription === null) {
-        throw new Error(tFor(locale, 'error')('missingJobDescription', { reference: posting.reference, filePath }));
+        throw codedError('missing_job_description', { reference: posting.reference, filePath }, { locale });
       }
       return jobDescription;
     },

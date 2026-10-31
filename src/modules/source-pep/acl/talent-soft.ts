@@ -1,4 +1,5 @@
 import { tFor } from '#/domain/catalogue/i18n.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import {
   JOB_DESCRIPTION_SCHEMA,
   LISTED_POSTING_SCHEMA,
@@ -7,6 +8,7 @@ import {
   type Locale,
 } from '#/domain/index.ts';
 import { COPY_NAMESPACE } from '#/modules/source-pep/copy.ts';
+import { messageOf } from '#/text/index.ts';
 
 // The PEP publishes through Talent-Soft, whose pages are plain server HTML. Its URLs, feed and field
 // ids are in French, as the site names them.
@@ -55,16 +57,27 @@ function toMarkdown(html: string): string {
     .trim()}\n`;
 }
 
+// A site that never answers would hold the Detection: past this, it is unreachable
+const REQUEST_TIMEOUT_MS = 30_000;
+
 async function get(httpFetch: typeof fetch, url: string, locale: Locale): Promise<string> {
   let response: Response;
   try {
     // A removed offer redirects to the home page: the redirect is an error, not a Job Description
-    response = await httpFetch(url, { redirect: 'manual' });
+    response = await httpFetch(url, { redirect: 'manual', signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   } catch (error) {
-    throw new Error(tFor(locale, COPY_NAMESPACE)('unreachable', { url, reason: String(error) }), { cause: error });
+    throw codedError(
+      'source_unreachable',
+      { detail: tFor(locale, COPY_NAMESPACE)('unreachable', { url, reason: messageOf(error) }) },
+      { locale, cause: error },
+    );
   }
   if (response.status !== 200) {
-    throw new Error(tFor(locale, COPY_NAMESPACE)('unexpectedStatus', { url, status: response.status }));
+    throw codedError(
+      'source_status',
+      { detail: tFor(locale, COPY_NAMESPACE)('unexpectedStatus', { url, status: response.status }) },
+      { locale },
+    );
   }
   // text() decodes leniently: invalid UTF-8 becomes U+FFFD instead of failing the Detection
   return response.text();
@@ -78,7 +91,11 @@ function readItem(item: string, locale: Locale): ListedPosting {
   const feedTitle = readTag(item, 'title');
   const [, reference, title] = /^(\d{4}-\d{7}) - (.+)$/.exec(feedTitle) ?? [];
   if (reference === undefined || title === undefined) {
-    throw new Error(tFor(locale, COPY_NAMESPACE)('noReference', { feedTitle }));
+    throw codedError(
+      'source_format_changed',
+      { detail: tFor(locale, COPY_NAMESPACE)('noReference', { feedTitle }) },
+      { locale },
+    );
   }
   return LISTED_POSTING_SCHEMA.parse({
     reference,
@@ -92,13 +109,21 @@ export async function readFeed(locale: Locale, httpFetch: typeof fetch = fetch):
   const xml = await get(httpFetch, FEED_URL, locale);
   const channelTitle = readTag(xml, 'title');
   if (!channelTitle.includes(FEED_FILTER)) {
-    throw new Error(tFor(locale, COPY_NAMESPACE)('notFiltered', { channelTitle, filter: FEED_FILTER }));
+    throw codedError(
+      'source_format_changed',
+      { detail: tFor(locale, COPY_NAMESPACE)('notFiltered', { channelTitle, filter: FEED_FILTER }) },
+      { locale },
+    );
   }
   const listedPostingList = Array.from(xml.matchAll(/<item>([\s\S]*?)<\/item>/g), ([, item = '']) =>
     readItem(item, locale),
   );
   if (listedPostingList.length === 0) {
-    throw new Error(tFor(locale, COPY_NAMESPACE)('emptyFeed', { url: FEED_URL }));
+    throw codedError(
+      'source_format_changed',
+      { detail: tFor(locale, COPY_NAMESPACE)('emptyFeed', { url: FEED_URL }) },
+      { locale },
+    );
   }
   return listedPostingList;
 }
@@ -121,7 +146,11 @@ export async function readJobDescription(
   // cspell:disable-next-line
   const content = /id="contenu-ficheoffre"[^>]*>([\s\S]*?)<div class="ts-offer-page__cta is-bottom/.exec(html)?.[1];
   if (content === undefined) {
-    throw new Error(tFor(locale, COPY_NAMESPACE)('unreadablePage', { reference, url }));
+    throw codedError(
+      'source_format_changed',
+      { detail: tFor(locale, COPY_NAMESPACE)('unreadablePage', { reference, url }) },
+      { locale },
+    );
   }
   // cspell:disable
   const deadline = readField(content, 'fldoffer_date1');

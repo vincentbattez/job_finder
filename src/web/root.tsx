@@ -22,14 +22,18 @@ import {
 import { readCandidate } from './candidate.server.ts';
 import { CandidateMenu } from './components/candidate-menu.tsx';
 import { LocaleSwitcher } from './components/locale-switcher.tsx';
+import { isLoaderFailure } from './failure.ts';
 import { LocaleProvider, useLocale } from './i18n.tsx';
 import { englishUrlOf } from './redirects.ts';
+import { relayLoader } from './relay-action.server.ts';
 
 // An English route reached with the French query of an older link moves for good to the English one.
 // Otherwise the menu's Candidates and the locale the whole page renders in (ADR-0012).
 export function loader({ request }: LoaderFunctionArgs) {
-  const englishUrl = englishUrlOf(new URL(request.url));
-  return englishUrl === null ? readCandidate(request) : redirect(englishUrl, 301);
+  return relayLoader(request, async () => {
+    const englishUrl = englishUrlOf(new URL(request.url));
+    return englishUrl === null ? await readCandidate(request) : redirect(englishUrl, 301);
+  });
 }
 
 export const links: LinksFunction = () => [
@@ -95,14 +99,25 @@ export default function App() {
   return <Outlet />;
 }
 
+// A loader's failure shows its code and its message, which says what to do, in the Candidate's
+// locale (relayLoader): the front, on the LAN or WireGuard only, has nothing to hide (ADR-0002,
+// ADR-0015). Any other one, such as a render's, shows the hint, never a raw message.
 export function ErrorBoundary({ error }: Readonly<{ error: unknown }>) {
   const isNotFound = isRouteErrorResponse(error) && error.status === 404;
+  const failure = isRouteErrorResponse(error) && isLoaderFailure(error.data) ? error.data : null;
   const { t } = useTranslation('settings');
   return (
     <main className="container page">
       <div className="page__head">
         <h1>{isNotFound ? t('layout.notFoundHeading') : t('layout.errorHeading')}</h1>
-        <p>{isNotFound ? t('layout.notFoundHint') : t('layout.errorHint')}</p>
+        {failure === null ? (
+          <p>{isNotFound ? t('layout.notFoundHint') : t('layout.errorHint')}</p>
+        ) : (
+          <>
+            <p role="alert">{failure.message}</p>
+            <p>{t('layout.errorCode', { errorCode: failure.errorCode })}</p>
+          </>
+        )}
       </div>
     </main>
   );

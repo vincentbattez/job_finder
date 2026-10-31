@@ -33,7 +33,8 @@ export function ModuleInstructions({
   module,
   defaultInstructions,
   candidateInstructions,
-}: Readonly<IModuleInstructions>) {
+  error,
+}: Readonly<IModuleInstructions & { error: string | null }>) {
   const { t } = useTranslation('settings');
   const headingId = useId();
   const hasCandidateInstructions = candidateInstructions !== null;
@@ -67,6 +68,7 @@ export function ModuleInstructions({
           {editedInstructions !== (candidateInstructions ?? defaultInstructions) && (
             <p role="status">{t('unsavedChanges')}</p>
           )}
+          {error !== null && <p role="alert">{error}</p>}
         </ButtonRow>
       </Form>
       {hasCandidateInstructions && (

@@ -1,10 +1,11 @@
 import type { ActionFunctionArgs } from 'react-router';
 
 import { tFor } from '#/actions/i18n.ts';
-import { messageOf, type Actions } from '#/actions/index.ts';
+import { codedError, type Actions } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { readParameters } from '#/web/parameters.server.ts';
+import { relayAction } from '#/web/relay-action.server.ts';
 
 type ParameterChoice = Awaited<ReturnType<Actions['listParameterChoices']>>[number];
 
@@ -30,27 +31,29 @@ export async function action({ request }: ActionFunctionArgs) {
     parameter: formData.get('parameter') ?? undefined,
     parameters: readParameters(formData, moduleList.find(({ id }) => id === moduleId)?.parameterList),
   };
-  try {
-    switch (formData.get('intent')) {
-      case 'save': {
-        await ACTIONS.saveNotificationChannel(input);
-        return answer(t('notificationChannel.saved'));
+  return relayAction(
+    request,
+    async () => {
+      switch (formData.get('intent')) {
+        case 'save': {
+          await ACTIONS.saveNotificationChannel(input);
+          return answer(t('notificationChannel.saved'));
+        }
+        case 'test': {
+          await ACTIONS.testNotificationChannel(input);
+          return answer(t('notificationChannel.answers'));
+        }
+        case 'choices': {
+          const choiceList = await ACTIONS.listParameterChoices(input);
+          return answer(t('notificationChannel.choicesFound', { count: choiceList.length }), choiceList);
+        }
+        case 'notify': {
+          await ACTIONS.sendTestNotification(input);
+          return answer(t('notificationChannel.notified'));
+        }
       }
-      case 'test': {
-        await ACTIONS.testNotificationChannel(input);
-        return answer(t('notificationChannel.answers'));
-      }
-      case 'choices': {
-        const choiceList = await ACTIONS.listParameterChoices(input);
-        return answer(t('notificationChannel.choicesFound', { count: choiceList.length }), choiceList);
-      }
-      case 'notify': {
-        await ACTIONS.sendTestNotification(input);
-        return answer(t('notificationChannel.notified'));
-      }
-    }
-  } catch (error) {
-    return refuse(messageOf(error));
-  }
-  return refuse(t('unknownIntent'));
+      throw codedError('unknown_intent', {}, { locale });
+    },
+    refuse,
+  );
 }

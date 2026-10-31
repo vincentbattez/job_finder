@@ -1,6 +1,6 @@
 import { z } from 'zod/v4';
 
-import { tFor } from '#/domain/catalogue/i18n.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import {
   PROFILE_FILE_NAME_SCHEMA,
   UPLOAD_CONVERSION_SCHEMA,
@@ -27,25 +27,25 @@ const UPLOAD_INPUT_SCHEMA = UPLOAD_NAME_INPUT_SCHEMA.extend({ content: z.instanc
 // The name comes from the front: parsed before anything touches the disk, so it never leads out of
 // the folder of the Uploads
 function parseUploadFileName(fileName: string, candidate: Candidate): UploadFileName {
-  const t = tFor(candidate.locale, 'error');
+  const { locale } = candidate;
   // The front sends an unnamed, empty file when the request carries none
   if (fileName === '') {
-    throw new Error(t('noFileReceived'));
+    throw codedError('no_file_received', {}, { locale });
   }
   const result = UPLOAD_FILE_NAME_SCHEMA.safeParse(fileName);
   if (!result.success) {
-    throw new Error(t('invalidUploadName', { fileName }));
+    throw codedError('invalid_upload_name', { fileName }, { locale });
   }
   return result.data;
 }
 
 function assertIsAcceptedPdf(fileName: string, content: Uint8Array, candidate: Candidate): void {
-  const t = tFor(candidate.locale, 'error');
+  const { locale } = candidate;
   if (new TextDecoder().decode(content.subarray(0, PDF_SIGNATURE.length)) !== PDF_SIGNATURE) {
-    throw new Error(t('notAPdf', { fileName }));
+    throw codedError('not_a_pdf', { fileName }, { locale });
   }
   if (content.byteLength > MAX_UPLOAD_MEGABYTES * 1024 * 1024) {
-    throw new Error(t('uploadTooLarge', { fileName, maxMegabytes: MAX_UPLOAD_MEGABYTES }));
+    throw codedError('upload_too_large', { fileName, maxMegabytes: MAX_UPLOAD_MEGABYTES }, { locale });
   }
 }
 
@@ -59,24 +59,24 @@ export async function runConversion(context: ActionContext, job: ProfileJob): Pr
   const { workspace, uploadConversion, findCandidate } = context;
   const { candidateId, upload } = job;
   const candidate = await findCandidate({ candidateId });
-  const t = tFor(candidate.locale, 'error');
+  const { locale } = candidate;
   if (!hasUpload(context, candidateId, upload)) {
-    throw new Error(t('uploadGone', { upload, candidateName: candidate.name }));
+    throw codedError('upload_gone', { upload, candidateName: candidate.name }, { locale });
   }
   const conversion = workspace.startConversion(candidateId, upload);
   const session = await uploadConversion.convert(candidate, { upload, ...conversion });
   const convertedFileList = workspace.readConversionFiles(conversion.outputDirectory);
   if (convertedFileList.length === 0) {
-    throw new Error(t('conversionWithoutFile', { upload, log: session.log }));
+    throw codedError('conversion_without_file', { upload, log: session.log }, { locale });
   }
   const profileFileList = workspace.readProfileFiles(candidateId);
   const fileList = convertedFileList.map(({ fileName, markdown }) => {
     if (!isConversionFileName(fileName)) {
-      throw new Error(t('conversionRefused', { upload, fileName }));
+      throw codedError('conversion_refused', { upload, fileName }, { locale });
     }
     const existingFile = profileFileList.find((profileFile) => profileFile.fileName === fileName);
     if (existingFile !== undefined && existingFile.markdown !== markdown) {
-      throw new Error(t('conversionOverwrite', { upload, fileName }));
+      throw codedError('conversion_overwrite', { upload, fileName }, { locale });
     }
     return { fileName: PROFILE_FILE_NAME_SCHEMA.parse(fileName), markdown };
   });
@@ -91,7 +91,7 @@ export function createUploadActions(context: ActionContext) {
 
   function assertHasUpload(candidate: Candidate, fileName: UploadFileName): void {
     if (!hasUpload(context, candidate.id, fileName)) {
-      throw new Error(tFor(candidate.locale, 'error')('missingUpload', { candidateName: candidate.name, fileName }));
+      throw codedError('missing_upload', { candidateName: candidate.name, fileName }, { locale: candidate.locale });
     }
   }
 

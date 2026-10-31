@@ -12,6 +12,9 @@ export const NOTIFICATION_EN = {
   testTitle: 'Test notification',
   testMessage: '{{candidateName}}’s Notification Channel works.',
   researchReadyTitle: 'Research ready',
+  // The Research the Detection or an extraction queued failed, while no one watched it run
+  researchFailedTitle: 'Research failed',
+  researchFailedLine: 'Relaunch the Research from the page of Posting {{reference}}.',
   // What the Detection or the worker reports of a notification not sent
   notSent: 'Notification “{{title}}” of Posting {{reference}} not sent: {{reason}}',
   // A label the message quotes

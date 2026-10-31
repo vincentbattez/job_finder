@@ -1,12 +1,34 @@
+import { execFile } from 'node:child_process';
 import { once } from 'node:events';
+import path from 'node:path';
+import { promisify } from 'node:util';
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod/v4';
 
 import { createActions, type Actions } from '#/actions/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
+import { createFakeAiSession } from './fake-ai-session.ts';
 import { LEA_WATCH_ID } from './lea.ts';
-import { createRecordedFetch, DSJ_FEED_URL } from './recorded-http.ts';
+import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
+
+// What test/detect-in-process.ts prints: what its Detection found, or the refusal of the lock
+const REFUSED_MESSAGE_PATTERN = /^Une Détection est déjà en cours/;
+const FOUND_SCHEMA = z.object({ newReferenceList: z.array(z.string()) });
+const REFUSED_SCHEMA = z.object({
+  code: z.literal('detection_running'),
+  message: z.string().regex(REFUSED_MESSAGE_PATTERN),
+});
+const DETECT_OUTCOME_SCHEMA = z.union([FOUND_SCHEMA, REFUSED_SCHEMA]);
+
+// A Detection in a process of its own (test/detect-in-process.ts): SQLite makes two connections of
+// one process wait on each other, which two processes never do
+async function detectInProcess(dataDirectory: string): Promise<unknown> {
+  const scriptPath = path.join(import.meta.dirname, 'detect-in-process.ts');
+  const { stdout } = await promisify(execFile)(process.execPath, [scriptPath, dataDirectory]);
+  return JSON.parse(stdout);
+}
 
 // Expired depends on the day: the clock stays on the day the responses were recorded
 beforeAll(() => {
@@ -148,6 +170,34 @@ describe('a running Detection', () => {
     await cliActions.detect();
     const { last } = await cliActions.followDetection({ candidateId: 'lea' });
     expect(last).toMatchObject({ origin: 'cli' });
+  });
+
+  // The daily automation and the button at the same instant, each in its own process: the lock
+  // refuses one with its code (ADR-0014), so the same new Posting is never saved twice
+  it('lets one of two Detections launched at the same instant run, with no duplicate Posting or job', async () => {
+    const dataDirectory = createDataDirectory();
+    const bethuneReferenceList = ['2026-2445600', '2026-2445609'];
+    const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout(bethuneReferenceList) } });
+    const earlierActions = await createActions({ dataDirectory, fetch: earlierFetch.fetch });
+    await earlierActions.detect();
+
+    const resultList = await Promise.all([detectInProcess(dataDirectory), detectInProcess(dataDirectory)]);
+
+    // Refused while the other runs, or run after it and finding nothing new: never another failure
+    const outcomeList = resultList.map((result) => DETECT_OUTCOME_SCHEMA.parse(result));
+    expect(outcomeList.flatMap((outcome) => ('newReferenceList' in outcome ? outcome.newReferenceList : []))).toEqual(
+      bethuneReferenceList,
+    );
+    const research = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
+    const worker = await createActions({ dataDirectory, aiSession: createFakeAiSession(research, research) });
+    const postingList = await worker.listPostings({ candidateId: 'lea' });
+    const referenceList = postingList.map(({ reference }) => reference);
+    expect(referenceList).toHaveLength(81);
+    expect(new Set(referenceList).size).toBe(81);
+    const jobList = await worker.runQueuedJobs();
+    expect(jobList.map((job) => ('posting' in job ? `${job.module} ${job.posting.reference}` : job.module))).toEqual(
+      bethuneReferenceList.map((reference) => `research ${reference}`),
+    );
   });
 
   it('stops holding the lock once its process died, and says it was interrupted', async () => {

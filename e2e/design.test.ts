@@ -16,7 +16,7 @@ test.describe('design system page', () => {
   test('shows a badge for each state of an Artifact', async ({ page }) => {
     const section = page.getByRole('region', { name: 'États d’un Artefact' });
 
-    await expect(section.getByRole('listitem')).toHaveText(['Absent', 'En cours', 'Prêt', 'En échec']);
+    await expect(section.getByRole('listitem')).toHaveText(['Absent', 'En attente', 'En cours', 'Prêt', 'En échec']);
   });
 
   test('lists the Postings with their link, status, publication date and Deadline', async ({ page }) => {
@@ -44,10 +44,10 @@ test.describe('design system page', () => {
     await expect(detail.getByRole('heading', { level: 3 })).toHaveText(/Attaché de justice/);
     await expect(detail.getByRole('term')).toContainText(['Mail de candidature', 'Contact 1', 'Contact 2']);
     await expect(detail.getByRole('region', { name: 'Artefacts' }).getByRole('listitem')).toHaveText([
-      /^Recherche.*(Absent|En cours|Prêt|En échec)$/,
-      /^Lettre.*(Absent|En cours|Prêt|En échec)$/,
-      /^Fiche d’entretien.*(Absent|En cours|Prêt|En échec)$/,
-      /^Visualisation.*(Absent|En cours|Prêt|En échec)$/,
+      /^Recherche.*(Absent|En attente|En cours|Prêt|En échec)$/,
+      /^Lettre.*(Absent|En attente|En cours|Prêt|En échec)$/,
+      /^Fiche d’entretien.*(Absent|En attente|En cours|Prêt|En échec)$/,
+      /^Visualisation.*(Absent|En attente|En cours|Prêt|En échec)$/,
     ]);
   });
 

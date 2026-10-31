@@ -100,6 +100,24 @@ function findJobsRunOutsideWorker(projectDirectory: string): string[] {
   );
 }
 
+// A failure written only to a standard stream is seen by no one: the business code keeps it, on its
+// job or in its result, for the front, the CLI or a notification. The CLI and the worker display.
+function findStandardStreamWrites(projectDirectory: string): string[] {
+  const filePathList = globSync('src/{actions,modules,workspace}/**/*.{ts,tsx}', {
+    cwd: projectDirectory,
+    exclude: ['**/*.test.{ts,tsx}', 'src/workspace/generated/**'],
+  });
+  return filePathList
+    .filter((filePath) =>
+      /\bprocess\.(?:stderr|stdout)\.write\b/.test(readFileSync(path.join(projectDirectory, filePath), 'utf8')),
+    )
+    .map(
+      (filePath) =>
+        `${filePath} writes to a standard stream, which no one reads: keep the failure where the Candidate ` +
+        'looks for it (CODING_STANDARDS “Visible failure”)',
+    );
+}
+
 // The families of interchangeable modules, each module in src/modules/<family>-<name>/ (ADR-0010).
 // source-import is no Source a Watch chooses but the import of a Job Description by hand: an
 // ordinary module, out of the family.
@@ -474,6 +492,169 @@ function findControlsOfASingleFile(projectDirectory: string): string[] {
   );
 }
 
+// The one file allowed to build an Error: every failure of src/ comes from the catalogue of codes
+const CODED_ERROR_PATH = 'src/domain/coded-error.ts';
+// An Error class, built or called: Error, TypeError, a class of its own
+const ERROR_CLASS_PATTERN = /^(?:[A-Z][A-Za-z]*)?Error$/;
+
+// Each place src/ raises a failure without a code: an Error class built, called or extended, or a
+// value thrown as is (CODING_STANDARDS “Visible failure”, ADR-0015)
+function findErrorsOutsideCatalogue(projectDirectory: string): string[] {
+  const filePathList = globSync('src/**/*.{ts,tsx}', {
+    cwd: projectDirectory,
+    exclude: [CODED_ERROR_PATH, '**/*.test.{ts,tsx}', 'src/workspace/generated/**'],
+  });
+  return filePathList.flatMap((filePath) => {
+    const content = readFileSync(path.join(projectDirectory, filePath), 'utf8');
+    const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const violationList: string[] = [];
+    const report = (node: ts.Node, what: string) => {
+      const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+      violationList.push(
+        `${filePath}:${String(line + 1)} ${what} outside the catalogue of codes: throw codedError(<code>) ` +
+          '(CODING_STANDARDS “Visible failure”, ADR-0015)',
+      );
+    };
+    const isErrorClass = (expression: ts.Expression) =>
+      ts.isIdentifier(expression) && ERROR_CLASS_PATTERN.test(expression.text);
+    const visit = (node: ts.Node) => {
+      if ((ts.isNewExpression(node) || ts.isCallExpression(node)) && isErrorClass(node.expression)) {
+        report(node, `builds ${node.expression.getText(sourceFile)}`);
+      } else if (ts.isHeritageClause(node) && node.types.some(({ expression }) => isErrorClass(expression))) {
+        report(node, 'extends an Error class');
+      } else if (
+        ts.isThrowStatement(node) &&
+        (ts.isLiteralExpression(node.expression) ||
+          ts.isTemplateExpression(node.expression) ||
+          ts.isObjectLiteralExpression(node.expression) ||
+          ts.isArrayLiteralExpression(node.expression))
+      ) {
+        report(node, 'throws a value');
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
+    return violationList;
+  });
+}
+
+// What an anti-corruption layer calls outside the process, and the option that bounds its duration: a
+// call that never returns would hold a job, and the whole queue behind it, “Running” forever
+const BOUNDED_CALL_LIST = [
+  { pattern: /^(?:spawn|spawnSync|exec|execSync|execFile|execFileSync|fork)$/, option: 'timeout' },
+  // fetch, or the fetch a Source or API Géo is given (httpFetch)
+  { pattern: /^(?:fetch|\w+Fetch)$/, option: 'signal' },
+];
+// The calls left unbounded on purpose, each with its reason
+const UNBOUNDED_CALL_LIST = [
+  // The interactive session of jf edit and jf profile, which the Candidate ends themselves
+  { filePath: 'src/ai-session/acl/claude-code.ts', callee: 'spawnSync' },
+];
+
+// Each call of an acl/ folder to a subprocess without a timeout or to HTTP without a signal, given
+// in an object literal of its arguments (CODING_STANDARDS “Visible failure”)
+function findUnboundedCalls(projectDirectory: string): string[] {
+  const filePathList = globSync('src/**/acl/**/*.{ts,tsx}', {
+    cwd: projectDirectory,
+    exclude: ['**/*.test.{ts,tsx}', 'src/workspace/generated/**'],
+  });
+  return filePathList.flatMap((filePath) => {
+    const content = readFileSync(path.join(projectDirectory, filePath), 'utf8');
+    const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const violationList: string[] = [];
+    const visit = (node: ts.Node) => {
+      if (ts.isCallExpression(node)) {
+        // A method, such as RegExp's exec, is none of them: they are called by their imported name
+        const name = ts.isIdentifier(node.expression) ? node.expression.text : '';
+        const bound = BOUNDED_CALL_LIST.find(({ pattern }) => pattern.test(name));
+        const isBounded = node.arguments.some(
+          (argument) =>
+            ts.isObjectLiteralExpression(argument) &&
+            argument.properties.some(
+              (property) => property.name !== undefined && property.name.getText(sourceFile) === bound?.option,
+            ),
+        );
+        const isException = UNBOUNDED_CALL_LIST.some(
+          (exception) => exception.filePath === filePath && exception.callee === name,
+        );
+        if (bound !== undefined && !isBounded && !isException) {
+          const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+          violationList.push(
+            `${filePath}:${String(line + 1)} calls ${name} without a ${bound.option}: a call that never returns ` +
+              'would leave its job “Running” forever (CODING_STANDARDS “Visible failure”)',
+          );
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
+    return violationList;
+  });
+}
+
+// The helpers every action and every loader of a route go through, so that a failure goes back to the
+// form that posted it, or shows on the error page, in its code's message (CODING_STANDARDS “Visible
+// failure”)
+const RELAY_ACTION_NAME = 'relayAction';
+const RELAY_LOADER_NAME = 'relayLoader';
+
+function isExported(node: ts.Node): boolean {
+  return (
+    ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some(({ kind }) => kind === ts.SyntaxKind.ExportKeyword)
+  );
+}
+
+function isCalling(node: ts.Node, name: string): boolean {
+  return ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === name
+    ? true
+    : (ts.forEachChild(node, (child) => isCalling(child, name)) ?? false);
+}
+
+// The exported function of this name in each of the files, such as the action of a route
+function findExports(projectDirectory: string, pattern: string, exportName: string) {
+  const filePathList = globSync(pattern, { cwd: projectDirectory });
+  return filePathList.flatMap((filePath) => {
+    const content = readFileSync(path.join(projectDirectory, filePath), 'utf8');
+    const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    return sourceFile.statements.flatMap((statement): { filePath: string; node: ts.Node }[] => {
+      if (!isExported(statement)) {
+        return [];
+      }
+      if (ts.isFunctionDeclaration(statement)) {
+        return statement.name?.text === exportName ? [{ filePath, node: statement }] : [];
+      }
+      if (ts.isVariableStatement(statement)) {
+        return statement.declarationList.declarations
+          .filter(({ name }) => ts.isIdentifier(name) && name.text === exportName)
+          .map((node) => ({ filePath, node }));
+      }
+      return [];
+    });
+  });
+}
+
+// Each route of src/web/routes whose exported action never calls relayAction
+function findActionsWithoutRelay(projectDirectory: string): string[] {
+  return findExports(projectDirectory, 'src/web/routes/*.{ts,tsx}', 'action')
+    .filter(({ node }) => !isCalling(node, RELAY_ACTION_NAME))
+    .map(
+      ({ filePath }) =>
+        `${filePath} exports an action that does not go through ${RELAY_ACTION_NAME}: a failure would replace the page ` +
+        'instead of showing its message by the form (CODING_STANDARDS “Visible failure”)',
+    );
+}
+
+// Each route of src/web/routes, and the root, whose exported loader never calls relayLoader
+function findLoadersWithoutRelay(projectDirectory: string): string[] {
+  return findExports(projectDirectory, 'src/web/{root.tsx,routes/*.{ts,tsx}}', 'loader')
+    .filter(({ node }) => !isCalling(node, RELAY_LOADER_NAME))
+    .map(
+      ({ filePath }) =>
+        `${filePath} exports a loader that does not go through ${RELAY_LOADER_NAME}: a foreign failure would show ` +
+        'on the error page without a code (CODING_STANDARDS “Visible failure”)',
+    );
+}
+
 function createProject(fileContentByPath: Record<string, string>): string {
   const projectDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-architecture-'));
   const tsconfigPath = path.join(projectDirectory, 'tsconfig.json');
@@ -534,6 +715,114 @@ describe('architecture', () => {
     expect(findRawDataOutsideAcl(ROOT_DIRECTORY)).toEqual([]);
   });
 
+  it('catches an error thrown outside the catalogue of codes', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/actions/postings.ts': "throw new Error('Offre inconnue.');\n",
+        'src/actions/jobs.ts': "export const reject = () => Promise.reject(TypeError('Job inconnu.'));\n",
+        'src/status/index.ts': "export class StatusError extends Error {}\nthrow 'Statut invalide.';\n",
+        'src/domain/coded-error.ts': 'export class CodedError extends Error {}\nnew CodedError();\n',
+        'src/actions/watches.ts': "throw codedError('unknown_watch');\n",
+      }),
+    );
+
+    expect(
+      sortedList(findErrorsOutsideCatalogue(projectDirectory)).map((violation) => violation.split(' outside', 1)[0]),
+    ).toEqual([
+      'src/actions/jobs.ts:1 builds TypeError',
+      'src/actions/postings.ts:1 builds Error',
+      'src/status/index.ts:1 extends an Error class',
+      'src/status/index.ts:2 throws a value',
+    ]);
+    expect(findErrorsOutsideCatalogue(projectDirectory)[0]).toMatch(/“Visible failure”, ADR-0015/);
+  });
+
+  it('throws only errors of the catalogue of codes', () => {
+    expect(findErrorsOutsideCatalogue(ROOT_DIRECTORY)).toEqual([]);
+  });
+
+  it('catches a subprocess without a timeout and a request without a signal in an anti-corruption layer', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/ai-session/acl/claude-code.ts': [
+          "spawn('claude', []);",
+          "spawn('claude', [], { timeout: 1000 });",
+          "spawnSync('claude', [], { stdio: 'inherit' });",
+        ].join('\n'),
+        'src/geo/acl/api-geo.ts': [
+          'await httpFetch(url);',
+          'await httpFetch(url, { signal: AbortSignal.timeout(1000) });',
+          'await fetch(url, { method: "POST" });',
+        ].join('\n'),
+        'src/workspace/acl/database.ts': "execFileSync('node', [], { stdio: 'pipe' });\n",
+        'src/postings/fetch.ts': 'await fetch(url);\n',
+      }),
+    );
+
+    expect(
+      sortedList(findUnboundedCalls(projectDirectory)).map((violation) => violation.split(' without', 1)[0]),
+    ).toEqual([
+      'src/ai-session/acl/claude-code.ts:1 calls spawn',
+      'src/geo/acl/api-geo.ts:1 calls httpFetch',
+      'src/geo/acl/api-geo.ts:3 calls fetch',
+      'src/workspace/acl/database.ts:1 calls execFileSync',
+    ]);
+    expect(findUnboundedCalls(projectDirectory)[0]).toMatch(/“Visible failure”/);
+  });
+
+  it('bounds every subprocess and every request of an anti-corruption layer', () => {
+    expect(findUnboundedCalls(ROOT_DIRECTORY)).toEqual([]);
+  });
+
+  it('catches a route action that does not go through relayAction', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/routes/status.ts':
+          'export async function action({ request }) {\n  await ACTIONS.changeStatus(await request.formData());\n  return null;\n}\n',
+        'src/web/routes/document.ts': 'export const action = () => ACTIONS.saveDocument({});\n',
+        'src/web/routes/run.ts':
+          'export function action({ request }) {\n  return relayAction(request, () => ACTIONS.runModule({}));\n}\n',
+        'src/web/routes/posting.tsx': 'export function loader() {\n  return ACTIONS.readPosting({});\n}\n',
+      }),
+    );
+
+    const violationList = findActionsWithoutRelay(projectDirectory);
+
+    expect(sortedList(violationList).map((violation) => violation.split(' exports', 1)[0])).toEqual([
+      'src/web/routes/document.ts',
+      'src/web/routes/status.ts',
+    ]);
+    expect(violationList[0]).toMatch(/“Visible failure”/);
+  });
+
+  it('has every route action go through relayAction', () => {
+    expect(findActionsWithoutRelay(ROOT_DIRECTORY)).toEqual([]);
+  });
+
+  it('catches a route loader that does not go through relayLoader', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/root.tsx': 'export function loader({ request }) {\n  return readCandidate(request);\n}\n',
+        'src/web/routes/postings.tsx': 'export const loader = () => ACTIONS.listPostings({});\n',
+        'src/web/routes/posting.tsx':
+          'export function loader({ request }) {\n  return relayLoader(request, () => ACTIONS.readPosting({}));\n}\n',
+        'src/web/routes/run.ts': 'export function action() {\n  return ACTIONS.runModule({});\n}\n',
+      }),
+    );
+
+    const violationList = findLoadersWithoutRelay(projectDirectory);
+
+    expect(sortedList(violationList).map((violation) => violation.split(' exports', 1)[0])).toEqual([
+      'src/web/root.tsx',
+      'src/web/routes/postings.tsx',
+    ]);
+    expect(violationList[0]).toMatch(/“Visible failure”/);
+  });
+
+  it('has every route loader go through relayLoader', () => {
+    expect(findLoadersWithoutRelay(ROOT_DIRECTORY)).toEqual([]);
+  });
+
   it('catches the front running the queued jobs', () => {
     const projectDirectory = path.dirname(
       createProject({ 'src/web/routes/postings.tsx': 'export const run = (actions) => actions.runQueuedJobs();\n' }),
@@ -544,6 +833,30 @@ describe('architecture', () => {
 
   it('runs the queued jobs only in the worker', () => {
     expect(findJobsRunOutsideWorker(ROOT_DIRECTORY)).toEqual([]);
+  });
+
+  it('catches business code writing a failure to a standard stream', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/actions/jobs.ts': 'export const log = (failure) => process.stderr.write(failure);\n',
+        'src/modules/research/index.ts': "export const log = () => process.stdout.write('done');\n",
+        'src/cli/jf.ts': 'export const log = (failure) => process.stderr.write(failure);\n',
+        'src/worker/worker.ts': "export const log = () => process.stdout.write('ready');\n",
+      }),
+    );
+
+    const violationList = findStandardStreamWrites(projectDirectory);
+
+    expect(
+      violationList
+        .map((violation) => violation.slice(0, violation.indexOf(' ')))
+        .toSorted((left, right) => left.localeCompare(right)),
+    ).toEqual(['src/actions/jobs.ts', 'src/modules/research/index.ts']);
+    expect(violationList[0]).toMatch(/“Visible failure”/);
+  });
+
+  it('writes to a standard stream only in the CLI and the worker, which display', () => {
+    expect(findStandardStreamWrites(ROOT_DIRECTORY)).toEqual([]);
   });
 
   it.each([

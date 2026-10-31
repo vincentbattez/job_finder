@@ -2,8 +2,8 @@ import path from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 
-import { DEFAULT_LOCALE, localeOf, tFor } from '#/actions/i18n.ts';
-import { createActions, messageOf, type Actions } from '#/actions/index.ts';
+import { DEFAULT_LOCALE, localeOf, tFor, type Locale } from '#/actions/i18n.ts';
+import { codedError, createActions, formatError, type Actions } from '#/actions/index.ts';
 
 import { readTextFile } from './acl/files.ts';
 
@@ -33,14 +33,22 @@ function cliOf(candidate: Parameters<typeof localeOf>[0]): Cli {
   return tFor(localeOf(candidate), 'cli');
 }
 
+async function localeOfCandidate(actions: Actions, candidateId: string): Promise<Locale> {
+  const candidateList = await actions.listCandidates();
+  return localeOf(candidateList.find(({ id }) => id === candidateId));
+}
+
 // Each command speaks the locale of the Candidate it acts for (spec #65)
 async function cliOfCandidate(actions: Actions, candidateId: string): Promise<Cli> {
-  const candidateList = await actions.listCandidates();
-  return cliOf(candidateList.find(({ id }) => id === candidateId));
+  return tFor(await localeOfCandidate(actions, candidateId), 'cli');
+}
+
+async function localeOfPosting(actions: Actions, reference: string): Promise<Locale> {
+  return localeOf(await actions.readPostingCandidate({ reference }));
 }
 
 async function cliOfPosting(actions: Actions, reference: string): Promise<Cli> {
-  return cliOf(await actions.readPostingCandidate({ reference }));
+  return tFor(await localeOfPosting(actions, reference), 'cli');
 }
 
 function formatAddress({ email, source }: Recipients['ccList'][number], t: Cli): string {
@@ -89,18 +97,20 @@ interface IChoice<T> {
   question: string;
   itemList: T[];
   label: (item: T) => string;
-  emptyMessage: string;
+  // The failure when there is nothing to choose from
+  emptyError: () => Error;
 }
 
 // A numbered list to pick from on the terminal; a single item needs no question
 async function choose<T>(
   terminal: Terminal,
-  t: Cli,
-  { question, itemList, label, emptyMessage }: IChoice<T>,
+  locale: Locale,
+  { question, itemList, label, emptyError }: IChoice<T>,
 ): Promise<T> {
+  const t = tFor(locale, 'cli');
   const [firstItem, ...otherItemList] = itemList;
   if (firstItem === undefined) {
-    throw new Error(emptyMessage);
+    throw emptyError();
   }
   if (otherItemList.length === 0) {
     process.stdout.write(t('answered', { question, label: label(firstItem) }));
@@ -111,33 +121,33 @@ async function choose<T>(
   }
   const answer = await terminal.ask(t('ask', { question, itemCount: itemList.length }));
   if (answer === undefined) {
-    throw new Error(t('noChoice'));
+    throw codedError('no_choice', {}, { locale });
   }
   const item = itemList[Number(answer) - 1];
   if (item === undefined) {
-    throw new Error(t('invalidChoice', { answer }));
+    throw codedError('invalid_choice', { answer }, { locale });
   }
   return item;
 }
 
 // Before a Candidate is chosen, no locale but the default one
 async function chooseCandidate(actions: Actions, terminal: Terminal) {
-  return choose(terminal, DEFAULT_CLI, {
+  return choose(terminal, DEFAULT_LOCALE, {
     question: DEFAULT_CLI('candidateQuestion'),
     itemList: await actions.listCandidates(),
     label: ({ name }) => name,
-    emptyMessage: DEFAULT_CLI('noCandidate'),
+    emptyError: () => codedError('no_candidate'),
   });
 }
 
 async function chooseReference(actions: Actions, terminal: Terminal): Promise<string> {
   const candidate = await chooseCandidate(actions, terminal);
   const t = cliOf(candidate);
-  const posting = await choose(terminal, t, {
+  const posting = await choose(terminal, candidate.locale, {
     question: t('postingQuestion'),
     itemList: await actions.listPostings({ candidateId: candidate.id }),
     label: (item) => formatPosting(item, t),
-    emptyMessage: t('noPosting', { candidateName: candidate.name }),
+    emptyError: () => codedError('no_posting', { candidateName: candidate.name }, { locale: candidate.locale }),
   });
   return posting.reference;
 }
@@ -150,13 +160,14 @@ async function chooseArtifact(actions: Actions, [givenReference, givenArtifact]:
   const terminal = openTerminal();
   try {
     const reference = givenReference ?? (await chooseReference(actions, terminal));
-    const t = await cliOfPosting(actions, reference);
-    const version = await choose(terminal, t, {
+    const locale = await localeOfPosting(actions, reference);
+    const t = tFor(locale, 'cli');
+    const version = await choose(terminal, locale, {
       question: t('artifactQuestion'),
       itemList: await actions.listChosenVersions({ reference }),
       label: ({ artifact, number }) =>
         t('chosenVersionLabel', { artifactLabel: t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' }), number }),
-      emptyMessage: t('noArtifact', { reference }),
+      emptyError: () => codedError('no_artifact', { reference }, { locale }),
     });
     return { reference, artifact: version.artifact };
   } finally {
@@ -181,10 +192,11 @@ async function readStandardInput(t: Cli): Promise<string> {
 // ones on the standard input
 async function runInstructionsOperation(
   actions: Actions,
-  t: Cli,
+  locale: Locale,
   { candidateId, module, defaultInstructions, candidateInstructions }: ModuleInstructions & { candidateId: string },
   operation: string | undefined,
 ): Promise<void> {
+  const t = tFor(locale, 'cli');
   switch (operation) {
     case undefined: {
       const headingKey = candidateInstructions === null ? 'defaultInstructionsHeading' : 'candidateInstructionsHeading';
@@ -207,7 +219,7 @@ async function runInstructionsOperation(
       return;
     }
     default: {
-      throw new Error(t('unknownOperation', { operation }));
+      throw codedError('unknown_operation', { operation }, { locale });
     }
   }
 }
@@ -217,7 +229,7 @@ function changeStatusCommand(status: Posting['status'], name: string, describe: 
     describe: (t) => t('statusCommandDescription', { description: describe(t), name }),
     run: async (actions, [reference]) => {
       if (reference === undefined) {
-        throw new Error(DEFAULT_CLI('statusUsage', { name }));
+        throw codedError('status_usage', { name });
       }
       await actions.changeStatus({ reference, status });
       const t = await cliOfPosting(actions, reference);
@@ -261,11 +273,15 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
         for (const { reference, title } of nearMissList) {
           process.stdout.write(`  ${reference}\t${title}\n`);
         }
+        // API Géo down fails nothing: the next Detection locates these Postings
+        if (detection.locationFailure !== null) {
+          process.stderr.write(`${detection.locationFailure}\n`);
+        }
       }
       // What the Detection found is printed first; a notification not sent then fails the run in lpm
       const failureList = detectionList.flatMap(({ notificationFailureList }) => notificationFailureList);
       if (failureList.length > 0) {
-        throw new Error(failureList.join('\n'));
+        throw codedError('notifications_not_sent', { failures: failureList.join('\n') });
       }
     },
   },
@@ -273,13 +289,12 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     describe: (t) => t('importDescription'),
     run: async (actions, [filePath, givenCandidateId], { isWaiting }) => {
       if (filePath === undefined) {
-        throw new Error(DEFAULT_CLI('importUsage'));
+        throw codedError('import_usage');
       }
       // Read before any question, in the locale of the Candidate named, if any
-      const givenT = givenCandidateId === undefined ? DEFAULT_CLI : await cliOfCandidate(actions, givenCandidateId);
-      const markdown = readTextFile(filePath, (unreadablePath, reason) =>
-        givenT('unreadableFile', { filePath: unreadablePath, reason }),
-      );
+      const givenLocale =
+        givenCandidateId === undefined ? DEFAULT_LOCALE : await localeOfCandidate(actions, givenCandidateId);
+      const markdown = readTextFile(filePath, givenLocale);
       let candidateId = givenCandidateId;
       if (candidateId === undefined) {
         const terminal = openTerminal();
@@ -289,7 +304,8 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
           terminal.close();
         }
       }
-      const t = await cliOfCandidate(actions, candidateId);
+      const locale = await localeOfCandidate(actions, candidateId);
+      const t = tFor(locale, 'cli');
       const job = await actions.importJobDescription({ candidateId, fileName: path.basename(filePath), markdown });
       const { reference } = job.posting;
       process.stdout.write(t('imported', { reference, jobId: job.id }));
@@ -298,9 +314,9 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
         return;
       }
       process.stdout.write(t('extractionWaiting'));
-      const { state, posting, log } = await actions.followJob({ jobId: job.id });
+      const { state, posting, log, errorCode } = await actions.followJob({ jobId: job.id });
       if (state === 'failed') {
-        throw new Error(t('extractionFailed', { reference, log }));
+        throw codedError('extraction_failed', { reference, log, errorCode }, { locale });
       }
       process.stdout.write(t('extracted', { postingLine: formatPosting(posting, t), reference }));
     },
@@ -309,7 +325,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     describe: (t) => t('listDescription'),
     run: async (actions, [candidateId]) => {
       if (candidateId === undefined) {
-        throw new Error(DEFAULT_CLI('listUsage'));
+        throw codedError('list_usage');
       }
       const postingList = await actions.listPostings({ candidateId });
       const t = await cliOfCandidate(actions, candidateId);
@@ -322,10 +338,11 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     describe: (t) => t('runDescription'),
     run: async (actions, [module, reference], { isWaiting }) => {
       if (module === undefined || reference === undefined) {
-        throw new Error(DEFAULT_CLI('runUsage'));
+        throw codedError('run_usage');
       }
       const queuedJob = await actions.runModule({ module, reference });
-      const t = await cliOfPosting(actions, reference);
+      const locale = await localeOfPosting(actions, reference);
+      const t = tFor(locale, 'cli');
       // jf versions takes the Artifact, which the module of jf run brief is not named after
       const versionsCommand = `jf versions ${reference} ${queuedJob.module}`;
       process.stdout.write(t('queued', { module, reference, jobId: queuedJob.id }));
@@ -334,10 +351,10 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
         return;
       }
       process.stdout.write(t('runWaiting'));
-      const { state, version, log } = await actions.followJob({ jobId: queuedJob.id });
+      const { state, version, log, errorCode } = await actions.followJob({ jobId: queuedJob.id });
       const name = version === null ? module : `${module} v${String(version.number)}`;
       if (state === 'failed') {
-        throw new Error(t('runFailed', { name, log, module, reference }));
+        throw codedError('run_failed', { name, log, module, reference, errorCode }, { locale });
       }
       process.stdout.write(t('runReady', { name, versionsCommand }));
     },
@@ -346,7 +363,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     describe: (t) => t('recipientsDescription'),
     run: async (actions, [reference]) => {
       if (reference === undefined) {
-        throw new Error(DEFAULT_CLI('recipientsUsage'));
+        throw codedError('recipients_usage');
       }
       const { to, ccList, salutation, justification } = await actions.readRecipients({ reference });
       const t = await cliOfPosting(actions, reference);
@@ -366,7 +383,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     describe: (t) => t('versionsDescription'),
     run: async (actions, [reference, artifact]) => {
       if (reference === undefined || artifact === undefined) {
-        throw new Error(DEFAULT_CLI('versionsUsage'));
+        throw codedError('versions_usage');
       }
       const versionList = await actions.listVersions({ reference, artifact });
       const t = await cliOfPosting(actions, reference);
@@ -380,13 +397,22 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
         ];
         process.stdout.write(`${columnList.join('\t')}\n`);
       }
+      // Without --wait, the reason of a failed job is read here, even one that failed before its
+      // Version, and why a queued or running one makes no progress (#41)
+      const { failure, workerFailure } = await actions.readArtifactState({ reference, artifact });
+      if (failure !== null) {
+        process.stdout.write(t('lastJobFailed', { errorCode: failure.errorCode ?? '—', log: failure.log }));
+      }
+      if (workerFailure !== null) {
+        process.stdout.write(t('lastJobStalled', workerFailure));
+      }
     },
   },
   choose: {
     describe: (t) => t('chooseDescription'),
     run: async (actions, [reference, artifact, version]) => {
       if (reference === undefined || artifact === undefined || version === undefined) {
-        throw new Error(DEFAULT_CLI('chooseUsage'));
+        throw codedError('choose_usage');
       }
       await actions.chooseVersion({ reference, artifact, number: version.replace(/^v/, '') });
       const t = await cliOfPosting(actions, reference);
@@ -400,7 +426,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     describe: (t) => t('profileDescription'),
     run: async (actions, [candidateId]) => {
       if (candidateId === undefined) {
-        throw new Error(DEFAULT_CLI('profileUsage'));
+        throw codedError('profile_usage');
       }
       await actions.openProfile({ candidateId });
     },
@@ -409,9 +435,10 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     describe: (t) => t('instructionsDescription'),
     run: async (actions, [candidateId, module, operation]) => {
       if (candidateId === undefined) {
-        throw new Error(DEFAULT_CLI('instructionsUsage'));
+        throw codedError('instructions_usage');
       }
-      const t = await cliOfCandidate(actions, candidateId);
+      const locale = await localeOfCandidate(actions, candidateId);
+      const t = tFor(locale, 'cli');
       if (module === undefined) {
         const instructionsList = await actions.listInstructions({ candidateId });
         for (const { module: name, candidateInstructions } of instructionsList) {
@@ -421,7 +448,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
         return;
       }
       const instructions = await actions.readInstructions({ candidateId, module });
-      await runInstructionsOperation(actions, t, { ...instructions, candidateId }, operation);
+      await runInstructionsOperation(actions, locale, { ...instructions, candidateId }, operation);
     },
   },
   edit: {
@@ -461,7 +488,7 @@ async function run(): Promise<void> {
   }
   const command = COMMAND_BY_NAME[commandName];
   if (command === undefined) {
-    throw new Error(DEFAULT_CLI('unknownCommand', { commandName }));
+    throw codedError('unknown_command', { commandName });
   }
   const actions = await createActions({ dataDirectory: DATA_DIRECTORY });
   // Imported once by the first launch that found it, then never read again (ADR-0011)
@@ -478,6 +505,7 @@ async function run(): Promise<void> {
 try {
   await run();
 } catch (error) {
-  process.stderr.write(`${messageOf(error)}\n`);
+  // The code tells which failure it is, the message what to do (ADR-0015)
+  process.stderr.write(`${formatError(error)}\n`);
   process.exitCode = 1;
 }

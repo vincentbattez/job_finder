@@ -8,6 +8,7 @@ import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { z } from 'zod/v4';
 
 import { localeOf } from '#/domain/catalogue/i18n.ts';
+import type { ErrorCode } from '#/domain/error.ts';
 import {
   CANDIDATE_SCHEMA,
   DEFAULT_DEADLINE_PERIOD_SCHEMA,
@@ -65,6 +66,11 @@ const DEFAULT_DEADLINE_PERIOD_ID = 1;
 const DEFAULT_DELAY_MONTHS = 6;
 
 const DETECTION_INCLUDE = { watchList: { orderBy: { id: 'asc' } } } as const;
+
+const MIGRATION_TIMEOUT_MS = 2 * 60_000;
+
+// The single row of the worker's heartbeat
+const WORKER_HEARTBEAT_ID = 1;
 
 const JOB_INCLUDE = { posting: { include: POSTING_INCLUDE }, version: { include: VERSION_INCLUDE } };
 
@@ -132,6 +138,8 @@ export function openDatabase(databasePath: string) {
       cwd: ROOT_DIRECTORY,
       env: { ...process.env, DATABASE_URL: url, CHECKPOINT_DISABLE: '1' },
       stdio: 'pipe',
+      // A migration takes seconds: one that hangs fails the launch rather than holding it
+      timeout: MIGRATION_TIMEOUT_MS,
     });
   }
   // Read at launch once the Default Deadline Period exists, then changed by the process that saves them (ADR-0011)
@@ -361,9 +369,21 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    async createJob(posting: Posting, module: Module): Promise<Job> {
+    // A job the Candidate launches is not automatic: they see it run, and fail, on the screen
+    async createJob(posting: Posting, module: Module, { isAutomatic = false } = {}): Promise<Job> {
       return JOB_SCHEMA.parse(
-        await prisma.job.create({ data: { module, postingId: posting.id }, include: JOB_INCLUDE }),
+        await prisma.job.create({ data: { module, postingId: posting.id, isAutomatic }, include: JOB_INCLUDE }),
+      );
+    },
+
+    // The job keeps its state: only its notification failed
+    async failNotification({ id }: Job, { code, message }: { code: ErrorCode; message: string }): Promise<Job> {
+      return JOB_SCHEMA.parse(
+        await prisma.job.update({
+          where: { id },
+          data: { notificationErrorCode: code, notificationFailure: message },
+          include: JOB_INCLUDE,
+        }),
       );
     },
 
@@ -411,12 +431,17 @@ export function openDatabase(databasePath: string) {
     // A ready Version becomes the Chosen Version: by default, the latest one is retained
     async finishJob(
       { job, version }: { job: Job; version: Version },
-      { isReady, log, sessionId }: { isReady: boolean; log: string; sessionId: string | null },
+      { errorCode, log, sessionId }: { errorCode: ErrorCode | null; log: string; sessionId: string | null },
     ): Promise<{ job: Job; version: Version }> {
+      // Ready unless it failed under a code
+      const isReady = errorCode === null;
       const versionWhere = { postingId: job.posting.id, artifact: version.artifact, number: version.number };
       await prisma.$transaction([
         prisma.version.updateMany({ where: versionWhere, data: { state: isReady ? 'ready' : 'failed' } }),
-        prisma.job.update({ where: { id: job.id }, data: { state: isReady ? 'done' : 'failed', log, sessionId } }),
+        prisma.job.update({
+          where: { id: job.id },
+          data: { state: isReady ? 'done' : 'failed', log, errorCode, sessionId },
+        }),
         ...(isReady ? chooseStatementList(versionWhere) : []),
       ]);
       return {
@@ -456,7 +481,7 @@ export function openDatabase(databasePath: string) {
     async claimNextJob(): Promise<QueuedJob | null> {
       const claimedList = z.array(z.object({ id: z.int() })).parse(
         await prisma.$queryRaw`
-          UPDATE "Job" SET "state" = 'running'
+          UPDATE "Job" SET "state" = 'running', "startedAt" = ${new Date()}
           WHERE "id" = (SELECT "id" FROM "Job" WHERE "state" = 'queued' ORDER BY "id" LIMIT 1)
             AND NOT EXISTS (SELECT 1 FROM "Job" WHERE "state" = 'running')
           RETURNING "id"`,
@@ -469,9 +494,27 @@ export function openDatabase(databasePath: string) {
           );
     },
 
-    // Fails the running jobs and their Versions, keeping the reason in the job's log
-    // The log of each job in the locale of its Candidate, that of its Posting or of its Upload
-    async failRunningJobs(composeLog: (locale: Locale) => string): Promise<QueuedJob[]> {
+    // The worker tells it runs: a job tells no worker runs once this is stale
+    async beatWorker(): Promise<void> {
+      const beatAt = new Date();
+      await prisma.workerHeartbeat.upsert({
+        where: { id: WORKER_HEARTBEAT_ID },
+        create: { id: WORKER_HEARTBEAT_ID, beatAt },
+        update: { beatAt },
+      });
+    },
+
+    // When the worker last told it runs, null before it ever started
+    async findWorkerBeat(): Promise<Date | null> {
+      const heartbeat = await prisma.workerHeartbeat.findUnique({ where: { id: WORKER_HEARTBEAT_ID } });
+      return heartbeat === null ? null : z.date().parse(heartbeat.beatAt);
+    },
+
+    // Fails the running jobs and their Versions, keeping the code of the failure and its message in
+    // the job's log, in the locale of its Candidate, that of its Posting or of its Upload
+    async failRunningJobs(
+      composeError: (locale: Locale) => { code: ErrorCode; message: string },
+    ): Promise<QueuedJob[]> {
       const runningList = await prisma.job.findMany({
         where: { state: 'running' },
         select: { id: true, candidate: true, posting: { select: { candidate: true } } },
@@ -479,12 +522,10 @@ export function openDatabase(databasePath: string) {
       const idList = runningList.map(({ id }) => id);
       await prisma.$transaction([
         prisma.version.updateMany({ where: { jobId: { in: idList } }, data: { state: 'failed' } }),
-        ...runningList.map(({ id, candidate, posting }) =>
-          prisma.job.update({
-            where: { id },
-            data: { state: 'failed', log: composeLog(localeOf(candidate ?? posting?.candidate)) },
-          }),
-        ),
+        ...runningList.map(({ id, candidate, posting }) => {
+          const { code, message } = composeError(localeOf(candidate ?? posting?.candidate));
+          return prisma.job.update({ where: { id }, data: { state: 'failed', log: message, errorCode: code } });
+        }),
       ]);
       return z
         .array(QUEUED_JOB_SCHEMA)

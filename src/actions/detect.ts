@@ -1,7 +1,7 @@
 import { z } from 'zod/v4';
 
 import { defaultErrorTranslator } from '#/domain/catalogue/i18n.ts';
-import { ERROR } from '#/domain/error.ts';
+import { codedError, codedErrorOf } from '#/domain/coded-error.ts';
 import {
   DETECTION_ORIGIN_SCHEMA,
   DETECTION_OVERVIEW_SCHEMA,
@@ -11,6 +11,7 @@ import {
   type DetectionOverview,
   type ListedPosting,
   type Locale,
+  type Location,
   type Posting,
   type RecordedDetection,
   type SourceModule,
@@ -26,9 +27,9 @@ import {
 import { findRepostedPosting } from '#/repost/index.ts';
 import type { ISourceReadResult } from '#/source/index.ts';
 import { hasBeenApplied } from '#/status/index.ts';
-import { messageOf } from '#/text/index.ts';
 
 import type { ActionContext } from './context.ts';
+import { createTolerantLocator } from './locator.ts';
 
 // Every Watch, started from jf detect unless the daily automation says so
 const DETECT_INPUT_SCHEMA = z.object({ origin: DETECTION_ORIGIN_SCHEMA.default('cli') });
@@ -62,7 +63,7 @@ interface INotifiedPosting {
 
 // What a Detection found for one Watch, and the notifications to send once every Watch is done
 interface IFoundPostings {
-  detection: Omit<z.input<typeof DETECTION_SCHEMA>, 'notificationFailureList'>;
+  detection: Omit<z.input<typeof DETECTION_SCHEMA>, 'notificationFailureList' | 'locationFailure'>;
   notificationList: INotifiedPosting[];
 }
 
@@ -75,6 +76,7 @@ interface IWatchRun {
   // Every Posting of its Candidate, those this Detection saves included: a Repost is found there
   postingList: Posting[];
   locale: Locale;
+  locate: (city: string | null, locale: Locale) => Promise<Location>;
 }
 
 // The Detection, in the actions rather than a module: it reads the Source modules, which no module
@@ -100,7 +102,7 @@ export function createDetectActions({
 
   // In the Zone, a Posting gets its Research (ADR-0003)
   async function startInZone(posting: Posting, repostOf: Posting | undefined): Promise<NotificationComposer> {
-    await workspace.createJob(posting, 'research');
+    await workspace.createJob(posting, 'research', { isAutomatic: true });
     return repostOf === undefined
       ? composeNewPostingNotification(posting)
       : composeRepostNotification(posting, repostOf);
@@ -109,12 +111,12 @@ export function createDetectActions({
   // The Postings already online at the first launch start nothing (ADR-0003). The Repost of an
   // Posting once Applied gets no Research whatever the Zone: the Candidate, who applied already, decides.
   async function saveNewPosting(
-    { watch: { candidateId, source }, isFirstLaunch, postingList, locale }: IWatchRun,
+    { watch: { candidateId, source }, isFirstLaunch, postingList, locale, locate: locateCity }: IWatchRun,
     listedPosting: ListedPosting,
     { jobDescription, isInZone }: ISourceReadResult,
   ): Promise<{ posting: Posting; notification: NotificationComposer | undefined }> {
     const repostOf = findRepostedPosting({ ...listedPosting, ...jobDescription }, postingList);
-    const location = await locate(readCity(jobDescription.workplace), locale);
+    const location = await locateCity(readCity(jobDescription.workplace), locale);
     const posting = await workspace.savePosting({
       candidateId,
       source,
@@ -149,7 +151,14 @@ export function createDetectActions({
   // A Posting is known by its reference, never by its publication date, which the site changes
   // (ADR-0001). Each Watch has its own Zone: a Posting stored out of the Zone of one is read again
   // by each other Watch that has not read it yet.
-  async function detectWatch(detection: RecordedDetection, watch: Watch): Promise<IFoundPostings> {
+  // Each notification goes into notificationList as soon as its Posting is saved, so that a Detection
+  // cut off still sends it
+  async function detectWatch(
+    detection: RecordedDetection,
+    watch: Watch,
+    locateCity: IWatchRun['locate'],
+    notificationList: INotifiedPosting[],
+  ): Promise<IFoundPostings> {
     const { candidateId, source } = watch;
     await workspace.updateDetectionWatch(detection, watch.id, { step: 'searching' });
     const outOfZonePostingList = await workspace.listOutOfZonePostingsSince(watch);
@@ -162,9 +171,9 @@ export function createDetectActions({
       isFirstLaunch: watch.detectedAt === null,
       postingList: await workspace.listPostings(candidateId),
       locale,
+      locate: locateCity,
     };
     const newPostingList: Posting[] = [];
-    const notificationList: INotifiedPosting[] = [];
     // Oldest first, as published: a Repost found by the same Detection as the Posting it
     // publishes again, as on the first launch, is saved after it
     const oldestFirstList = matchingList.toSorted((left, right) => left.reference.localeCompare(right.reference));
@@ -222,7 +231,7 @@ export function createDetectActions({
       staleOption(),
     );
     if ('runningSince' in claimed) {
-      throw ERROR.detectionRunning(claimed.runningSince);
+      throw codedError('detection_running', { startedAt: claimed.runningSince });
     }
     return { detection: claimed.detection, watchList };
   }
@@ -234,7 +243,7 @@ export function createDetectActions({
       await workspace.finishDetection(detection, null);
       return detectionList;
     } catch (error) {
-      await workspace.finishDetection(detection, messageOf(error));
+      await workspace.finishDetection(detection, codedErrorOf(error).message);
       throw error;
     }
   }
@@ -248,15 +257,25 @@ export function createDetectActions({
   }
 
   async function detectWatches(detection: RecordedDetection, watchList: Watch[]): Promise<Detection[]> {
+    const locator = createTolerantLocator(locate);
     // The Postings saved before they had a city, or whose city API Géo did not know
     const unlocatedPostingList = await workspace.listUnlocatedPostings();
     for (const posting of unlocatedPostingList) {
       const locale = await findLocale(posting.candidateId);
-      await workspace.setLocation(posting, await locate(posting.city ?? readCity(posting.workplace), locale));
+      await workspace.setLocation(posting, await locator.locate(posting.city ?? readCity(posting.workplace), locale));
     }
     const foundList: IFoundPostings[] = [];
     for (const watch of watchList) {
-      foundList.push(await detectWatch(detection, watch));
+      const notificationList: INotifiedPosting[] = [];
+      try {
+        foundList.push(await detectWatch(detection, watch, locator.locate, notificationList));
+      } catch (error) {
+        // The Postings saved before the cut are known from now on: the next Detection would never
+        // notify them, so they are notified before the failure stops the run
+        const savedList = [...foundList.flatMap((found) => found.notificationList), ...notificationList];
+        await Promise.all(savedList.map(({ posting, notification }) => notify(posting, notification)));
+        throw error;
+      }
     }
     // Notified last, once every Posting is saved and its Research queued. A notification not sent
     // undoes nothing: it comes back with what the Detection found, which jf detect prints first.
@@ -266,12 +285,16 @@ export function createDetectActions({
       const failureList = await Promise.all(
         notificationList.map(({ posting, notification }) => notify(posting, notification)),
       );
-      const notificationFailureList = failureList.filter((failure) => failure !== undefined);
-      const watchDetection = DETECTION_SCHEMA.parse({ ...found, notificationFailureList });
+      const notificationFailureList = failureList
+        .filter((failure) => failure !== undefined)
+        .map(({ message }) => message);
+      const locationFailure = locator.failureFor(await findLocale(found.candidateId));
+      const watchDetection = DETECTION_SCHEMA.parse({ ...found, notificationFailureList, locationFailure });
       detectionList.push(watchDetection);
       await workspace.updateDetectionWatch(detection, found.watchId, {
         step: 'done',
         notificationFailureList,
+        locationFailure,
       });
     }
     return detectionList;

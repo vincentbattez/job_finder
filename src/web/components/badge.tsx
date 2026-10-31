@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Actions } from '#/actions/index.ts';
+import type { State } from '#/actions/state.ts';
 
 import './badge.css';
 
@@ -24,9 +25,7 @@ export function StatusBadge({ status, isExpired }: Readonly<{ status: Status; is
   );
 }
 
-export const STATE_LIST = ['absent', 'in_progress', 'ready', 'failed'] as const;
-
-export type State = (typeof STATE_LIST)[number];
+export { STATE_LIST, type State } from '#/actions/state.ts';
 
 export function StateBadge({ state }: Readonly<{ state: State }>) {
   const { t } = useTranslation('posting');

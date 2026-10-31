@@ -1,7 +1,8 @@
 import { z } from 'zod/v4';
 
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { defaultErrorTranslator, localeOf, tFor } from '#/domain/catalogue/i18n.ts';
+import { localeOf } from '#/domain/catalogue/i18n.ts';
+import { codedError, type CodedError } from '#/domain/coded-error.ts';
 import { LOCATION_SCHEMA, type Candidate, type Locale, type Location, type Posting } from '#/domain/index.ts';
 import { createApiGeo } from '#/geo/acl/api-geo.ts';
 import { createUploadConversion } from '#/modules/conversion/index.ts';
@@ -50,7 +51,7 @@ export async function openContext({
     const { candidateId } = CANDIDATE_INPUT_SCHEMA.parse(rawInput);
     const candidate = await workspace.findCandidate(candidateId);
     if (candidate === null) {
-      throw new Error(defaultErrorTranslator()('unknownCandidate', { candidateId }));
+      throw codedError('unknown_candidate', { candidateId });
     }
     return candidate;
   }
@@ -64,11 +65,11 @@ export async function openContext({
   async function findPosting(reference: string): Promise<Posting> {
     const [posting, ...otherPostingList] = await workspace.findPostings(reference);
     if (posting === undefined) {
-      throw new Error(defaultErrorTranslator()('unknownPosting', { reference }));
+      throw codedError('unknown_posting', { reference });
     }
     // Two Candidates may follow the same Source: a reference alone then names several Postings
     if (otherPostingList.length > 0) {
-      throw new Error(defaultErrorTranslator()('ambiguousPosting', { reference }));
+      throw codedError('ambiguous_posting', { reference });
     }
     return posting;
   }
@@ -87,13 +88,13 @@ export async function openContext({
 
   // The module of the Candidate's Notification Channel, as saved or as they picked it, null until chosen
   function findNotificationChannelModule(moduleId: string | null, candidate: Candidate): INotificationChannel {
-    const t = tFor(candidate.locale, 'notification');
+    const { locale } = candidate;
     if (moduleId === null) {
-      throw new Error(t('noChannel', { candidateName: candidate.name }));
+      throw codedError('no_channel', { candidateName: candidate.name }, { locale });
     }
     const module = notificationChannelModuleOf(moduleId);
     if (module === undefined) {
-      throw new Error(t('unknownChannel', { moduleId }));
+      throw codedError('unknown_channel', { moduleId }, { locale });
     }
     return module;
   }
@@ -103,12 +104,9 @@ export async function openContext({
     const source = sourceList.find(({ description: { id } }) => id === sourceId);
     if (source === undefined) {
       const knownList = sourceList.map(({ description: { id } }) => id).join(', ');
-      const t = tFor(locale, 'error');
-      throw new Error(
-        watchId === undefined
-          ? t('unknownSource', { sourceId, knownList })
-          : t('unknownSourceOfWatch', { sourceId, knownList, watchId }),
-      );
+      throw watchId === undefined
+        ? codedError('unknown_source', { sourceId, knownList }, { locale })
+        : codedError('unknown_source_of_watch', { sourceId, knownList, watchId }, { locale });
     }
     return source;
   }
@@ -121,18 +119,18 @@ export async function openContext({
   }
 
   // A notification not sent undoes and skips nothing: it comes back as the failure to report
-  async function notify(posting: Posting, composeNotification: NotificationComposer): Promise<string | undefined> {
+  async function notify(posting: Posting, composeNotification: NotificationComposer): Promise<CodedError | undefined> {
     try {
       await sendNotification(posting.candidateId, composeNotification);
       return undefined;
     } catch (error) {
       const locale = await findLocale(posting.candidateId);
       const { title } = composeNotification(locale);
-      return tFor(locale, 'notification')('notSent', {
-        title,
-        reference: posting.reference,
-        reason: messageOf(error),
-      });
+      return codedError(
+        'notification_not_sent',
+        { title, reference: posting.reference, reason: messageOf(error) },
+        { locale, cause: error },
+      );
     }
   }
 

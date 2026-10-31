@@ -40,7 +40,7 @@
     --badge-soft: var(--color-state-absent-soft);
   }
 
-  .badge[data-state='in_progress'] {
+  .badge:is([data-state='queued'], [data-state='in_progress']) {
     --badge-ink: var(--color-state-in-progress);
     --badge-soft: var(--color-state-in-progress-soft);
   }
@@ -59,6 +59,11 @@
   .badge:is([data-status='archived'], [data-state='absent']) {
     border-style: dashed;
     border-color: var(--color-muted);
+  }
+
+  /* A job that waits for the worker: the tint of the work to come, its rim not yet drawn */
+  .badge[data-state='queued'] {
+    border-style: dashed;
   }
 
   /* The one motion of the screen: a loader while a module writes the Artifact */

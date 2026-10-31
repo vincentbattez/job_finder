@@ -1,11 +1,13 @@
 import { z } from 'zod/v4';
 
-import { DEFAULT_LOCALE, defaultErrorTranslator, tFor, type ErrorTranslator } from '#/domain/catalogue/i18n.ts';
+import { DEFAULT_LOCALE } from '#/domain/catalogue/i18n.ts';
+import { codedError } from '#/domain/coded-error.ts';
 import {
   DEFAULT_DEADLINE_PERIOD_SCHEMA,
   LOCALE_SCHEMA,
   OBSOLETE_CONFIG_SCHEMA,
   type DefaultDeadlinePeriod,
+  type Locale,
   type ObsoleteConfig,
 } from '#/domain/index.ts';
 
@@ -29,17 +31,17 @@ const LOCALE_INPUT_SCHEMA = z.object({ locale: LOCALE_SCHEMA });
 const DEFAULT_DEADLINE_PERIOD_INPUT_SCHEMA = z.object({ months: z.union([z.string(), z.number()]) });
 
 // The identifier and the name come from the front: checked before anything is saved
-function parseCandidateId(id: string, t: ErrorTranslator): string {
+function parseCandidateId(id: string, locale: Locale): string {
   if (!CANDIDATE_ID_PATTERN.test(id)) {
-    throw new Error(t('invalidCandidateId', { candidateId: id }));
+    throw codedError('invalid_candidate_id', { candidateId: id }, { locale });
   }
   return id;
 }
 
-function parseName(name: string, t: ErrorTranslator): string {
+function parseName(name: string, locale: Locale): string {
   const trimmedName = name.trim();
   if (trimmedName === '') {
-    throw new Error(t('emptyCandidateName'));
+    throw codedError('empty_candidate_name', {}, { locale });
   }
   return trimmedName;
 }
@@ -48,7 +50,7 @@ function parseMonths(typedMonths: string | number): number {
   const months = Number(typedMonths);
   if (!Number.isSafeInteger(months) || months < 1) {
     // Shared by every Candidate: in the default locale
-    throw new Error(defaultErrorTranslator()('invalidDefaultDeadlinePeriod'));
+    throw codedError('invalid_default_deadline_period');
   }
   return months;
 }
@@ -60,22 +62,22 @@ export function createCandidateActions({ workspace, findCandidate }: ActionConte
     async createCandidate(rawInput: unknown): Promise<void> {
       const input = NEW_CANDIDATE_INPUT_SCHEMA.parse(rawInput);
       // In the locale of the Candidate being created
-      const t = tFor(input.locale, 'error');
+      const { locale } = input;
       const candidate = {
-        id: parseCandidateId(input.id, t),
-        name: parseName(input.name, t),
+        id: parseCandidateId(input.id, locale),
+        name: parseName(input.name, locale),
         locale: input.locale,
       };
       const candidateList = await workspace.listCandidates();
       if (candidateList.some(({ id }) => id === candidate.id)) {
-        throw new Error(t('duplicateCandidateId', { candidateId: candidate.id }));
+        throw codedError('duplicate_candidate_id', { candidateId: candidate.id }, { locale });
       }
       await workspace.createCandidate(candidate);
     },
 
     async renameCandidate(rawInput: unknown): Promise<void> {
       const candidate = await findCandidate(rawInput);
-      const name = parseName(RENAME_INPUT_SCHEMA.parse(rawInput).name, tFor(candidate.locale, 'error'));
+      const name = parseName(RENAME_INPUT_SCHEMA.parse(rawInput).name, candidate.locale);
       await workspace.renameCandidate(candidate, name);
     },
 

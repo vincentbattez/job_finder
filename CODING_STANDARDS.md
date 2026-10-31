@@ -7,11 +7,12 @@ The generic rules of the code. The why of a decision is in its ADR (`docs/adr/`)
 - **The least code that achieves the result.** We write what the ticket asks for. A family of interchangeable modules (Sources, Notification Channels) keeps a single module until a second one is asked for, but its contract is generic from the first one (ADR-0010).
 - **A rule that matters is checked by the machine**: a test, the typecheck or the lint. A rule that is only written ends up bypassed by oversight.
 - **Idempotence.** Running a command, a Detection or a job again gives the same result, with no duplicate.
-- **Visible failure.** An error stops the command with a non-zero exit code and a message, in the Candidate's locale, that says what to do. Silence always means "nothing to report".
+- **Visible failure.** An error stops the command with a non-zero exit code and a message, in the Candidate's locale, that says what to do. Silence always means "nothing to report". Every error comes from the catalogue of Error Codes, `src/domain/error.ts`, through `codedError`; a boundary that catches anything ties a foreign error to a code with `codedErrorOf` (ADR-0015). A failure no one waits for in front of the screen, such as that of a job the Detection queued or of a notification, is notified or kept on its job for the Posting page: the business code (`src/actions/`, `src/modules/`, `src/workspace/`) never writes to `process.stderr` nor `process.stdout`, which only the CLI and the worker, which display, do. **(CI)**
 
 ## Architecture
 
 - **Actions.** Each feature is an action of `src/actions/`. The CLI and the front relay to it, with no business rule (ADR-0003). **(CI)**
+- **Front failures.** Every action of a route of `src/web/routes/` goes through `relayAction` (`src/web/relay-action.server.ts`): a refusal goes back to the form that posted it, in its code's message, and the form keeps what was typed. Every loader, the root's included, goes through `relayLoader`: the `ErrorBoundary` shows the message and the Error Code of what failed, a foreign failure under `unexpected`, never a raw message (ADR-0002, ADR-0015). **(CI)**
 - **Modules.** A module lives in its folder of `src/modules/`, with a single entry point and its prompts in separate files. It exchanges with the other modules through the Artifacts on disk and through the database, without importing them (ADR-0003). **(CI)**
 - **Interchangeable modules (ADR-0010).** When the Candidate picks between several modules that do the same job (a Notification Channel, the Source of a Watch), these modules form a family:
   - the family's contract lives in `src/<family>/`;
@@ -28,6 +29,7 @@ The generic rules of the code. The why of a decision is in its ADR (`docs/adr/`)
 - An action receives its input as `unknown` and parses it. It returns `void` or domain values. **(CI)**
 - A domain value is always obtained through `parse`. `as` assertions are refused. **(CI)**
 - Validation happens at the boundaries. Past the ACL, the code trusts the types.
+- **Bounded calls.** In an ACL, every subprocess has a `timeout` and every request, `fetch` or an injected `httpFetch`, a `signal` with a time limit: a call that never returns would leave its job "Running" forever and hold the queue behind it. The interactive session of `jf edit` and `jf profile`, which the Candidate ends themselves, is the named exception of `UNBOUNDED_CALL_LIST`. **(CI)**
 - A new raw access, for example an HTTP client or an SDK, is added to `RAW_DATA_ACCESS_LIST` in `test/architecture.test.ts`.
 
 ## Code

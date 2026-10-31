@@ -20,7 +20,8 @@ import { createRecordedFetch } from './recorded-http.ts';
 // Applied, Archived and To Apply; Camille has no Watch, hence no Posting. The tests
 // that change data work on Postings of their own: Bastia 2026-2426147 (a Research and a Letter to
 // correct), Versailles 2026-2409178 (two Research), Rennes 2026-2420931 (a Research, ready for
-// its Letter) and Narbonne 2026-2412591 (a failed Research). Sacha, Noé, Inès, Malo and Rose, without
+// its Letter) and Narbonne 2026-2412591 (a failed Research). Léa's Béthune Posting 2026-2445609 has a Research
+// ready whose notification failed, which e2e/launch.test.ts only reads. Sacha, Noé, Inès, Malo and Rose, without
 // Watch either, each have their Profile changed by one e2e test only, which writes it first; Sacha
 // also has the Instructions the e2e tests change. Léa, Camille and Sacha have their Notification Channel
 // through the fake Home Assistant; Yanis and Zoé each have theirs changed by one e2e test only. Léa's Posting
@@ -42,6 +43,7 @@ const VERSAILLES_REFERENCE = '2026-2409178';
 const RENNES_REFERENCE = '2026-2420931';
 const NARBONNE_REFERENCE = '2026-2412591';
 const INSTRUCTIONS_REFERENCE = '2026-2409247';
+const NOTIFICATION_FAILED_REFERENCE = '2026-2445609';
 // Where playwright.config.ts started the fake Home Assistant
 const FAKE_HOME_ASSISTANT_URL = process.env.FAKE_HOME_ASSISTANT_URL ?? '';
 // Without a Watch, beside Léa (test/lea.ts)
@@ -101,7 +103,12 @@ const RUN_BY_VERSION: Record<string, Parameters<typeof createFakeAiSession>[numb
   [`${VERSAILLES_REFERENCE} research v1`]: researchRun('Recherche première : le pôle civil du TJ de Versailles'),
   [`${VERSAILLES_REFERENCE} research v2`]: researchRun('Recherche relancée : le pôle civil du TJ de Versailles'),
   [`${RENNES_REFERENCE} research v1`]: researchRun('Recherche : la JIRS du TJ de Rennes'),
-  [`${NARBONNE_REFERENCE} research v1`]: { isSuccess: false },
+  // The reason e2e/launch.test.ts reads beside the Relaunch button
+  [`${NARBONNE_REFERENCE} research v1`]: {
+    isSuccess: false,
+    log: 'Claude Code a atteint la limite de son abonnement.',
+  },
+  [`${NOTIFICATION_FAILED_REFERENCE} research v1`]: researchRun('Recherche : l’instruction du TJ de Béthune'),
   [`${INSTRUCTIONS_REFERENCE} research v1`]: researchRun('Recherche par défaut : le TJ de Pontoise'),
   [`${INSTRUCTIONS_REFERENCE} research v2`]: researchRun('Recherche selon Léa : le TJ de Pontoise'),
 };
@@ -175,6 +182,18 @@ await actions.runQueuedJobs();
 await actions.runModule({ module: 'research', reference: RENNES_REFERENCE });
 await actions.runModule({ module: 'research', reference: NARBONNE_REFERENCE });
 await actions.runQueuedJobs();
+
+// Ready while Home Assistant refused the token Léa saved for a while: its notification failed
+// (e2e/launch.test.ts)
+const leaChannel = { candidateId: 'lea', channel: 'home-assistant' };
+const leaParameters = { url: FAKE_HOME_ASSISTANT_URL, service: 'notify.mobile_app_iphone_de_lea' };
+await actions.saveNotificationChannel({ ...leaChannel, parameters: { ...leaParameters, token: 'jeton-refusé' } });
+await actions.runModule({ module: 'research', reference: NOTIFICATION_FAILED_REFERENCE });
+await actions.runQueuedJobs();
+await actions.saveNotificationChannel({
+  ...leaChannel,
+  parameters: { ...leaParameters, token: FAKE_HOME_ASSISTANT_TOKEN },
+});
 
 // One Research with the default Instructions, one with Léa's, which she then deletes
 await actions.runModule({ module: 'research', reference: INSTRUCTIONS_REFERENCE });
