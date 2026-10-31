@@ -79,11 +79,14 @@ test.describe('map of the Postings', () => {
     await page.getByRole('button', { name: 'Filtrer' }).click();
 
     await expect(findPoints(page)).toHaveCount(3);
-    await expect(findPoints(page).and(page.getByRole('button', { name: /2026-2290529/ }))).toHaveAttribute(
-      'data-status',
-      'archived',
-    );
-    await expect(page.getByRole('row', { name: /2026-2290529/ })).toHaveCount(1);
+    // Archived is a mark beside the status, which the point keeps (ADR-0007)
+    const archivedPoint = findPoints(page).and(page.getByRole('button', { name: /2026-2290529/ }));
+    await expect(archivedPoint).toHaveAttribute('data-archived', '');
+    await expect(archivedPoint).not.toHaveAttribute('data-status', 'archived');
+    await expect(page.getByRole('row', { name: /2026-2290529/ }).locator('.badge')).toHaveText([
+      /À traiter|Expirée/,
+      'Archivée',
+    ]);
   });
 
   test('filters the list and the map by region, then by city', async ({ page }) => {

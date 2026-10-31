@@ -49,7 +49,8 @@ test.describe('/applications', () => {
     await expect(page.getByRole('heading', { level: 2 })).toHaveText(SECTION_HEADING_LIST);
     await expect(findRow(page, 'Obtenues', HIRED_REFERENCE).locator('.badge')).toHaveText('Obtenue');
     await expect(findRow(page, 'Refusées', REJECTED_REFERENCE).locator('.badge')).toHaveText('Refusée');
-    await expect(findRow(page, 'Archivées', ARCHIVED_REFERENCE).locator('.badge')).toHaveText('Archivée');
+    // Archived is a mark beside the step, which it keeps (ADR-0007)
+    await expect(findRow(page, 'Archivées', ARCHIVED_REFERENCE).locator('.badge')).toHaveText(['Postulée', 'Archivée']);
     const archivedWithoutApplication = findRow(
       page,
       'Archivées sans Candidature',
@@ -57,6 +58,13 @@ test.describe('/applications', () => {
     );
     await expect(archivedWithoutApplication.getByRole('button', { name: 'Marquer comme Postulée' })).toBeVisible();
     await expect(archivedWithoutApplication.getByRole('group', { name: 'Issue de la Candidature' })).toHaveCount(0);
+  });
+
+  test('shows an Archived Application at its step on its page too, beside the Archived badge', async ({ page }) => {
+    await chooseLea(page);
+    await page.goto(`/postings/${ARCHIVED_REFERENCE}`);
+
+    await expect(page.locator('.posting-detail__title .badge')).toHaveText(['Postulée', 'Archivée']);
   });
 
   test('puts a Rejected Application back In progress from its row, staying on the page', async ({ page }) => {

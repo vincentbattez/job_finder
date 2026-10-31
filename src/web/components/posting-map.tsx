@@ -92,6 +92,10 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
             .marker([posting.latitude, posting.longitude], { icon, title: `${posting.title} · ${posting.reference}` })
             .addTo(map);
           point.getElement()?.setAttribute('data-status', showStatus(posting));
+          // Archived is a mark beside the status, which the point keeps (ADR-0007)
+          if (posting.archivedAt !== null) {
+            point.getElement()?.setAttribute('data-archived', '');
+          }
           const openPosting = () => void navigate(`/postings/${posting.reference}`);
           point.on('click', openPosting);
           point.on('keypress', ({ originalEvent }) => {
@@ -127,7 +131,7 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
         <li className="posting-map__key" data-status="expired">
           {t('expired', { ns: 'common' })}
         </li>
-        <li className="posting-map__key" data-status="archived">
+        <li className="posting-map__key" data-archived="">
           {t('archived', { ns: 'common' })}
         </li>
       </ul>

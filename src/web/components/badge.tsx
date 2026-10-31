@@ -20,24 +20,31 @@ interface IShownPosting {
 }
 
 // Expired comes from the Deadline, whatever the status (GLOSSARY.md). The badge and the map
-// show it only in place of To Apply: an Applied Posting stays green past its Deadline. Archived is a
-// mark beside the Status (ADR-0007): shown in its place while it lasts, the Status back once unarchived.
-export function showStatus({ step, isExpired, archivedAt }: IShownPosting): Step | 'expired' | 'archived' {
-  if (archivedAt !== null) {
-    return 'archived';
-  }
+// show it only in place of To Apply: an Applied Posting stays green past its Deadline.
+export function showStatus({ step, isExpired }: Pick<IShownPosting, 'step' | 'isExpired'>): Step | 'expired' {
   return step === 'to_apply' && isExpired ? 'expired' : step;
+}
+
+// Archived is a mark beside the Status, which it keeps (ADR-0007): its own badge, next to the Status one
+export function ArchivedBadge() {
+  const { t } = useTranslation();
+  return (
+    <span className="badge" data-archived="">
+      {t('archived')}
+    </span>
+  );
 }
 
 export function StatusBadge(posting: Readonly<IShownPosting>) {
   const { t } = useTranslation();
   const shownStatus = showStatus(posting);
   return (
-    <span className="badge" data-status={shownStatus}>
-      {shownStatus === 'expired' || shownStatus === 'archived'
-        ? t(shownStatus)
-        : t(`statusLabelByStatus.${shownStatus}`)}
-    </span>
+    <>
+      <span className="badge" data-status={shownStatus}>
+        {shownStatus === 'expired' ? t(shownStatus) : t(`statusLabelByStatus.${shownStatus}`)}
+      </span>
+      {posting.archivedAt !== null && <ArchivedBadge />}
+    </>
   );
 }
 

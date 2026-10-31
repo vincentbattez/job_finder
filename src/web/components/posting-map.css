@@ -67,8 +67,12 @@
     --point: var(--color-status-expired);
   }
 
-  .posting-map__point[data-status='archived'],
-  .posting-map__key[data-status='archived']::before {
+  /* Archived keeps the fill of its status, inside the dashed rim of what steps back */
+  .posting-map__point[data-archived] {
+    border: 2px dashed var(--color-muted);
+  }
+
+  .posting-map__key[data-archived]::before {
     border: 2px dashed var(--color-muted);
     background: var(--color-status-archived-soft);
   }

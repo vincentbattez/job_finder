@@ -184,8 +184,8 @@ test('takes a Candidate with the en locale through a Posting and its Status in E
   await page.getByRole('button', { name: 'Mark as Applied' }).click();
   await page.getByRole('button', { name: 'Cancel' }).click();
   await page.getByRole('button', { name: 'Archive' }).click();
-  await expect(statusBadge).toHaveText('Archived');
+  await expect(statusBadge).toHaveText(['To Apply', 'Archived']);
   await expect(page.getByRole('button', { name: 'Mark as Applied' })).toBeVisible();
   await unarchive.click();
-  await expect(statusBadge).toHaveText('To Apply');
+  await expect(statusBadge).toHaveText(['To Apply']);
 });
