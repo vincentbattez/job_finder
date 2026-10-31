@@ -530,8 +530,8 @@ export const QUEUED_JOB_SCHEMA = z.union([JOB_SCHEMA, PROFILE_JOB_SCHEMA]);
 
 export type QueuedJob = z.infer<typeof QUEUED_JOB_SCHEMA>;
 
-// An Upload and its conversion: the state of its latest conversion job, absent before any, and its log,
-// which says why it failed
+// An Upload and its conversion: the state of its latest conversion job, and its log, which says why it
+// failed; with no job, ready if the Profile holds its conversion under its name, absent otherwise
 export const UPLOAD_CONVERSION_SCHEMA = z
   .object({
     fileName: UPLOAD_FILE_NAME_SCHEMA,
