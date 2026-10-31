@@ -122,6 +122,11 @@ Where a Posting stands in its Application: To Apply, Applied, Invited, Interview
 _Avoid_: state, stage
 _Formerly_: Statut
 
+**Step**:
+Status as it stands now: Invited or Interviewed for an Applied Application, from its Interviews, otherwise the Status the Candidate set.
+_Avoid_: stage, computed status
+_Formerly_: Étape
+
 **To Apply**:
 Status of a Posting the Candidate has not applied to yet.
 _Avoid_: new, pending, to process
