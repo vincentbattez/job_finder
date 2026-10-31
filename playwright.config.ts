@@ -75,6 +75,8 @@ export default defineConfig({
       url: `${BASE_URL}/design`,
       // A server already running on the port may read data/: always start the one seeded above
       reuseExistingServer: false,
+      // In CI the dev server's log goes to the job's: it says when Vite re-optimizes and reloads
+      ...(process.env.CI !== undefined && { stdout: 'pipe' as const }),
     },
     {
       // The worker, in its own process like the lpm service: it runs the jobs the front queues,

@@ -58,3 +58,10 @@ jobs:
         run: npx playwright install --only-shell chromium
       - name: Playwright
         run: mise run test:e2e
+      # The page snapshot and the trace of each failed test, to read a failure the log does not explain
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: playwright-test-results
+          path: test-results/
+          if-no-files-found: ignore
