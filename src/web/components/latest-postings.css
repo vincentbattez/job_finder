@@ -1,0 +1,32 @@
+/* The tiles beside the map on a wide screen, above it on a phone */
+@layer components {
+  .latest-postings {
+    display: grid;
+    gap: var(--space-md);
+    min-width: 0;
+  }
+
+  .latest-postings__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-xs) var(--space-md);
+  }
+
+  .latest-postings__body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    align-items: start;
+    gap: var(--space-lg);
+  }
+
+  .latest-postings__tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+    gap: var(--space-md);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+}

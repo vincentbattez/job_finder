@@ -3,7 +3,8 @@ import { index, route, type RouteConfig } from '@react-router/dev/routes';
 import { REDIRECT_LIST } from './redirects.ts';
 
 export default [
-  index('routes/postings.tsx'),
+  index('routes/home.tsx'),
+  route('postings', 'routes/postings.tsx'),
   route('postings/:reference', 'routes/posting.tsx'),
   route('postings/:reference/status', 'routes/status.ts'),
   route('postings/:reference/archive', 'routes/archive.ts'),

@@ -28,6 +28,8 @@ test('imports a Job Description dropped on the Postings: it shows at once, then 
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption(CANDIDATE_NAME);
   await page.getByRole('button', { name: 'Choisir' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Bonjour ${CANDIDATE_NAME}`);
+  await page.goto('/postings');
   // The drop needs React, which enables the field once it runs
   await expect(page.getByLabel('Importer une Fiche de poste')).toBeEnabled();
 
@@ -54,7 +56,7 @@ test('imports a Job Description dropped on the Postings: it shows at once, then 
     timeout: READY_TIMEOUT_MS,
   });
 
-  await page.goto('/');
+  await page.goto('/postings');
   const row = page.getByRole('row', { name: new RegExp(TITLE) });
   await expect(row.getByRole('cell').last()).toHaveText('15/12/2026');
   // Located in Grenoble by API Géo's recorded answer

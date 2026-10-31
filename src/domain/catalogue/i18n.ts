@@ -6,6 +6,7 @@ import { CLI_EN } from './en/cli.ts';
 import { COMMON_EN } from './en/common.ts';
 import { DEFAULT_INSTRUCTIONS_EN } from './en/default-instructions.ts';
 import { ERROR_EN } from './en/error.ts';
+import { HOME_EN } from './en/home.ts';
 import { NOTIFICATION_EN } from './en/notification.ts';
 import { POSTING_LIST_EN } from './en/posting-list.ts';
 import { POSTING_EN } from './en/posting.ts';
@@ -14,6 +15,7 @@ import { CLI_FR } from './fr/cli.ts';
 import { COMMON_FR } from './fr/common.ts';
 import { DEFAULT_INSTRUCTIONS_FR } from './fr/default-instructions.ts';
 import { ERROR_FR } from './fr/error.ts';
+import { HOME_FR } from './fr/home.ts';
 import { NOTIFICATION_FR } from './fr/notification.ts';
 import { POSTING_LIST_FR } from './fr/posting-list.ts';
 import { POSTING_FR } from './fr/posting.ts';
@@ -23,6 +25,7 @@ import { SETTINGS_FR } from './fr/settings.ts';
 // shape to those of fr/: a key missing on either side fails the typecheck.
 const EN = {
   common: COMMON_EN,
+  home: HOME_EN,
   postingList: POSTING_LIST_EN,
   cli: CLI_EN,
   error: ERROR_EN,
@@ -38,6 +41,7 @@ const RESOURCES_BY_LOCALE: Record<Locale, Resources> = {
   en: EN,
   fr: {
     common: COMMON_FR,
+    home: HOME_FR,
     postingList: POSTING_LIST_FR,
     cli: CLI_FR,
     error: ERROR_FR,

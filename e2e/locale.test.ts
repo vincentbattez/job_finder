@@ -6,6 +6,8 @@ test('shows the Posting list in English to a Candidate with the en locale', asyn
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Emma');
   await page.getByRole('button', { name: 'Choisir' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Emma');
+  await page.goto('/postings');
 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Postings');
   await expect(page).toHaveTitle('Postings · Job Finder');
@@ -26,7 +28,7 @@ async function chooseEmma(page: Page) {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Emma');
   await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Postings');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Emma');
 }
 
 test('shows the menu and the Profile in English to a Candidate with the en locale', async ({ page }) => {
@@ -34,6 +36,7 @@ test('shows the menu and the Profile in English to a Candidate with the en local
   await expect(page.getByRole('combobox', { name: 'Candidate' })).toHaveValue('emma');
   await expect(page.getByRole('button', { name: 'Choose' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Pages' }).getByRole('link')).toHaveText([
+    'Home',
     'Postings',
     'Profile',
     'Instructions',
@@ -98,6 +101,8 @@ test('shows the tools of the Posting list in English to a Candidate with the en 
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Emma');
   await page.getByRole('button', { name: 'Choisir' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Emma');
+  await page.goto('/postings');
 
   // A Detection another test runs hides the button behind its progress, in English too (ADR-0014)
   await expect(
@@ -123,6 +128,8 @@ test('takes a Candidate with the en locale through a Posting and its Status in E
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Oliver');
   await page.getByRole('button', { name: 'Choisir' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Oliver');
+  await page.goto('/postings');
   await page.getByRole('checkbox', { name: 'Show the Archived' }).check();
   await page.getByRole('button', { name: 'Filter' }).click();
   await page.getByRole('link', { name: 'registry-officer-douai.md' }).click();

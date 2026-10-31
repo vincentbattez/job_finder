@@ -10,6 +10,8 @@ async function chooseLea(page: Page) {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Léa');
   await page.getByRole('button', { name: 'Choisir' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Léa');
+  await page.goto('/postings');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Léa');
 }
 
