@@ -17,6 +17,7 @@ archunit
 autoincrement
 CLAUDECODE
 commitlint
+gstatic
 ianvs
 isbot
 knip

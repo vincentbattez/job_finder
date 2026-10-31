@@ -44,7 +44,15 @@ export default defineConfig({
   // The GitHub runner has 2 vCPUs, so Playwright's default of half the cores ran the tests one at a
   // time; they mostly wait on the front, so two side by side fit
   ...(process.env.CI !== undefined && { workers: 2 }),
-  use: { baseURL: BASE_URL },
+  use: {
+    baseURL: BASE_URL,
+    // src/web/root.tsx loads its fonts from Google Fonts, the only network dependency of these tests,
+    // which run without network (CODING_STANDARDS, Tests). Chromium resolves both hosts to nothing: the
+    // pages render on the fallback fonts and the run loses 7 to 9 % of its duration (#113)
+    launchOptions: {
+      args: ['--host-resolver-rules=MAP fonts.googleapis.com ~NOTFOUND, MAP fonts.gstatic.com ~NOTFOUND'],
+    },
+  },
   // How a test reaches the fake Home Assistant, to read the notifications it received or save its
   // token in a Notification Channel (e2e/notifications.test.ts), and the data
   // folder, to put back the Profile it changes (e2e/profile.test.ts)
