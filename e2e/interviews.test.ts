@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 // Applications test/seed-front.ts marks Applied, whose Interviews only these tests change: one with JS,
@@ -41,6 +43,18 @@ test('adds an Interview to an Application, which becomes Invited, then edits and
   await expect(interview).toContainText('19 nov. 2099, 14:00');
   await expect(interview).toContainText('Mme Durand, directrice de greffe');
   await expect(page.locator('.badge[data-status]').first()).toHaveText('Convoquée');
+
+  // The iCal file, its links on the address the page was opened through
+  const icalLink = interview.getByRole('link', { name: 'Ajouter à l’agenda (iCal)' });
+  const downloadPromise = page.waitForEvent('download');
+  await icalLink.click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe(`interview-${REFERENCE}-1.ics`);
+  const ical = readFileSync(await download.path(), 'utf8').replaceAll('\r\n ', '');
+  expect(ical).toContain('DTSTART;TZID=Europe/Paris:20991119T140000\r\n');
+  expect(ical).toContain(`Page Job Finder : ${new URL(page.url()).origin}/postings/${REFERENCE}`);
+  const response = await page.request.get(String(await icalLink.getAttribute('href')));
+  expect(response.headers()['content-type']).toBe('text/calendar; charset=utf-8');
 
   await interview.getByText('Modifier l’Entretien 1').click();
   await interview.getByRole('textbox', { name: 'Lieu' }).fill('En visioconférence');

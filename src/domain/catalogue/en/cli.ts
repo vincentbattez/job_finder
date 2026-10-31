@@ -13,6 +13,7 @@ export const CLI_EN = {
   obsoleteConfig:
     '{{configPath}} is no longer read: its content is in the database, and the Candidates, their Watches and the Default Deadline Period are now set in the front. Delete it.',
   unreadableFile: 'Cannot read the file {{filePath}} ({{reason}}). Check its path.',
+  fileWriteFailed: 'Cannot write the file {{filePath}} ({{reason}}). Check that its folder is writable.',
 
   // A Posting on one line. The Source gives the Deadline as a day, at midnight UTC.
   deadline: '{{deadline, datetime(timeZone: UTC)}}',
@@ -141,6 +142,12 @@ export const CLI_EN = {
   interviewAdded: 'Interview added to {{reference}}.\n',
   interviewEdited: 'Interview {{number}} of {{reference}} saved.\n',
   interviewDeleted: 'Interview {{number}} of {{reference}} deleted.\n',
+  // jf ical
+  icalDescription:
+    'Writes the iCal file of an Interview in the current folder, its links on the address of the front: jf ical <posting> <interview> [--origin http://mac-mini.local:5180]',
+  icalUsage:
+    'Usage: jf ical <posting> <interview> [--origin <address of the front>]. “jf interviews <posting>” lists the numbers.',
+  icalWritten: 'iCal file written: {{filePath}}\n',
 
   // The worker, in lpm logs worker
   workerReady: 'Worker ready: it runs the queued jobs, one at a time.\n',

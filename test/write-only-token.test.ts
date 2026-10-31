@@ -55,6 +55,7 @@ const INPUT_BY_ACTION: Record<string, object> = {
   saveNotes: { notes: '# Appel du greffe\n' },
   // The Posting is Applied by changeStatus first, which runs before: an Interview needs an Application
   addInterview: { start: '2026-11-19T14:00', place: 'Béthune', interviewers: 'Mme Durand' },
+  readIcalFile: { origin: 'https://10.8.0.1:5180' },
 };
 
 type ActionMap = Record<string, (rawInput: unknown) => Promise<unknown>>;

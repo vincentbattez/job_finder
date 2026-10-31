@@ -1,8 +1,10 @@
 import { z } from 'zod/v4';
 
+import { tFor } from '#/domain/catalogue/i18n.ts';
 import { codedError } from '#/domain/coded-error.ts';
-import type { Interview, Posting } from '#/domain/index.ts';
+import { ICAL_FILE_SCHEMA, type IcalFile, type Interview, type Locale, type Posting } from '#/domain/index.ts';
 import { dateOfParisDateTime } from '#/domain/paris-time.ts';
+import { formatCalendar } from '#/ical/index.ts';
 import { hasBeenApplied } from '#/status/index.ts';
 
 import { REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
@@ -34,6 +36,38 @@ const INTERVIEW_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({ number: z.coerce.
 
 // A field left out keeps its value
 const INTERVIEW_EDIT_INPUT_SCHEMA = INTERVIEW_INPUT_SCHEMA.extend(z.object(FIELDS_SHAPE).partial().shape);
+
+// The address the Candidate opened Job Finder through: only its origin builds the links
+const ICAL_INPUT_SCHEMA = INTERVIEW_INPUT_SCHEMA.extend({ origin: z.url().transform((url) => new URL(url).origin) });
+
+// The sections of the Posting page to review before the Interview, by their anchor
+const REVIEWED_ARTIFACT_LIST = ['research', 'letter', 'interview_brief'] as const;
+
+const MINUTE_MS = 60_000;
+
+// What the Candidate reviews from their phone before the Interview: the official ad, if the Posting has
+// one, then the Posting page and its sections, all on the origin they opened Job Finder through
+function describeLinks(posting: Posting, pageUrl: string, locale: Locale): string {
+  const t = tFor(locale, 'posting');
+  const linkList = [
+    ...(posting.url === null ? [] : [{ label: t('ical.officialAd'), url: posting.url }]),
+    { label: t('ical.postingPage'), url: pageUrl },
+    ...REVIEWED_ARTIFACT_LIST.map((artifact) => ({
+      label: t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' }),
+      url: `${pageUrl}#${artifact}`,
+    })),
+  ];
+  return linkList.map((link) => t('ical.link', link)).join('\n');
+}
+
+// An employer given on several lines stays on the single line of the event's title
+function summarize(posting: Posting, locale: Locale): string {
+  const t = tFor(locale, 'posting');
+  const employer = posting.employer?.split('\n').join(' / ') ?? '';
+  return employer === ''
+    ? t('ical.summaryWithoutEmployer', { title: posting.title })
+    : t('ical.summary', { title: posting.title, employer });
+}
 
 export function createInterviewActions({ workspace, findPosting, findLocale }: ActionContext) {
   async function findInterview(rawInput: unknown): Promise<{ posting: Posting; interview: Interview }> {
@@ -75,6 +109,29 @@ export function createInterviewActions({ workspace, findPosting, findLocale }: A
         durationMinutes: edit.durationMinutes ?? interview.durationMinutes,
         place: edit.place ?? interview.place,
         interviewers: edit.interviewers ?? interview.interviewers,
+      });
+    },
+
+    // Its UID is the Interview's id, never reused, unlike its number once the last one is deleted
+    async readIcalFile(rawInput: unknown): Promise<IcalFile> {
+      const { origin } = ICAL_INPUT_SCHEMA.parse(rawInput);
+      const { posting, interview } = await findInterview(rawInput);
+      const locale = await findLocale(posting.candidateId);
+      const pageUrl = `${origin}/postings/${encodeURIComponent(posting.reference)}`;
+      const text = formatCalendar({
+        uid: `interview-${String(interview.id)}@job-finder`,
+        sequence: interview.editCount,
+        startAt: interview.startAt,
+        endAt: new Date(interview.startAt.getTime() + interview.durationMinutes * MINUTE_MS),
+        summary: summarize(posting, locale),
+        location: interview.place,
+        description: describeLinks(posting, pageUrl, locale),
+        url: pageUrl,
+        stampedAt: new Date(),
+      });
+      return ICAL_FILE_SCHEMA.parse({
+        fileName: `interview-${posting.reference}-${String(interview.number)}.ics`,
+        text,
       });
     },
 

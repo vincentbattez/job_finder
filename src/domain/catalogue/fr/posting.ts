@@ -99,6 +99,15 @@ export const POSTING_FR: typeof POSTING_EN = {
     save: 'Enregistrer l’Entretien',
     delete: 'Supprimer l’Entretien {{number}}',
     deleteForGood: 'Supprimer définitivement l’Entretien {{number}}',
+    ical: 'Ajouter à l’agenda (iCal)',
+  },
+
+  ical: {
+    summary: 'Entretien · {{title}} · {{employer}}',
+    summaryWithoutEmployer: 'Entretien · {{title}}',
+    officialAd: 'Annonce officielle',
+    postingPage: 'Page Job Finder',
+    link: '{{label}} : {{url}}',
   },
 
   detection: {

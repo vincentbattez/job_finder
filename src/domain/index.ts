@@ -497,6 +497,11 @@ export const VISUALIZATION_SCHEMA = z.object({ html: z.string() }).brand<'Domain
 
 export type Visualization = z.infer<typeof VISUALIZATION_SCHEMA>;
 
+// The iCal file of an Interview, which the front serves for download and jf ical writes
+export const ICAL_FILE_SCHEMA = z.object({ fileName: z.string(), text: z.string() }).brand<'Domain'>();
+
+export type IcalFile = z.infer<typeof ICAL_FILE_SCHEMA>;
+
 // A Parameter as the front builds its field: typed in, a list of values, secret, or chosen among what
 // the module lists. Its label and placeholder are i18next keys of the module's own namespace, whose
 // copy stays in its folder (ADR-0010, ADR-0012).

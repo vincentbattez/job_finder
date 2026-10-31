@@ -5,6 +5,7 @@ import { parisDateTimeOf } from '#/actions/paris-time.ts';
 
 import { ButtonRow } from './button-row.tsx';
 import { Deletion } from './deletion.tsx';
+import { IcalButton } from './ical-button.tsx';
 
 import './interviews.css';
 
@@ -97,7 +98,11 @@ function InterviewFields({
   );
 }
 
-function InterviewItem({ interview, renderForm }: Readonly<{ interview: IInterview; renderForm: FormRenderer }>) {
+function InterviewItem({
+  reference,
+  interview,
+  renderForm,
+}: Readonly<{ reference: string; interview: IInterview; renderForm: FormRenderer }>) {
   const headingId = useId();
   const { t } = useTranslation('posting');
   const { number, startAt, durationMinutes, place, interviewers, editCount } = interview;
@@ -117,6 +122,7 @@ function InterviewItem({ interview, renderForm }: Readonly<{ interview: IIntervi
           <dt>{t('interviews.interviewers')}</dt>
           <dd className="interviews__interviewers">{interviewers === '' ? '—' : interviewers}</dd>
         </dl>
+        <IcalButton reference={reference} number={number} />
         <details className="interviews__edit">
           <summary>{t('interviews.edit', { number })}</summary>
           {/* Keyed by its edits, so a saved edit shows the saved values */}
@@ -148,7 +154,7 @@ export function Interviews({
   interviewList,
   renderForm,
 }: Readonly<{
-  posting: { workplace: string | null; city: string | null };
+  posting: { reference: string; workplace: string | null; city: string | null };
   hasApplication: boolean;
   interviewList: IInterview[];
   renderForm: FormRenderer;
@@ -166,7 +172,12 @@ export function Interviews({
           ) : (
             <ol className="interviews__list">
               {interviewList.map((interview) => (
-                <InterviewItem key={interview.number} interview={interview} renderForm={renderForm} />
+                <InterviewItem
+                  key={interview.number}
+                  reference={posting.reference}
+                  interview={interview}
+                  renderForm={renderForm}
+                />
               ))}
             </ol>
           )}

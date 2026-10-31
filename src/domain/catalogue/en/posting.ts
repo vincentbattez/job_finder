@@ -112,6 +112,16 @@ export const POSTING_EN = {
     save: 'Save the Interview',
     delete: 'Delete Interview {{number}}',
     deleteForGood: 'Delete Interview {{number}} for good',
+    ical: 'Add to calendar (iCal)',
+  },
+
+  // The iCal file of an Interview: the event in the calendar and the links its description gives
+  ical: {
+    summary: 'Interview · {{title}} · {{employer}}',
+    summaryWithoutEmployer: 'Interview · {{title}}',
+    officialAd: 'Official ad',
+    postingPage: 'Job Finder page',
+    link: '{{label}}: {{url}}',
   },
 
   // The tools of the Posting list: the Detection, the import, the filters and the map

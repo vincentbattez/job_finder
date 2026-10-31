@@ -222,6 +222,8 @@ export const ERROR_CATALOGUE = {
   unknown_command: 'cli:unknownCommand',
   // A file named on the command line cannot be read
   unreadable_file: 'cli:unreadableFile',
+  // The file a command writes in the current folder cannot be written
+  file_write_failed: 'cli:fileWriteFailed',
   // The Candidate closed the question without answering
   no_choice: 'cli:noChoice',
   // An answer that is none of the numbers offered
@@ -250,6 +252,7 @@ export const ERROR_CATALOGUE = {
   instructions_usage: 'cli:instructionsUsage',
   notes_usage: 'cli:notesUsage',
   interviews_usage: 'cli:interviewsUsage',
+  ical_usage: 'cli:icalUsage',
 } satisfies Record<string, ErrorMessageKey>;
 
 export type ErrorCode = keyof typeof ERROR_CATALOGUE;

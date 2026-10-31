@@ -1,0 +1,9 @@
+/* A link that looks like the other buttons, as wide as its words */
+@layer components {
+  .ical-button {
+    display: inline-flex;
+    align-items: center;
+    justify-self: start;
+    text-decoration: none;
+  }
+}

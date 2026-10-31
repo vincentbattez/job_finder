@@ -14,6 +14,8 @@ export const CLI_FR: typeof CLI_EN = {
   obsoleteConfig:
     "{{configPath}} n'est plus lu : son contenu est en base, et les Candidats, leurs Veilles et le Délai par défaut se règlent désormais dans le front. Le supprimer.",
   unreadableFile: 'Impossible de lire le fichier {{filePath}} ({{reason}}). Vérifier son chemin.',
+  fileWriteFailed:
+    'Impossible d’écrire le fichier {{filePath}} ({{reason}}). Vérifier que son dossier est accessible en écriture.',
 
   deadline: '{{deadline, datetime(timeZone: UTC)}}',
   inZone: 'Zone',
@@ -129,6 +131,11 @@ export const CLI_FR: typeof CLI_EN = {
   interviewAdded: 'Entretien ajouté à {{reference}}.\n',
   interviewEdited: 'Entretien {{number}} de {{reference}} enregistré.\n',
   interviewDeleted: 'Entretien {{number}} de {{reference}} supprimé.\n',
+  icalDescription:
+    'Écrit le fichier iCal d’un Entretien dans le dossier courant, ses liens sur l’adresse du front : jf ical <offre> <entretien> [--origin http://mac-mini.local:5180]',
+  icalUsage:
+    'Usage : jf ical <offre> <entretien> [--origin <adresse du front>]. « jf interviews <offre> » liste les numéros.',
+  icalWritten: 'Fichier iCal écrit : {{filePath}}\n',
 
   workerReady: 'Worker prêt : il lance les jobs en file, un à la fois.\n',
   jobFailed: 'en échec : {{firstLine}}',

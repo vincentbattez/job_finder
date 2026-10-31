@@ -5,7 +5,8 @@ import { parseArgs } from 'node:util';
 import { DEFAULT_LOCALE, localeOf, tFor, type Locale } from '#/actions/i18n.ts';
 import { codedError, createActions, formatError, type Actions } from '#/actions/index.ts';
 
-import { readTextFile } from './acl/files.ts';
+import { readTextFile, writeTextFile } from './acl/files.ts';
+import { findDefaultOrigin } from './acl/origin.ts';
 
 const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
 
@@ -33,7 +34,7 @@ interface ICommand {
   run: (
     actions: Actions,
     argumentList: string[],
-    option: { isWaiting: boolean; isAutomation: boolean; interview: IInterviewOption },
+    option: { isWaiting: boolean; isAutomation: boolean; interview: IInterviewOption; origin: string | undefined },
   ) => Promise<void>;
 }
 
@@ -562,6 +563,19 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       }
     },
   },
+  // Written where the Candidate stands, its links on the address of the front
+  ical: {
+    describe: (t) => t('icalDescription'),
+    run: async (actions, [reference, number], { origin = findDefaultOrigin() }) => {
+      if (reference === undefined || number === undefined) {
+        throw codedError('ical_usage');
+      }
+      const locale = await localeOfPosting(actions, reference);
+      const { fileName, text } = await actions.readIcalFile({ reference, number, origin });
+      writeTextFile(fileName, text, locale);
+      process.stdout.write(tFor(locale, 'cli')('icalWritten', { filePath: path.resolve(fileName) }));
+    },
+  },
   edit: {
     describe: (t) => t('editDescription'),
     run: async (actions, argumentList) => {
@@ -598,6 +612,8 @@ async function run(): Promise<void> {
       duration: { type: 'string' },
       place: { type: 'string' },
       interviewers: { type: 'string' },
+      // The address of the front the links of jf ical start with
+      origin: { type: 'string' },
     },
     allowPositionals: true,
   });
@@ -619,6 +635,7 @@ async function run(): Promise<void> {
   await command.run(actions, argumentList, {
     isWaiting: values.wait === true,
     isAutomation: values.automation === true,
+    origin: values.origin,
     // Only those given: an edit keeps the others
     interview: Object.fromEntries(
       Object.entries({
