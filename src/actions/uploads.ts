@@ -53,6 +53,21 @@ function hasUpload({ workspace }: ActionContext, candidateId: string, fileName: 
   return workspace.readUploads(candidateId).some((upload) => upload.fileName === fileName);
 }
 
+// With no job, an Upload named after its conversion that the Profile holds was converted by hand or by
+// jf profile: converting it again would fail on that file or duplicate it under another name
+function conversionOf(
+  job: ProfileJob | undefined,
+  upload: UploadFileName,
+  profileFileNameList: string[],
+): UploadConversion['conversion'] {
+  if (job !== undefined) {
+    return { state: STATE_BY_JOB_STATE[job.state], log: job.log };
+  }
+  const markdownName = upload.replace(/\.pdf$/iu, '.md');
+  const isInProfile = isConversionFileName(markdownName) && profileFileNameList.includes(markdownName);
+  return { state: isInProfile ? 'ready' : 'absent', log: '' };
+}
+
 // The worker converts an Upload into the files of the Profile it names: the CV or a past letter. A file
 // the Profile already has is never overwritten: the job fails and says so.
 export async function runConversion(context: ActionContext, job: ProfileJob): Promise<ProfileJob> {
@@ -109,13 +124,13 @@ export function createUploadActions(context: ActionContext) {
     async listUploads(rawInput: unknown): Promise<UploadConversion[]> {
       const candidate = await findCandidate(rawInput);
       const jobList = await workspace.listProfileJobs(candidate.id);
+      const profileFileNameList = workspace.readProfileFiles(candidate.id).map(({ fileName }) => fileName);
       return workspace.readUploads(candidate.id).map(({ fileName, savedAt }) => {
         const job = jobList.findLast(({ upload }) => upload === fileName);
         return UPLOAD_CONVERSION_SCHEMA.parse({
           fileName,
           savedAt,
-          conversion:
-            job === undefined ? { state: 'absent', log: '' } : { state: STATE_BY_JOB_STATE[job.state], log: job.log },
+          conversion: conversionOf(job, fileName, profileFileNameList),
         });
       });
     },

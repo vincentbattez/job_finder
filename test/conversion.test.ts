@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -148,6 +148,28 @@ describe('conversion of an Upload', () => {
 
     expect(await conversionOf(actions)).toMatchObject({ state: 'ready' });
     expect(await profileFileNameListOf(actions)).toEqual(['cv.md', 'facts.md']);
+  });
+
+  it('shows as Ready an Upload converted without a job, whose Markdown the Profile holds under its name', async () => {
+    const { actions, profileDirectory } = await openProfile(createFakeAiSession());
+    // Put in place by hand: saveUpload would queue a job
+    mkdirSync(path.join(profileDirectory, 'uploads'));
+    writeFileSync(path.join(profileDirectory, 'uploads/letter-tj-lille-2025.pdf'), CV_PDF);
+    expect(await conversionOf(actions)).toEqual({ state: 'absent', log: '' });
+
+    // Converted by hand, or by jf profile
+    writeFileSync(path.join(profileDirectory, 'letter-tj-lille-2025.md'), '# Lettre au TJ de Lille\n');
+
+    expect(await conversionOf(actions)).toEqual({ state: 'ready', log: '' });
+  });
+
+  it('leaves Absent an Upload named after a file of the Profile that no conversion writes', async () => {
+    const { actions, profileDirectory } = await openProfile(createFakeAiSession());
+    mkdirSync(path.join(profileDirectory, 'uploads'));
+
+    writeFileSync(path.join(profileDirectory, 'uploads/facts.pdf'), CV_PDF);
+
+    expect(await conversionOf(actions)).toEqual({ state: 'absent', log: '' });
   });
 
   it('refuses to convert an Upload the Profile does not have', async () => {
