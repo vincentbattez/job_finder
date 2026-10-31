@@ -52,6 +52,7 @@ export function ArtifactVersions({
   artifact,
   state,
   failure,
+  notificationFailure,
   module,
   isEditable,
   versionList,
@@ -67,6 +68,7 @@ export function ArtifactVersions({
         artifact={artifact}
         state={state}
         failure={failure}
+        notificationFailure={notificationFailure}
         module={module}
         workerFailure={workerFailure}
       />

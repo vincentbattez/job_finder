@@ -4,11 +4,15 @@ import { z } from 'zod/v4';
 
 import { codedError, codedErrorOf } from '#/domain/coded-error.ts';
 import type { Job, QueuedJob } from '#/domain/index.ts';
-import { composeResearchReadyNotification } from '#/notification/index.ts';
+import {
+  composeResearchFailedNotification,
+  composeResearchReadyNotification,
+  type NotificationComposer,
+} from '#/notification/index.ts';
 
 import type { ActionContext } from './context.ts';
 import { runExtraction } from './import-job-description.ts';
-import { findInputs, parseModule } from './run-job.ts';
+import { findInputs, parseModule, type JobFailure } from './run-job.ts';
 import { findJobStall } from './stalled-job.ts';
 import { runConversion } from './uploads.ts';
 
@@ -18,8 +22,32 @@ const JOB_INPUT_SCHEMA = z.object({ jobId: z.coerce.number().int() });
 // How often a followed job is read again: a module runs for minutes
 const FOLLOW_INTERVAL_MS = 1000;
 
+// A ready Research is notified. A failed one only when automatic: whoever launched it by hand sees
+// it fail, while no one waits for one the Detection or an extraction queued.
+function composeFinishedNotification(job: Job, failure: JobFailure | undefined): NotificationComposer | null {
+  if (job.state === 'done') {
+    return composeResearchReadyNotification(job.posting);
+  }
+  return failure !== undefined && job.isAutomatic
+    ? composeResearchFailedNotification(job.posting, failure.message)
+    : null;
+}
+
 export function createJobActions(context: ActionContext) {
   const { workspace, runJob, findPosting, findLocale, notify } = context;
+
+  // A notification not sent stays on the job, which the Posting page shows (CODING_STANDARDS
+  // “Visible failure”)
+  async function notifyFinished(job: QueuedJob, failure: JobFailure | undefined): Promise<QueuedJob> {
+    if (job.module !== 'research') {
+      return job;
+    }
+    const composeNotification = composeFinishedNotification(job, failure);
+    const notificationFailure =
+      composeNotification === null ? undefined : await notify(job.posting, composeNotification);
+    return notificationFailure === undefined ? job : workspace.failNotification(job, notificationFailure);
+  }
+
   return {
     // Only queues the job: the worker runs it, so restarting the front never stops a session
     // (ADR-0003)
@@ -79,21 +107,19 @@ export function createJobActions(context: ActionContext) {
             continue;
           }
           const { module } = job;
-          const { job: finishedJob } =
+          const { job: finishedJob, failure } =
             module === 'extraction'
-              ? await runExtraction(context, job)
+              ? { ...(await runExtraction(context, job)), failure: undefined }
               : await runJob({ ...job, module }, await findLocale(job.posting.candidateId));
-          jobList.push(finishedJob);
-          if (finishedJob.module === 'research' && finishedJob.state === 'done') {
-            const failure = await notify(finishedJob.posting, composeResearchReadyNotification(finishedJob.posting));
-            // Logged, in lpm logs worker: lpm never restarts a stopped worker, and the job is done
-            if (failure !== undefined) {
-              process.stderr.write(`${failure}\n`);
-            }
-          }
+          jobList.push(await notifyFinished(finishedJob, failure));
         } catch (error) {
           // An error fails this job only, the one running, and the worker goes on with the queue
-          jobList.push(...(await workspace.failRunningJobs((locale) => codedErrorOf(error, locale))));
+          const failedList = await workspace.failRunningJobs((locale) => codedErrorOf(error, locale));
+          for (const failedJob of failedList) {
+            const locale =
+              failedJob.module === 'conversion' ? undefined : await findLocale(failedJob.posting.candidateId);
+            jobList.push(await notifyFinished(failedJob, codedErrorOf(error, locale)));
+          }
         }
       }
       return jobList;

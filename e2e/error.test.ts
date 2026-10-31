@@ -27,9 +27,11 @@ test('refuses an unknown Version next to its button, without an error page', asy
   await version.locator('summary', { hasText: /^v2/ }).click();
   const chooseButton = version.getByRole('button', { name: 'Retenir cette Version' });
   await expect(chooseButton).toBeEnabled();
-  // As if v2 had gone since the page was shown
-  await version.locator('input[name="number"]').evaluate((input: HTMLInputElement) => {
-    input.value = '99';
+  // As if v2 had gone since the page was shown: set in the data the form posts, which no render puts back
+  await chooseButton.evaluate((button: HTMLButtonElement) => {
+    button.form?.addEventListener('formdata', (event) => {
+      event.formData.set('number', '99');
+    });
   });
 
   await chooseButton.click();
@@ -46,9 +48,12 @@ test('keeps the text typed when saving a document fails', async ({ page }) => {
   // React resets a textarea it takes over: typing waits for it to be editable
   await expect(textbox).toBeEditable();
   await textbox.fill('# Recherche corrigée\n');
-  // As if the file had been renamed since the page was shown; after typing, which renders the form again
+  // As if the file had been renamed since the page was shown: set in the data the form posts, which no
+  // render puts back
   await document.locator('input[name="fileName"]').evaluate((input: HTMLInputElement) => {
-    input.value = 'renamed.md';
+    input.form?.addEventListener('formdata', (event) => {
+      event.formData.set('fileName', 'renamed.md');
+    });
   });
 
   await document.getByRole('button', { name: 'Enregistrer' }).click();

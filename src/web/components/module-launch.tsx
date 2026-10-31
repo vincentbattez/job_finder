@@ -15,10 +15,11 @@ export function ModuleLaunch({
   artifact,
   state,
   failure,
+  notificationFailure,
   module,
   workerFailure,
 }: Readonly<
-  Pick<IArtifactVersions, 'artifact' | 'state' | 'failure' | 'module'> & {
+  Pick<IArtifactVersions, 'artifact' | 'state' | 'failure' | 'notificationFailure' | 'module'> & {
     reference: string;
     workerFailure: string | null;
   }
@@ -28,9 +29,11 @@ export function ModuleLaunch({
   const isHydrated = useIsHydrated();
   const isRunning = state === 'queued' || state === 'in_progress';
   useRevalidateWhile(isRunning);
-  // The refusal of a relaunch, else why the last job failed or why the worker does not move it, next
-  // to the Relaunch button
-  const error = fetcher.data?.error ?? failure?.log ?? (isRunning ? workerFailure : null);
+  // The refusal of a relaunch, else why the last job failed, else why the worker does not move it,
+  // else why its notification was not sent: the Candidate was not warned (CODING_STANDARDS “Visible
+  // failure”)
+  const error =
+    fetcher.data?.error ?? failure?.log ?? (isRunning ? workerFailure : null) ?? notificationFailure?.message ?? null;
   return (
     <fetcher.Form method="post" action="/run">
       <input type="hidden" name="reference" value={reference} />

@@ -100,6 +100,24 @@ function findJobsRunOutsideWorker(projectDirectory: string): string[] {
   );
 }
 
+// A failure written only to a standard stream is seen by no one: the business code keeps it, on its
+// job or in its result, for the front, the CLI or a notification. The CLI and the worker display.
+function findStandardStreamWrites(projectDirectory: string): string[] {
+  const filePathList = globSync('src/{actions,modules,workspace}/**/*.{ts,tsx}', {
+    cwd: projectDirectory,
+    exclude: ['**/*.test.{ts,tsx}', 'src/workspace/generated/**'],
+  });
+  return filePathList
+    .filter((filePath) =>
+      /\bprocess\.(?:stderr|stdout)\.write\b/.test(readFileSync(path.join(projectDirectory, filePath), 'utf8')),
+    )
+    .map(
+      (filePath) =>
+        `${filePath} writes to a standard stream, which no one reads: keep the failure where the Candidate ` +
+        'looks for it (CODING_STANDARDS “Visible failure”)',
+    );
+}
+
 // The families of interchangeable modules, each module in src/modules/<family>-<name>/ (ADR-0010).
 // source-import is no Source a Watch chooses but the import of a Job Description by hand: an
 // ordinary module, out of the family.
@@ -774,6 +792,30 @@ describe('architecture', () => {
 
   it('runs the queued jobs only in the worker', () => {
     expect(findJobsRunOutsideWorker(ROOT_DIRECTORY)).toEqual([]);
+  });
+
+  it('catches business code writing a failure to a standard stream', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/actions/jobs.ts': 'export const log = (failure) => process.stderr.write(failure);\n',
+        'src/modules/research/index.ts': "export const log = () => process.stdout.write('done');\n",
+        'src/cli/jf.ts': 'export const log = (failure) => process.stderr.write(failure);\n',
+        'src/worker/worker.ts': "export const log = () => process.stdout.write('ready');\n",
+      }),
+    );
+
+    const violationList = findStandardStreamWrites(projectDirectory);
+
+    expect(
+      violationList
+        .map((violation) => violation.slice(0, violation.indexOf(' ')))
+        .toSorted((left, right) => left.localeCompare(right)),
+    ).toEqual(['src/actions/jobs.ts', 'src/modules/research/index.ts']);
+    expect(violationList[0]).toMatch(/“Visible failure”/);
+  });
+
+  it('writes to a standard stream only in the CLI and the worker, which display', () => {
+    expect(findStandardStreamWrites(ROOT_DIRECTORY)).toEqual([]);
   });
 
   it.each([

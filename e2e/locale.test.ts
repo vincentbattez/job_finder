@@ -99,7 +99,12 @@ test('shows the tools of the Posting list in English to a Candidate with the en 
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Emma');
   await page.getByRole('button', { name: 'Choisir' }).click();
 
-  await expect(page.getByRole('button', { name: 'Run a Detection' })).toBeVisible();
+  // A Detection another test runs hides the button behind its progress, in English too (ADR-0014)
+  await expect(
+    page
+      .getByRole('button', { name: 'Run a Detection' })
+      .or(page.getByRole('region', { name: 'Detection in progress' })),
+  ).toBeVisible();
   await expect(page.getByText('Import a Job Description')).toBeVisible();
   const filters = page.getByRole('search', { name: 'Filters' });
   await expect(filters.getByRole('combobox', { name: 'City' })).toBeVisible();

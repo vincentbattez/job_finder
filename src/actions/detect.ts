@@ -105,7 +105,7 @@ export function createDetectActions({
 
   // In the Zone, a Posting gets its Research (ADR-0003)
   async function startInZone(posting: Posting, repostOf: Posting | undefined): Promise<NotificationComposer> {
-    await workspace.createJob(posting, 'research');
+    await workspace.createJob(posting, 'research', { isAutomatic: true });
     return repostOf === undefined
       ? composeNewPostingNotification(posting)
       : composeRepostNotification(posting, repostOf);
@@ -315,7 +315,9 @@ export function createDetectActions({
       const failureList = await Promise.all(
         notificationList.map(({ posting, notification }) => notify(posting, notification)),
       );
-      const notificationFailureList = failureList.filter((failure) => failure !== undefined);
+      const notificationFailureList = failureList
+        .filter((failure) => failure !== undefined)
+        .map(({ message }) => message);
       const locationFailure = locator.failureFor(await findLocale(found.candidateId));
       const watchDetection = DETECTION_SCHEMA.parse({ ...found, notificationFailureList, locationFailure });
       detectionList.push(watchDetection);

@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { IAiModule } from '#/ai-module/index.ts';
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
 import { tFor } from '#/domain/catalogue/i18n.ts';
-import { codedError } from '#/domain/coded-error.ts';
+import { codedError, type CodedError } from '#/domain/coded-error.ts';
 import {
   ARTIFACT_SCHEMA,
   type Artifact,
@@ -178,6 +178,9 @@ export async function describeModule(workspace: Workspace, posting: Posting, art
   return { refusal: refusal === undefined ? null : wordRefusal(refusal, posting, artifact, locale) };
 }
 
+// Why a job failed, which the notification of an automatic job tells: an Error Code and its message
+export type JobFailure = Pick<CodedError, 'code' | 'message'>;
+
 // The worker runs each queued job with it (ADR-0003); the Version keeps the Instructions it was made
 // with, so that two Versions compare
 export function createJobRunner(
@@ -210,7 +213,7 @@ export function createJobRunner(
   return async function runJob(
     job: Job & { module: Artifact },
     locale: Locale,
-  ): Promise<{ job: Job; version: Version }> {
+  ): Promise<{ job: Job; version: Version; failure: JobFailure | undefined }> {
     const { posting, module } = job;
     const aiModule = AI_MODULE_BY_ARTIFACT[module];
     const { versionList: inputList, directoryList } = await findInputs(workspace, posting, module, locale);
@@ -255,7 +258,8 @@ export function createJobRunner(
     // that of a failure the session names already does
     if (session.errorCode !== null) {
       const { errorCode, log, sessionId } = session;
-      return workspace.finishJob({ job, version }, { errorCode, log, sessionId });
+      const finished = await workspace.finishJob({ job, version }, { errorCode, log, sessionId });
+      return { ...finished, failure: { code: errorCode, message: log } };
     }
     const problem = session.isSuccess
       ? aiModule.outputFileList
@@ -266,7 +270,7 @@ export function createJobRunner(
     if (errorCode === null) {
       aiModule.completeVersion?.(outputDirectory);
     }
-    return workspace.finishJob(
+    const finished = await workspace.finishJob(
       { job, version },
       {
         errorCode,
@@ -274,5 +278,6 @@ export function createJobRunner(
         sessionId: session.sessionId,
       },
     );
+    return { ...finished, failure: problem };
   };
 }

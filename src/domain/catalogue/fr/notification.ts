@@ -12,6 +12,8 @@ export const NOTIFICATION_FR: typeof NOTIFICATION_EN = {
   testTitle: 'Notification de test',
   testMessage: 'Le Canal de notification de {{candidateName}} fonctionne.',
   researchReadyTitle: 'Recherche prête',
+  researchFailedTitle: 'Recherche en échec',
+  researchFailedLine: "Relancer la Recherche depuis la page de l'Offre {{reference}}.",
   notSent: "Notification « {{title}} » de l'Offre {{reference}} non envoyée : {{reason}}",
   quote: '« {{text}} »',
   incompleteChannel:

@@ -369,9 +369,21 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    async createJob(posting: Posting, module: Module): Promise<Job> {
+    // A job the Candidate launches is not automatic: they see it run, and fail, on the screen
+    async createJob(posting: Posting, module: Module, { isAutomatic = false } = {}): Promise<Job> {
       return JOB_SCHEMA.parse(
-        await prisma.job.create({ data: { module, postingId: posting.id }, include: JOB_INCLUDE }),
+        await prisma.job.create({ data: { module, postingId: posting.id, isAutomatic }, include: JOB_INCLUDE }),
+      );
+    },
+
+    // The job keeps its state: only its notification failed
+    async failNotification({ id }: Job, { code, message }: { code: ErrorCode; message: string }): Promise<Job> {
+      return JOB_SCHEMA.parse(
+        await prisma.job.update({
+          where: { id },
+          data: { notificationErrorCode: code, notificationFailure: message },
+          include: JOB_INCLUDE,
+        }),
       );
     },
 
