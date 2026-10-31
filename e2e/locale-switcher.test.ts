@@ -1,4 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+
+import { expect, test } from './candidate.ts';
 
 async function expectFrench(page: Page, heading: string) {
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
@@ -30,10 +32,13 @@ async function expectEnglish(page: Page, heading: string) {
 
 // Nina's locale, which this test alone changes (test/seed-front.ts), is put back to French first: a
 // run stopped halfway may have left it in English
-test('switches the whole site of a Candidate to English, for good, and back to French', async ({ page }) => {
-  await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Nina');
-  await page.getByRole('button', { name: 'Choisir' }).click();
+test('switches the whole site of a Candidate to English, for good, and back to French', async ({
+  page,
+  asCandidate,
+  openPage,
+}) => {
+  await asCandidate('nina');
+  await openPage('/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Nina/);
   await page.getByRole('button', { name: /^(Français|French)$/ }).click();
   await expectFrench(page, 'Bonjour Nina');

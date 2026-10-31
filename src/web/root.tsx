@@ -20,6 +20,7 @@ import {
 } from 'react-router';
 
 import { readCandidate } from './candidate.server.ts';
+import { useIsHydrated } from './components/use-is-hydrated.ts';
 import { CandidateMenu } from './containers/candidate-menu.tsx';
 import { LocaleSwitcher } from './containers/locale-switcher.tsx';
 import { isLoaderFailure } from './failure.ts';
@@ -59,8 +60,11 @@ function Page({ children }: Readonly<{ children: ReactNode }>) {
   const candidateData = useRouteLoaderData<typeof loader>('root');
   const locale = useLocale();
   const { t } = useTranslation('settings');
+  // Tells when React runs the page: a click or a form sent before may go nowhere, so an e2e test waits
+  // for it (e2e/candidate.ts)
+  const isHydrated = useIsHydrated();
   return (
-    <html lang={locale}>
+    <html lang={locale} data-hydrated={isHydrated || undefined}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

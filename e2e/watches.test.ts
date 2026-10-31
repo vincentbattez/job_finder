@@ -1,13 +1,12 @@
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+
+import { expect, test } from './candidate.ts';
 
 // Jade's Watches, which this test alone changes (test/seed-front.ts): any an earlier run left is
 // deleted first
 async function openJadeWatches(page: Page) {
-  await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Jade');
-  await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Jade');
-  await page.getByRole('link', { name: 'Profil', exact: true }).click();
+  await page.goto('/profile');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Profil de Jade');
   const watches = page.getByRole('region', { name: 'Veilles' });
   // Disabled until React hydrates: a click before would go nowhere
   await expect(watches.getByRole('button', { name: 'Créer la Veille' })).toBeEnabled();
@@ -21,7 +20,8 @@ async function openJadeWatches(page: Page) {
 }
 
 // The form of a Watch, built from the descriptor of its Source (ADR-0010)
-test('creates, changes and deletes a Watch of the Profile', async ({ page }) => {
+test('creates, changes and deletes a Watch of the Profile', async ({ page, asCandidate }) => {
+  await asCandidate('jade');
   const watches = await openJadeWatches(page);
   const creation = watches.getByRole('group', { name: 'Nouvelle Veille' });
 

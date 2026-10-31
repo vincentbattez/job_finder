@@ -1,5 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
+import { expect, test, type IFront } from './candidate.ts';
 import { findOverflowing } from './overflow.ts';
 
 // test/seed-front.ts gives Léa one Posting per section that only these tests read: Hired, two Rejected whose
@@ -12,16 +13,9 @@ const ARCHIVED_WITHOUT_APPLICATION_REFERENCE = '2026-2380466';
 
 const SECTION_HEADING_LIST = ['En cours', 'Obtenues', 'Refusées', 'Archivées', 'Archivées sans Candidature'];
 
-async function chooseLea(page: Page) {
-  await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Léa');
-  await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Léa');
-}
-
-async function openApplications(page: Page) {
-  await chooseLea(page);
-  await page.goto('/applications');
+// Léa's, once asCandidate chose her
+async function openApplications({ page, openPage }: IFront) {
+  await openPage('/applications');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Candidatures de Léa');
 }
 
@@ -42,9 +36,10 @@ async function putBackRejected(page: Page, reference: string) {
 }
 
 test.describe('/applications', () => {
-  test('shows every section in order, each Posting in its own', async ({ page }) => {
+  test('shows every section in order, each Posting in its own', async ({ page, asCandidate, openPage }) => {
     await putBackRejected(page, REJECTED_REFERENCE);
-    await openApplications(page);
+    await asCandidate('lea');
+    await openApplications({ page, openPage });
 
     await expect(page.getByRole('heading', { level: 2 })).toHaveText(SECTION_HEADING_LIST);
     await expect(findRow(page, 'Obtenues', HIRED_REFERENCE).locator('.badge')).toHaveText('Obtenue');
@@ -60,16 +55,24 @@ test.describe('/applications', () => {
     await expect(archivedWithoutApplication.getByRole('group', { name: 'Issue de la Candidature' })).toHaveCount(0);
   });
 
-  test('shows an Archived Application at its step on its page too, beside the Archived badge', async ({ page }) => {
-    await chooseLea(page);
+  test('shows an Archived Application at its step on its page too, beside the Archived badge', async ({
+    page,
+    asCandidate,
+  }) => {
+    await asCandidate('lea');
     await page.goto(`/postings/${ARCHIVED_REFERENCE}`);
 
     await expect(page.locator('.posting-detail__title .badge')).toHaveText(['Postulée', 'Archivée']);
   });
 
-  test('puts a Rejected Application back In progress from its row, staying on the page', async ({ page }) => {
+  test('puts a Rejected Application back In progress from its row, staying on the page', async ({
+    page,
+    asCandidate,
+    openPage,
+  }) => {
     await putBackRejected(page, REJECTED_REFERENCE);
-    await openApplications(page);
+    await asCandidate('lea');
+    await openApplications({ page, openPage });
 
     await findRow(page, 'Refusées', REJECTED_REFERENCE).getByRole('button', { name: 'Envoyée' }).click();
 
@@ -78,8 +81,10 @@ test.describe('/applications', () => {
     await expect(page).toHaveURL('/applications');
   });
 
-  test('is reached from the home and from the menu', async ({ page }) => {
-    await chooseLea(page);
+  test('is reached from the home and from the menu', async ({ page, asCandidate, openPage }) => {
+    await asCandidate('lea');
+    await openPage('/');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Léa');
 
     await page.getByRole('link', { name: 'Toutes les Candidatures' }).click();
     await expect(page).toHaveURL('/applications');
@@ -90,9 +95,10 @@ test.describe('/applications', () => {
     await expect(page).toHaveURL('/applications');
   });
 
-  test('fits a phone screen', async ({ page }) => {
+  test('fits a phone screen', async ({ page, asCandidate, openPage }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await openApplications(page);
+    await asCandidate('lea');
+    await openApplications({ page, openPage });
 
     await expect.poll(() => findOverflowing(page)).toEqual([]);
   });
@@ -107,9 +113,14 @@ test.describe('/applications', () => {
   test.describe('before React runs', () => {
     test.use({ javaScriptEnabled: false });
 
-    test('marks a Rejected Application Hired from its row through a plain form, back on the page', async ({ page }) => {
+    test('marks a Rejected Application Hired from its row through a plain form, back on the page', async ({
+      page,
+      asCandidate,
+      openPage,
+    }) => {
       await putBackRejected(page, REJECTED_WITHOUT_JS_REFERENCE);
-      await openApplications(page);
+      await asCandidate('lea');
+      await openApplications({ page, openPage });
 
       await findRow(page, 'Refusées', REJECTED_WITHOUT_JS_REFERENCE).getByRole('button', { name: 'Obtenue' }).click();
 

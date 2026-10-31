@@ -1,4 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+
+import { expect, test, type IFront } from './candidate.ts';
 
 // test/seed-front.ts locates Léa's Postings through API Géo's recorded responses, and gives the three
 // Melun Postings, whose Deadline passed in the summer of 2026, a status each. No e2e test adds a
@@ -7,12 +9,9 @@ import { expect, test, type Page } from '@playwright/test';
 const LEA_POSTING_COUNT = 78;
 const BETHUNE_TITLE = 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE';
 
-async function chooseLea(page: Page) {
-  await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Léa');
-  await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Léa');
-  await page.goto('/postings');
+// Léa's, once asCandidate chose her
+async function openPostingsOfLea({ page, openPage }: IFront) {
+  await openPage('/postings');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Léa');
 }
 
@@ -33,15 +32,17 @@ test.describe('map of the Postings', () => {
     await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
   });
 
-  test('shows a point per Posting of the list', async ({ page }) => {
-    await chooseLea(page);
+  test('shows a point per Posting of the list', async ({ page, asCandidate, openPage }) => {
+    await asCandidate('lea');
+    await openPostingsOfLea({ page, openPage });
 
     await expect(page.getByRole('row')).toHaveCount(1 + LEA_POSTING_COUNT);
     await expect(findPoints(page)).toHaveCount(LEA_POSTING_COUNT);
   });
 
-  test('opens the Posting page on a click on its point', async ({ page }) => {
-    await chooseLea(page);
+  test('opens the Posting page on a click on its point', async ({ page, asCandidate, openPage }) => {
+    await asCandidate('lea');
+    await openPostingsOfLea({ page, openPage });
     await filter(page, { city: 'Béthune' });
     const point = findPoints(page).and(page.getByRole('button', { name: /2026-2445600/ }));
     await expect(point).toHaveAttribute('data-status', /^(to_apply|expired)$/);
@@ -54,8 +55,13 @@ test.describe('map of the Postings', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(BETHUNE_TITLE);
   });
 
-  test('colors a point by status: green when Applied even past its Deadline, red when Expired', async ({ page }) => {
-    await chooseLea(page);
+  test('colors a point by status: green when Applied even past its Deadline, red when Expired', async ({
+    page,
+    asCandidate,
+    openPage,
+  }) => {
+    await asCandidate('lea');
+    await openPostingsOfLea({ page, openPage });
 
     await filter(page, { city: 'Melun' });
 
@@ -69,8 +75,9 @@ test.describe('map of the Postings', () => {
     );
   });
 
-  test('hides the Archived, from the list as from the map, until asked', async ({ page }) => {
-    await chooseLea(page);
+  test('hides the Archived, from the list as from the map, until asked', async ({ page, asCandidate, openPage }) => {
+    await asCandidate('lea');
+    await openPostingsOfLea({ page, openPage });
     await filter(page, { city: 'Melun' });
     await expect(findPoints(page)).toHaveCount(2);
     await expect(page.getByRole('row', { name: /2026-2290529/ })).toHaveCount(0);
@@ -89,8 +96,9 @@ test.describe('map of the Postings', () => {
     ]);
   });
 
-  test('filters the list and the map by region, then by city', async ({ page }) => {
-    await chooseLea(page);
+  test('filters the list and the map by region, then by city', async ({ page, asCandidate, openPage }) => {
+    await asCandidate('lea');
+    await openPostingsOfLea({ page, openPage });
 
     await filter(page, { region: 'Hauts-de-France' });
 
