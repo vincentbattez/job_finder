@@ -30,6 +30,12 @@ export default defineConfig(
     plugins: { 'unused-imports': unusedImports },
     rules: {
       '@typescript-eslint/consistent-type-imports': 'error',
+      // React Router shows the data a loader throws on its error page: relayLoader throws a failure's
+      // code and message so, the only way they cross to the browser (ADR-0015)
+      '@typescript-eslint/only-throw-error': [
+        'error',
+        { allow: [{ from: 'package', package: 'react-router', name: 'DataWithResponseInit' }] },
+      ],
       // A domain value is only obtained by parsing it, never asserted (ADR-0005)
       '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
       // SQLite and JSON both use null for a missing value

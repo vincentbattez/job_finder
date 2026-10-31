@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs } from 'react-router';
 
 import { tFor } from '#/actions/i18n.ts';
-import type { Actions } from '#/actions/index.ts';
+import { codedError, type Actions } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { readParameters } from '#/web/parameters.server.ts';
@@ -52,7 +52,7 @@ export async function action({ request }: ActionFunctionArgs) {
           return answer(t('notificationChannel.notified'));
         }
       }
-      return refuse(t('unknownIntent'));
+      throw codedError('unknown_intent', {}, { locale });
     },
     refuse,
   );

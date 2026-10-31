@@ -8,7 +8,7 @@ import { createActions, type Actions } from '#/actions/index.ts';
 import { createDataDirectory, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
-import { createRecordedFetch } from './recorded-http.ts';
+import { createRecordedFetch, fetchWithApiGeoDown } from './recorded-http.ts';
 
 // A Job Description found elsewhere than on the Sources the Watches read
 const JOB_DESCRIPTION = `# Greffier placé – Tribunal judiciaire de Lille
@@ -100,7 +100,13 @@ describe('import of a Job Description in Markdown', () => {
     });
     const { jobDescription, extraction } = await actions.readPosting({ reference: job.posting.reference });
     expect(jobDescription).toBe(JOB_DESCRIPTION);
-    expect(extraction).toEqual({ state: 'queued', log: '', errorCode: null });
+    // No worker runs in the test: the Posting page says so under the extraction
+    expect(extraction).toMatchObject({
+      state: 'queued',
+      log: '',
+      errorCode: null,
+      workerFailure: { errorCode: 'worker_not_running', message: /^Le worker ne tourne pas/ },
+    });
     // The worker runs the session, never the front nor the CLI (ADR-0003)
     expect(aiSession.headlessSessionList).toEqual([]);
   });
@@ -139,6 +145,44 @@ describe('import of a Job Description in Markdown', () => {
     expect(extraction?.state).toBe('ready');
   });
 
+  // API Géo only places the Posting on the map: down, it fails nothing, as in a Detection (#44)
+  it('saves the extracted Posting without coordinates while API Géo is down, and the next Detection locates it', async () => {
+    const dataDirectory = createDataDirectory();
+    const aiSession = createFakeAiSession(extractionRun(), { fileByName: { 'research.md': RESEARCH } });
+    const option = {
+      dataDirectory,
+      aiSession,
+      notificationChannelList: createFakeNotificationChannel().notificationChannelList,
+    };
+    const actions = await createActions({ ...option, fetch: fetchWithApiGeoDown('unreachable') });
+    const { posting: importedPosting } = await actions.importJobDescription({
+      candidateId: 'lea',
+      fileName: FILE_NAME,
+      markdown: JOB_DESCRIPTION,
+    });
+
+    const jobList = await actions.runQueuedJobs();
+
+    expect(jobList.map(({ module, state }) => ({ module, state }))).toEqual([
+      { module: 'extraction', state: 'done' },
+      { module: 'research', state: 'done' },
+    ]);
+    expect(jobList[0]?.log).toMatch(/\[api_geo_unreachable\] API Géo est injoignable/);
+    const { posting } = await actions.readPosting({ reference: importedPosting.reference });
+    expect(posting).toMatchObject({
+      title: 'Greffier placé – Tribunal judiciaire de Lille',
+      city: 'Lille',
+      latitude: null,
+      longitude: null,
+    });
+
+    const nextActions = await createActions({ ...option, fetch: createRecordedFetch().fetch });
+    await nextActions.detect();
+
+    const { posting: locatedPosting } = await nextActions.readPosting({ reference: importedPosting.reference });
+    expect(locatedPosting).toMatchObject({ city: 'Lille', latitude: 50.6311, longitude: 3.0468 });
+  });
+
   it('fails the extraction visibly when the session fails, leaving the Posting as imported, and runs it again', async () => {
     const actions = await openActions(createFakeAiSession({ isSuccess: false }, extractionRun()));
     const { posting } = await actions.importJobDescription({
@@ -161,7 +205,12 @@ describe('import of a Job Description in Markdown', () => {
     });
     const detail = await actions.readPosting({ reference: posting.reference });
     expect(detail.posting).toMatchObject({ title: FILE_NAME, employer: null });
-    expect(detail.extraction).toEqual({ state: 'failed', log, errorCode: 'extraction_session_failed' });
+    expect(detail.extraction).toEqual({
+      state: 'failed',
+      log,
+      errorCode: 'extraction_session_failed',
+      workerFailure: null,
+    });
     expect(detail.artifactList.find(({ artifact }) => artifact === 'research')?.state).toBe('absent');
 
     const job = await actions.runModule({ module: 'extraction', reference: posting.reference });

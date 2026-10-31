@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
+import type { IRefusal } from '#/web/failure.ts';
+
 import './candidate-menu.css';
 
 interface ICandidate {
@@ -14,7 +16,7 @@ export function CandidateMenu({
   candidate,
 }: Readonly<{ candidateList: ICandidate[]; candidate: ICandidate | null }>) {
   const { t } = useTranslation('settings');
-  const fetcher = useFetcher<{ error?: string }>();
+  const fetcher = useFetcher<IRefusal>();
   return (
     <fetcher.Form method="post" action="/candidate" className="candidate-menu">
       <label htmlFor="candidate">{t('menu.candidateLabel')}</label>

@@ -11,7 +11,13 @@ import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { LEA_WATCH_ID } from './lea.ts';
-import { createRecordedFetch, DSJ_FEED_URL, feedWithout, readRecordedFile } from './recorded-http.ts';
+import {
+  createRecordedFetch,
+  DSJ_FEED_URL,
+  feedWithout,
+  fetchWithApiGeoDown,
+  readRecordedFile,
+} from './recorded-http.ts';
 
 // Every attaché de justice offer of the DSJ feed recorded on 2026-10-29, counted by hand from its
 // titles, « (e) » and « .e » forms included
@@ -383,20 +389,6 @@ describe('a city API Géo does not know', () => {
 const BETHUNE_REFERENCE_LIST = ['2026-2445600', '2026-2445609'];
 
 const RESEARCH = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
-
-// The recorded responses, but API Géo down: every one of its URLs answers the given failure
-function fetchWithApiGeoDown(failure: 'unreachable' | number): typeof globalThis.fetch {
-  const recordedFetch = createRecordedFetch().fetch;
-  return (input, init) => {
-    const url = input instanceof Request ? input.url : input.toString();
-    if (!url.startsWith('https://geo.api.gouv.fr/')) {
-      return recordedFetch(input, init);
-    }
-    return failure === 'unreachable'
-      ? Promise.reject(new TypeError('fetch failed'))
-      : Promise.resolve(new Response('<html>Internal Server Error</html>', { status: failure }));
-  };
-}
 
 describe('a detection while API Géo is down', () => {
   it.each([

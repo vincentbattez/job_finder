@@ -2,6 +2,10 @@ import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
+import type { ErrorCode } from '#/actions/index.ts';
+import { isPending } from '#/actions/state.ts';
+import type { IRefusal } from '#/web/failure.ts';
+
 import { StateBadge, type State } from './badge.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
@@ -14,21 +18,24 @@ export function ExtractionLaunch({
   state,
   log,
   workerFailure,
-}: Readonly<{ reference: string; state: State; log: string; workerFailure: string | null }>) {
-  const fetcher = useFetcher<{ error: string | null }>();
+}: Readonly<{
+  reference: string;
+  state: State;
+  log: string;
+  // Why its job makes no progress: the worker is stopped or stuck
+  workerFailure: { errorCode: ErrorCode; message: string } | null;
+}>) {
+  const fetcher = useFetcher<IRefusal>();
   const { t } = useTranslation('posting');
   const isHydrated = useIsHydrated();
   const labelId = useId();
-  const isRunning = state === 'queued' || state === 'in_progress';
+  const isRunning = isPending(state);
   useRevalidateWhile(isRunning);
   return (
     <fetcher.Form method="post" action="/run" aria-labelledby={labelId}>
       <input type="hidden" name="reference" value={reference} />
       <input type="hidden" name="module" value="extraction" />
-      <WorkerTask
-        refusal={state === 'failed' ? log : null}
-        error={fetcher.data?.error ?? (isRunning ? workerFailure : null)}
-      >
+      <WorkerTask refusal={state === 'failed' ? log : null} error={fetcher.data?.error ?? workerFailure?.message}>
         <span id={labelId}>{t('extractionLabel')}</span>
         <span role="status">
           <StateBadge state={state} />

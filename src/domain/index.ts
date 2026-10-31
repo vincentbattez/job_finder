@@ -2,6 +2,7 @@ import { z } from 'zod/v4';
 
 import { ERROR_CODE_SCHEMA } from './error.ts';
 import { LOCALE_LIST, type Locale } from './locale.ts';
+import { STATE_LIST } from './state.ts';
 
 export type { Locale } from './locale.ts';
 
@@ -333,9 +334,9 @@ const VERSION_DOCUMENTS_SCHEMA = z.object({
 
 // What the front shows of an Artifact at a glance: queued while its job waits for the worker, in
 // progress once the worker runs it
-const STATE_SCHEMA = z.enum(['absent', 'queued', 'in_progress', 'ready', 'failed']);
+const STATE_SCHEMA = z.enum(STATE_LIST);
 
-export type State = z.infer<typeof STATE_SCHEMA>;
+export type { State } from './state.ts';
 
 // Why the last job of an Artifact failed: the code of the catalogue it failed under, and its log, which
 // starts with the code's message (ADR-0015)
@@ -343,6 +344,10 @@ const JOB_FAILURE_SCHEMA = z.object({ errorCode: ERROR_CODE_SCHEMA.nullable(), l
 
 // The code of a notification not sent, and its message, which names the notification and why
 const NOTIFICATION_FAILURE_SCHEMA = z.object({ errorCode: ERROR_CODE_SCHEMA, message: z.string() }).brand<'Domain'>();
+
+// Why a queued or running job makes no progress, the worker being stopped or stuck: its code and its
+// message, which says how to start it again
+const WORKER_FAILURE_SCHEMA = z.object({ errorCode: ERROR_CODE_SCHEMA, message: z.string() }).brand<'Domain'>();
 
 const ARTIFACT_STATE_SHAPE = {
   // That of its last job, from the moment it is queued, unless a Version came after it; then that of
@@ -353,6 +358,8 @@ const ARTIFACT_STATE_SHAPE = {
   // Why the notification of its last job was not sent, such as « Research ready »: the Candidate
   // was not warned
   notificationFailure: NOTIFICATION_FAILURE_SCHEMA.nullable(),
+  // Why its last job, queued or running, makes no progress; null while it moves or once it is over
+  workerFailure: WORKER_FAILURE_SCHEMA.nullable(),
 };
 
 // Where an Artifact stands, as jf versions reads it
@@ -382,11 +389,15 @@ export const POSTING_DETAIL_SCHEMA = z
     artifactList: z.array(ARTIFACT_VERSIONS_SCHEMA),
     recipients: RECIPIENTS_SCHEMA.nullable(),
     // That of its latest extraction job, null for a Posting that was not imported; the log says why
-    // it failed
-    extraction: z.object({ state: STATE_SCHEMA, log: z.string(), errorCode: ERROR_CODE_SCHEMA.nullable() }).nullable(),
-    // Why its queued or running job makes no progress, the worker being stopped or stuck; null while
-    // it moves
-    workerFailure: z.object({ errorCode: ERROR_CODE_SCHEMA, message: z.string() }).nullable(),
+    // it failed, workerFailure why it makes no progress
+    extraction: z
+      .object({
+        state: STATE_SCHEMA,
+        log: z.string(),
+        errorCode: ERROR_CODE_SCHEMA.nullable(),
+        workerFailure: WORKER_FAILURE_SCHEMA.nullable(),
+      })
+      .nullable(),
   })
   .brand<'Domain'>();
 

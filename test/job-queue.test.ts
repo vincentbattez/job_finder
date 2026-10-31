@@ -24,8 +24,9 @@ function moveClockBy(durationMs: number): void {
 }
 
 async function researchOf(actions: Actions, reference = REFERENCE) {
-  const { artifactList, workerFailure } = await actions.readPosting({ reference });
-  return { state: artifactList.find(({ artifact }) => artifact === 'research')?.state, workerFailure };
+  const { artifactList } = await actions.readPosting({ reference });
+  const research = artifactList.find(({ artifact }) => artifact === 'research');
+  return { state: research?.state, workerFailure: research?.workerFailure };
 }
 
 afterEach(() => {
@@ -180,6 +181,51 @@ describe('the job queue', () => {
     await expect(actions.followJob({ jobId: job.id })).rejects.toMatchObject({ code: 'job_overdue' });
     await expect(actions.followJob({ jobId: job.id })).rejects.toThrow(/lpm service worker restart -p job_finder/);
     expect(await researchOf(actions)).toMatchObject({ workerFailure: { errorCode: 'job_overdue' } });
+  });
+
+  // The job overdue is the running one: the job queued behind it waits, which says nothing of it
+  it('tells that a job is overdue under its Artifact only, and in jf versions', async () => {
+    const aiSession = createFakeAiSession(RESEARCH, { isInterrupted: true });
+    const { actions } = await detectPostings(aiSession);
+    await actions.runModule({ module: 'research', reference: REFERENCE });
+    await actions.runQueuedJobs();
+    await actions.runModule({ module: 'letter', reference: REFERENCE });
+    await actions.runModule({ module: 'interview_brief', reference: REFERENCE });
+    void actions.runQueuedJobs();
+    await vi.waitFor(() => {
+      expect(aiSession.headlessSessionList).toHaveLength(2);
+    });
+
+    moveClockBy(40 * MINUTE_MS);
+    await actions.beatWorker();
+
+    const { artifactList } = await actions.readPosting({ reference: REFERENCE });
+    expect(
+      artifactList.map(({ artifact, state, workerFailure }) => ({
+        artifact,
+        state,
+        errorCode: workerFailure?.errorCode ?? null,
+      })),
+    ).toEqual([
+      { artifact: 'research', state: 'ready', errorCode: null },
+      { artifact: 'letter', state: 'in_progress', errorCode: 'job_overdue' },
+      { artifact: 'interview_brief', state: 'queued', errorCode: null },
+      { artifact: 'visualization', state: 'absent', errorCode: null },
+    ]);
+    expect(await actions.readArtifactState({ reference: REFERENCE, artifact: 'letter' })).toMatchObject({
+      state: 'in_progress',
+      workerFailure: { errorCode: 'job_overdue', message: /lpm service worker restart/ },
+    });
+  });
+
+  it('tells in jf versions that no worker runs the last job of an Artifact', async () => {
+    const { actions } = await detectPostings();
+    await actions.runModule({ module: 'research', reference: REFERENCE });
+
+    expect(await actions.readArtifactState({ reference: REFERENCE, artifact: 'research' })).toMatchObject({
+      state: 'queued',
+      workerFailure: { errorCode: 'worker_not_running' },
+    });
   });
 
   it('fails the job a stopped worker left running, at its restart, and it can be launched again', async () => {

@@ -8,6 +8,7 @@ import { DetectionProgress, DetectionResult, type IRecordedDetection } from '#/w
 import { MarkdownEditor } from '#/web/components/markdown-editor.tsx';
 import { PostingDetail, type IPostingDetail } from '#/web/components/posting-detail.tsx';
 import { PostingList, type IPostingRow } from '#/web/components/posting-list.tsx';
+import { relayLoader } from '#/web/relay-action.server.ts';
 
 // Sample values that read as samples: the real Postings reach the front through the actions (ADR-0003).
 // They are French Postings, as the Sources publish them.
@@ -65,6 +66,7 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
       state: 'ready',
       failure: null,
       notificationFailure: null,
+      workerFailure: null,
       module: { refusal: null },
       isEditable: true,
       versionList: [sampleVersion(1, 'ready')],
@@ -74,6 +76,7 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
       state: 'in_progress',
       failure: null,
       notificationFailure: null,
+      workerFailure: null,
       module: { refusal: null },
       isEditable: true,
       versionList: [sampleVersion(1, 'ready'), sampleVersion(2, 'running')],
@@ -86,6 +89,7 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
         log: 'La session Claude Code a échoué : son journal dit pourquoi. Relancer le module.\nAPI Error: 529 Overloaded',
       },
       notificationFailure: null,
+      workerFailure: null,
       module: { refusal: null },
       isEditable: false,
       versionList: [sampleVersion(1, 'failed')],
@@ -95,6 +99,7 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
       state: 'absent',
       failure: null,
       notificationFailure: null,
+      workerFailure: null,
       module: { refusal: 'Il faut d’abord une Fiche d’entretien retenue.' },
       isEditable: false,
       versionList: [],
@@ -106,7 +111,6 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
     salutation: { text: 'Madame, Monsieur,', source: null },
     justification: 'Le mail de candidature est la seule adresse publiée ; aucun contact ne donne de nom.',
   },
-  workerFailure: null,
 };
 
 const SAMPLE_LETTER = [
@@ -237,7 +241,7 @@ const STATUS_SAMPLE_LIST: { status: Status; isExpired: boolean }[] = [
 // The chrome of the page reads in the chosen Candidate's locale; the samples stay French Postings, as
 // the Sources publish them
 export function loader({ request }: LoaderFunctionArgs) {
-  return readCandidate(request);
+  return relayLoader(request, () => readCandidate(request));
 }
 
 export function meta({ loaderData }: MetaArgs<typeof loader>) {

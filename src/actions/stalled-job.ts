@@ -9,11 +9,16 @@ const WORKER_SILENCE_MS = 6 * WORKER_BEAT_INTERVAL_MS;
 // Past the maximum duration of its session and the time to read what it wrote, a running job is stuck
 const MAX_JOB_DURATION_MS = MAX_SESSION_DURATION_MS + 5 * 60_000;
 
+// A job the worker has yet to finish, whether it waits in the queue or runs
+function isPendingJob({ state }: Job): boolean {
+  return state === 'queued' || state === 'running';
+}
+
 // Why a queued or running job makes no progress, so that the Posting page and jf run --wait say it
 // rather than "Running" forever; undefined while it moves, or once it is over (CODING_STANDARDS
 // “Visible failure”)
 export async function findJobStall(workspace: Workspace, job: Job, locale: Locale): Promise<CodedError | undefined> {
-  if (job.state !== 'queued' && job.state !== 'running') {
+  if (!isPendingJob(job)) {
     return undefined;
   }
   const beatAt = await workspace.findWorkerBeat();

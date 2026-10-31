@@ -1,6 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
+import { isPending } from '#/actions/state.ts';
+import type { IRefusal } from '#/web/failure.ts';
+
 import { StateBadge } from './badge.tsx';
 import type { IArtifactVersions } from './posting-detail.tsx';
 import { useIsHydrated } from './use-is-hydrated.ts';
@@ -19,21 +22,19 @@ export function ModuleLaunch({
   module,
   workerFailure,
 }: Readonly<
-  Pick<IArtifactVersions, 'artifact' | 'state' | 'failure' | 'notificationFailure' | 'module'> & {
+  Pick<IArtifactVersions, 'artifact' | 'state' | 'failure' | 'notificationFailure' | 'workerFailure' | 'module'> & {
     reference: string;
-    workerFailure: string | null;
   }
 >) {
   const { t } = useTranslation('posting');
-  const fetcher = useFetcher<{ error: string | null }>();
+  const fetcher = useFetcher<IRefusal>();
   const isHydrated = useIsHydrated();
-  const isRunning = state === 'queued' || state === 'in_progress';
+  const isRunning = isPending(state);
   useRevalidateWhile(isRunning);
   // The refusal of a relaunch, else why the last job failed, else why the worker does not move it,
   // else why its notification was not sent: the Candidate was not warned (CODING_STANDARDS “Visible
   // failure”)
-  const error =
-    fetcher.data?.error ?? failure?.log ?? (isRunning ? workerFailure : null) ?? notificationFailure?.message ?? null;
+  const error = fetcher.data?.error ?? failure?.log ?? workerFailure?.message ?? notificationFailure?.message ?? null;
   return (
     <fetcher.Form method="post" action="/run">
       <input type="hidden" name="reference" value={reference} />

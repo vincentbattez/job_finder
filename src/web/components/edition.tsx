@@ -2,6 +2,8 @@ import { Fragment, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
+import type { IRefusal } from '#/web/failure.ts';
+
 import type { Status } from './badge.tsx';
 import { ButtonRow } from './button-row.tsx';
 import { CopyMarkdown } from './copy-command.tsx';
@@ -15,12 +17,9 @@ import './edition.css';
 // an action, then comes back to the Posting page where it was (ADR-0003). Through a fetcher, a
 // refusal comes back to the form, which shows it and keeps what was typed.
 
-interface IRefusal {
-  error?: string;
-}
-
 function Refusal({ data }: Readonly<{ data: IRefusal | undefined }>) {
-  return data?.error === undefined ? null : <p role="alert">{data.error}</p>;
+  const error = data?.error ?? null;
+  return error === null ? null : <p role="alert">{error}</p>;
 }
 
 interface IArtifactDocument {

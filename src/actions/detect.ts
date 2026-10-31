@@ -1,12 +1,11 @@
 import { z } from 'zod/v4';
 
-import { defaultErrorTranslator, tFor } from '#/domain/catalogue/i18n.ts';
-import { codedError, codedErrorOf, formatError } from '#/domain/coded-error.ts';
+import { defaultErrorTranslator } from '#/domain/catalogue/i18n.ts';
+import { codedError, codedErrorOf } from '#/domain/coded-error.ts';
 import {
   DETECTION_ORIGIN_SCHEMA,
   DETECTION_OVERVIEW_SCHEMA,
   DETECTION_SCHEMA,
-  LOCATION_SCHEMA,
   type Detection,
   type DetectionOrigin,
   type DetectionOverview,
@@ -30,6 +29,7 @@ import type { ISourceReadResult } from '#/source/index.ts';
 import { hasBeenApplied } from '#/status/index.ts';
 
 import type { ActionContext } from './context.ts';
+import { createTolerantLocator } from './locator.ts';
 
 // Every Watch, started from jf detect unless the daily automation says so
 const DETECT_INPUT_SCHEMA = z.object({ origin: DETECTION_ORIGIN_SCHEMA.default('cli') });
@@ -46,9 +46,6 @@ function staleOption() {
     interruptedError: defaultErrorTranslator()('detectionInterrupted'),
   };
 }
-
-// The failures of API Géo, a secondary service whose outage leaves the Postings off the map
-const API_GEO_FAILURE_SET = new Set<string>(['api_geo_unreachable', 'api_geo_status', 'api_geo_format_changed']);
 
 // What a Posting a Detection found keeps of it: its reference and its title
 const referenceAndTitle = ({ reference, title }: { reference: string; title: string }) => ({ reference, title });
@@ -259,35 +256,8 @@ export function createDetectActions({
     }
   }
 
-  // API Géo only places a Posting on the map: down, it leaves the Postings without coordinates, which
-  // the next Detection locates (listUnlocatedPostings), and is asked no more for this Detection
-  function createDetectionLocator() {
-    let outage: unknown;
-    return {
-      locate: async (city: string | null, locale: Locale): Promise<Location> => {
-        if (outage === undefined) {
-          try {
-            return await locate(city, locale);
-          } catch (error) {
-            if (!API_GEO_FAILURE_SET.has(codedErrorOf(error).code)) {
-              throw error;
-            }
-            outage = error;
-          }
-        }
-        return LOCATION_SCHEMA.parse({ city, region: null, latitude: null, longitude: null });
-      },
-      // What each Watch reports of the outage, with its code, in its Candidate's locale
-      failureFor: (locale: Locale): string | null => {
-        return outage === undefined
-          ? null
-          : tFor(locale, 'error')('postingsNotLocated', { reason: formatError(outage) });
-      },
-    };
-  }
-
   async function detectWatches(detection: RecordedDetection, watchList: Watch[]): Promise<Detection[]> {
-    const locator = createDetectionLocator();
+    const locator = createTolerantLocator(locate);
     // The Postings saved before they had a city, or whose city API Géo did not know
     const unlocatedPostingList = await workspace.listUnlocatedPostings();
     for (const posting of unlocatedPostingList) {

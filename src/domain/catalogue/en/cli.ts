@@ -86,6 +86,7 @@ export const CLI_EN = {
   versionsUsage: 'Usage: jf versions <posting> <artifact>, for example jf versions 2026-2445600 research.',
   versionStateLabelByState: { running: 'in progress', ready: 'ready', failed: 'failed' },
   lastJobFailed: 'Last launch failed ({{errorCode}}):\n{{log}}\n',
+  lastJobStalled: 'Last launch not moving ({{errorCode}}):\n{{message}}\n',
   chosenVersion: 'chosen',
   candidateInstructions: 'Candidate’s Instructions',
   defaultInstructions: 'Default Instructions',

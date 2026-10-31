@@ -1,9 +1,19 @@
+import { data } from 'react-router';
+
+import { DEFAULT_LOCALE, type Locale } from '#/actions/i18n.ts';
 import { codedErrorOf } from '#/actions/index.ts';
 
 import { readCandidate } from './candidate.server.ts';
+import type { ILoaderFailure, IRefusal } from './failure.ts';
 
-interface IRefusal {
-  error: string;
+// The Candidate's locale, or the default one when even the Candidate cannot be read
+async function localeOf(request: Request): Promise<Locale> {
+  try {
+    const { locale } = await readCandidate(request);
+    return locale;
+  } catch {
+    return DEFAULT_LOCALE;
+  }
 }
 
 // Every action of a route runs through here (test/architecture.test.ts): a failure goes back to the
@@ -19,7 +29,7 @@ export function relayAction<TAnswer, TRefusal>(
 export async function relayAction(
   request: Request,
   run: () => Promise<unknown>,
-  refuse = (error: string): unknown => ({ error }),
+  refuse = (error: string): IRefusal => ({ error }),
 ): Promise<unknown> {
   try {
     return await run();
@@ -28,7 +38,23 @@ export async function relayAction(
     if (error instanceof Response) {
       throw error;
     }
-    const { locale } = await readCandidate(request);
-    return refuse(codedErrorOf(error, locale).message);
+    const { message } = codedErrorOf(error, await localeOf(request));
+    return refuse(message);
+  }
+}
+
+// Every loader of a route, and the root's, runs through here (test/architecture.test.ts): the error
+// page shows a failure under its code, in the Candidate's locale, a foreign one under unexpected,
+// never its raw message (ADR-0015)
+export async function relayLoader<TAnswer>(request: Request, run: () => Promise<TAnswer> | TAnswer): Promise<TAnswer> {
+  try {
+    return await run();
+  } catch (error) {
+    // A redirect or a not found thrown on purpose is an answer, not a failure
+    if (error instanceof Response) {
+      throw error;
+    }
+    const { code, message } = codedErrorOf(error, await localeOf(request));
+    throw data({ errorCode: code, message } satisfies ILoaderFailure, { status: 500 });
   }
 }

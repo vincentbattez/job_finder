@@ -116,8 +116,10 @@ export function createJobActions(context: ActionContext) {
           // An error fails this job only, the one running, and the worker goes on with the queue
           const failedList = await workspace.failRunningJobs((locale) => codedErrorOf(error, locale));
           for (const failedJob of failedList) {
-            const locale =
-              failedJob.module === 'conversion' ? undefined : await findLocale(failedJob.posting.candidateId);
+            // A conversion belongs to a Profile, not a Posting: its Candidate is on the job itself
+            const candidateId =
+              failedJob.module === 'conversion' ? failedJob.candidateId : failedJob.posting.candidateId;
+            const locale = await findLocale(candidateId);
             jobList.push(await notifyFinished(failedJob, codedErrorOf(error, locale)));
           }
         }

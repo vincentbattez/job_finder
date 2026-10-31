@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useFetcher } from 'react-router';
 
+import type { IRefusal } from '#/web/failure.ts';
+
 import { useIsHydrated } from './use-is-hydrated.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
 
@@ -238,7 +240,7 @@ export function DetectionResult({ detection }: Readonly<{ detection: IRecordedDe
 export function Detection({
   overview,
 }: Readonly<{ overview: { running: IRecordedDetection | null; last: IRecordedDetection | null } }>) {
-  const fetcher = useFetcher<{ error: string | null }>();
+  const fetcher = useFetcher<IRefusal>();
   const isHydrated = useIsHydrated();
   const { t } = useTranslation('posting');
   const panelReference = useRef<HTMLDivElement>(null);

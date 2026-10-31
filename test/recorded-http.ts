@@ -63,3 +63,17 @@ export function createRecordedFetch(responseByUrl: Record<string, IRecordedRespo
   };
   return { fetch, requestedUrlList };
 }
+
+// The recorded responses, but API Géo down: every one of its URLs answers the given failure
+export function fetchWithApiGeoDown(failure: 'unreachable' | number): typeof globalThis.fetch {
+  const recordedFetch = createRecordedFetch().fetch;
+  return (input, init) => {
+    const url = input instanceof Request ? input.url : input.toString();
+    if (!url.startsWith('https://geo.api.gouv.fr/')) {
+      return recordedFetch(input, init);
+    }
+    return failure === 'unreachable'
+      ? Promise.reject(new TypeError('fetch failed'))
+      : Promise.resolve(new Response('<html>Internal Server Error</html>', { status: failure }));
+  };
+}

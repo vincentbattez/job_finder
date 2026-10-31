@@ -20,21 +20,23 @@ import { ProfileFile, ProfileFileCreation } from '#/web/components/profile-file.
 import { Uploads } from '#/web/components/uploads.tsx';
 import { Watches } from '#/web/components/watches.tsx';
 import { translateParameters } from '#/web/parameters.server.ts';
-import { relayAction } from '#/web/relay-action.server.ts';
+import { relayAction, relayLoader } from '#/web/relay-action.server.ts';
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  const { candidate, locale } = await readCandidate(request);
-  return {
-    candidate,
-    locale,
-    profileFileList: candidate === null ? [] : await ACTIONS.listProfileFiles({ candidateId: candidate.id }),
-    uploadList: candidate === null ? [] : await ACTIONS.listUploads({ candidateId: candidate.id }),
-    sectionList: candidate === null ? [] : await ACTIONS.readFacts({ candidateId: candidate.id }),
-    channel: candidate === null ? null : await ACTIONS.readNotificationChannel({ candidateId: candidate.id }),
-    channelModuleList: translateParameters(await ACTIONS.listNotificationChannels(), locale),
-    watchList: candidate === null ? [] : await ACTIONS.listWatches({ candidateId: candidate.id }),
-    sourceList: translateParameters(await ACTIONS.listSources(), locale),
-  };
+export function loader({ request }: LoaderFunctionArgs) {
+  return relayLoader(request, async () => {
+    const { candidate, locale } = await readCandidate(request);
+    return {
+      candidate,
+      locale,
+      profileFileList: candidate === null ? [] : await ACTIONS.listProfileFiles({ candidateId: candidate.id }),
+      uploadList: candidate === null ? [] : await ACTIONS.listUploads({ candidateId: candidate.id }),
+      sectionList: candidate === null ? [] : await ACTIONS.readFacts({ candidateId: candidate.id }),
+      channel: candidate === null ? null : await ACTIONS.readNotificationChannel({ candidateId: candidate.id }),
+      channelModuleList: translateParameters(await ACTIONS.listNotificationChannels(), locale),
+      watchList: candidate === null ? [] : await ACTIONS.listWatches({ candidateId: candidate.id }),
+      sourceList: translateParameters(await ACTIONS.listSources(), locale),
+    };
+  });
 }
 
 // The Candidate is the one of the menu, never one the form names; a refusal goes back to the file

@@ -1,7 +1,7 @@
 import { z } from 'zod/v4';
 import { fr } from 'zod/v4/locales';
 
-import { DEFAULT_LOCALE, i18nOf } from './catalogue/i18n.ts';
+import { DEFAULT_LOCALE, i18nOf, tFor } from './catalogue/i18n.ts';
 import { ERROR_CATALOGUE, type ErrorCode } from './error.ts';
 import type { Locale } from './locale.ts';
 
@@ -24,9 +24,12 @@ export type { CodedError };
 z.config(fr());
 
 // Each input to correct, by its name, with what is wrong with it
-function problemOf(error: z.ZodError): string {
+function problemOf(error: z.ZodError, locale: Locale): string {
+  const t = tFor(locale, 'error');
   return error.issues
-    .map(({ path: pathList, message }) => (pathList.length === 0 ? message : `« ${pathList.join('.')} » : ${message}`))
+    .map(({ path: pathList, message }) =>
+      pathList.length === 0 ? message : t('invalidInputIssue', { path: pathList.join('.'), message }),
+    )
     .join('\n');
 }
 
@@ -54,7 +57,7 @@ export function codedErrorOf(error: unknown, locale: Locale = DEFAULT_LOCALE): C
     return error;
   }
   if (error instanceof z.ZodError) {
-    return codedError('invalid_input', { problem: problemOf(error) }, { locale, cause: error });
+    return codedError('invalid_input', { problem: problemOf(error, locale) }, { locale, cause: error });
   }
   const reason = error instanceof Error ? error.message : String(error);
   return codedError('unexpected', { reason }, { locale, cause: error });
@@ -63,5 +66,10 @@ export function codedErrorOf(error: unknown, locale: Locale = DEFAULT_LOCALE): C
 // How the CLI and the worker's logs print a failure: its code, then its message
 export function formatError(error: unknown): string {
   const { code, message } = codedErrorOf(error);
+  return formatFailure({ code, message });
+}
+
+// The same, for a failure kept as its code and its message, such as the notification of a job
+export function formatFailure({ code, message }: { code: ErrorCode; message: string }): string {
   return `[${code}] ${message}`;
 }

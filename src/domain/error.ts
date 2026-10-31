@@ -26,6 +26,8 @@ export const ERROR_CATALOGUE = {
   unexpected: 'error:unexpected',
   // An input does not follow the schema of its action
   invalid_input: 'error:invalidInput',
+  // A button of the front posts an intent its route does not know: its form is older than the page's code
+  unknown_intent: 'error:unknownIntent',
 
   // The data folder and the config an older jf left
   // An entry of the data folder exists both in the French layout and in the English one

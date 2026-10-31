@@ -12,14 +12,14 @@ export const SETTINGS_EN = {
     notFoundHint: 'This address leads to no page of the front.',
     errorHeading: 'This page could not be shown',
     errorHint: 'Reload the page. If the error comes back, the logs of the front say what failed.',
+    // Beside the message of a failure, what to quote when reporting it
+    errorCode: 'Error Code: {{errorCode}}',
   },
   menu: {
     candidateLabel: 'Candidate',
     namePlaceholder: 'Your name',
     choose: 'Choose',
   },
-  // A button whose form is older than the page's code
-  unknownIntent: 'This button does nothing: reload the page.',
   unsavedChanges: 'Unsaved changes',
   candidates: {
     pageTitle: 'Candidates · Job Finder',

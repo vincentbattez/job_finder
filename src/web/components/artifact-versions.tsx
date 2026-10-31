@@ -57,7 +57,7 @@ export function ArtifactVersions({
   isEditable,
   versionList,
   workerFailure,
-}: Readonly<IArtifactVersions & { reference: string; workerFailure: string | null }>) {
+}: Readonly<IArtifactVersions & { reference: string }>) {
   const { t } = useTranslation('posting');
   const headingId = useId();
   return (

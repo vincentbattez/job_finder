@@ -20,7 +20,8 @@ export type Actions = Awaited<ReturnType<typeof createActions>>;
 
 // The CLI, the front and the worker reach nothing but the actions (ADR-0003)
 export { messageOf } from '#/text/index.ts';
-export { codedError, codedErrorOf, formatError } from '#/domain/coded-error.ts';
+export { codedError, codedErrorOf, formatError, formatFailure } from '#/domain/coded-error.ts';
+export type { ErrorCode } from '#/domain/error.ts';
 export { ARTIFACT_RENAME_LIST } from '#/domain/artifact-rename.ts';
 
 // The single entry point of every feature, so no business rule lives in the CLI or the front

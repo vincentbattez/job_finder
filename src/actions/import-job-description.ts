@@ -3,6 +3,7 @@ import { z } from 'zod/v4';
 import type { Job } from '#/domain/index.ts';
 
 import type { ActionContext } from './context.ts';
+import { createTolerantLocator } from './locator.ts';
 
 const IMPORT_INPUT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string() });
 
@@ -19,8 +20,10 @@ export async function runExtraction(
     workspace.readJobDescription(posting, locale),
     locale,
   );
-  // A Job Description without a title keeps the name of its file: nothing is invented
-  const location = await locate(city, locale);
+  // A Job Description without a title keeps the name of its file: nothing is invented. API Géo down
+  // leaves it off the map, as a Detection does, until the next Detection locates it
+  const locator = createTolerantLocator(locate);
+  const location = await locator.locate(city, locale);
   const filledPosting = await workspace.fillPosting(
     posting,
     { title: title ?? posting.title, jobDescription, location },
@@ -28,7 +31,8 @@ export async function runExtraction(
   );
   // Imported by the Candidate, it gets its Research whatever the Zone
   await workspace.createJob(filledPosting, 'research', { isAutomatic: true });
-  return { job: await workspace.finishJobWithoutVersion(job, { log: session.log, sessionId: session.sessionId }) };
+  const log = [session.log, locator.failureFor(locale)].filter((line) => line !== null && line !== '').join('\n');
+  return { job: await workspace.finishJobWithoutVersion(job, { log, sessionId: session.sessionId }) };
 }
 
 export function createImportActions({ workspace, importSource, findCandidate, locate }: ActionContext) {

@@ -2,7 +2,7 @@ import { z } from 'zod/v4';
 
 import { codedError } from '#/domain/coded-error.ts';
 import { LOCATION_SCHEMA, type Locale, type Location } from '#/domain/index.ts';
-import { wordListOf } from '#/text/index.ts';
+import { messageOf, wordListOf } from '#/text/index.ts';
 
 const ORIGIN = 'https://geo.api.gouv.fr';
 
@@ -29,7 +29,7 @@ async function parseCommunes(response: Response, url: string, locale: Locale) {
   try {
     body = JSON.parse(text);
   } catch (error) {
-    throw codedError('api_geo_format_changed', { url, problem: String(error) }, { locale, cause: error });
+    throw codedError('api_geo_format_changed', { url, problem: messageOf(error) }, { locale, cause: error });
   }
   const parsed = z.array(COMMUNE_SCHEMA).safeParse(body);
   if (!parsed.success) {
@@ -53,7 +53,7 @@ export function createApiGeo(httpFetch: typeof fetch = fetch) {
       try {
         response = await httpFetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
       } catch (error) {
-        throw codedError('api_geo_unreachable', { url, reason: String(error) }, { locale, cause: error });
+        throw codedError('api_geo_unreachable', { url, reason: messageOf(error) }, { locale, cause: error });
       }
       if (response.status !== 200) {
         throw codedError('api_geo_status', { url, status: response.status }, { locale });

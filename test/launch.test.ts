@@ -137,6 +137,7 @@ describe('the failure of a module', () => {
       state: 'ready',
       failure: null,
       notificationFailure: null,
+      workerFailure: null,
     });
   });
 });

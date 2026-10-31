@@ -36,11 +36,18 @@ const STATE_BY_JOB_STATE = { queued: 'queued', running: 'in_progress', done: 're
 
 // The state of an Artifact follows its last job, unless a Version came after it: a job that failed
 // before creating its Version, refused by findInputs, is failed rather than the previous Version's state
+// Why the job makes no progress, in the Candidate's locale; null while it moves or once it is over
+async function findWorkerFailure(workspace: Workspace, job: Job, locale: Locale) {
+  const stall = await findJobStall(workspace, job, locale);
+  return stall === undefined ? null : { errorCode: stall.code, message: stall.message };
+}
+
 async function findArtifactState(
   workspace: Workspace,
   posting: Posting,
   artifact: Artifact,
   jobList: Job[],
+  locale: Locale,
 ): Promise<ArtifactState> {
   const versionList = await workspace.listVersions(posting, artifact);
   const lastVersion = versionList.at(-1);
@@ -52,6 +59,7 @@ async function findArtifactState(
       state: lastVersion === undefined ? 'absent' : STATE_BY_VERSION_STATE[lastVersion.state],
       failure: null,
       notificationFailure: null,
+      workerFailure: null,
     });
   }
   const { state, errorCode, log, notificationErrorCode, notificationFailure } = lastJob;
@@ -60,6 +68,8 @@ async function findArtifactState(
     failure: state === 'failed' ? { errorCode, log } : null,
     notificationFailure:
       notificationErrorCode === null ? null : { errorCode: notificationErrorCode, message: notificationFailure ?? '' },
+    // That of this job only: a job overdue says nothing of the one queued behind it
+    workerFailure: await findWorkerFailure(workspace, lastJob, locale),
   });
 }
 
@@ -110,8 +120,6 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
       const locale = await findLocale(posting.candidateId);
       const jobList = await workspace.listJobs(posting);
       const extractionJob = jobList.findLast(({ module }) => module === 'extraction');
-      const pendingJob = jobList.find(({ state }) => state === 'queued' || state === 'running');
-      const stall = pendingJob === undefined ? undefined : await findJobStall(workspace, pendingJob, locale);
       const artifactList = await Promise.all(
         ARTIFACT_SCHEMA.options.map(async (artifact) => {
           const versionList = await workspace.listVersions(posting, artifact);
@@ -120,7 +128,7 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
             artifact,
             // A queued job has no Version yet, while the worker runs another one (ADR-0003), and a
             // claimed job has none until the worker starts it: the job tells its state
-            ...(await findArtifactState(workspace, posting, artifact, jobList)),
+            ...(await findArtifactState(workspace, posting, artifact, jobList, locale)),
             module: await describeModule(workspace, posting, artifact, locale),
             isEditable: isAccepted(() => {
               assertArtifactModifiable(posting, artifact, chosenVersion, locale);
@@ -142,8 +150,8 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
                 state: STATE_BY_JOB_STATE[extractionJob.state],
                 log: extractionJob.log,
                 errorCode: extractionJob.errorCode,
+                workerFailure: await findWorkerFailure(workspace, extractionJob, locale),
               },
-        workerFailure: stall === undefined ? null : { errorCode: stall.code, message: stall.message },
       });
     },
 
@@ -153,12 +161,14 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
       return workspace.listVersions(posting, parseArtifact(artifact, await findLocale(posting.candidateId)));
     },
 
-    // What jf versions prints under the Versions: the reason the last job failed, even before its Version
+    // What jf versions prints under the Versions: the reason the last job failed, even before its
+    // Version, or makes no progress
     async readArtifactState(rawInput: unknown): Promise<ArtifactState> {
       const { reference, artifact } = ARTIFACT_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
-      const parsedArtifact = parseArtifact(artifact, await findLocale(posting.candidateId));
-      return findArtifactState(workspace, posting, parsedArtifact, await workspace.listJobs(posting));
+      const locale = await findLocale(posting.candidateId);
+      const parsedArtifact = parseArtifact(artifact, locale);
+      return findArtifactState(workspace, posting, parsedArtifact, await workspace.listJobs(posting), locale);
     },
 
     async readVisualization(rawInput: unknown): Promise<Visualization> {

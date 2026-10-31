@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
 import { LOCALE_LIST } from '#/actions/i18n.ts';
+import type { IRefusal } from '#/web/failure.ts';
 import { useLocale } from '#/web/i18n.tsx';
 
 import './locale-switcher.css';
@@ -12,7 +13,7 @@ import './locale-switcher.css';
 export function LocaleSwitcher() {
   const { t } = useTranslation();
   const currentLocale = useLocale();
-  const fetcher = useFetcher<{ error?: string } | null>();
+  const fetcher = useFetcher<IRefusal | null>();
   return (
     <fetcher.Form method="post" action="/locale" className="locale-switcher" aria-label={t('localeSwitcherLabel')}>
       {LOCALE_LIST.map((locale) => (

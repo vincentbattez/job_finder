@@ -13,17 +13,19 @@ import { localeOf, tFor } from '#/actions/i18n.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { SettingsPanel, SettingsStep } from '#/web/components/settings-panel.tsx';
-import { relayAction } from '#/web/relay-action.server.ts';
+import { relayAction, relayLoader } from '#/web/relay-action.server.ts';
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  const { candidate, locale } = await readCandidate(request);
-  return {
-    candidate,
-    locale,
-    candidateList: await ACTIONS.listCandidates(),
-    defaultDeadlinePeriod: await ACTIONS.readDefaultDeadlinePeriod(),
-    obsoleteConfig: await ACTIONS.findObsoleteConfig(),
-  };
+export function loader({ request }: LoaderFunctionArgs) {
+  return relayLoader(request, async () => {
+    const { candidate, locale } = await readCandidate(request);
+    return {
+      candidate,
+      locale,
+      candidateList: await ACTIONS.listCandidates(),
+      defaultDeadlinePeriod: await ACTIONS.readDefaultDeadlinePeriod(),
+      obsoleteConfig: await ACTIONS.findObsoleteConfig(),
+    };
+  });
 }
 
 // Any visitor of the front creates or renames a Candidate and sets the Default Deadline Period; no Candidate is

@@ -9,6 +9,10 @@ export const ERROR_EN = {
   // What reaches the Candidate of a failure our code did not foresee, or of an input not as expected
   unexpected: 'Unexpected error: {{reason}}\nRun again; if it comes back, report it with this message.',
   invalidInput: 'Invalid input:\n{{problem}}\nCorrect it, then try again.',
+  // One input to correct, by its name, and what is wrong with it
+  invalidInputIssue: '“{{path}}”: {{message}}',
+  // A button whose form is older than the page's code
+  unknownIntent: 'This button does nothing: reload the page.',
   // A module's failure, worded in its own copy (ADR-0010)
   moduleFailure: '{{detail}}',
 

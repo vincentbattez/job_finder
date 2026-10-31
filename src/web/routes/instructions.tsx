@@ -12,15 +12,17 @@ import { localeOf, tFor } from '#/actions/i18n.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { ModuleInstructions } from '#/web/components/module-instructions.tsx';
-import { relayAction } from '#/web/relay-action.server.ts';
+import { relayAction, relayLoader } from '#/web/relay-action.server.ts';
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  const { candidate, locale } = await readCandidate(request);
-  return {
-    candidate,
-    locale,
-    instructionsList: candidate === null ? [] : await ACTIONS.listInstructions({ candidateId: candidate.id }),
-  };
+export function loader({ request }: LoaderFunctionArgs) {
+  return relayLoader(request, async () => {
+    const { candidate, locale } = await readCandidate(request);
+    return {
+      candidate,
+      locale,
+      instructionsList: candidate === null ? [] : await ACTIONS.listInstructions({ candidateId: candidate.id }),
+    };
+  });
 }
 
 // The Candidate is the one of the menu, never one the form names; a refusal goes back to the editor of

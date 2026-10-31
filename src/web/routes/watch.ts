@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs } from 'react-router';
 
 import { tFor } from '#/actions/i18n.ts';
+import { codedError } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { readParameters } from '#/web/parameters.server.ts';
@@ -33,7 +34,7 @@ export async function action({ request }: ActionFunctionArgs) {
           return { message: null, error: null };
         }
       }
-      return { message: null, error: t('unknownIntent') };
+      throw codedError('unknown_intent', {}, { locale });
     },
     (error) => ({ message: null, error }),
   );

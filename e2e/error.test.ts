@@ -10,13 +10,14 @@ test('says when a page does not exist', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Page introuvable');
 });
 
-// A failing loader says what failed and what to do, rather than only that the page failed
-test('shows the message of a loader that fails', async ({ page }) => {
+// A failing loader says what failed and what to do, under its code, rather than only that the page failed
+test('shows the message and the code of a loader that fails', async ({ page }) => {
   await page.goto('/postings/2000-0000000');
 
-  await expect(page.getByRole('main')).toContainText(
+  await expect(page.getByRole('alert')).toHaveText(
     'Offre inconnue : 2000-0000000. « jf list <candidat> » liste les Offres.',
   );
+  await expect(page.getByRole('main')).toContainText('Code d’erreur : unknown_posting');
 });
 
 // A refusal goes back to the button that was clicked: the page stays, with the code's message

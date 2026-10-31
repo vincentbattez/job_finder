@@ -6,6 +6,8 @@ export const ERROR_FR: typeof ERROR_EN = {
 
   unexpected: 'Erreur inattendue : {{reason}}\nRelancer ; si elle revient, la signaler avec ce message.',
   invalidInput: 'Saisie invalide :\n{{problem}}\nLa corriger, puis réessayer.',
+  invalidInputIssue: '« {{path}} » : {{message}}',
+  unknownIntent: 'Ce bouton ne fait rien : recharger la page.',
   moduleFailure: '{{detail}}',
 
   dataLayoutMixed:

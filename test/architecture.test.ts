@@ -592,9 +592,11 @@ function findUnboundedCalls(projectDirectory: string): string[] {
   });
 }
 
-// The helper every action of a route goes through, so that a failure goes back to the form that
-// posted it, in its code's message, instead of replacing the page (CODING_STANDARDS “Visible failure”)
+// The helpers every action and every loader of a route go through, so that a failure goes back to the
+// form that posted it, or shows on the error page, in its code's message (CODING_STANDARDS “Visible
+// failure”)
 const RELAY_ACTION_NAME = 'relayAction';
+const RELAY_LOADER_NAME = 'relayLoader';
 
 function isExported(node: ts.Node): boolean {
   return (
@@ -602,40 +604,55 @@ function isExported(node: ts.Node): boolean {
   );
 }
 
-function isCallingRelayAction(node: ts.Node): boolean {
-  return ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === RELAY_ACTION_NAME
+function isCalling(node: ts.Node, name: string): boolean {
+  return ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === name
     ? true
-    : (ts.forEachChild(node, isCallingRelayAction) ?? false);
+    : (ts.forEachChild(node, (child) => isCalling(child, name)) ?? false);
 }
 
-// Each route of src/web/routes whose exported action never calls relayAction
-function findActionsWithoutRelay(projectDirectory: string): string[] {
-  const filePathList = globSync('src/web/routes/*.{ts,tsx}', { cwd: projectDirectory });
+// The exported function of this name in each of the files, such as the action of a route
+function findExports(projectDirectory: string, pattern: string, exportName: string) {
+  const filePathList = globSync(pattern, { cwd: projectDirectory });
   return filePathList.flatMap((filePath) => {
     const content = readFileSync(path.join(projectDirectory, filePath), 'utf8');
     const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-    const actionList = sourceFile.statements.flatMap((statement): ts.Node[] => {
+    return sourceFile.statements.flatMap((statement): { filePath: string; node: ts.Node }[] => {
       if (!isExported(statement)) {
         return [];
       }
       if (ts.isFunctionDeclaration(statement)) {
-        return statement.name?.text === 'action' ? [statement] : [];
+        return statement.name?.text === exportName ? [{ filePath, node: statement }] : [];
       }
       if (ts.isVariableStatement(statement)) {
-        return statement.declarationList.declarations.filter(
-          ({ name }) => ts.isIdentifier(name) && name.text === 'action',
-        );
+        return statement.declarationList.declarations
+          .filter(({ name }) => ts.isIdentifier(name) && name.text === exportName)
+          .map((node) => ({ filePath, node }));
       }
       return [];
     });
-    return actionList
-      .filter((action) => !isCallingRelayAction(action))
-      .map(
-        () =>
-          `${filePath} exports an action that does not go through ${RELAY_ACTION_NAME}: a failure would replace the page ` +
-          'instead of showing its message by the form (CODING_STANDARDS “Visible failure”)',
-      );
   });
+}
+
+// Each route of src/web/routes whose exported action never calls relayAction
+function findActionsWithoutRelay(projectDirectory: string): string[] {
+  return findExports(projectDirectory, 'src/web/routes/*.{ts,tsx}', 'action')
+    .filter(({ node }) => !isCalling(node, RELAY_ACTION_NAME))
+    .map(
+      ({ filePath }) =>
+        `${filePath} exports an action that does not go through ${RELAY_ACTION_NAME}: a failure would replace the page ` +
+        'instead of showing its message by the form (CODING_STANDARDS “Visible failure”)',
+    );
+}
+
+// Each route of src/web/routes, and the root, whose exported loader never calls relayLoader
+function findLoadersWithoutRelay(projectDirectory: string): string[] {
+  return findExports(projectDirectory, 'src/web/{root.tsx,routes/*.{ts,tsx}}', 'loader')
+    .filter(({ node }) => !isCalling(node, RELAY_LOADER_NAME))
+    .map(
+      ({ filePath }) =>
+        `${filePath} exports a loader that does not go through ${RELAY_LOADER_NAME}: a foreign failure would show ` +
+        'on the error page without a code (CODING_STANDARDS “Visible failure”)',
+    );
 }
 
 function createProject(fileContentByPath: Record<string, string>): string {
@@ -780,6 +797,30 @@ describe('architecture', () => {
 
   it('has every route action go through relayAction', () => {
     expect(findActionsWithoutRelay(ROOT_DIRECTORY)).toEqual([]);
+  });
+
+  it('catches a route loader that does not go through relayLoader', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/web/root.tsx': 'export function loader({ request }) {\n  return readCandidate(request);\n}\n',
+        'src/web/routes/postings.tsx': 'export const loader = () => ACTIONS.listPostings({});\n',
+        'src/web/routes/posting.tsx':
+          'export function loader({ request }) {\n  return relayLoader(request, () => ACTIONS.readPosting({}));\n}\n',
+        'src/web/routes/run.ts': 'export function action() {\n  return ACTIONS.runModule({});\n}\n',
+      }),
+    );
+
+    const violationList = findLoadersWithoutRelay(projectDirectory);
+
+    expect(sortedList(violationList).map((violation) => violation.split(' exports', 1)[0])).toEqual([
+      'src/web/root.tsx',
+      'src/web/routes/postings.tsx',
+    ]);
+    expect(violationList[0]).toMatch(/“Visible failure”/);
+  });
+
+  it('has every route loader go through relayLoader', () => {
+    expect(findLoadersWithoutRelay(ROOT_DIRECTORY)).toEqual([]);
   });
 
   it('catches the front running the queued jobs', () => {

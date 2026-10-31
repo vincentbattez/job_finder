@@ -2,7 +2,7 @@ import path from 'node:path';
 import { setTimeout } from 'node:timers/promises';
 
 import { DEFAULT_LOCALE, localeOf, tFor } from '#/actions/i18n.ts';
-import { createActions, formatError, type Actions } from '#/actions/index.ts';
+import { createActions, formatError, formatFailure, type Actions } from '#/actions/index.ts';
 import { WORKER_BEAT_INTERVAL_MS } from '#/actions/stalled-job.ts';
 
 const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
@@ -31,7 +31,9 @@ async function formatJobs(actions: Actions, jobList: Job[]): Promise<string> {
       const outcome = state === 'done' ? t('artifactDone') : failure(t);
       // Also kept on the job, which the Posting page shows: the log only helps whoever reads it
       const notificationLine =
-        notificationErrorCode === null ? '' : `[${notificationErrorCode}] ${notificationFailure ?? ''}\n`;
+        notificationErrorCode === null
+          ? ''
+          : `${formatFailure({ code: notificationErrorCode, message: notificationFailure ?? '' })}\n`;
       return t('artifactJob', { jobId: id, artifact, reference: posting.reference, outcome }) + notificationLine;
     })
     .join('');

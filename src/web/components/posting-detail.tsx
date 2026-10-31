@@ -1,6 +1,8 @@
 import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ErrorCode } from '#/actions/index.ts';
+
 import { StateBadge, StatusBadge, type State } from './badge.tsx';
 import { DateText } from './date.tsx';
 import { Markdown } from './markdown.tsx';
@@ -24,9 +26,11 @@ export interface IArtifactVersions {
   artifact: Artifact;
   state: State;
   // Why its last job failed: the code and the log, which starts with the code's message
-  failure: { errorCode: string | null; log: string } | null;
+  failure: { errorCode: ErrorCode | null; log: string } | null;
   // Why the notification of its last job, such as « Research ready », was not sent
-  notificationFailure: { errorCode: string; message: string } | null;
+  notificationFailure: { errorCode: ErrorCode; message: string } | null;
+  // Why its last job, queued or running, does not move: the worker is stopped or stuck
+  workerFailure: { errorCode: ErrorCode; message: string } | null;
   // The module that produces the Artifact, and why it cannot run now
   module: { refusal: string | null };
   // Given by the action: jf edit opens its Chosen Version
@@ -58,8 +62,6 @@ export interface IPostingDetail {
   jobDescription: string;
   artifactList: IArtifactVersions[];
   recipients: IRecipients | null;
-  // Why its queued or running job does not move: the worker is stopped or stuck
-  workerFailure: { errorCode: string; message: string } | null;
 }
 
 // A mail written in free text, as Avesnes publishes it, stays as published rather than a broken link

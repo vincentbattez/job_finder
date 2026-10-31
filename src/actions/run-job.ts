@@ -204,10 +204,10 @@ export function createJobRunner(
     if (content.trim() === '') {
       return codedError('empty_output', { outputPath }, { locale });
     }
-    const formatError = findFormatError?.(content, locale, posting);
-    return formatError === undefined
+    const formatProblem = findFormatError?.(content, locale, posting);
+    return formatProblem === undefined
       ? undefined
-      : codedError('malformed_output', { outputPath, formatError }, { locale });
+      : codedError('malformed_output', { outputPath, formatError: formatProblem }, { locale });
   }
 
   return async function runJob(

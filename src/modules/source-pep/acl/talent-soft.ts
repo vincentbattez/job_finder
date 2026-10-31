@@ -8,6 +8,7 @@ import {
   type Locale,
 } from '#/domain/index.ts';
 import { COPY_NAMESPACE } from '#/modules/source-pep/copy.ts';
+import { messageOf } from '#/text/index.ts';
 
 // The PEP publishes through Talent-Soft, whose pages are plain server HTML. Its URLs, feed and field
 // ids are in French, as the site names them.
@@ -67,7 +68,7 @@ async function get(httpFetch: typeof fetch, url: string, locale: Locale): Promis
   } catch (error) {
     throw codedError(
       'source_unreachable',
-      { detail: tFor(locale, COPY_NAMESPACE)('unreachable', { url, reason: String(error) }) },
+      { detail: tFor(locale, COPY_NAMESPACE)('unreachable', { url, reason: messageOf(error) }) },
       { locale, cause: error },
     );
   }

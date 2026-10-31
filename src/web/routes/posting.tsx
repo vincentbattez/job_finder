@@ -7,13 +7,16 @@ import { ArtifactVersions } from '#/web/components/artifact-versions.tsx';
 import { StatusButtons } from '#/web/components/edition.tsx';
 import { ExtractionLaunch } from '#/web/components/extraction-launch.tsx';
 import { PostingDetail } from '#/web/components/posting-detail.tsx';
+import { relayLoader } from '#/web/relay-action.server.ts';
 
-export async function loader({ params, request }: LoaderFunctionArgs) {
-  const [{ candidate, locale }, detail] = await Promise.all([
-    readCandidate(request),
-    ACTIONS.readPosting({ reference: params.reference }),
-  ]);
-  return { candidate, locale, detail };
+export function loader({ params, request }: LoaderFunctionArgs) {
+  return relayLoader(request, async () => {
+    const [{ candidate, locale }, detail] = await Promise.all([
+      readCandidate(request),
+      ACTIONS.readPosting({ reference: params.reference }),
+    ]);
+    return { candidate, locale, detail };
+  });
 }
 
 export function meta({ loaderData }: MetaArgs<typeof loader>) {
@@ -23,22 +26,14 @@ export function meta({ loaderData }: MetaArgs<typeof loader>) {
 
 export default function Posting() {
   const { detail } = useLoaderData<typeof loader>();
-  const workerFailure = detail.workerFailure?.message ?? null;
   return (
     <main className="container page">
       <PostingDetail detail={detail} isPage>
         <StatusButtons reference={detail.posting.reference} nextStatusList={detail.nextStatusList} />
-        {detail.extraction !== null && (
-          <ExtractionLaunch reference={detail.posting.reference} {...detail.extraction} workerFailure={workerFailure} />
-        )}
+        {detail.extraction !== null && <ExtractionLaunch reference={detail.posting.reference} {...detail.extraction} />}
       </PostingDetail>
       {detail.artifactList.map((artifactVersions) => (
-        <ArtifactVersions
-          key={artifactVersions.artifact}
-          reference={detail.posting.reference}
-          {...artifactVersions}
-          workerFailure={workerFailure}
-        />
+        <ArtifactVersions key={artifactVersions.artifact} reference={detail.posting.reference} {...artifactVersions} />
       ))}
     </main>
   );
