@@ -12,6 +12,8 @@ export const COMMON_EN = {
   } satisfies Record<Step, string>,
   // A mark beside the Status, which the Posting keeps (ADR-0007)
   archived: 'Archived',
+  // A mark beside the Status, while the Source no longer publishes the Posting (GLOSSARY.md)
+  unpublished: 'Unpublished',
   // Shown in place of To Apply once the Deadline is past (GLOSSARY.md)
   expired: 'Expired',
   artifactLabelByArtifact: {

@@ -145,6 +145,9 @@ export const POSTING_SCHEMA = z
     statusChangedAt: z.date().nullable(),
     // When the Candidate archived it, null while they follow it: a mark beside the Status (ADR-0007)
     archivedAt: z.date().nullable(),
+    // When a Detection found its Source no longer publishes it, null while online: a mark beside the
+    // Status (ADR-0001)
+    unpublishedAt: z.date().nullable(),
     // Free Markdown the Candidate keeps on it, whatever its Status; empty by default
     notes: z.string(),
     isInZone: z.boolean(),

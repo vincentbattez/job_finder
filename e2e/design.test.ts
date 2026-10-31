@@ -19,6 +19,7 @@ test.describe('design system page', () => {
       'Refusée',
       'Expirée',
       'Archivée',
+      'Dépubliée',
     ]);
   });
 

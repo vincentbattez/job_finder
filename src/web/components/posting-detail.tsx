@@ -97,7 +97,7 @@ export function PostingDetail({
         <header className="posting-detail__label">
           <div className="posting-detail__title">
             <TITLE_TAG>{posting.title}</TITLE_TAG>
-            <StatusBadge step={posting.step} isExpired={posting.isExpired} archivedAt={posting.archivedAt} />
+            <StatusBadge {...posting} />
           </div>
           <p>{[posting.workplace, posting.employer].filter(Boolean).join(', ')}</p>
           <dl className="posting-detail__facts">

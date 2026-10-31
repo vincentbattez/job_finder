@@ -17,10 +17,12 @@ import { declareParameters, type ParameterShape, type ParametersOf } from '#/par
 // src/modules/source-<name>/ declares, and what the rest of the application knows of them (ADR-0010)
 
 // The Postings of the Source that match the Watch, and those that came close: they reveal a new way
-// of writing what the Watch looks for
+// of writing what the Watch looks for. The references of every Posting the Source still publishes,
+// whatever their title, tell which stored Postings are Unpublished.
 interface ISearchResult {
   matchingList: ListedPosting[];
   nearMissList: ListedPosting[];
+  publishedReferenceList: string[];
 }
 
 // A Posting's detail page, and whether the Posting is in the Zone of the Watch, which the Source alone

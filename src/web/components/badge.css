@@ -47,7 +47,8 @@
     --badge-soft: var(--color-status-expired-soft);
   }
 
-  .badge[data-archived] {
+  /* Unpublished steps back like Archived, in its look */
+  .badge:is([data-archived], [data-unpublished]) {
     --badge-ink: var(--color-status-archived);
     --badge-soft: var(--color-status-archived-soft);
   }
@@ -73,7 +74,7 @@
   }
 
   /* What steps back keeps its place: a dashed rim instead of a fill */
-  .badge:is([data-archived], [data-state='absent']) {
+  .badge:is([data-archived], [data-unpublished], [data-state='absent']) {
     border-style: dashed;
     border-color: var(--color-muted);
   }

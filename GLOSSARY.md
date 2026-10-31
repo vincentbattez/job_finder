@@ -182,6 +182,10 @@ Said of a Posting the Candidate decided to stop following, whatever its Status, 
 _Avoid_: deleted, ignored, hidden
 _Formerly_: Archivée
 
+**Unpublished**:
+Said of a Posting its Source no longer publishes, whatever its Status, as the last Detection found it; a Posting the Source puts back online is no longer Unpublished.
+_Avoid_: removed, withdrawn, offline, deleted
+
 **Expired**:
 Said of a Posting whose Deadline has passed, whatever its Status.
 _Avoid_: closed, outdated

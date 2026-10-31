@@ -13,6 +13,7 @@ interface IMappedPosting {
   step: Step;
   isExpired: boolean;
   archivedAt: Date | null;
+  unpublishedAt: Date | null;
   latitude: number | null;
   longitude: number | null;
 }
@@ -96,6 +97,10 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
           if (posting.archivedAt !== null) {
             point.getElement()?.setAttribute('data-archived', '');
           }
+          // Unpublished too, in the look of Archived
+          if (posting.unpublishedAt !== null) {
+            point.getElement()?.setAttribute('data-unpublished', '');
+          }
           const openPosting = () => void navigate(`/postings/${posting.reference}`);
           point.on('click', openPosting);
           point.on('keypress', ({ originalEvent }) => {
@@ -139,6 +144,9 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
         </li>
         <li className="posting-map__key" data-archived="">
           {t('archived', { ns: 'common' })}
+        </li>
+        <li className="posting-map__key" data-unpublished="">
+          {t('unpublished', { ns: 'common' })}
         </li>
       </ul>
       {unlocatedCount > 0 && <p className="posting-map__note">{t('unlocatedPostings', { count: unlocatedCount })}</p>}

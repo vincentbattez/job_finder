@@ -290,6 +290,57 @@ describe('a second detection', () => {
   });
 });
 
+// A Béthune Posting the site took offline: its detail page redirects to the home page, and the DSJ
+// feed no longer lists it
+const UNPUBLISHED_REFERENCE = '2026-2445600';
+
+function unpublishedReferenceListOf(postingList: Posting[]): string[] {
+  return postingList.filter(({ unpublishedAt }) => unpublishedAt !== null).map(({ reference }) => reference);
+}
+
+describe('a Posting its Source no longer publishes', () => {
+  it('is Unpublished from the next Detection on, until the Source publishes it again', async () => {
+    const dataDirectory = createDataDirectory();
+    const firstActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
+    await firstActions.detect();
+    const feedWithoutItFetch = createRecordedFetch({
+      [DSJ_FEED_URL]: { body: feedWithout([UNPUBLISHED_REFERENCE]) },
+    }).fetch;
+    const actions = await createActions({ dataDirectory, fetch: feedWithoutItFetch });
+
+    await actions.detect();
+
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(unpublishedReferenceListOf(postingList)).toEqual([UNPUBLISHED_REFERENCE]);
+    expect(postingList.find(({ reference }) => reference === UNPUBLISHED_REFERENCE)).toMatchObject({
+      unpublishedAt: new Date('2026-10-29T12:00:00Z'),
+      status: 'to_apply',
+      archivedAt: null,
+    });
+    const republishedActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
+    await republishedActions.detect();
+    expect(unpublishedReferenceListOf(await republishedActions.listPostings({ candidateId: 'lea' }))).toEqual([]);
+  });
+
+  // The feed lists every Posting of the Source, whatever the title: one the Watch no longer searches
+  // for is still online
+  it('stays published when the Watch no longer searches for it', async () => {
+    const dataDirectory = createDataDirectory();
+    const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
+    await actions.detect();
+    await actions.saveWatch({
+      candidateId: 'lea',
+      watchId: LEA_WATCH_ID,
+      source: 'pep',
+      parameters: { title: 'astronaute', courtOfAppealList: ['Douai'] },
+    });
+
+    await actions.detect();
+
+    expect(unpublishedReferenceListOf(await actions.listPostings({ candidateId: 'lea' }))).toEqual([]);
+  });
+});
+
 describe('a first launch cut off mid-way', () => {
   // The Postings saved before the cut stay, but the first launch is over only once a Detection of the
   // Watch went through: the next one imports the rest without triggering anything either

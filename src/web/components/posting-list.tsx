@@ -16,6 +16,7 @@ export interface IPostingRow {
   step: Step;
   isExpired: boolean;
   archivedAt: Date | null;
+  unpublishedAt: Date | null;
   publishedAt: Date | null;
   deadline: Date | null;
 }
@@ -61,7 +62,7 @@ export function PostingList({
               </div>
             </td>
             <td>
-              <StatusBadge step={posting.step} isExpired={posting.isExpired} archivedAt={posting.archivedAt} />
+              <StatusBadge {...posting} />
             </td>
             <td className="posting-list__date" data-column="publishedAt" data-label={t('publishedAtColumn')}>
               <DateText date={posting.publishedAt} />

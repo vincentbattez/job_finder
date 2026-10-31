@@ -35,7 +35,7 @@ export function ApplicationRow({ application, outcomeSelector }: Readonly<IAppli
         {whereList.length > 0 && <span className="application-row__where">{whereList.join(' · ')}</span>}
       </div>
       <div className="application-row__status">
-        <StatusBadge step={posting.step} isExpired={posting.isExpired} archivedAt={posting.archivedAt} />
+        <StatusBadge {...posting} />
         {outcomeSelector}
       </div>
       <dl className="application-row__facts">
