@@ -66,14 +66,18 @@ const CLAUDE_RESULT_SCHEMA = z.object({
 });
 
 // What claude -p says, in English, when it refuses a session because its login expired or the
-// subscription reached its limit: never checked against a real refusal, hence broad (#41)
+// subscription reached its limit: only its own wording, so that a session's error that merely mentions
+// a login page or a quota stays a failed session (#41)
 const REFUSAL_LIST: { code: ErrorCode; pattern: RegExp }[] = [
-  { code: 'claude_usage_limit', pattern: /usage limit|limit reached|hit your limit|rate limit|quota|\b429\b/i },
+  { code: 'claude_usage_limit', pattern: /Claude AI usage limit|usage limit reached|you've hit your limit/i },
   {
     code: 'claude_login_required',
-    pattern: /\/login|log ?in|authentication|authenticate|oauth|api key|credential|\b401\b/i,
+    pattern: /Please run \/login|Invalid API key|OAuth token (?:has )?expired|Not logged in/i,
   },
 ];
+
+// A session past its maximum duration gets SIGTERM; one still alive this long after gets SIGKILL
+const KILL_GRACE_MS = 10_000;
 
 // A failure Claude Code names, under its code; its message tells on which machine to act, the one
 // the session runs on
@@ -120,8 +124,8 @@ function readResult(output: string, stderr: string, exitCode: number | null, loc
 
 // The only file that knows the AI runs on Claude Code, through the subscription and never an API
 // key (ADR-0003): the rest of the app sees an IAiSession, which the tests replace with a fake. A
-// headless session is stopped past sessionTimeoutMs.
-export function createClaudeCode(sessionTimeoutMs: number): IAiSession {
+// headless session is stopped past sessionTimeoutMs, then killed past killGraceMs more.
+export function createClaudeCode(sessionTimeoutMs: number, killGraceMs = KILL_GRACE_MS): IAiSession {
   return {
     // The prompt goes into the system prompt, not the Candidate's messages; the manual mode asks their
     // consent to each edit, and a confined session has no shell that could get round its read-only paths
@@ -192,6 +196,15 @@ export function createClaudeCode(sessionTimeoutMs: number): IAiSession {
         stdio: 'pipe',
         timeout: sessionTimeoutMs,
       });
+      // A claude deaf to the SIGTERM of the timeout would still hold its job, and the queue behind it
+      const killTimer = setTimeout(() => {
+        if (child.exitCode === null && child.signalCode === null) {
+          child.kill('SIGKILL');
+        }
+      }, sessionTimeoutMs + killGraceMs);
+      child.on('exit', () => {
+        clearTimeout(killTimer);
+      });
       // A claude that exits before reading its message tells why through its exit
       child.stdin
         .on('error', () => {
@@ -230,8 +243,8 @@ export function createClaudeCode(sessionTimeoutMs: number): IAiSession {
           ? failedSession('session_timed_out', { minutes: String(Math.round(sessionTimeoutMs / 60_000)) }, { locale })
           : failedSession('session_killed', { signal }, { locale });
       } catch (error) {
-        const log = tFor(locale, 'error')('sessionNotLaunched', { reason: messageOf(error) });
-        return SESSION_RESULT_SCHEMA.parse({ isSuccess: false, sessionId: null, log, errorCode: null });
+        clearTimeout(killTimer);
+        return failedSession('session_not_launched', { reason: messageOf(error) }, { locale });
       }
     },
   };

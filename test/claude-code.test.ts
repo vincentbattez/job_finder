@@ -26,6 +26,8 @@ interface IFakeClaudeBehavior {
   signal?: string;
   // Never ends, as a session waiting on the network or on a question
   isHanging?: boolean;
+  // Ignores SIGTERM, so that only SIGKILL stops it
+  isDeafToTerm?: boolean;
 }
 
 // Puts the fake claude of test/fixtures/claude on the PATH, answering with the given output, JSON
@@ -39,6 +41,7 @@ function stubClaude(output: object | string, exitCode = 0, behavior: IFakeClaude
   vi.stubEnv('FAKE_CLAUDE_STDERR', behavior.stderr ?? '');
   vi.stubEnv('FAKE_CLAUDE_SIGNAL', behavior.signal ?? '');
   vi.stubEnv('FAKE_CLAUDE_HANG', behavior.isHanging === true ? '1' : '');
+  vi.stubEnv('FAKE_CLAUDE_IGNORE_TERM', behavior.isDeafToTerm === true ? '1' : '');
   return recordDirectory;
 }
 
@@ -115,6 +118,19 @@ describe('the headless launch of Claude Code', () => {
     expect(result.log).toContain(`ssh ${hostname()}`);
   });
 
+  // SIGTERM alone leaves a claude that ignores it running, and its job "Running" forever
+  it('kills a session that ignores the stop past its maximum duration', async () => {
+    stubClaude('', 0, { isHanging: true, isDeafToTerm: true });
+
+    const result = await createClaudeCode(300, 300).runHeadless({
+      ...SESSION,
+      directory: createDirectory(),
+      outputDirectory: '/v1',
+    });
+
+    expect(result).toMatchObject({ isSuccess: false, sessionId: null, errorCode: 'session_timed_out' });
+  });
+
   // cspell:words login
   it('tells how to log back in when Claude Code refuses the session for its authentication', async () => {
     stubClaude(
@@ -146,6 +162,23 @@ describe('the headless launch of Claude Code', () => {
     expect(result.log).toMatch(/limite d'usage/);
   });
 
+  // Only Claude Code's own wording of a refusal: a module's error that mentions a login page is no refusal
+  it('keeps an error result that merely mentions a login page a failed session', async () => {
+    stubClaude(
+      {
+        subtype: 'error_max_turns',
+        is_error: true,
+        session_id: 'session-6',
+        result: 'Reached max turns while reading the login page of the recruitment site (HTTP 429, quota).',
+      },
+      1,
+    );
+
+    const result = await CLAUDE_CODE.runHeadless({ ...SESSION, directory: createDirectory(), outputDirectory: '/v1' });
+
+    expect(result).toMatchObject({ isSuccess: false, sessionId: 'session-6', errorCode: null });
+  });
+
   it('keeps in the log what a claude that crashed without its JSON wrote to stderr', async () => {
     stubClaude('', 1, { stderr: 'Error: EACCES: permission denied, open /Users/lea/.claude.json' });
 
@@ -169,7 +202,12 @@ describe('the headless launch of Claude Code', () => {
 
     const result = await CLAUDE_CODE.runHeadless({ ...SESSION, directory: createDirectory(), outputDirectory: '/v1' });
 
-    expect(result).toMatchObject({ isSuccess: false, sessionId: null, log: /Impossible de lancer Claude Code/ });
+    expect(result).toMatchObject({
+      isSuccess: false,
+      sessionId: null,
+      errorCode: 'session_not_launched',
+      log: /Impossible de lancer Claude Code/,
+    });
   });
 });
 
