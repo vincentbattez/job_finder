@@ -56,11 +56,14 @@ function toMarkdown(html: string): string {
     .trim()}\n`;
 }
 
+// A site that never answers would hold the Detection: past this, it is unreachable
+const REQUEST_TIMEOUT_MS = 30_000;
+
 async function get(httpFetch: typeof fetch, url: string, locale: Locale): Promise<string> {
   let response: Response;
   try {
     // A removed offer redirects to the home page: the redirect is an error, not a Job Description
-    response = await httpFetch(url, { redirect: 'manual' });
+    response = await httpFetch(url, { redirect: 'manual', signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   } catch (error) {
     throw codedError(
       'source_unreachable',

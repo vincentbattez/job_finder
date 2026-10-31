@@ -100,7 +100,7 @@ describe('import of a Job Description in Markdown', () => {
     });
     const { jobDescription, extraction } = await actions.readPosting({ reference: job.posting.reference });
     expect(jobDescription).toBe(JOB_DESCRIPTION);
-    expect(extraction).toEqual({ state: 'in_progress', log: '', errorCode: null });
+    expect(extraction).toEqual({ state: 'queued', log: '', errorCode: null });
     // The worker runs the session, never the front nor the CLI (ADR-0003)
     expect(aiSession.headlessSessionList).toEqual([]);
   });

@@ -1,12 +1,23 @@
 #!/bin/sh
 # Stands in for the claude CLI in test/claude-code.test.ts: records how it was launched, then
 # answers as `claude -p --output-format json` would. An interactive session reads and prints
-# nothing, since the test runner holds the terminal.
+# nothing, since the test runner holds the terminal. It can also write to stderr, hang, or be
+# killed by a signal, as a stuck or crashed claude would.
 printf '%s\0' "$@" > "$FAKE_CLAUDE_RECORD/arguments"
 env > "$FAKE_CLAUDE_RECORD/environment"
 pwd -P > "$FAKE_CLAUDE_RECORD/directory"
 if [ "$1" = "-p" ]; then
   cat > "$FAKE_CLAUDE_RECORD/message"
   printf '%s' "$FAKE_CLAUDE_OUTPUT"
+fi
+if [ -n "$FAKE_CLAUDE_STDERR" ]; then
+  printf '%s\n' "$FAKE_CLAUDE_STDERR" >&2
+fi
+if [ -n "$FAKE_CLAUDE_SIGNAL" ]; then
+  kill -"$FAKE_CLAUDE_SIGNAL" $$
+fi
+if [ -n "$FAKE_CLAUDE_HANG" ]; then
+  # exec, so that stopping the session stops the process holding its output
+  exec sleep 600
 fi
 exit "${FAKE_CLAUDE_EXIT_CODE:-0}"

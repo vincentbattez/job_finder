@@ -8,21 +8,29 @@ import { useRevalidateWhile } from './use-revalidate-while.ts';
 import { WorkerTask } from './worker-task.tsx';
 
 // The button of the module that produces an Artifact, beside its state. The worker runs the job in
-// its own process (ADR-0003), so the Posting page reads the state again until the job is done.
+// its own process (ADR-0003), so the Posting page reads the state again until the job is done, and
+// says when no worker moves it.
 export function ModuleLaunch({
   reference,
   artifact,
   state,
   failure,
   module,
-}: Readonly<Pick<IArtifactVersions, 'artifact' | 'state' | 'failure' | 'module'> & { reference: string }>) {
+  workerFailure,
+}: Readonly<
+  Pick<IArtifactVersions, 'artifact' | 'state' | 'failure' | 'module'> & {
+    reference: string;
+    workerFailure: string | null;
+  }
+>) {
   const { t } = useTranslation('posting');
   const fetcher = useFetcher<{ error: string | null }>();
   const isHydrated = useIsHydrated();
-  const isRunning = state === 'in_progress';
+  const isRunning = state === 'queued' || state === 'in_progress';
   useRevalidateWhile(isRunning);
-  // The refusal of a relaunch, else why the last job failed, next to the Relaunch button
-  const error = fetcher.data?.error ?? failure?.log ?? null;
+  // The refusal of a relaunch, else why the last job failed or why the worker does not move it, next
+  // to the Relaunch button
+  const error = fetcher.data?.error ?? failure?.log ?? (isRunning ? workerFailure : null);
   return (
     <fetcher.Form method="post" action="/run">
       <input type="hidden" name="reference" value={reference} />

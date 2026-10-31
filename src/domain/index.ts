@@ -251,6 +251,8 @@ export const JOB_SCHEMA = z
     // The code of the catalogue a failed job failed under (ADR-0015)
     errorCode: ERROR_CODE_SCHEMA.nullable(),
     sessionId: z.string().nullable(),
+    // When the worker claimed it, null while it is queued
+    startedAt: z.date().nullable(),
     version: VERSION_SCHEMA.nullable(),
   })
   .brand<'Domain'>();
@@ -324,8 +326,9 @@ const VERSION_DOCUMENTS_SCHEMA = z.object({
   documentList: z.array(DOCUMENT_SCHEMA),
 });
 
-// What the front shows of an Artifact at a glance
-const STATE_SCHEMA = z.enum(['absent', 'in_progress', 'ready', 'failed']);
+// What the front shows of an Artifact at a glance: queued while its job waits for the worker, in
+// progress once the worker runs it
+const STATE_SCHEMA = z.enum(['absent', 'queued', 'in_progress', 'ready', 'failed']);
 
 export type State = z.infer<typeof STATE_SCHEMA>;
 
@@ -370,6 +373,9 @@ export const POSTING_DETAIL_SCHEMA = z
     // That of its latest extraction job, null for a Posting that was not imported; the log says why
     // it failed
     extraction: z.object({ state: STATE_SCHEMA, log: z.string(), errorCode: ERROR_CODE_SCHEMA.nullable() }).nullable(),
+    // Why its queued or running job makes no progress, the worker being stopped or stuck; null while
+    // it moves
+    workerFailure: z.object({ errorCode: ERROR_CODE_SCHEMA, message: z.string() }).nullable(),
   })
   .brand<'Domain'>();
 
@@ -407,9 +413,16 @@ export const UPLOAD_CONVERSION_SCHEMA = z
 
 export type UploadConversion = z.infer<typeof UPLOAD_CONVERSION_SCHEMA>;
 
-// How a headless AI session ended: its id, to resume it, and what it said, kept as the job's log
+// How a headless AI session ended: its id, to resume it, and what it said, kept as the job's log. A
+// failure the AI tool itself names (stopped, killed, refused) has its code, and its log starts with
+// the code's message; any other failure has none (ADR-0015).
 export const SESSION_RESULT_SCHEMA = z
-  .object({ isSuccess: z.boolean(), sessionId: z.string().nullable(), log: z.string() })
+  .object({
+    isSuccess: z.boolean(),
+    sessionId: z.string().nullable(),
+    log: z.string(),
+    errorCode: ERROR_CODE_SCHEMA.nullable(),
+  })
   .brand<'Domain'>();
 
 export type SessionResult = z.infer<typeof SESSION_RESULT_SCHEMA>;

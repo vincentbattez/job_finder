@@ -18,6 +18,10 @@ interface IAccess {
 const SERVICE_BY_NAME_SCHEMA = z.record(z.string(), z.object({ name: z.string().optional() }));
 const SERVICE_DOMAIN_LIST_SCHEMA = z.array(z.object({ domain: z.string(), services: SERVICE_BY_NAME_SCHEMA }));
 
+// A Home Assistant that never answers would hold the Detection or the job that notifies: past this,
+// it is unreachable
+const REQUEST_TIMEOUT_MS = 10_000;
+
 // Every call to the REST API of Home Assistant, whose failures say what to do; the token never
 // appears in a message, which reaches the front (ADR-0006)
 async function request({ url, token }: IAccess, locale: Locale, pathname: string, body?: unknown): Promise<Response> {
@@ -31,6 +35,7 @@ async function request({ url, token }: IAccess, locale: Locale, pathname: string
       method: body === undefined ? 'GET' : 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       ...(body !== undefined && { body: JSON.stringify(body) }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
     throw codedError(

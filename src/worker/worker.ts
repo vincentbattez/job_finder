@@ -3,6 +3,7 @@ import { setTimeout } from 'node:timers/promises';
 
 import { DEFAULT_LOCALE, localeOf, tFor } from '#/actions/i18n.ts';
 import { createActions, formatError, type Actions } from '#/actions/index.ts';
+import { WORKER_BEAT_INTERVAL_MS } from '#/actions/stalled-job.ts';
 
 const DATA_DIRECTORY = path.join(import.meta.dirname, '..', '..', 'data');
 
@@ -36,6 +37,17 @@ async function formatJobs(actions: Actions, jobList: Job[]): Promise<string> {
 // In its own process, so restarting the front never stops a session (ADR-0003)
 async function work(): Promise<never> {
   const actions = await createActions({ dataDirectory: DATA_DIRECTORY });
+  // On a timer, so that it goes on during a session: the Posting page and jf run --wait tell a job no
+  // worker runs from one that waits (#41)
+  const beat = async () => {
+    try {
+      await actions.beatWorker();
+    } catch (error) {
+      process.stderr.write(`${formatError(error)}\n`);
+    }
+  };
+  await beat();
+  setInterval(() => void beat(), WORKER_BEAT_INTERVAL_MS);
   process.stdout.write(await formatJobs(actions, await actions.failInterruptedJobs()));
   // Before any job, no Candidate: in the default locale
   process.stdout.write(tFor(DEFAULT_LOCALE, 'cli')('workerReady'));

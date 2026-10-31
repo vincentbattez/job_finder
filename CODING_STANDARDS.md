@@ -29,6 +29,7 @@ The generic rules of the code. The why of a decision is in its ADR (`docs/adr/`)
 - An action receives its input as `unknown` and parses it. It returns `void` or domain values. **(CI)**
 - A domain value is always obtained through `parse`. `as` assertions are refused. **(CI)**
 - Validation happens at the boundaries. Past the ACL, the code trusts the types.
+- **Bounded calls.** In an ACL, every subprocess has a `timeout` and every request, `fetch` or an injected `httpFetch`, a `signal` with a time limit: a call that never returns would leave its job "Running" forever and hold the queue behind it. The interactive session of `jf edit` and `jf profile`, which the Candidate ends themselves, is the named exception of `UNBOUNDED_CALL_LIST`. **(CI)**
 - A new raw access, for example an HTTP client or an SDK, is added to `RAW_DATA_ACCESS_LIST` in `test/architecture.test.ts`.
 
 ## Code

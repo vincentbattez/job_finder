@@ -10,6 +10,7 @@ export const POSTING_EN = {
   unreadPosting: 'Posting',
   stateLabelByState: {
     absent: 'Absent',
+    queued: 'Queued',
     in_progress: 'In progress',
     ready: 'Ready',
     failed: 'Failed',

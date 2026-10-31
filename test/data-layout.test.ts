@@ -295,7 +295,7 @@ describe('the French data folder', () => {
     expect(recipients).toEqual(JSON.parse(RECIPIENTS));
     const { artifactList: queuedArtifactList } = await actions.readPosting({ reference: '2026-3' });
     expect(queuedArtifactList.find(({ artifact }) => artifact === 'visualization')).toMatchObject({
-      state: 'in_progress',
+      state: 'queued',
     });
     expect(await actions.readInstructions({ candidateId: 'lea', module: 'interview_brief' })).toMatchObject({
       candidateInstructions: BRIEF_INSTRUCTIONS,

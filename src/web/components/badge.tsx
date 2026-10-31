@@ -24,7 +24,7 @@ export function StatusBadge({ status, isExpired }: Readonly<{ status: Status; is
   );
 }
 
-export const STATE_LIST = ['absent', 'in_progress', 'ready', 'failed'] as const;
+export const STATE_LIST = ['absent', 'queued', 'in_progress', 'ready', 'failed'] as const;
 
 export type State = (typeof STATE_LIST)[number];
 

@@ -23,14 +23,22 @@ export function meta({ loaderData }: MetaArgs<typeof loader>) {
 
 export default function Posting() {
   const { detail } = useLoaderData<typeof loader>();
+  const workerFailure = detail.workerFailure?.message ?? null;
   return (
     <main className="container page">
       <PostingDetail detail={detail} isPage>
         <StatusButtons reference={detail.posting.reference} nextStatusList={detail.nextStatusList} />
-        {detail.extraction !== null && <ExtractionLaunch reference={detail.posting.reference} {...detail.extraction} />}
+        {detail.extraction !== null && (
+          <ExtractionLaunch reference={detail.posting.reference} {...detail.extraction} workerFailure={workerFailure} />
+        )}
       </PostingDetail>
       {detail.artifactList.map((artifactVersions) => (
-        <ArtifactVersions key={artifactVersions.artifact} reference={detail.posting.reference} {...artifactVersions} />
+        <ArtifactVersions
+          key={artifactVersions.artifact}
+          reference={detail.posting.reference}
+          {...artifactVersions}
+          workerFailure={workerFailure}
+        />
       ))}
     </main>
   );

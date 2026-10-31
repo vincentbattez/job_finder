@@ -520,6 +520,60 @@ function findErrorsOutsideCatalogue(projectDirectory: string): string[] {
   });
 }
 
+// What an anti-corruption layer calls outside the process, and the option that bounds its duration: a
+// call that never returns would hold a job, and the whole queue behind it, “Running” forever
+const BOUNDED_CALL_LIST = [
+  { pattern: /^(?:spawn|spawnSync|exec|execSync|execFile|execFileSync|fork)$/, option: 'timeout' },
+  // fetch, or the fetch a Source or API Géo is given (httpFetch)
+  { pattern: /^(?:fetch|\w+Fetch)$/, option: 'signal' },
+];
+// The calls left unbounded on purpose, each with its reason
+const UNBOUNDED_CALL_LIST = [
+  // The interactive session of jf edit and jf profile, which the Candidate ends themselves
+  { filePath: 'src/ai-session/acl/claude-code.ts', callee: 'spawnSync' },
+];
+
+// Each call of an acl/ folder to a subprocess without a timeout or to HTTP without a signal, given
+// in an object literal of its arguments (CODING_STANDARDS “Visible failure”)
+function findUnboundedCalls(projectDirectory: string): string[] {
+  const filePathList = globSync('src/**/acl/**/*.{ts,tsx}', {
+    cwd: projectDirectory,
+    exclude: ['**/*.test.{ts,tsx}', 'src/workspace/generated/**'],
+  });
+  return filePathList.flatMap((filePath) => {
+    const content = readFileSync(path.join(projectDirectory, filePath), 'utf8');
+    const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const violationList: string[] = [];
+    const visit = (node: ts.Node) => {
+      if (ts.isCallExpression(node)) {
+        // A method, such as RegExp's exec, is none of them: they are called by their imported name
+        const name = ts.isIdentifier(node.expression) ? node.expression.text : '';
+        const bound = BOUNDED_CALL_LIST.find(({ pattern }) => pattern.test(name));
+        const isBounded = node.arguments.some(
+          (argument) =>
+            ts.isObjectLiteralExpression(argument) &&
+            argument.properties.some(
+              (property) => property.name !== undefined && property.name.getText(sourceFile) === bound?.option,
+            ),
+        );
+        const isException = UNBOUNDED_CALL_LIST.some(
+          (exception) => exception.filePath === filePath && exception.callee === name,
+        );
+        if (bound !== undefined && !isBounded && !isException) {
+          const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+          violationList.push(
+            `${filePath}:${String(line + 1)} calls ${name} without a ${bound.option}: a call that never returns ` +
+              'would leave its job “Running” forever (CODING_STANDARDS “Visible failure”)',
+          );
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
+    return violationList;
+  });
+}
+
 // The helper every action of a route goes through, so that a failure goes back to the form that
 // posted it, in its code's message, instead of replacing the page (CODING_STANDARDS “Visible failure”)
 const RELAY_ACTION_NAME = 'relayAction';
@@ -650,6 +704,39 @@ describe('architecture', () => {
 
   it('throws only errors of the catalogue of codes', () => {
     expect(findErrorsOutsideCatalogue(ROOT_DIRECTORY)).toEqual([]);
+  });
+
+  it('catches a subprocess without a timeout and a request without a signal in an anti-corruption layer', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/ai-session/acl/claude-code.ts': [
+          "spawn('claude', []);",
+          "spawn('claude', [], { timeout: 1000 });",
+          "spawnSync('claude', [], { stdio: 'inherit' });",
+        ].join('\n'),
+        'src/geo/acl/api-geo.ts': [
+          'await httpFetch(url);',
+          'await httpFetch(url, { signal: AbortSignal.timeout(1000) });',
+          'await fetch(url, { method: "POST" });',
+        ].join('\n'),
+        'src/workspace/acl/database.ts': "execFileSync('node', [], { stdio: 'pipe' });\n",
+        'src/postings/fetch.ts': 'await fetch(url);\n',
+      }),
+    );
+
+    expect(
+      sortedList(findUnboundedCalls(projectDirectory)).map((violation) => violation.split(' without', 1)[0]),
+    ).toEqual([
+      'src/ai-session/acl/claude-code.ts:1 calls spawn',
+      'src/geo/acl/api-geo.ts:1 calls httpFetch',
+      'src/geo/acl/api-geo.ts:3 calls fetch',
+      'src/workspace/acl/database.ts:1 calls execFileSync',
+    ]);
+    expect(findUnboundedCalls(projectDirectory)[0]).toMatch(/“Visible failure”/);
+  });
+
+  it('bounds every subprocess and every request of an anti-corruption layer', () => {
+    expect(findUnboundedCalls(ROOT_DIRECTORY)).toEqual([]);
   });
 
   it('catches a route action that does not go through relayAction', () => {

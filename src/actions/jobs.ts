@@ -9,6 +9,7 @@ import { composeResearchReadyNotification } from '#/notification/index.ts';
 import type { ActionContext } from './context.ts';
 import { runExtraction } from './import-job-description.ts';
 import { findInputs, parseModule } from './run-job.ts';
+import { findJobStall } from './stalled-job.ts';
 import { runConversion } from './uploads.ts';
 
 const MODULE_INPUT_SCHEMA = z.object({ module: z.string(), reference: z.string() });
@@ -49,8 +50,18 @@ export function createJobActions(context: ActionContext) {
         if (job.state === 'done' || job.state === 'failed') {
           return job;
         }
+        // A job no worker moves would be followed forever
+        const stall = await findJobStall(workspace, job, await findLocale(job.posting.candidateId));
+        if (stall !== undefined) {
+          throw stall;
+        }
         await setTimeout(FOLLOW_INTERVAL_MS);
       }
+    },
+
+    // The worker tells it runs, while it waits for jobs as during a session
+    async beatWorker(): Promise<void> {
+      await workspace.beatWorker();
     },
 
     // At the worker's start, a running job was cut off by its stop: failing it frees the queue

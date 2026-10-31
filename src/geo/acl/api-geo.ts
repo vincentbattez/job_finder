@@ -39,6 +39,9 @@ async function parseCommunes(response: Response, url: string, locale: Locale) {
   return parsed.data;
 }
 
+// An API Géo that never answers would hold the Detection: past this, it is unreachable
+const REQUEST_TIMEOUT_MS = 10_000;
+
 // API Géo, the State's directory of communes: no key, and no AI that could invent a location
 export function createApiGeo(httpFetch: typeof fetch = fetch) {
   return {
@@ -48,7 +51,7 @@ export function createApiGeo(httpFetch: typeof fetch = fetch) {
       const url = `${ORIGIN}/communes?nom=${encodeURIComponent(city)}&fields=nom,centre,region&boost=population&limit=5`;
       let response: Response;
       try {
-        response = await httpFetch(url);
+        response = await httpFetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
       } catch (error) {
         throw codedError('api_geo_unreachable', { url, reason: String(error) }, { locale, cause: error });
       }

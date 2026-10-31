@@ -102,6 +102,7 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
     salutation: { text: 'Madame, Monsieur,', source: null },
     justification: 'Le mail de candidature est la seule adresse publiée ; aucun contact ne donne de nom.',
   },
+  workerFailure: null,
 };
 
 const SAMPLE_LETTER = [

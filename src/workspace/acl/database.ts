@@ -67,6 +67,11 @@ const DEFAULT_DELAY_MONTHS = 6;
 
 const DETECTION_INCLUDE = { watchList: { orderBy: { id: 'asc' } } } as const;
 
+const MIGRATION_TIMEOUT_MS = 2 * 60_000;
+
+// The single row of the worker's heartbeat
+const WORKER_HEARTBEAT_ID = 1;
+
 const JOB_INCLUDE = { posting: { include: POSTING_INCLUDE }, version: { include: VERSION_INCLUDE } };
 
 export interface INewCandidate {
@@ -133,6 +138,8 @@ export function openDatabase(databasePath: string) {
       cwd: ROOT_DIRECTORY,
       env: { ...process.env, DATABASE_URL: url, CHECKPOINT_DISABLE: '1' },
       stdio: 'pipe',
+      // A migration takes seconds: one that hangs fails the launch rather than holding it
+      timeout: MIGRATION_TIMEOUT_MS,
     });
   }
   // Read at launch once the Default Deadline Period exists, then changed by the process that saves them (ADR-0011)
@@ -462,7 +469,7 @@ export function openDatabase(databasePath: string) {
     async claimNextJob(): Promise<QueuedJob | null> {
       const claimedList = z.array(z.object({ id: z.int() })).parse(
         await prisma.$queryRaw`
-          UPDATE "Job" SET "state" = 'running'
+          UPDATE "Job" SET "state" = 'running', "startedAt" = ${new Date()}
           WHERE "id" = (SELECT "id" FROM "Job" WHERE "state" = 'queued' ORDER BY "id" LIMIT 1)
             AND NOT EXISTS (SELECT 1 FROM "Job" WHERE "state" = 'running')
           RETURNING "id"`,
@@ -473,6 +480,22 @@ export function openDatabase(databasePath: string) {
         : QUEUED_JOB_SCHEMA.parse(
             await prisma.job.findUniqueOrThrow({ where: { id: claimed.id }, include: JOB_INCLUDE }),
           );
+    },
+
+    // The worker tells it runs: a job tells no worker runs once this is stale
+    async beatWorker(): Promise<void> {
+      const beatAt = new Date();
+      await prisma.workerHeartbeat.upsert({
+        where: { id: WORKER_HEARTBEAT_ID },
+        create: { id: WORKER_HEARTBEAT_ID, beatAt },
+        update: { beatAt },
+      });
+    },
+
+    // When the worker last told it runs, null before it ever started
+    async findWorkerBeat(): Promise<Date | null> {
+      const heartbeat = await prisma.workerHeartbeat.findUnique({ where: { id: WORKER_HEARTBEAT_ID } });
+      return heartbeat === null ? null : z.date().parse(heartbeat.beatAt);
     },
 
     // Fails the running jobs and their Versions, keeping the code of the failure and its message in

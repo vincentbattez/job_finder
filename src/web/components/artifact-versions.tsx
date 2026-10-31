@@ -55,13 +55,21 @@ export function ArtifactVersions({
   module,
   isEditable,
   versionList,
-}: Readonly<IArtifactVersions & { reference: string }>) {
+  workerFailure,
+}: Readonly<IArtifactVersions & { reference: string; workerFailure: string | null }>) {
   const { t } = useTranslation('posting');
   const headingId = useId();
   return (
     <section className="artifact-versions" id={artifact} data-artifact={artifact} aria-labelledby={headingId}>
       <h2 id={headingId}>{t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' })}</h2>
-      <ModuleLaunch reference={reference} artifact={artifact} state={state} failure={failure} module={module} />
+      <ModuleLaunch
+        reference={reference}
+        artifact={artifact}
+        state={state}
+        failure={failure}
+        module={module}
+        workerFailure={workerFailure}
+      />
       {isEditable && <CopyCommand command={`jf edit ${reference} ${artifact}`} />}
       {versionList.length === 0 ? (
         <p className="artifact-versions__missing">{t('noVersion')}</p>

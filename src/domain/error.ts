@@ -98,6 +98,10 @@ export const ERROR_CATALOGUE = {
   unknown_job: 'error:unknownJob',
   // The worker stopped while the job ran
   interrupted_job: 'error:interruptedJob',
+  // A job waits or runs while no worker is running to take it
+  worker_not_running: 'error:workerNotRunning',
+  // A job runs past its maximum duration: the worker that runs it is stuck
+  job_overdue: 'error:jobOverdue',
   // The Claude Code session of a job ended on an error
   session_failed: 'error:sessionFailed',
   // A file the module must write is missing
@@ -156,6 +160,14 @@ export const ERROR_CATALOGUE = {
   session_not_launched: 'error:sessionNotLaunched',
   // An interactive Claude Code session ended on an error
   interactive_session_failed: 'error:interactiveSessionFailed',
+  // A headless Claude Code session ran past its maximum duration, and was stopped
+  session_timed_out: 'error:sessionTimedOut',
+  // Claude Code refused the session: it is no longer logged in on the machine of the worker
+  claude_login_required: 'error:claudeLoginRequired',
+  // Claude Code refused the session: its subscription reached its usage limit
+  claude_usage_limit: 'error:claudeUsageLimit',
+  // A Claude Code session was killed by a signal, from outside or for lack of memory
+  session_killed: 'error:sessionKilled',
   // The session converting an Upload failed
   conversion_session_failed: 'error:conversionSessionFailed',
   // The folder of a Posting cannot take the name of its new title: the Posting keeps its title

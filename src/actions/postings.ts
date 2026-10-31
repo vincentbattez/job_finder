@@ -27,11 +27,12 @@ import type { Workspace } from '#/workspace/index.ts';
 import { ARTIFACT_INPUT_SCHEMA, REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
 import { assertArtifactModifiable, assertChoosable, assertDocumentModifiable, isAccepted } from './edition.ts';
 import { describeModule, findChosenVersion, parseArtifact } from './run-job.ts';
+import { findJobStall } from './stalled-job.ts';
 
 const VISUALIZATION_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
 
 const STATE_BY_VERSION_STATE = { running: 'in_progress', ready: 'ready', failed: 'failed' } as const;
-const STATE_BY_JOB_STATE = { queued: 'in_progress', running: 'in_progress', done: 'ready', failed: 'failed' } as const;
+const STATE_BY_JOB_STATE = { queued: 'queued', running: 'in_progress', done: 'ready', failed: 'failed' } as const;
 
 // The state of an Artifact follows its last job, unless a Version came after it: a job that failed
 // before creating its Version, refused by findInputs, is failed rather than the previous Version's state
@@ -106,6 +107,8 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
       const locale = await findLocale(posting.candidateId);
       const jobList = await workspace.listJobs(posting);
       const extractionJob = jobList.findLast(({ module }) => module === 'extraction');
+      const pendingJob = jobList.find(({ state }) => state === 'queued' || state === 'running');
+      const stall = pendingJob === undefined ? undefined : await findJobStall(workspace, pendingJob, locale);
       const artifactList = await Promise.all(
         ARTIFACT_SCHEMA.options.map(async (artifact) => {
           const versionList = await workspace.listVersions(posting, artifact);
@@ -113,7 +116,7 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
           return {
             artifact,
             // A queued job has no Version yet, while the worker runs another one (ADR-0003), and a
-            // claimed job has none until the worker starts it: both are already in progress
+            // claimed job has none until the worker starts it: the job tells its state
             ...(await findArtifactState(workspace, posting, artifact, jobList)),
             module: await describeModule(workspace, posting, artifact, locale),
             isEditable: isAccepted(() => {
@@ -137,6 +140,7 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
                 log: extractionJob.log,
                 errorCode: extractionJob.errorCode,
               },
+        workerFailure: stall === undefined ? null : { errorCode: stall.code, message: stall.message },
       });
     },
 

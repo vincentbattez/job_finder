@@ -146,7 +146,7 @@ async function readStateByArtifact(actions: Actions) {
 }
 
 describe('the state of each Artifact on the Posting page', () => {
-  it('is absent, then in progress from the moment its job is queued, then ready', async () => {
+  it('is absent, then queued from the moment its job is queued, then ready', async () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
     const before = await readStateByArtifact(actions);
 
@@ -160,11 +160,11 @@ describe('the state of each Artifact on the Posting page', () => {
       interview_brief: 'absent',
       visualization: 'absent',
     });
-    expect(queued).toMatchObject({ research: 'in_progress', letter: 'absent' });
+    expect(queued).toMatchObject({ research: 'queued', letter: 'absent' });
     expect(await readStateByArtifact(actions)).toMatchObject({ research: 'ready', letter: 'absent' });
   });
 
-  it('is failed after a failed run, and in progress again once relaunched', async () => {
+  it('is failed after a failed run, and queued again once relaunched', async () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, { isSuccess: false }));
     await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runModule({ module: 'research', reference: REFERENCE });
@@ -174,7 +174,7 @@ describe('the state of each Artifact on the Posting page', () => {
     await actions.runModule({ module: 'research', reference: REFERENCE });
 
     expect(failed).toMatchObject({ research: 'failed' });
-    expect(await readStateByArtifact(actions)).toMatchObject({ research: 'in_progress' });
+    expect(await readStateByArtifact(actions)).toMatchObject({ research: 'queued' });
   });
 });
 

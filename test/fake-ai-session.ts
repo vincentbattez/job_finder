@@ -3,6 +3,7 @@ import path from 'node:path';
 import { setTimeout } from 'node:timers/promises';
 
 import type { IHeadlessSession, IInteractiveSession } from '#/ai-session/acl/claude-code.ts';
+import type { ErrorCode } from '#/domain/error.ts';
 import { SESSION_RESULT_SCHEMA, type SessionResult } from '#/domain/index.ts';
 
 interface IPlannedRun {
@@ -10,6 +11,8 @@ interface IPlannedRun {
   isSuccess?: boolean;
   // What the session says, kept as the job's log
   log?: string;
+  // The code of a failure the AI tool names, such as a session stopped past its maximum duration
+  errorCode?: ErrorCode;
   // The worker is stopped during this session, which then never ends
   isInterrupted?: boolean;
   // The launch throws this error instead of running the session
@@ -42,7 +45,8 @@ export function createFakeAiSession(...plannedRunList: IPlannedRun[]) {
       const sessionId = `fake-session-${String(headlessSessionList.length)}`;
       const {
         fileByName = {},
-        isSuccess = true,
+        errorCode = null,
+        isSuccess = errorCode === null,
         log = isSuccess ? 'La Recherche est écrite.' : 'Claude Code a rencontré une erreur.',
         isInterrupted = false,
         errorMessage,
@@ -62,7 +66,7 @@ export function createFakeAiSession(...plannedRunList: IPlannedRun[]) {
       for (const [fileName, content] of Object.entries(fileByName)) {
         writeFileSync(path.join(session.outputDirectory, fileName), content);
       }
-      return SESSION_RESULT_SCHEMA.parse({ isSuccess, sessionId, log });
+      return SESSION_RESULT_SCHEMA.parse({ isSuccess, sessionId, log, errorCode });
     },
   };
 }

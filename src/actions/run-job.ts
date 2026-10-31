@@ -251,7 +251,12 @@ export function createJobRunner(
       outputDirectory,
       locale,
     });
-    // The log starts with the message of the failure's code, which the Posting page and jf versions show
+    // The log starts with the message of the failure's code, which the Posting page and jf versions show;
+    // that of a failure the session names already does
+    if (session.errorCode !== null) {
+      const { errorCode, log, sessionId } = session;
+      return workspace.finishJob({ job, version }, { errorCode, log, sessionId });
+    }
     const problem = session.isSuccess
       ? aiModule.outputFileList
           .map((outputFile) => findOutputProblem(outputFile, posting, outputDirectory, locale))

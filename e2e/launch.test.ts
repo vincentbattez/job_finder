@@ -23,7 +23,8 @@ test.describe('launching the modules of a Posting', () => {
 
     await letter.getByRole('button', { name: 'Lancer la Lettre' }).click();
 
-    await expect(letter.getByRole('status')).toHaveText('En cours');
+    // Queued until the worker takes the job, which its session then runs
+    await expect(letter.getByRole('status')).toHaveText(/^(?:En attente|En cours)$/);
     await expect(letter.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
     await expect(letter.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
     await expect(letter.locator('figcaption')).toHaveText(['draft.md', 'letter.md']);

@@ -56,6 +56,8 @@ export interface IPostingDetail {
   jobDescription: string;
   artifactList: IArtifactVersions[];
   recipients: IRecipients | null;
+  // Why its queued or running job does not move: the worker is stopped or stuck
+  workerFailure: { errorCode: string; message: string } | null;
 }
 
 // A mail written in free text, as Avesnes publishes it, stays as published rather than a broken link

@@ -61,6 +61,10 @@ export const ERROR_EN = {
     'Posting {{reference}} was Applied: its Chosen Letter is frozen as sent. It is no longer edited, regenerated or replaced by another Version.',
 
   // Modules, jobs and Versions
+  workerNotRunning:
+    'The worker is not running: job {{jobId}} is not moving. Start it: “lpm service worker start -p job_finder”, then read “lpm logs worker -p job_finder” if it stops again.',
+  jobOverdue:
+    'Job {{jobId}} has been running for over {{minutes}} minutes, past its maximum duration: the worker is stuck. Restart it: “lpm service worker restart -p job_finder”, which fails the job; then run the module again.',
   unknownModule: 'Unknown module: {{name}}. Modules: {{names}}.',
   unknownArtifact: 'Unknown Artifact: {{name}}. Artifacts: {{names}}.',
   // The front shows it beside the button of the missing Artifact, the CLI with the command that lifts it
@@ -113,6 +117,14 @@ export const ERROR_EN = {
   // The AI sessions and what they write
   sessionFailed: 'The Claude Code session failed: its log says why. Run the module again.',
   sessionStopped: 'Claude Code stopped (code {{exitCode}}): {{output}}',
+  sessionTimedOut:
+    'The Claude Code session ran past its maximum duration ({{minutes}} minutes) and was stopped. Run the module again; if it comes back, “ssh {{host}}”, then run “claude” alone to see what it waits for (login, usage limit, a question).',
+  claudeLoginRequired:
+    'Claude Code refused the session: it is no longer logged in on {{host}}. Log back in: “ssh {{host}}”, run “claude” then type “/login”, then run the module again.\n{{result}}',
+  claudeUsageLimit:
+    'Claude Code has reached its usage limit on {{host}}. Run the module again once the limit is lifted, at the time it gives.\n{{result}}',
+  sessionKilled:
+    'Claude Code was stopped by the signal {{signal}}: its process was killed, or the machine ran out of memory. Try again; if it comes back, “ssh {{host}}”, then run “claude” alone to read its message.',
   sessionNotLaunched: 'Claude Code could not be launched ({{reason}}). Install “claude” and log in to it.',
   interactiveSessionFailed:
     'The Claude Code session stopped on an error (code {{status}}). Run the command again; if the error comes back, run “claude” alone to read its message.',

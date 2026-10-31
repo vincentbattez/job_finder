@@ -59,6 +59,10 @@ export const ERROR_FR: typeof ERROR_EN = {
   malformedOutput: 'Le fichier {{outputPath}} est mal formé : {{formatError}}.',
   notImported: "L'Offre {{reference}} n'a pas été importée : ses champs viennent de sa Source, sans extraction.",
   unknownJob: 'Job inconnu : {{jobId}}. Son numéro est celui que « jf run » ou « jf import » a affiché.',
+  workerNotRunning:
+    "Le worker ne tourne pas : le job {{jobId}} n'avance pas. Le démarrer : « lpm service worker start -p job_finder », puis lire « lpm logs worker -p job_finder » s'il s'arrête encore.",
+  jobOverdue:
+    'Le job {{jobId}} tourne depuis plus de {{minutes}} minutes, au-delà de sa durée maximale : le worker est bloqué. Le redémarrer : « lpm service worker restart -p job_finder », ce qui fait échouer le job ; puis relancer le module.',
   interruptedJob:
     "Interrompu : le worker s'est arrêté pendant ce job. Relancer le module en crée une nouvelle Version.",
   visualizationNotEditable:
@@ -100,6 +104,14 @@ export const ERROR_FR: typeof ERROR_EN = {
 
   sessionFailed: 'La session Claude Code a échoué : son journal dit pourquoi. Relancer le module.',
   sessionStopped: "Claude Code s'est arrêté (code {{exitCode}}) : {{output}}",
+  sessionTimedOut:
+    "La session Claude Code a dépassé sa durée maximale ({{minutes}} minutes) : elle a été arrêtée. Relancer le module ; si cela revient, « ssh {{host}} », puis lancer « claude » seul pour voir ce qu'il attend (connexion, limite d'usage, une question).",
+  claudeLoginRequired:
+    "Claude Code a refusé la session : il n'est plus connecté sur {{host}}. S'y reconnecter : « ssh {{host}} », lancer « claude » puis taper « /login », puis relancer le module.\n{{result}}",
+  claudeUsageLimit:
+    "Claude Code a atteint sa limite d'usage sur {{host}}. Relancer le module une fois la limite levée, à l'heure qu'il indique.\n{{result}}",
+  sessionKilled:
+    'Claude Code a été arrêté par le signal {{signal}} : son processus a été tué, ou la machine a manqué de mémoire. Relancer ; si cela revient, « ssh {{host}} », puis lancer « claude » seul pour lire son message.',
   sessionNotLaunched: "Impossible de lancer Claude Code ({{reason}}). Installer « claude » et s'y connecter.",
   interactiveSessionFailed:
     "La session Claude Code s'est arrêtée en erreur (code {{status}}). Relancer la commande ; si l'erreur revient, lancer « claude » seul pour lire son message.",
