@@ -2,9 +2,9 @@ import { expect, test, type IFront } from './candidate.ts';
 
 // Emma reads the interface in English (test/seed-front.ts): her one Posting, imported, has no
 // Deadline
-test('shows the Posting list in English to a Candidate with the en locale', async ({ page, asCandidate }) => {
+test('shows the Posting list in English to a Candidate with the en locale', async ({ page, asCandidate, openPage }) => {
   await asCandidate('emma');
-  await page.goto('/postings');
+  await openPage('/postings');
 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Postings');
   await expect(page).toHaveTitle('Postings · Job Finder');
@@ -100,7 +100,7 @@ test('shows the Instructions and the Candidates in English to a Candidate with t
 test('shows the design page in English to a Candidate with the en locale', async ({ page, asCandidate, openPage }) => {
   await asCandidate('emma');
   await openHomeOfEmma({ page, openPage });
-  await page.goto('/design');
+  await openPage('/design');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Design system');
   await expect(page).toHaveTitle('Job Finder design system');
 });
@@ -108,9 +108,10 @@ test('shows the design page in English to a Candidate with the en locale', async
 test('shows the tools of the Posting list in English to a Candidate with the en locale', async ({
   page,
   asCandidate,
+  openPage,
 }) => {
   await asCandidate('emma');
-  await page.goto('/postings');
+  await openPage('/postings');
 
   // A Detection another test runs hides the button behind its progress, in English too (ADR-0014)
   await expect(

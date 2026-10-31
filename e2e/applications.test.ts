@@ -58,9 +58,10 @@ test.describe('/applications', () => {
   test('shows an Archived Application at its step on its page too, beside the Archived badge', async ({
     page,
     asCandidate,
+    openPage,
   }) => {
     await asCandidate('lea');
-    await page.goto(`/postings/${ARCHIVED_REFERENCE}`);
+    await openPage(`/postings/${ARCHIVED_REFERENCE}`);
 
     await expect(page.locator('.posting-detail__title .badge')).toHaveText(['Postulée', 'Archivée']);
   });

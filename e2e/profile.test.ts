@@ -196,10 +196,10 @@ test.describe('Profile of a Candidate', () => {
     await expect(cv.getByRole('textbox')).toHaveValue('# CV converti\n\n## Formation\n\n- Master 2 droit public\n');
   });
 
-  test('says how to fill an empty Profile', async ({ page, asCandidate }) => {
+  test('says how to fill an empty Profile', async ({ page, asCandidate, openPage }) => {
     await asCandidate('camille');
 
-    await page.goto('/profile');
+    await openPage('/profile');
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Profil de Camille');
     await expect(page.getByRole('code')).toHaveText('jf profile camille');

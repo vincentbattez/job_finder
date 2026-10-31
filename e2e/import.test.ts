@@ -23,11 +23,12 @@ const CANDIDATE_NAME = 'Hugo';
 test('imports a Job Description dropped on the Postings: it shows at once, then the worker reads its fields and runs its Research', async ({
   page,
   asCandidate,
+  openPage,
 }) => {
   // The tiles of the map come from OpenStreetMap over the internet: its points show without them
   await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
   await asCandidate('hugo');
-  await page.goto('/postings');
+  await openPage('/postings');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Offres de ${CANDIDATE_NAME}`);
   // The drop needs React, which enables the field once it runs
   await expect(page.getByLabel('Importer une Fiche de poste')).toBeEnabled();

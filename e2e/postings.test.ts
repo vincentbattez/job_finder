@@ -122,15 +122,15 @@ test.describe('Postings of a Candidate', () => {
     await expect(page.getByRole('region', { name: 'Fiche d’entretien' }).getByRole('code')).toHaveCount(0);
   });
 
-  test('fits a phone screen, the list as the Posting page', async ({ page, asCandidate }) => {
+  test('fits a phone screen, the list as the Posting page', async ({ page, asCandidate, openPage }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await asCandidate('lea');
-    await page.goto('/postings');
+    await openPage('/postings');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Léa');
 
     await expect.poll(() => findOverflowing(page)).toEqual([]);
 
-    await page.goto('/postings/2026-2445600');
+    await openPage('/postings/2026-2445600');
     await page.locator('li > details > summary', { hasText: 'v2' }).click();
     await page.getByText('Lire la Fiche de poste').click();
 
