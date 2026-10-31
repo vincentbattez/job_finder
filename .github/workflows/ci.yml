@@ -43,12 +43,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+      # The browser only changes with @playwright/test: keyed on its version, the cache survives
+      # a lockfile change that leaves Playwright alone
+      - name: Read the Playwright version
+        id: playwright
+        run: echo "version=$(jq -r .version node_modules/@playwright/test/package.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      # Headless, the tests only need Chromium's headless shell, not the full browser
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      # Headless, the tests only need Chromium's headless shell, not the full browser. No --with-deps:
+      # the runner already has every shared library, apt would only add fallback fonts (#111)
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps --only-shell chromium
+        run: npx playwright install --only-shell chromium
       - name: Playwright
         run: mise run test:e2e
