@@ -56,6 +56,10 @@ export const POSTING_EN = {
   confirmApplied: 'Confirm: Applied',
   cancel: 'Cancel',
   appliedFreezesLetter: 'Once Applied, the Chosen Letter no longer changes: it is the one sent.',
+  // Applied undone on an Application In progress whose Letter was never sent
+  markNotSent: 'Not sent yet',
+  confirmToApply: 'Confirm: To Apply',
+  toApplyFreesLetter: 'The Posting goes back to To Apply and its Chosen Letter can change again.',
 
   // The launch of a module or of the extraction
   // The context is the Artifact: French names some of them in the masculine, such as the Portrait

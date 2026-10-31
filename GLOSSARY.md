@@ -137,7 +137,7 @@ _Avoid_: new, pending, to process
 _Formerly_: À traiter
 
 **Applied**:
-Status of a Posting whose Candidate sent their application and is waiting for its outcome; its Application starts there, and its Letter never changes afterwards.
+Status of a Posting whose Candidate sent their application and is waiting for its outcome; only the Candidate says so, a Letter written not being a Letter sent. Its Application starts there, and its Letter no longer changes, unless the Candidate puts it back To Apply because they never sent it, which no outcome nor Interview allows anymore.
 _Avoid_: sent, submitted
 _Formerly_: Postulée
 

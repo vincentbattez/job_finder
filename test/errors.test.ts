@@ -155,9 +155,10 @@ describe('an error for an English-speaking Candidate', () => {
   it('refuses a Status the Posting cannot move to, in English', async () => {
     const { actions, reference } = await createEmma();
     await actions.changeStatus({ reference, status: 'applied' });
+    await actions.changeStatus({ reference, status: 'rejected' });
 
     await expect(actions.changeStatus({ reference, status: 'to_apply' })).rejects.toThrow(
-      `Posting ${reference} was Applied: it never goes back to To Apply, since its Chosen Letter is the one sent.`,
+      `Posting ${reference} has an outcome: put it back In progress first, only an Applied Posting without an Interview goes back to To Apply.`,
     );
   });
 

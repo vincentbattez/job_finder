@@ -249,7 +249,7 @@ describe('the French data folder', () => {
     const actions = await createActions({ dataDirectory });
 
     const { statusChoiceList, artifactList } = await actions.readPosting({ reference: '2026-1' });
-    expect(statusChoiceList).toEqual(['hired', 'rejected']);
+    expect(statusChoiceList).toEqual(['to_apply', 'hired', 'rejected']);
     expect(artifactList.find(({ artifact }) => artifact === 'letter')).toMatchObject({ isEditable: false });
     await expect(actions.runModule({ module: 'letter', reference: '2026-1' })).rejects.toThrow(/figée/);
     const draftPath = path.join(

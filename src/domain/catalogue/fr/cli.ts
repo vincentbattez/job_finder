@@ -99,7 +99,9 @@ export const CLI_FR: typeof CLI_EN = {
   statusCommandDescription: '{{description}} : jf {{name}} <offre>',
   statusUsage: 'Usage : jf {{name}} <offre>. « jf list <candidat> » liste les Offres.',
   statusChanged: '{{reference}} : {{statusLabel}}\n',
-  applyDescription: 'Passe une Offre en Postulée, avec ou sans Lettre, ce qui fige sa Lettre pour de bon',
+  applyDescription: 'Passe une Offre en Postulée, avec ou sans Lettre, ce qui fige sa Lettre',
+  toApplyDescription:
+    'Remet À traiter une Offre Postulée sans Entretien dont la Lettre n’a jamais été envoyée, sa Lettre de nouveau libre',
   hiredDescription: 'Marque une Candidature Obtenue : le Candidat a le poste',
   rejectedDescription: "Marque une Candidature Refusée : l'employeur n'a pas retenu le Candidat",
   inProgressDescription: 'Remet En cours, soit Postulée, une Candidature Obtenue ou Refusée',

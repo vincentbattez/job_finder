@@ -36,6 +36,17 @@ describe('the Interviews of an Application', () => {
     expect(await actions.listInterviews({ reference: '2026-2445600' })).toEqual([]);
   });
 
+  // An Interview proves the Letter was sent: Applied is only undone without one
+  it('keep their Application from going back to To Apply', async () => {
+    await apply('2026-2448209');
+    await addInterview('2026-2448209', '2030-11-19T14:00');
+
+    await expect(actions.changeStatus({ reference: '2026-2448209', status: 'to_apply' })).rejects.toThrow(
+      "L'Offre 2026-2448209 a un Entretien : sa Lettre a été envoyée, elle ne revient pas À traiter.",
+    );
+    expect(await readStep('2026-2448209')).toBe('invited');
+  });
+
   it('start at the time typed in Paris, last an hour by default and are numbered per Posting', async () => {
     await apply('2026-2445609');
     await addInterview('2026-2445609', '2026-11-19T14:00');

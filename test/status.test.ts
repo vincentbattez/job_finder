@@ -118,15 +118,26 @@ describe('status of a Posting', () => {
     });
   });
 
-  // Applied is never undone: the Chosen Letter was sent
-  it('never brings an Applied Posting back to To Apply, Archived or not', async () => {
+  // A Letter written is not a Letter sent: the Candidate undoes an Applied they never sent, and the
+  // Application never started
+  it('brings an Applied Posting never sent back to To Apply, its Letter modifiable again, Archived or not', async () => {
     await actions.changeStatus({ reference: '2026-2360411', status: 'applied' });
     await actions.archive({ reference: '2026-2360411' });
+    vi.setSystemTime(new Date('2026-10-30T12:00:00Z'));
 
-    await expect(actions.changeStatus({ reference: '2026-2360411', status: 'to_apply' })).rejects.toThrow(
-      /L'Offre 2026-2360411 a été Postulée : elle ne revient jamais À traiter/,
-    );
-    expect(await findStatus('2026-2360411')).toBe('applied');
+    await actions.changeStatus({ reference: '2026-2360411', status: 'to_apply' });
+
+    vi.setSystemTime(new Date('2026-10-29T12:00:00Z'));
+    expect(await findPosting(actions, '2026-2360411')).toMatchObject({
+      status: 'to_apply',
+      appliedAt: null,
+      statusChangedAt: new Date('2026-10-30T12:00:00Z'),
+      archivedAt: new Date('2026-10-29T12:00:00Z'),
+    });
+    // No longer frozen: the Letter is only refused for want of the Research it builds on
+    await expect(actions.runModule({ module: 'letter', reference: '2026-2360411' })).rejects.toMatchObject({
+      code: 'missing_artifact',
+    });
   });
 
   // The outcome selector offers each of them, and none other; archiving changes none of them
@@ -140,7 +151,7 @@ describe('status of a Posting', () => {
 
     expect(detailList.map(({ statusChoiceList }) => statusChoiceList)).toEqual([
       ['applied'],
-      ['hired', 'rejected'],
+      ['to_apply', 'hired', 'rejected'],
       ['applied'],
     ]);
   });
@@ -190,12 +201,13 @@ describe('status of a Posting', () => {
     expect(await findPosting(actions, '2026-2448213')).toMatchObject({ status: 'to_apply', statusChangedAt: null });
   });
 
+  // The employer answered, so the Letter was sent
   it('never brings a Rejected Application back to To Apply', async () => {
     await actions.changeStatus({ reference: '2026-2448215', status: 'applied' });
     await actions.changeStatus({ reference: '2026-2448215', status: 'rejected' });
 
     await expect(actions.changeStatus({ reference: '2026-2448215', status: 'to_apply' })).rejects.toMatchObject({
-      code: 'status_change_after_applied',
+      code: 'to_apply_after_outcome',
     });
     expect(await findStatus('2026-2448215')).toBe('rejected');
   });

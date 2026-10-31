@@ -10,11 +10,14 @@ const OUTCOME_WITHOUT_JS_REFERENCE = '2026-2448209';
 
 const CORRECTED_LETTER = 'Madame la Première présidente,\n\nTitulaire d’un master 2 de droit privé obtenu en 2025.\n';
 
-test('corrects a Letter, saves it, marks the Posting as Applied and finds the Letter frozen', async ({
+test('corrects a Letter, saves it, marks the Posting as Applied, finds the Letter frozen, then undoes it', async ({
   page,
   context,
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  // Back To Apply, whatever a run stopped halfway left it at
+  const response = await page.request.post(`/postings/${BASTIA_REFERENCE}/status`, { form: { status: 'to_apply' } });
+  expect(response.ok()).toBe(true);
   await page.goto(`/postings/${BASTIA_REFERENCE}`);
   const letter = page.getByRole('region', { name: 'Lettre' });
   const draft = letter.getByRole('figure', { name: 'draft.md' });
@@ -37,8 +40,11 @@ test('corrects a Letter, saves it, marks the Posting as Applied and finds the Le
     expect(await page.evaluate(() => globalThis.navigator.clipboard.readText())).toBe(CORRECTED_LETTER);
   }).toPass();
 
-  // Applied is never undone: a second click confirms it
+  // Applied freezes the Letter: a second click confirms it
   await page.getByRole('button', { name: 'Marquer comme Postulée' }).click();
+  await expect(
+    page.getByText('Une fois Postulée, la Lettre retenue ne change plus : c’est celle envoyée.'),
+  ).toBeVisible();
   await expect(page.getByText('Postulée', { exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Confirmer : Postulée' }).click();
 
@@ -47,6 +53,14 @@ test('corrects a Letter, saves it, marks the Posting as Applied and finds the Le
   await expect(page.getByRole('button', { name: 'Archiver' })).toBeVisible();
   await expect(letter.getByRole('textbox')).toHaveCount(0);
   await expect(correction).toContainText('Titulaire d’un master 2 de droit privé obtenu en 2025.');
+
+  // A Letter written is not a Letter sent: the Candidate undoes Applied, and the Letter changes again
+  await page.getByRole('button', { name: 'Pas encore envoyée' }).click();
+  await page.getByRole('button', { name: 'Confirmer : À traiter' }).click();
+
+  await expect(page.locator('.posting-detail__title .badge')).toHaveText('À traiter');
+  await expect(page.getByRole('button', { name: 'Marquer comme Postulée' })).toBeVisible();
+  await expect(correction.getByRole('textbox', { name: 'Markdown' })).toHaveValue(CORRECTED_LETTER);
 });
 
 test('changes the Chosen Version of an Artifact', async ({ page }) => {
