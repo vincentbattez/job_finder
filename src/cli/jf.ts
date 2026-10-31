@@ -166,10 +166,11 @@ async function chooseReference(actions: Actions, terminal: Terminal): Promise<st
   return posting.reference;
 }
 
-// From a list, unless given: the Candidate has no reference to remember
-async function chooseArtifact(actions: Actions, [givenReference, givenArtifact]: string[]) {
+// From a list, unless given: the Candidate has no reference to remember. An Artifact of an Interview
+// takes its number last.
+async function chooseArtifact(actions: Actions, [givenReference, givenArtifact, givenInterview]: string[]) {
   if (givenReference !== undefined && givenArtifact !== undefined) {
-    return { reference: givenReference, artifact: givenArtifact };
+    return { reference: givenReference, artifact: givenArtifact, interview: givenInterview };
   }
   const terminal = openTerminal();
   try {
@@ -179,11 +180,15 @@ async function chooseArtifact(actions: Actions, [givenReference, givenArtifact]:
     const version = await choose(terminal, locale, {
       question: t('artifactQuestion'),
       itemList: await actions.listChosenVersions({ reference }),
-      label: ({ artifact, number }) =>
-        t('chosenVersionLabel', { artifactLabel: t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' }), number }),
+      label: ({ artifact, number, interview }) => {
+        const artifactLabel = t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' });
+        return interview === null
+          ? t('chosenVersionLabel', { artifactLabel, number })
+          : t('chosenInterviewVersionLabel', { artifactLabel, number, interviewNumber: interview.number });
+      },
       emptyError: () => codedError('no_artifact', { reference }, { locale }),
     });
-    return { reference, artifact: version.artifact };
+    return { reference, artifact: version.artifact, interview: version.interview?.number };
   } finally {
     // Claude Code takes the terminal next
     terminal.close();
@@ -374,15 +379,20 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
   },
   run: {
     describe: (t) => t('runDescription'),
-    run: async (actions, [module, reference], { isWaiting }) => {
+    run: async (actions, [module, reference, interview], { isWaiting }) => {
       if (module === undefined || reference === undefined) {
         throw codedError('run_usage');
       }
-      const queuedJob = await actions.runModule({ module, reference });
+      const queuedJob = await actions.runModule({ module, reference, interview });
       const locale = await localeOfPosting(actions, reference);
       const t = tFor(locale, 'cli');
       // jf versions takes the Artifact, which the module of jf run brief is not named after
-      const versionsCommand = `jf versions ${reference} ${queuedJob.module}`;
+      const versionsCommand = [
+        'jf versions',
+        reference,
+        queuedJob.module,
+        ...(interview === undefined ? [] : [interview]),
+      ].join(' ');
       process.stdout.write(t('queued', { module, reference, jobId: queuedJob.id }));
       if (!isWaiting) {
         process.stdout.write(t('runQueued', { versionsCommand }));
@@ -392,7 +402,8 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       const { state, version, log, errorCode } = await actions.followJob({ jobId: queuedJob.id });
       const name = version === null ? module : `${module} v${String(version.number)}`;
       if (state === 'failed') {
-        throw codedError('run_failed', { name, log, module, reference, errorCode }, { locale });
+        const command = ['jf run', module, reference, ...(interview === undefined ? [] : [interview])].join(' ');
+        throw codedError('run_failed', { name, log, command, errorCode }, { locale });
       }
       process.stdout.write(t('runReady', { name, versionsCommand }));
     },
@@ -419,11 +430,11 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
   },
   versions: {
     describe: (t) => t('versionsDescription'),
-    run: async (actions, [reference, artifact]) => {
+    run: async (actions, [reference, artifact, interview]) => {
       if (reference === undefined || artifact === undefined) {
         throw codedError('versions_usage');
       }
-      const versionList = await actions.listVersions({ reference, artifact });
+      const versionList = await actions.listVersions({ reference, artifact, interview });
       const t = await cliOfPosting(actions, reference);
       for (const { number, state, isChosen, hasCandidateInstructions, createdAt } of versionList) {
         const columnList = [
@@ -437,7 +448,7 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       }
       // Without --wait, the reason of a failed job is read here, even one that failed before its
       // Version, and why a queued or running one makes no progress (#41)
-      const { failure, workerFailure } = await actions.readArtifactState({ reference, artifact });
+      const { failure, workerFailure } = await actions.readArtifactState({ reference, artifact, interview });
       if (failure !== null) {
         process.stdout.write(t('lastJobFailed', { errorCode: failure.errorCode ?? '—', log: failure.log }));
       }
@@ -448,11 +459,11 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
   },
   choose: {
     describe: (t) => t('chooseDescription'),
-    run: async (actions, [reference, artifact, version]) => {
+    run: async (actions, [reference, artifact, version, interview]) => {
       if (reference === undefined || artifact === undefined || version === undefined) {
         throw codedError('choose_usage');
       }
-      await actions.chooseVersion({ reference, artifact, number: version.replace(/^v/, '') });
+      await actions.chooseVersion({ reference, artifact, number: version.replace(/^v/, ''), interview });
       const t = await cliOfPosting(actions, reference);
       process.stdout.write(t('versionChosen', { artifact, version, reference }));
     },

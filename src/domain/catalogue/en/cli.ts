@@ -33,6 +33,7 @@ export const CLI_EN = {
   noPosting: 'No Posting for {{candidateName}}: “jf detect” looks for new Postings.',
   artifactQuestion: 'Artifact to edit',
   chosenVersionLabel: '{{artifactLabel}} (v{{number}}, chosen)',
+  chosenInterviewVersionLabel: '{{artifactLabel}} of Interview {{interviewNumber}} (v{{number}}, chosen)',
   noArtifact: 'Posting {{reference}} has no Artifact to edit: “jf run research {{reference}}” produces its Research.',
 
   // jf candidates, jf list
@@ -62,12 +63,13 @@ export const CLI_EN = {
 
   // jf run
   runDescription:
-    'Queues a new Version of an Artifact, which the worker produces with Claude Code; --wait waits for the end: jf run research|letter|brief|visualization <posting> [--wait]',
-  runUsage: 'Usage: jf run <module> <posting> [--wait], for example jf run research 2026-2445600.',
+    'Queues a new Version of an Artifact, which the worker produces with Claude Code; --wait waits for the end: jf run research|letter|brief|visualization <posting> [<interview>] [--wait]',
+  runUsage:
+    'Usage: jf run <module> <posting> [<interview>] [--wait], for example jf run research 2026-2445600, or jf run brief 2026-2445600 1 for the Interview Brief of Interview 1.',
   queued: '{{module}} of Posting {{reference}} queued (job {{jobId}}).\n',
   runQueued: 'The worker will produce it. “{{versionsCommand}}” follows its Versions.\n',
   runWaiting: 'Waiting for the worker (lpm worker service): Claude Code may take several minutes…\n',
-  runFailed: '{{name}} failed ({{errorCode}}):\n{{log}}\nRun it again: jf run {{module}} {{reference}}',
+  runFailed: '{{name}} failed ({{errorCode}}):\n{{log}}\nRun it again: {{command}}',
   runReady: '{{name}} ready and chosen. “{{versionsCommand}}” lists its Versions.\n',
 
   // jf recipients
@@ -83,8 +85,10 @@ export const CLI_EN = {
   justification: 'Justification: {{text}}',
 
   // jf versions, jf choose
-  versionsDescription: 'Lists the Versions of an Artifact: jf versions <posting> research',
-  versionsUsage: 'Usage: jf versions <posting> <artifact>, for example jf versions 2026-2445600 research.',
+  versionsDescription:
+    'Lists the Versions of an Artifact: jf versions <posting> research, or jf versions <posting> brief <interview> for an Artifact of an Interview',
+  versionsUsage:
+    'Usage: jf versions <posting> <artifact> [<interview>], for example jf versions 2026-2445600 research, or jf versions 2026-2445600 brief 1.',
   versionStateLabelByState: { running: 'in progress', ready: 'ready', failed: 'failed' },
   lastJobFailed: 'Last launch failed ({{errorCode}}):\n{{log}}\n',
   lastJobStalled: 'Last launch not moving ({{errorCode}}):\n{{message}}\n',
@@ -92,8 +96,10 @@ export const CLI_EN = {
   candidateInstructions: 'Candidate’s Instructions',
   defaultInstructions: 'Default Instructions',
   createdAt: '{{createdAt, datetime(dateStyle: short; timeStyle: medium; timeZone: Europe/Paris)}}',
-  chooseDescription: 'Changes the Chosen Version of an Artifact: jf choose <posting> research <version>',
-  chooseUsage: 'Usage: jf choose <posting> <artifact> <version>, for example jf choose 2026-2445600 research 2.',
+  chooseDescription:
+    'Changes the Chosen Version of an Artifact: jf choose <posting> research <version>, or jf choose <posting> brief <version> <interview>',
+  chooseUsage:
+    'Usage: jf choose <posting> <artifact> <version> [<interview>], for example jf choose 2026-2445600 research 2, or jf choose 2026-2445600 brief 2 1.',
   versionChosen: '{{artifact}} {{version}} chosen for Posting {{reference}}.\n',
 
   // jf apply, jf hired, jf rejected, jf in-progress, jf archive, jf unarchive
@@ -113,7 +119,7 @@ export const CLI_EN = {
   profileDescription: 'Completes the Profile of a Candidate with Claude Code: jf profile <candidate>',
   profileUsage: 'Usage: jf profile <candidate>. “jf candidates” lists the Candidates.',
   editDescription:
-    'Edits an Artifact with Claude Code, Posting and Artifact offered if missing: jf edit [<posting> [<artifact>]]',
+    'Edits an Artifact with Claude Code, Posting and Artifact offered if missing: jf edit [<posting> [<artifact> [<interview>]]]',
 
   // jf instructions
   instructionsDescription:

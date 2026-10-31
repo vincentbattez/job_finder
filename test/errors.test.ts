@@ -34,7 +34,10 @@ describe('an error', () => {
   it('takes the alias of an Artifact, as jf run does', async () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
 
-    expect(await actions.listVersions({ reference: REFERENCE, artifact: 'brief' })).toEqual([]);
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: '', interviewers: '' });
+
+    expect(await actions.listVersions({ reference: REFERENCE, artifact: 'brief', interview: 1 })).toEqual([]);
   });
 
   it('tells where to find the Versions of an Artifact when one is unknown', async () => {

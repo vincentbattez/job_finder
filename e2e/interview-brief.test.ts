@@ -1,8 +1,11 @@
 import { expect, test } from '@playwright/test';
 
+import { prepareInterview } from './interview.ts';
+import { findOverflowing } from './overflow.ts';
+
 // A Posting that test/seed-front.ts leaves without any Artifact and that no other test touches: the
-// test produces its Research first. The e2e worker runs the jobs with the fake Claude, whose
-// sessions last a second (test/e2e-actions.server.ts).
+// test marks it Applied, gives it an Interview and produces its Research first. The e2e worker runs
+// the jobs with the fake Claude, whose sessions last a second (test/e2e-actions.server.ts).
 const REFERENCE = '2026-2416437';
 
 // The worker takes the job, then its session lasts a second, and the Posting page reads the state again
@@ -29,10 +32,13 @@ Titulaire d’un master 2 de droit privé, je souhaite rejoindre votre juridicti
 - Pourquoi ce poste ?
 `;
 
-test('launches the Interview Brief once the Posting has a Chosen Research, then corrects it', async ({ page }) => {
-  await page.goto(`/postings/${REFERENCE}`);
+test('launches the Interview Brief of an Interview once the Posting has a Chosen Research, then corrects it', async ({
+  page,
+}) => {
+  const interview = await prepareInterview(page, REFERENCE);
   const research = page.getByRole('region', { name: 'Recherche' });
-  const brief = page.getByRole('region', { name: 'Fiche d’entretien' });
+  // Under its Interview, beside the Interview's facts
+  const brief = interview.getByRole('region', { name: 'Fiche d’entretien' });
   await expect(brief).toContainText(`L'Offre ${REFERENCE} n'a pas de Recherche retenue`);
   await expect(brief.getByRole('button', { name: 'Lancer la Fiche d’entretien' })).toBeDisabled();
   await research.getByRole('button', { name: 'Lancer la Recherche' }).click();
@@ -42,7 +48,7 @@ test('launches the Interview Brief once the Posting has a Chosen Research, then 
 
   await expect(brief.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
   await expect(brief.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
-  await expect(brief.getByText(`jf edit ${REFERENCE} interview_brief`)).toBeVisible();
+  await expect(brief.getByText(`jf edit ${REFERENCE} interview_brief 1`)).toBeVisible();
   const document = brief.getByRole('figure', { name: 'interview-brief.md' });
   const editor = document.getByRole('textbox', { name: 'Markdown' });
   await expect(document.locator('mark')).toHaveText(['[à compléter : diplôme]']);
@@ -53,4 +59,7 @@ test('launches the Interview Brief once the Posting has a Chosen Research, then 
   await page.reload();
   await expect(editor).toHaveValue(CORRECTED_BRIEF);
   await expect(brief.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
+  // Under its Interview, the Interview Brief still fits a phone screen
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect.poll(() => findOverflowing(page)).toEqual([]);
 });

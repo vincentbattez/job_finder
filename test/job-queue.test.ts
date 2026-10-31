@@ -189,8 +189,10 @@ describe('the job queue', () => {
     const { actions } = await detectPostings(aiSession);
     await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runQueuedJobs();
-    await actions.runModule({ module: 'letter', reference: REFERENCE });
-    await actions.runModule({ module: 'interview_brief', reference: REFERENCE });
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: '', interviewers: '' });
+    await actions.runModule({ module: 'interview_brief', reference: REFERENCE, interview: 1 });
+    await actions.runModule({ module: 'research', reference: REFERENCE });
     void actions.runQueuedJobs();
     await vi.waitFor(() => {
       expect(aiSession.headlessSessionList).toHaveLength(2);
@@ -199,20 +201,22 @@ describe('the job queue', () => {
     moveClockBy(40 * MINUTE_MS);
     await actions.beatWorker();
 
-    const { artifactList } = await actions.readPosting({ reference: REFERENCE });
+    const { artifactList, interviewList } = await actions.readPosting({ reference: REFERENCE });
     expect(
-      artifactList.map(({ artifact, state, workerFailure }) => ({
+      [...artifactList, ...(interviewList[0]?.artifactList ?? [])].map(({ artifact, state, workerFailure }) => ({
         artifact,
         state,
         errorCode: workerFailure?.errorCode ?? null,
       })),
     ).toEqual([
-      { artifact: 'research', state: 'ready', errorCode: null },
-      { artifact: 'letter', state: 'in_progress', errorCode: 'job_overdue' },
-      { artifact: 'interview_brief', state: 'queued', errorCode: null },
+      { artifact: 'research', state: 'queued', errorCode: null },
+      { artifact: 'letter', state: 'absent', errorCode: null },
+      { artifact: 'interview_brief', state: 'in_progress', errorCode: 'job_overdue' },
       { artifact: 'visualization', state: 'absent', errorCode: null },
     ]);
-    expect(await actions.readArtifactState({ reference: REFERENCE, artifact: 'letter' })).toMatchObject({
+    expect(
+      await actions.readArtifactState({ reference: REFERENCE, artifact: 'interview_brief', interview: 1 }),
+    ).toMatchObject({
       state: 'in_progress',
       workerFailure: { errorCode: 'job_overdue', message: /lpm service worker restart/ },
     });

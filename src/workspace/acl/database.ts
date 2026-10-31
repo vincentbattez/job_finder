@@ -55,8 +55,17 @@ const PRISMA_CLI_PATH = fileURLToPath(import.meta.resolve('prisma/build/index.js
 const MIGRATIONS_DIRECTORY = path.join(ROOT_DIRECTORY, 'prisma', 'migrations');
 const APPLIED_MIGRATION_LIST_SCHEMA = z.array(z.object({ migration_name: z.string() }));
 
+const VERSION_INTERVIEW_SELECT = { select: { number: true } };
 const VERSION_INCLUDE = {
-  inputList: { select: { artifact: true, number: true, posting: { select: { reference: true } } } },
+  interview: VERSION_INTERVIEW_SELECT,
+  inputList: {
+    select: {
+      artifact: true,
+      number: true,
+      posting: { select: { reference: true } },
+      interview: VERSION_INTERVIEW_SELECT,
+    },
+  },
 };
 const LINKED_POSTING_SELECT = { select: { reference: true } };
 const POSTING_INCLUDE = {
@@ -107,7 +116,7 @@ const MIGRATION_TIMEOUT_MS = 2 * 60_000;
 // The single row of the worker's heartbeat
 const WORKER_HEARTBEAT_ID = 1;
 
-const JOB_INCLUDE = { posting: { include: POSTING_INCLUDE }, version: { include: VERSION_INCLUDE } };
+const JOB_INCLUDE = { posting: { include: POSTING_INCLUDE }, interview: true, version: { include: VERSION_INCLUDE } };
 
 export interface INewCandidate {
   id: string;
@@ -194,22 +203,13 @@ export function openDatabase(databasePath: string) {
     },
   });
 
-  // A single Chosen Version per Artifact of a Posting
-  function chooseStatementList({
-    postingId,
-    artifact,
-    number,
-  }: {
-    postingId: number;
-    artifact: Artifact;
-    number: number;
-  }) {
+  // A single Chosen Version per Artifact of a Posting, or of an Interview for an Artifact attached to one
+  function chooseStatementList({ id }: Version) {
     return [
-      prisma.version.updateMany({
-        where: { postingId, artifact, number: { not: number } },
-        data: { isChosen: false },
-      }),
-      prisma.version.updateMany({ where: { postingId, artifact, number }, data: { isChosen: true } }),
+      prisma.$executeRaw`
+        UPDATE "Version" SET "isChosen" = "id" = ${id}
+        WHERE ("postingId", COALESCE("interviewId", 0), "artifact") =
+          (SELECT "postingId", COALESCE("interviewId", 0), "artifact" FROM "Version" WHERE "id" = ${id})`,
     ];
   }
 
@@ -425,10 +425,18 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    // A job the Candidate launches is not automatic: they see it run, and fail, on the screen
-    async createJob(posting: Posting, module: Module, { isAutomatic = false } = {}): Promise<Job> {
+    // A job the Candidate launches is not automatic: they see it run, and fail, on the screen. A module
+    // attached to an Interview runs for one.
+    async createJob(
+      posting: Posting,
+      module: Module,
+      { isAutomatic = false, interview = null }: { isAutomatic?: boolean; interview?: Interview | null } = {},
+    ): Promise<Job> {
       return JOB_READ_SCHEMA.parse(
-        await prisma.job.create({ data: { module, postingId: posting.id, isAutomatic }, include: JOB_INCLUDE }),
+        await prisma.job.create({
+          data: { module, postingId: posting.id, interviewId: interview?.id ?? null, isAutomatic },
+          include: JOB_INCLUDE,
+        }),
       );
     },
 
@@ -443,10 +451,10 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    // The job runs and its Version is created, numbered after the last Version of its Artifact,
-    // with the Versions it reads
+    // The job runs and its Version is created, numbered after the last Version of its Artifact on its
+    // Interview, or on its Posting without one, with the Versions it reads
     async startJob(
-      { id, module, posting }: Job & { module: Artifact },
+      { id, module, posting, interview }: Job & { module: Artifact },
       {
         instructions,
         hasCandidateInstructions,
@@ -457,8 +465,9 @@ export function openDatabase(databasePath: string) {
         inputList: { posting: Posting; version: Version }[];
       },
     ): Promise<Version> {
+      const interviewId = interview?.id ?? null;
       const { _max: max } = await prisma.version.aggregate({
-        where: { postingId: posting.id, artifact: module },
+        where: { postingId: posting.id, interviewId, artifact: module },
         _max: { number: true },
       });
       const [, version] = await prisma.$transaction([
@@ -466,17 +475,14 @@ export function openDatabase(databasePath: string) {
         prisma.version.create({
           data: {
             postingId: posting.id,
+            interviewId,
             artifact: module,
             number: (max.number ?? 0) + 1,
             state: 'running',
             instructions,
             hasCandidateInstructions,
             jobId: id,
-            inputList: {
-              connect: inputList.map(({ posting: { id: postingId }, version: { artifact, number } }) => ({
-                postingId_artifact_number: { postingId, artifact, number },
-              })),
-            },
+            inputList: { connect: inputList.map(({ version: input }) => ({ id: input.id })) },
           },
           include: VERSION_INCLUDE,
         }),
@@ -491,22 +497,18 @@ export function openDatabase(databasePath: string) {
     ): Promise<{ job: Job; version: Version }> {
       // Ready unless it failed under a code
       const isReady = errorCode === null;
-      const versionWhere = { postingId: job.posting.id, artifact: version.artifact, number: version.number };
       await prisma.$transaction([
-        prisma.version.updateMany({ where: versionWhere, data: { state: isReady ? 'ready' : 'failed' } }),
+        prisma.version.updateMany({ where: { id: version.id }, data: { state: isReady ? 'ready' : 'failed' } }),
         prisma.job.update({
           where: { id: job.id },
           data: { state: isReady ? 'done' : 'failed', log, errorCode, sessionId },
         }),
-        ...(isReady ? chooseStatementList(versionWhere) : []),
+        ...(isReady ? chooseStatementList(version) : []),
       ]);
       return {
         job: JOB_READ_SCHEMA.parse(await prisma.job.findUniqueOrThrow({ where: { id: job.id }, include: JOB_INCLUDE })),
         version: VERSION_SCHEMA.parse(
-          await prisma.version.findUniqueOrThrow({
-            where: { postingId_artifact_number: versionWhere },
-            include: VERSION_INCLUDE,
-          }),
+          await prisma.version.findUniqueOrThrow({ where: { id: version.id }, include: VERSION_INCLUDE }),
         ),
       };
     },
@@ -606,18 +608,19 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    async listVersions(posting: Posting, artifact: Artifact): Promise<Version[]> {
+    // Those of an Interview for an Artifact attached to one, else those of the Posting, without an Interview
+    async listVersions(posting: Posting, artifact: Artifact, interview: Interview | null): Promise<Version[]> {
       return z.array(VERSION_SCHEMA).parse(
         await prisma.version.findMany({
-          where: { postingId: posting.id, artifact },
+          where: { postingId: posting.id, interviewId: interview?.id ?? null, artifact },
           orderBy: { number: 'asc' },
           include: VERSION_INCLUDE,
         }),
       );
     },
 
-    async chooseVersion(posting: Posting, { artifact, number }: Version): Promise<void> {
-      await prisma.$transaction(chooseStatementList({ postingId: posting.id, artifact, number }));
+    async chooseVersion(version: Version): Promise<void> {
+      await prisma.$transaction(chooseStatementList(version));
     },
 
     claimDetection,
@@ -752,6 +755,7 @@ export function openDatabase(databasePath: string) {
       await prisma.interview.update({ where: { id }, data: { ...fields, editCount: { increment: 1 } } });
     },
 
+    // Its Versions and their jobs go with it
     async deleteInterview({ id }: Interview): Promise<void> {
       await prisma.interview.delete({ where: { id } });
     },

@@ -12,11 +12,16 @@ import {
 
 import type { ActionContext } from './context.ts';
 import { runExtraction } from './import-job-description.ts';
-import { findInputs, parseModule, type JobFailure } from './run-job.ts';
+import { findInputs, findTarget, parseModule, type JobFailure } from './run-job.ts';
 import { findJobStall } from './stalled-job.ts';
 import { runConversion } from './uploads.ts';
 
-const MODULE_INPUT_SCHEMA = z.object({ module: z.string(), reference: z.string() });
+// The Interview, by its number on the Posting, for a module attached to one
+const MODULE_INPUT_SCHEMA = z.object({
+  module: z.string(),
+  reference: z.string(),
+  interview: z.coerce.number().int().optional(),
+});
 const JOB_INPUT_SCHEMA = z.object({ jobId: z.coerce.number().int() });
 
 // How often a followed job is read again: a module runs for minutes
@@ -52,7 +57,7 @@ export function createJobActions(context: ActionContext) {
     // Only queues the job: the worker runs it, so restarting the front never stops a session
     // (ADR-0003)
     async runModule(rawInput: unknown): Promise<Job> {
-      const { module, reference } = MODULE_INPUT_SCHEMA.parse(rawInput);
+      const { module, reference, interview: interviewNumber } = MODULE_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
       const locale = await findLocale(posting.candidateId);
       // The extraction of an imported Posting runs again after a failure
@@ -63,8 +68,9 @@ export function createJobActions(context: ActionContext) {
         return workspace.createJob(posting, 'extraction');
       }
       const artifact = parseModule(module, locale);
-      await findInputs(workspace, posting, artifact, locale);
-      return workspace.createJob(posting, artifact);
+      const target = await findTarget(workspace, posting, artifact, interviewNumber, locale);
+      await findInputs(workspace, target, artifact, locale);
+      return workspace.createJob(posting, artifact, { interview: target.interview });
     },
 
     async followJob(rawInput: unknown): Promise<Job> {

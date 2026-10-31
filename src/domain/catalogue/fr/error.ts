@@ -54,13 +54,17 @@ export const ERROR_FR: typeof ERROR_EN = {
     "L'Offre {{reference}} est À traiter : la marquer Postulée d'abord, un Entretien appartient à sa Candidature.",
   unknownInterview:
     "L'Offre {{reference}} n'a pas d'Entretien {{number}}. « jf interviews {{reference}} » liste ses Entretiens.",
+  interviewRequired:
+    "« {{artifactLabel}} » prépare un Entretien : donner son numéro après les autres arguments. « jf interviews {{reference}} » liste les Entretiens de l'Offre {{reference}}.",
+  interviewNotExpected:
+    "« {{artifactLabel}} » appartient à l'Offre {{reference}}, pas à l'un de ses Entretiens : ne donner aucun numéro d'Entretien.",
 
   unknownModule: 'Module inconnu : {{name}}. Modules : {{names}}.',
   unknownArtifact: 'Artefact inconnu : {{name}}. Artefacts : {{names}}.',
   missingArtifactForFront:
     "L'Offre {{reference}} n'a pas de {{missingLabel}} retenue, sur laquelle s'appuie la {{moduleLabel}} : lancez d'abord la {{missingLabel}}.",
   missingArtifactForCli:
-    "L'Offre {{reference}} n'a pas de {{missingLabel}} retenue, sur laquelle s'appuie la {{moduleLabel}}. La produire d'abord : jf run {{missingArtifact}} {{reference}}.",
+    "L'Offre {{reference}} n'a pas de {{missingLabel}} retenue, sur laquelle s'appuie la {{moduleLabel}}. La produire d'abord : {{command}}.",
   missingOutput: 'Le fichier attendu {{outputPath}} est absent.',
   emptyOutput: 'Le fichier attendu {{outputPath}} est vide.',
   malformedOutput: 'Le fichier {{outputPath}} est mal formé : {{formatError}}.',
@@ -75,11 +79,11 @@ export const ERROR_FR: typeof ERROR_EN = {
   visualizationNotEditable:
     "La Visualisation ne se modifie pas à la main : elle reprend la Fiche d'entretien retenue. Corrigez celle-ci, puis relancez la Visualisation de l'Offre {{reference}}.",
   noChosenVersionToEdit:
-    "L'Offre {{reference}} n'a pas de Version retenue de {{artifact}} à modifier : « jf run {{artifact}} {{reference}} » en produit une.",
+    "L'Offre {{reference}} n'a pas de Version retenue de {{artifact}} à modifier : « {{command}} » en produit une.",
   draftNotEditable:
     "Le Brouillon ne se modifie jamais : il garde ce que l'IA a écrit. Corrigez la Lettre de l'Offre {{reference}}.",
   unknownVersion:
-    "Version inconnue : {{artifact}} v{{number}} de l'Offre {{reference}}. « jf versions {{reference}} {{artifact}} » liste ses Versions.",
+    "Version inconnue : {{artifact}} v{{number}} de l'Offre {{reference}}. « {{command}} » liste ses Versions.",
   versionFailed:
     "La Version {{artifact}} v{{number}} de l'Offre {{reference}} est en échec : seule une Version prête peut être retenue.",
   versionRunning:

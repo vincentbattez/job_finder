@@ -2,12 +2,22 @@ import { z } from 'zod/v4';
 
 import { tFor } from '#/domain/catalogue/i18n.ts';
 import { codedError } from '#/domain/coded-error.ts';
-import { ICAL_FILE_SCHEMA, type IcalFile, type Interview, type Locale, type Posting } from '#/domain/index.ts';
+import {
+  ICAL_FILE_SCHEMA,
+  type Artifact,
+  type IcalFile,
+  type Interview,
+  type Locale,
+  type Posting,
+  type Version,
+} from '#/domain/index.ts';
+import { interviewSectionIdOf } from '#/domain/interview-section.ts';
 import { dateOfParisDateTime } from '#/domain/paris-time.ts';
 import { formatCalendar } from '#/ical/index.ts';
 import { hasBeenApplied } from '#/status/index.ts';
 
 import { REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
+import { findChosenVersion } from './run-job.ts';
 
 // An hour, unless the Candidate says otherwise
 const DEFAULT_DURATION_MINUTES = 60;
@@ -40,22 +50,34 @@ const INTERVIEW_EDIT_INPUT_SCHEMA = INTERVIEW_INPUT_SCHEMA.extend(z.object(FIELD
 // The address the Candidate opened Job Finder through: only its origin builds the links
 const ICAL_INPUT_SCHEMA = INTERVIEW_INPUT_SCHEMA.extend({ origin: z.url().transform((url) => new URL(url).origin) });
 
-// The sections of the Posting page to review before the Interview, by their anchor
-const REVIEWED_ARTIFACT_LIST = ['research', 'letter', 'interview_brief'] as const;
+// The sections of the Posting page to review before the Interview, by their anchor: those of the Posting,
+// then the Interview Brief of the Interview, in its section
+const REVIEWED_ARTIFACT_LIST = ['research', 'letter'] as const;
 
 const MINUTE_MS = 60_000;
 
 // What the Candidate reviews from their phone before the Interview: the official ad, if the Posting has
-// one, then the Posting page and its sections, all on the origin they opened Job Finder through
-function describeLinks(posting: Posting, pageUrl: string, locale: Locale): string {
+// one, then the Posting page and its sections, and the page of the Chosen Visualization of the Interview
+// once there is one, all on the origin they opened Job Finder through
+function describeLinks(
+  { posting, interview, visualization }: { posting: Posting; interview: Interview; visualization: Version | undefined },
+  pageUrl: string,
+  locale: Locale,
+): string {
   const t = tFor(locale, 'posting');
+  const labelOf = (artifact: Artifact) => t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' });
+  const interviewUrl = `${pageUrl}/interviews/${String(interview.number)}`;
   const linkList = [
     ...(posting.url === null ? [] : [{ label: t('ical.officialAd'), url: posting.url }]),
     { label: t('ical.postingPage'), url: pageUrl },
-    ...REVIEWED_ARTIFACT_LIST.map((artifact) => ({
-      label: t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' }),
-      url: `${pageUrl}#${artifact}`,
-    })),
+    ...REVIEWED_ARTIFACT_LIST.map((artifact) => ({ label: labelOf(artifact), url: `${pageUrl}#${artifact}` })),
+    {
+      label: labelOf('interview_brief'),
+      url: `${pageUrl}#${interviewSectionIdOf(interview.number, 'interview_brief')}`,
+    },
+    ...(visualization === undefined
+      ? []
+      : [{ label: labelOf('visualization'), url: `${interviewUrl}/visualization/${String(visualization.number)}` }]),
   ];
   return linkList.map((link) => t('ical.link', link)).join('\n');
 }
@@ -125,7 +147,15 @@ export function createInterviewActions({ workspace, findPosting, findLocale }: A
         endAt: new Date(interview.startAt.getTime() + interview.durationMinutes * MINUTE_MS),
         summary: summarize(posting, locale),
         location: interview.place,
-        description: describeLinks(posting, pageUrl, locale),
+        description: describeLinks(
+          {
+            posting,
+            interview,
+            visualization: await findChosenVersion(workspace, { posting, interview }, 'visualization'),
+          },
+          pageUrl,
+          locale,
+        ),
         url: pageUrl,
         stampedAt: new Date(),
       });
@@ -135,9 +165,10 @@ export function createInterviewActions({ workspace, findPosting, findLocale }: A
       });
     },
 
+    // With its Artifacts: their Versions, their jobs and their files (spec #45, story 24)
     async deleteInterview(rawInput: unknown): Promise<void> {
-      const { interview } = await findInterview(rawInput);
-      await workspace.deleteInterview(interview);
+      const { posting, interview } = await findInterview(rawInput);
+      await workspace.deleteInterview(posting, interview);
     },
   };
 }

@@ -234,8 +234,8 @@ describe('the French data folder', () => {
     ]);
     const { jobDescription } = await actions.readPosting({ reference: '2026-3' });
     expect(jobDescription).toBe('# Greffier, encore\n');
+    // The Interview Brief of a Posting went with its Version: an Interview Brief belongs to an Interview now
     expect(listSorted(path.join(dataDirectory, 'candidates', 'lea', 'postings', '2026-1-greffier'))).toEqual([
-      'interview_brief',
       'job-description.md',
       'letter',
       'research',
@@ -267,8 +267,9 @@ describe('the French data folder', () => {
   });
 
   // Each Version keeps its number, its Instructions, the Versions it read and whether it is chosen; a
-  // failed or queued Job reads back under its English module
-  it('keeps every Version of each Artifact, its Chosen Version, its inputs and its Jobs', async () => {
+  // failed or queued Job reads back under its English module. The Interview Brief and the Visualization
+  // of a Posting go, with their jobs: they belong to an Interview now (spec #45).
+  it('keeps every Version of each Artifact of a Posting, its Chosen Version, its inputs and its Jobs', async () => {
     const dataDirectory = writeFrenchDataDirectory();
 
     const actions = await createActions({ dataDirectory });
@@ -279,15 +280,13 @@ describe('the French data folder', () => {
     ]);
     expect(await actions.listVersions({ reference: '2026-1', artifact: 'letter' })).toEqual([
       expect.objectContaining({
-        inputList: [{ artifact: 'research', number: 2, posting: { reference: '2026-1' } }],
+        inputList: [{ artifact: 'research', number: 2, posting: { reference: '2026-1' }, interview: null }],
       }),
     ]);
     const { artifactList, recipients } = await actions.readPosting({ reference: '2026-1' });
     expect(Object.fromEntries(artifactList.map(({ artifact, state }) => [artifact, state]))).toEqual({
       research: 'ready',
       letter: 'ready',
-      interview_brief: 'failed',
-      visualization: 'absent',
     });
     const research = artifactList.find(({ artifact }) => artifact === 'research');
     expect(research?.versionList[1]?.documentList).toEqual([
@@ -298,10 +297,7 @@ describe('the French data folder', () => {
       expect.arrayContaining(['draft.md', 'letter.md']),
     );
     expect(recipients).toEqual(JSON.parse(RECIPIENTS));
-    const { artifactList: queuedArtifactList } = await actions.readPosting({ reference: '2026-3' });
-    expect(queuedArtifactList.find(({ artifact }) => artifact === 'visualization')).toMatchObject({
-      state: 'queued',
-    });
+    expect(await actions.runQueuedJobs()).toEqual([]);
     expect(await actions.readInstructions({ candidateId: 'lea', module: 'interview_brief' })).toMatchObject({
       candidateInstructions: BRIEF_INSTRUCTIONS,
     });

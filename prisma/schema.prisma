@@ -104,18 +104,21 @@ model Posting {
 // An Interview of an Application, one per round, numbered per Posting like a Version. Only a Posting
 // that has an Application gets one; the Status reads them to show Invited or Interviewed (ADR-0009).
 model Interview {
-  id              Int      @id @default(autoincrement())
-  posting         Posting  @relation(fields: [postingId], references: [id])
+  id              Int       @id @default(autoincrement())
+  posting         Posting   @relation(fields: [postingId], references: [id])
   postingId       Int
   number          Int
   startAt         DateTime
-  durationMinutes Int      @default(60)
+  durationMinutes Int       @default(60)
   // Free text, prefilled by the front with the place of work and the City of the Posting
   place           String
   // Free text: name, role, anything the Candidate knows of them
   interviewers    String
   // Grows at each edit: the SEQUENCE of its iCal event, so a calendar updates the event
-  editCount       Int      @default(0)
+  editCount       Int       @default(0)
+  // Its Interview Brief and Visualization, and the jobs that make them: deleted with it
+  versionList     Version[]
+  jobList         Job[]
 
   @@unique([postingId, number])
 }
@@ -128,11 +131,15 @@ enum PostingStatus {
   rejected
 }
 
-// A Version of the letter Artifact holds a pair: the Draft, never changed, and the Letter.
+// A Version of the letter Artifact holds a pair: the Draft, never changed, and the Letter. The Versions
+// of an Artifact attached to an Interview, such as the Interview Brief, are numbered and chosen per
+// Interview; the others, such as the Research, per Posting, without an Interview.
 model Version {
   id                       Int          @id @default(autoincrement())
   posting                  Posting      @relation(fields: [postingId], references: [id])
   postingId                Int
+  interview                Interview?   @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  interviewId              Int?
   artifact                 Artifact
   number                   Int
   isChosen                 Boolean      @default(false)
@@ -148,7 +155,7 @@ model Version {
   job                      Job?         @relation(fields: [jobId], references: [id])
   jobId                    Int?         @unique
 
-  @@unique([postingId, artifact, number])
+  @@unique([postingId, interviewId, artifact, number])
 }
 
 enum Artifact {
@@ -170,6 +177,9 @@ model Job {
   module                String
   posting               Posting?   @relation(fields: [postingId], references: [id], onDelete: Restrict)
   postingId             Int?
+  // The Interview the job prepares, for a module attached to one
+  interview             Interview? @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  interviewId           Int?
   candidate             Candidate? @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   candidateId           String?
   upload                String?

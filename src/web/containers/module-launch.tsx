@@ -8,6 +8,7 @@ import { useIsHydrated } from '#/web/components/use-is-hydrated.ts';
 import { WorkerTask } from '#/web/components/worker-task.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
+import { InterviewField } from './interview-field.tsx';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
 
 // The button of the module that produces an Artifact, beside its state. The worker runs the job in
@@ -15,6 +16,7 @@ import { useRevalidateWhile } from './use-revalidate-while.ts';
 // says when no worker moves it.
 export function ModuleLaunch({
   reference,
+  interviewNumber,
   artifact,
   state,
   failure,
@@ -24,6 +26,7 @@ export function ModuleLaunch({
 }: Readonly<
   Pick<IArtifactVersions, 'artifact' | 'state' | 'failure' | 'notificationFailure' | 'workerFailure' | 'module'> & {
     reference: string;
+    interviewNumber: number | null;
   }
 >) {
   const { t } = useTranslation('posting');
@@ -39,6 +42,7 @@ export function ModuleLaunch({
     <fetcher.Form method="post" action="/run">
       <input type="hidden" name="reference" value={reference} />
       <input type="hidden" name="module" value={artifact} />
+      <InterviewField interviewNumber={interviewNumber} />
       <WorkerTask refusal={module.refusal} error={error}>
         <span role="status">
           <StateBadge state={state} />

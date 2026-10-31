@@ -23,6 +23,9 @@ interface IInterview {
 // with the refusal of the action, if any
 type FormRenderer = (formKey: string, renderFieldList: (error: string | null | undefined) => ReactNode) => ReactNode;
 
+// The Artifacts of an Interview, its Interview Brief and its Visualization, which its Container lays out
+type ArtifactsRenderer = (interviewNumber: number) => ReactNode;
+
 // The duration the action gives an Interview when none is typed: the field starts on it
 const DEFAULT_DURATION_MINUTES = 60;
 
@@ -102,7 +105,13 @@ function InterviewItem({
   reference,
   interview,
   renderForm,
-}: Readonly<{ reference: string; interview: IInterview; renderForm: FormRenderer }>) {
+  renderArtifacts,
+}: Readonly<{
+  reference: string;
+  interview: IInterview;
+  renderForm: FormRenderer;
+  renderArtifacts: ArtifactsRenderer;
+}>) {
   const headingId = useId();
   const { t } = useTranslation('posting');
   const { number, startAt, durationMinutes, place, interviewers, editCount } = interview;
@@ -141,23 +150,26 @@ function InterviewItem({
             </ButtonRow>
           ))}
         </Deletion>
+        {renderArtifacts(number)}
       </article>
     </li>
   );
 }
 
-// The Interviews of an Application, by date, each edited and deleted in place, and the form adding
-// the next one; a To Apply Posting has none (ADR-0009)
+// The Interviews of an Application, by date, each edited and deleted in place with the Artifacts that
+// prepare it, and the form adding the next one; a To Apply Posting has none (ADR-0009)
 export function Interviews({
   posting,
   hasApplication,
   interviewList,
   renderForm,
+  renderArtifacts,
 }: Readonly<{
   posting: { reference: string; workplace: string | null; city: string | null };
   hasApplication: boolean;
   interviewList: IInterview[];
   renderForm: FormRenderer;
+  renderArtifacts: ArtifactsRenderer;
 }>) {
   const headingId = useId();
   const newHeadingId = useId();
@@ -177,6 +189,7 @@ export function Interviews({
                   reference={posting.reference}
                   interview={interview}
                   renderForm={renderForm}
+                  renderArtifacts={renderArtifacts}
                 />
               ))}
             </ol>

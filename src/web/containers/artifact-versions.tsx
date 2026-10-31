@@ -5,9 +5,10 @@ import { ArtifactDocument, ChooseButton } from './edition.tsx';
 import { ModuleLaunch } from './module-launch.tsx';
 
 // Every Version of an Artifact, with the launch of its module, the choice of a Version and the
-// correction of its files
+// correction of its files; an Artifact of an Interview names it to each action
 export function ArtifactVersions({
   reference,
+  interviewNumber = null,
   artifact,
   state,
   failure,
@@ -16,16 +17,18 @@ export function ArtifactVersions({
   isEditable,
   versionList,
   workerFailure,
-}: Readonly<IArtifactVersions & { reference: string }>) {
+}: Readonly<IArtifactVersions & { reference: string; interviewNumber?: number | null }>) {
   return (
     <ArtifactVersionsView
       reference={reference}
+      interviewNumber={interviewNumber}
       artifact={artifact}
       isEditable={isEditable}
       versionList={versionList}
       launch={
         <ModuleLaunch
           reference={reference}
+          interviewNumber={interviewNumber}
           artifact={artifact}
           state={state}
           failure={failure}
@@ -34,8 +37,12 @@ export function ArtifactVersions({
           workerFailure={workerFailure}
         />
       }
-      renderChooseButton={(number) => <ChooseButton reference={reference} artifact={artifact} number={number} />}
-      renderDocument={(document) => <ArtifactDocument reference={reference} artifact={artifact} {...document} />}
+      renderChooseButton={(number) => (
+        <ChooseButton reference={reference} interviewNumber={interviewNumber} artifact={artifact} number={number} />
+      )}
+      renderDocument={(document) => (
+        <ArtifactDocument reference={reference} interviewNumber={interviewNumber} artifact={artifact} {...document} />
+      )}
     />
   );
 }

@@ -99,7 +99,8 @@ test.describe('Postings of a Candidate', () => {
       'draft.md',
       'letter.md',
     ]);
-    await expect(page.getByRole('region', { name: 'Fiche d’entretien' })).toContainText('Aucune Version');
+    // The Interview Brief belongs to an Interview, which a To Apply Posting has none of
+    await expect(page.getByRole('region', { name: 'Fiche d’entretien' })).toHaveCount(0);
   });
 
   test('copies the jf edit command of an Artifact', async ({ page, context }) => {

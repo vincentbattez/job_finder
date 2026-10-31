@@ -14,11 +14,14 @@ function findFormatError(html: string, locale: Locale): string | undefined {
   return /<script\b/i.test(html) ? t('hasScript') : undefined;
 }
 
-// The Visualization of a Posting: a headless Claude session writes a single HTML page from the Chosen
-// Interview Brief, which the front shows (ADR-0003). It is regenerated, never corrected by hand.
+// The Visualization of an Interview: a headless Claude session writes a single HTML page from the Chosen
+// Interview Brief of that Interview, which the front shows (ADR-0003). It is regenerated, never corrected
+// by hand.
 export const VISUALIZATION_MODULE = {
   fileName: VISUALIZATION_FILE_NAME,
   outputFileList: [{ name: VISUALIZATION_FILE_NAME, findFormatError }],
   composePrompt: composeVisualizationPrompt,
+  // Attached to the Interview of the Interview Brief it lays out
+  isAttachedToInterview: true,
   requiredArtifactList: ['interview_brief'],
 } satisfies IAiModule;

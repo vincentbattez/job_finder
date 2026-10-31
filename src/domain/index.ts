@@ -102,17 +102,17 @@ export type Step = z.infer<typeof STEP_SCHEMA>;
 // An Interview of an Application, numbered per Posting like a Version. Its start is an instant, which the
 // Candidate types and reads in Paris time; editCount grows at each edit, so a calendar updates the event
 // rather than duplicating it.
-export const INTERVIEW_SCHEMA = z
-  .object({
-    id: z.int(),
-    number: z.int(),
-    startAt: z.date(),
-    durationMinutes: z.int().positive(),
-    place: z.string(),
-    interviewers: z.string(),
-    editCount: z.int(),
-  })
-  .brand<'Domain'>();
+const INTERVIEW_SHAPE = {
+  id: z.int(),
+  number: z.int(),
+  startAt: z.date(),
+  durationMinutes: z.int().positive(),
+  place: z.string(),
+  interviewers: z.string(),
+  editCount: z.int(),
+};
+
+export const INTERVIEW_SCHEMA = z.object(INTERVIEW_SHAPE).brand<'Domain'>();
 
 export type Interview = z.infer<typeof INTERVIEW_SCHEMA>;
 
@@ -242,17 +242,24 @@ export const MODULE_INSTRUCTIONS_SCHEMA = z
 
 export type ModuleInstructions = z.infer<typeof MODULE_INSTRUCTIONS_SCHEMA>;
 
+// The Interview a Version is attached to, by its number on the Posting; null for a Version of the Posting
+const VERSION_INTERVIEW_SCHEMA = z.object({ number: z.int() }).nullable();
+
 // A Version that another Version read as input, of its own Posting or of another one
 const READ_VERSION_SCHEMA = z.object({
   artifact: ARTIFACT_SCHEMA,
   number: z.int(),
   posting: z.object({ reference: z.string() }),
+  interview: VERSION_INTERVIEW_SCHEMA,
 });
 
 // Each launch of a module creates a new Version, which keeps the Instructions it was produced with
-// and the Versions it read
+// and the Versions it read. Its number counts the Versions of its Artifact on its Interview, for an
+// Artifact attached to one, else on its Posting.
 export const VERSION_SCHEMA = z
   .object({
+    id: z.int(),
+    interview: VERSION_INTERVIEW_SCHEMA,
     artifact: ARTIFACT_SCHEMA,
     number: z.int(),
     isChosen: z.boolean(),
@@ -279,6 +286,8 @@ export const JOB_SCHEMA = z
     id: z.int(),
     module: MODULE_SCHEMA,
     posting: POSTING_SCHEMA,
+    // The Interview it prepares, for a module attached to one
+    interview: INTERVIEW_SCHEMA.nullable(),
     state: JOB_STATE_SCHEMA,
     log: z.string(),
     // The code of the catalogue a failed job failed under (ADR-0015)
@@ -410,6 +419,9 @@ const ARTIFACT_VERSIONS_SCHEMA = z.object({
   versionList: z.array(VERSION_DOCUMENTS_SCHEMA),
 });
 
+// An Interview on the Posting page, with every Version of each Artifact attached to it
+const INTERVIEW_DETAIL_SCHEMA = z.object({ ...INTERVIEW_SHAPE, artifactList: z.array(ARTIFACT_VERSIONS_SCHEMA) });
+
 // What the Posting page shows: the Posting with its raw contacts, its Job Description, every
 // Version of each Artifact with its files, and the recipients its Chosen Letter recommends
 export const POSTING_DETAIL_SCHEMA = z
@@ -417,10 +429,12 @@ export const POSTING_DETAIL_SCHEMA = z
     posting: POSTING_SCHEMA,
     // What the outcome selector offers, beside the Status the Posting has
     statusChoiceList: z.array(STATUS_SCHEMA),
-    // Whether it has an Application, which alone gets Interviews; they come by date
+    // Whether it has an Application, which alone gets Interviews; they come by date, each with the
+    // Artifacts attached to it
     hasApplication: z.boolean(),
-    interviewList: z.array(INTERVIEW_SCHEMA),
+    interviewList: z.array(INTERVIEW_DETAIL_SCHEMA),
     jobDescription: z.string(),
+    // The Artifacts attached to the Posting
     artifactList: z.array(ARTIFACT_VERSIONS_SCHEMA),
     recipients: RECIPIENTS_SCHEMA.nullable(),
     // That of its latest extraction job, null for a Posting that was not imported; the log says why

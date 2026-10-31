@@ -157,8 +157,6 @@ test('takes a Candidate with the en locale through a Posting and its Status in E
   await expect(page.getByRole('region', { name: 'Artifacts' }).getByRole('listitem')).toHaveText([
     'ResearchReady',
     'LetterAbsent',
-    'Interview BriefAbsent',
-    'VisualizationAbsent',
   ]);
   await expect(page.getByRole('region', { name: 'Contacts' }).getByRole('definition')).toHaveText([
     'Not specified',

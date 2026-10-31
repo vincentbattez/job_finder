@@ -13,7 +13,9 @@ Begin with a summary of a few lines: what the recruiters expect, and why. Then d
 
 Open on this specific position and on what draws the Candidate to this department and this place. Then set their background against what the recruiters expect, as the Research establishes it: two or three strengths, each backed by a fact from their Profile. End with their availability for an interview. Keep the voice and style of their past letters, and carry over the corrections they made to the Letters they already sent. Avoid empty phrases and superlatives.
 `,
-  interview_brief: `Prepare the Candidate for the interview of this specific Posting, not for an interview in general. They will reread the Interview Brief the day before and practice out loud with it: prefer short lists and precise facts to long paragraphs.
+  interview_brief: `Prepare the Candidate for this Interview of this specific Posting, not for an interview in general. They will reread the Interview Brief the day before and practice out loud with it: prefer short lists and precise facts to long paragraphs.
+
+Adapt the pitch to the Interviewers: a first round with human resources, a manager of the department or a specialist of the profession do not expect the same answers. Put first what they will look at, in the words of their own job, and build on the previous rounds and the Notes rather than repeating them.
 
 Organize the Interview Brief to revise, then to practice, under these level 2 sections, with these exact titles:
 

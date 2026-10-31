@@ -94,6 +94,10 @@ export const ERROR_CATALOGUE = {
   interview_without_application: 'error:interviewWithoutApplication',
   // The Posting has no Interview with this number
   unknown_interview: 'error:unknownInterview',
+  // An Artifact attached to an Interview is named without one
+  interview_required: 'error:interviewRequired',
+  // An Artifact attached to the Posting is named with an Interview
+  interview_not_expected: 'error:interviewNotExpected',
 
   // Modules, jobs and Versions
   // No module has this name

@@ -13,7 +13,7 @@ export default [
   route('postings/:reference/interviews/:number/ical', 'routes/ical.ts'),
   route('postings/:reference/:artifact/document', 'routes/document.ts'),
   route('postings/:reference/:artifact/chosen', 'routes/chosen-version.ts'),
-  route('postings/:reference/visualization/:number', 'routes/visualization.ts'),
+  route('postings/:reference/interviews/:interview/visualization/:number', 'routes/visualization.ts'),
   route('candidate', 'routes/candidate.ts'),
   route('locale', 'routes/locale.ts'),
   route('profile', 'routes/profile.tsx'),

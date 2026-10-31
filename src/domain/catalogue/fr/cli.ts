@@ -33,6 +33,7 @@ export const CLI_FR: typeof CLI_EN = {
   noPosting: 'Aucune Offre pour {{candidateName}} : « jf detect » cherche les nouvelles Offres.',
   artifactQuestion: 'Artefact à modifier',
   chosenVersionLabel: '{{artifactLabel}} (v{{number}}, retenue)',
+  chosenInterviewVersionLabel: "{{artifactLabel}} de l'Entretien {{interviewNumber}} (v{{number}}, retenue)",
   noArtifact:
     "L'Offre {{reference}} n'a aucun Artefact à modifier : « jf run research {{reference}} » produit sa Recherche.",
 
@@ -59,12 +60,13 @@ export const CLI_FR: typeof CLI_EN = {
   extracted: '{{postingLine}}\nSa Recherche est en file : « jf versions {{reference}} research » la suit.\n',
 
   runDescription:
-    "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run research|letter|brief|visualization <offre> [--wait]",
-  runUsage: 'Usage : jf run <module> <offre> [--wait], par exemple jf run research 2026-2445600.',
+    "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run research|letter|brief|visualization <offre> [<entretien>] [--wait]",
+  runUsage:
+    "Usage : jf run <module> <offre> [<entretien>] [--wait], par exemple jf run research 2026-2445600, ou jf run brief 2026-2445600 1 pour la Fiche d'entretien de l'Entretien 1.",
   queued: "{{module}} de l'Offre {{reference}} en file (job {{jobId}}).\n",
   runQueued: 'Le worker la produira. « {{versionsCommand}} » suit ses Versions.\n',
   runWaiting: 'Attente du worker (service lpm worker) : Claude Code peut prendre plusieurs minutes…\n',
-  runFailed: '{{name}} en échec ({{errorCode}}) :\n{{log}}\nRelancer : jf run {{module}} {{reference}}',
+  runFailed: '{{name}} en échec ({{errorCode}}) :\n{{log}}\nRelancer : {{command}}',
   runReady: '{{name}} prête et retenue. « {{versionsCommand}} » liste ses Versions.\n',
 
   recipientsDescription: 'Affiche à qui adresser la candidature, selon la Lettre retenue : jf recipients <offre>',
@@ -77,8 +79,10 @@ export const CLI_FR: typeof CLI_EN = {
   salutation: "Formule d'appel : {{text}}",
   justification: 'Justification : {{text}}',
 
-  versionsDescription: "Liste les Versions d'un Artefact : jf versions <offre> research",
-  versionsUsage: 'Usage : jf versions <offre> <artifact>, par exemple jf versions 2026-2445600 research.',
+  versionsDescription:
+    "Liste les Versions d'un Artefact : jf versions <offre> research, ou jf versions <offre> brief <entretien> pour un Artefact d'un Entretien",
+  versionsUsage:
+    'Usage : jf versions <offre> <artifact> [<entretien>], par exemple jf versions 2026-2445600 research, ou jf versions 2026-2445600 brief 1.',
   versionStateLabelByState: { running: 'en cours', ready: 'prête', failed: 'en échec' },
   lastJobFailed: 'Dernier lancement en échec ({{errorCode}}) :\n{{log}}\n',
   lastJobStalled: "Dernier lancement à l'arrêt ({{errorCode}}) :\n{{message}}\n",
@@ -86,8 +90,10 @@ export const CLI_FR: typeof CLI_EN = {
   candidateInstructions: 'Consignes du Candidat',
   defaultInstructions: 'Consignes par défaut',
   createdAt: '{{createdAt, datetime(dateStyle: short; timeStyle: medium; timeZone: Europe/Paris)}}',
-  chooseDescription: "Change la Version retenue d'un Artefact : jf choose <offre> research <version>",
-  chooseUsage: 'Usage : jf choose <offre> <artifact> <version>, par exemple jf choose 2026-2445600 research 2.',
+  chooseDescription:
+    "Change la Version retenue d'un Artefact : jf choose <offre> research <version>, ou jf choose <offre> brief <version> <entretien>",
+  chooseUsage:
+    'Usage : jf choose <offre> <artifact> <version> [<entretien>], par exemple jf choose 2026-2445600 research 2, ou jf choose 2026-2445600 brief 2 1.',
   versionChosen: "{{artifact}} {{version}} retenue pour l'Offre {{reference}}.\n",
 
   statusCommandDescription: '{{description}} : jf {{name}} <offre>',
@@ -105,7 +111,7 @@ export const CLI_FR: typeof CLI_EN = {
   profileDescription: "Complète le Profil d'un Candidat avec Claude Code : jf profile <candidat>",
   profileUsage: 'Usage : jf profile <candidat>. « jf candidates » liste les Candidats.',
   editDescription:
-    'Modifie un Artefact avec Claude Code, Offre et Artefact proposés si absents : jf edit [<offre> [<artifact>]]',
+    'Modifie un Artefact avec Claude Code, Offre et Artefact proposés si absents : jf edit [<offre> [<artifact> [<entretien>]]]',
 
   instructionsDescription:
     "Montre, remplace (lues sur l'entrée standard) ou supprime les Consignes d'un module : jf instructions <candidat> [<module> [default|replace|delete]]",

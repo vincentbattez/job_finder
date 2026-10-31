@@ -4,6 +4,7 @@ import { codedError } from '#/domain/coded-error.ts';
 import {
   JOB_DESCRIPTION_FILE_NAME,
   type Artifact,
+  type Interview,
   type JobDescription,
   type Locale,
   type Location,
@@ -18,6 +19,7 @@ import { findObsoleteConfig, readObsoleteConfig } from './acl/config.ts';
 import { openDatabase, type INewCandidate, type INewPosting } from './acl/database.ts';
 import {
   createDirectory,
+  deleteDirectory,
   deleteFile,
   emptyDirectory,
   moveDirectory,
@@ -67,9 +69,15 @@ export async function openWorkspace(dataDirectory: string) {
     return path.join(candidateDirectoryOf(candidateId), 'postings', `${reference}-${slugify(title)}`);
   }
 
+  // An Interview's Artifacts sit in a folder of its own in its Posting's, which goes with it
+  function interviewDirectoryOf(posting: Posting, { number }: Pick<Interview, 'number'>): string {
+    return path.join(postingDirectoryOf(posting), 'interviews', String(number));
+  }
+
   // Each Version of an Artifact has its own folder, so a new launch never overwrites the others
-  function versionDirectoryOf(posting: Posting, { artifact, number }: Version): string {
-    return path.join(postingDirectoryOf(posting), artifact, `v${String(number)}`);
+  function versionDirectoryOf(posting: Posting, { interview, artifact, number }: Version): string {
+    const directory = interview === null ? postingDirectoryOf(posting) : interviewDirectoryOf(posting, interview);
+    return path.join(directory, artifact, `v${String(number)}`);
   }
 
   return {
@@ -87,6 +95,13 @@ export async function openWorkspace(dataDirectory: string) {
     postingDirectoryOf,
     versionDirectoryOf,
     readTextFile,
+
+    // Its Versions, their jobs and their files go with it: its number may be given again, to an
+    // Interview added after it
+    async deleteInterview(posting: Posting, interview: Interview): Promise<void> {
+      await database.deleteInterview(interview);
+      deleteDirectory(interviewDirectoryOf(posting, interview));
+    },
 
     // The folder where a job's session writes its Version
     createVersionDirectory(posting: Posting, version: Version): string {

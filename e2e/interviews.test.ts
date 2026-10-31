@@ -1,28 +1,13 @@
 import { readFileSync } from 'node:fs';
 
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+
+import { deleteEveryInterview, findInterviews } from './interview.ts';
 
 // Applications test/seed-front.ts marks Applied, whose Interviews only these tests change: one with JS,
 // one without
 const REFERENCE = '2026-2448213';
 const NO_JS_REFERENCE = '2026-2448215';
-
-function findInterviews(page: Page): Locator {
-  return page.getByRole('region', { name: 'Entretiens' });
-}
-
-// Each test starts from an Application without any Interview, whatever a previous run left
-async function deleteEveryInterview(page: Page): Promise<void> {
-  const interviews = findInterviews(page);
-  const interviewList = interviews.getByRole('article');
-  while ((await interviewList.count()) > 0) {
-    const count = await interviewList.count();
-    const first = interviewList.first();
-    await first.getByText(/^Supprimer l’Entretien \d+…$/).click();
-    await first.getByRole('button', { name: /^Supprimer définitivement/ }).click();
-    await expect(interviewList).toHaveCount(count - 1);
-  }
-}
 
 test('adds an Interview to an Application, which becomes Invited, then edits and deletes it', async ({ page }) => {
   await page.goto(`/postings/${REFERENCE}`);

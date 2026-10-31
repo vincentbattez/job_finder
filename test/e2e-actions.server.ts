@@ -73,7 +73,8 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
 // Long enough for the front to show the Artifact in progress before it is ready
 const SESSION_DURATION_MS = 1000;
 
-// A session's module is the Artifact its Version folder belongs to: <posting>/<artifact>/v<n>. The
+// A session's module is the Artifact its Version folder belongs to: <posting>/<artifact>/v<n>, or
+// <posting>/interviews/<number>/<artifact>/v<n> for an Artifact of an Interview. The
 // extraction of an imported Posting writes in a folder of its own, <posting>/extraction
 // (src/modules/source-import), and the conversion of an Upload in profile/uploads/.conversion/<upload>
 // (src/workspace).
