@@ -3,10 +3,10 @@ import { useLoaderData, type LoaderFunctionArgs, type MetaArgs } from 'react-rou
 import { localeOf, tFor } from '#/actions/i18n.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
-import { ArtifactVersions } from '#/web/components/artifact-versions.tsx';
-import { StatusButtons } from '#/web/components/edition.tsx';
-import { ExtractionLaunch } from '#/web/components/extraction-launch.tsx';
 import { PostingDetail } from '#/web/components/posting-detail.tsx';
+import { ArtifactVersions } from '#/web/containers/artifact-versions.tsx';
+import { StatusButtons } from '#/web/containers/edition.tsx';
+import { ExtractionLaunch } from '#/web/containers/extraction-launch.tsx';
 import { relayLoader } from '#/web/relay-action.server.ts';
 
 export function loader({ params, request }: LoaderFunctionArgs) {

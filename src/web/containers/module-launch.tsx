@@ -2,13 +2,13 @@ import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
 import { isPending } from '#/actions/state.ts';
+import { StateBadge } from '#/web/components/badge.tsx';
+import type { IArtifactVersions } from '#/web/components/posting-detail.tsx';
+import { useIsHydrated } from '#/web/components/use-is-hydrated.ts';
+import { WorkerTask } from '#/web/components/worker-task.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
-import { StateBadge } from './badge.tsx';
-import type { IArtifactVersions } from './posting-detail.tsx';
-import { useIsHydrated } from './use-is-hydrated.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
-import { WorkerTask } from './worker-task.tsx';
 
 // The button of the module that produces an Artifact, beside its state. The worker runs the job in
 // its own process (ADR-0003), so the Posting page reads the state again until the job is done, and

@@ -12,6 +12,7 @@ import { localeOf, tFor } from '#/actions/i18n.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { ModuleInstructions } from '#/web/components/module-instructions.tsx';
+import { renderPostForm } from '#/web/containers/post-form.tsx';
 import { relayAction, relayLoader } from '#/web/relay-action.server.ts';
 
 export function loader({ request }: LoaderFunctionArgs) {
@@ -78,6 +79,7 @@ export default function Instructions() {
               key={`${instructions.module}-${instructions.candidateInstructions === null ? 'default' : 'candidate'}`}
               {...instructions}
               error={refusal?.module === instructions.module ? refusal.message : null}
+              renderForm={renderPostForm}
             />
           ))}
         </>

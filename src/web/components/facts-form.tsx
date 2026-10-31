@@ -1,6 +1,5 @@
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Form } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
 
@@ -55,37 +54,42 @@ function ListSection({ title, example, entryList }: Readonly<Section>) {
 }
 
 // The Facts by section, read from facts.md and written back into it; the rest of the file stays as
-// written
-export function FactsForm({ sectionList }: Readonly<{ sectionList: Section[] }>) {
+// written, in the form its Container hands in
+export function FactsForm({
+  sectionList,
+  renderForm,
+}: Readonly<{ sectionList: Section[]; renderForm: (fieldList: ReactNode) => ReactNode }>) {
   const headingId = useId();
   const { t } = useTranslation('settings');
   return (
     <section className="facts-form" aria-labelledby={headingId}>
       <h2 id={headingId}>{t('facts.heading')}</h2>
       <p>{t('facts.intro')}</p>
-      <Form method="post" preventScrollReset>
-        <input type="hidden" name="intent" value="facts" />
-        {sectionList.map((section) =>
-          section.isList ? (
-            <ListSection key={section.title} {...section} />
-          ) : (
-            <label key={section.title} className="facts-form__section">
-              {section.title}
-              <textarea
-                name={section.title}
-                defaultValue={section.entryList.join('\n\n')}
-                rows={2}
-                placeholder={section.example}
-              />
-            </label>
-          ),
-        )}
-        <ButtonRow>
-          <button type="submit" className="button button--primary">
-            {t('facts.save')}
-          </button>
-        </ButtonRow>
-      </Form>
+      {renderForm(
+        <>
+          <input type="hidden" name="intent" value="facts" />
+          {sectionList.map((section) =>
+            section.isList ? (
+              <ListSection key={section.title} {...section} />
+            ) : (
+              <label key={section.title} className="facts-form__section">
+                {section.title}
+                <textarea
+                  name={section.title}
+                  defaultValue={section.entryList.join('\n\n')}
+                  rows={2}
+                  placeholder={section.example}
+                />
+              </label>
+            ),
+          )}
+          <ButtonRow>
+            <button type="submit" className="button button--primary">
+              {t('facts.save')}
+            </button>
+          </ButtonRow>
+        </>,
+      )}
     </section>
   );
 }

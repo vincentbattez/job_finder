@@ -3,10 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useFetcher, type FetcherWithComponents } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
-
-import { PARAMETER_FIELD_PREFIX, ParameterField } from './parameter-field.tsx';
-import { SettingsPanel, SettingsStep } from './settings-panel.tsx';
-import { useIsHydrated } from './use-is-hydrated.ts';
+import { PARAMETER_FIELD_PREFIX, ParameterField } from '#/web/components/parameter-field.tsx';
+import { SettingsPanel, SettingsStep } from '#/web/components/settings-panel.tsx';
+import { useIsHydrated } from '#/web/components/use-is-hydrated.ts';
 
 type NotificationChannel = Awaited<ReturnType<Actions['readNotificationChannel']>>;
 type NotificationChannelModule = Awaited<ReturnType<Actions['listNotificationChannels']>>[number];

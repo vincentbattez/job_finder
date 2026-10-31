@@ -20,8 +20,8 @@ import {
 } from 'react-router';
 
 import { readCandidate } from './candidate.server.ts';
-import { CandidateMenu } from './components/candidate-menu.tsx';
-import { LocaleSwitcher } from './components/locale-switcher.tsx';
+import { CandidateMenu } from './containers/candidate-menu.tsx';
+import { LocaleSwitcher } from './containers/locale-switcher.tsx';
 import { isLoaderFailure } from './failure.ts';
 import { LocaleProvider, useLocale } from './i18n.tsx';
 import { englishUrlOf } from './redirects.ts';
