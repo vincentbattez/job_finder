@@ -3,6 +3,10 @@ import { z } from 'zod/v4';
 
 import { CANDIDATE_COOKIE } from '#/web/cookies.server.ts';
 
+// The dev server compiles a route on its first request: on the 2 vCPU runner, the first page of a
+// worker takes longer to hydrate than the 5 s an expect waits by default
+const HYDRATION_TIMEOUT_MS = 15_000;
+
 export type AsCandidate = (candidateId: string) => Promise<void>;
 export type OpenPage = (path: string) => Promise<void>;
 // What a helper of a spec file takes to open the pages of a test
@@ -34,7 +38,7 @@ export const test = base.extend<{ asCandidate: AsCandidate; openPage: OpenPage }
     await use(async (path) => {
       await page.goto(path);
       if (javaScriptEnabled) {
-        await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
+        await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true', { timeout: HYDRATION_TIMEOUT_MS });
       }
     });
   },

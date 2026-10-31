@@ -14,6 +14,8 @@ test.describe.configure({ mode: 'serial' });
 
 // The slow Source searches for 1.5 s, then reads 81 Job Descriptions; the page reads it every 2 s
 const VERDICT_TIMEOUT_MS = 30_000;
+// How long a raw write of these tests waits for the server's own writes to release the database
+const BUSY_TIMEOUT_MS = 5000;
 
 // The Postings of the Candidate asCandidate chose
 async function openPostingsOf({ page, openPage }: IFront, candidateName: string) {
@@ -25,7 +27,9 @@ async function openPostingsOf({ page, openPage }: IFront, candidateName: string)
 // database, as the Profile form resets it only when the Parameters change.
 function restartFirstLaunch(watchId: string) {
   const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
-  const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'));
+  // The dev server and the worker write to this database too, and the previous test's Detection may
+  // still be committing: without a busy timeout, SQLite answers "database is locked" at once
+  const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
   database.prepare('UPDATE "Watch" SET "detectedAt" = NULL WHERE "id" = ?').run(watchId);
   database.close();
 }
