@@ -1,6 +1,11 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/cli/jf.ts", "test/create-lea-database.ts", "test/detect-in-process.ts"],
+  "entry": [
+    "src/cli/jf.ts",
+    "test/create-lea-database.ts",
+    "test/create-detected-folder.ts",
+    "test/detect-in-process.ts"
+  ],
   "project": ["src/**/*.{ts,tsx}", "test/**/*.ts", "e2e/**/*.ts", "prisma/**/*.{ts,prisma}"],
   "lefthook": true,
   "ignoreDependencies": ["@prisma/client", "cspell"]
