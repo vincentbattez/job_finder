@@ -109,7 +109,7 @@ export const ERROR_FR: typeof ERROR_EN = {
   uploadGone: "« {{upload}} » n'est plus dans le Profil de {{candidateName}} : la déposer à nouveau pour la convertir.",
   conversionWithoutFile: "La conversion de « {{upload}} » n'a écrit aucun fichier Markdown.\n{{log}}",
   conversionRefused:
-    "La conversion de « {{upload}} » est refusée : « {{fileName}} » n'est ni « cv.md » ni une lettre « letter-<employer>-<year>.md ».",
+    "La conversion de « {{upload}} » est refusée : « {{fileName}} » n'est ni « cv.md », ni une lettre « letter-<employer>-<year>.md », ni une Annexe « annex-<subject>.md ».",
   conversionOverwrite:
     "« {{upload}} » se convertit en « {{fileName}} », que le Profil a déjà : il n'est pas écrasé. Supprimer ou renommer « {{fileName}} », puis relancer la conversion.",
 

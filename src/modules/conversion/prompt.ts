@@ -5,7 +5,7 @@ import { CONVERSION_INSTRUCTIONS } from '#/profile/prompt.ts';
 // document keeps its own language. Its rules are those of jf profile, which converts the same
 // documents with the Candidate.
 export function composeConversionPrompt({ name }: Candidate, uploadPath: string, outputDirectory: string): string {
-  return `You convert into Markdown an Upload that ${name} dropped into their Candidate Profile: an original document, their CV or a past cover letter, as a PDF. The current folder is this Profile: the Upload is \`${uploadPath}\`. Read it in full.
+  return `You convert into Markdown an Upload that ${name} dropped into their Candidate Profile: an original document, their CV, a past cover letter or an Annex, as a PDF. The current folder is this Profile: the Upload is \`${uploadPath}\`. Read it in full.
 
 ## What you produce
 
