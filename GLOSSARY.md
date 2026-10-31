@@ -167,6 +167,11 @@ Outcome of an Application where the employer did not pick the Candidate.
 _Avoid_: refused, declined, failed
 _Formerly_: Refusée
 
+**In progress**:
+Said of an Application with no outcome yet, whether Applied, Invited or Interviewed; putting a Hired or Rejected Application back In progress removes its outcome.
+_Avoid_: open, active, ongoing
+_Formerly_: En cours
+
 **Archived**:
 Said of a Posting the Candidate decided to stop following, whatever its Status, which it keeps; unarchiving it restores it as it was.
 _Avoid_: deleted, ignored, hidden

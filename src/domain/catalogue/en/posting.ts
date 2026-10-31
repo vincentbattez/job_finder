@@ -42,12 +42,15 @@ export const POSTING_EN = {
   noCc: 'None',
   salutationTerm: 'Salutation',
 
-  // The Status buttons
-  statusButtonLabelByStatus: {
-    to_apply: 'Back to To Apply',
-    applied: 'Mark as Applied',
-  } satisfies Record<Status, string>,
-  // The Archived mark, beside the Status buttons (ADR-0007)
+  // The outcome selector: Applied on a To Apply Posting, then the outcomes of its Application
+  markApplied: 'Mark as Applied',
+  outcomeLabel: 'Outcome of the Application',
+  outcomeLabelByStatus: {
+    applied: 'In progress',
+    hired: 'Hired',
+    rejected: 'Rejected',
+  } satisfies Record<Exclude<Status, 'to_apply'>, string>,
+  // The Archived mark, beside the outcome selector (ADR-0007)
   archive: 'Archive',
   unarchive: 'Unarchive',
   confirmApplied: 'Confirm: Applied',

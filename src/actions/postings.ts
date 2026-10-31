@@ -21,7 +21,7 @@ import {
 } from '#/domain/index.ts';
 import { LETTER_MODULE } from '#/modules/letter/index.ts';
 import { VISUALIZATION_MODULE } from '#/modules/visualization/index.ts';
-import { listNextStatuses } from '#/status/index.ts';
+import { listStatusChoices } from '#/status/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
 import { ARTIFACT_INPUT_SCHEMA, REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
@@ -139,7 +139,7 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
       );
       return POSTING_DETAIL_SCHEMA.parse({
         posting,
-        nextStatusList: listNextStatuses(posting),
+        statusChoiceList: listStatusChoices(posting),
         jobDescription: workspace.readJobDescription(posting, locale),
         artifactList,
         recipients: await findRecipients(posting),

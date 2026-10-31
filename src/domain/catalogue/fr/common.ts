@@ -4,6 +4,8 @@ export const COMMON_FR: typeof COMMON_EN = {
   statusLabelByStatus: {
     to_apply: 'À traiter',
     applied: 'Postulée',
+    hired: 'Obtenue',
+    rejected: 'Refusée',
   },
   archived: 'Archivée',
   expired: 'Expirée',

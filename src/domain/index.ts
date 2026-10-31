@@ -88,7 +88,8 @@ export const LOCATION_SCHEMA = z.object(LOCATION_SHAPE).brand<'Domain'>();
 
 export type Location = z.infer<typeof LOCATION_SCHEMA>;
 
-export const STATUS_SCHEMA = z.enum(['to_apply', 'applied']);
+// The stored Status: Invited and Interviewed are computed from the Interviews, never stored (ADR-0009)
+export const STATUS_SCHEMA = z.enum(['to_apply', 'applied', 'hired', 'rejected']);
 
 export type Status = z.infer<typeof STATUS_SCHEMA>;
 
@@ -115,6 +116,8 @@ export const POSTING_SCHEMA = z
     status: STATUS_SCHEMA,
     // When it was first marked Applied, null if never
     appliedAt: z.date().nullable(),
+    // When its Status last changed, null if never
+    statusChangedAt: z.date().nullable(),
     // When the Candidate archived it, null while they follow it: a mark beside the Status (ADR-0007)
     archivedAt: z.date().nullable(),
     isInZone: z.boolean(),
@@ -385,8 +388,8 @@ const ARTIFACT_VERSIONS_SCHEMA = z.object({
 export const POSTING_DETAIL_SCHEMA = z
   .object({
     posting: POSTING_SCHEMA,
-    // The statuses the Posting can move to, a button each
-    nextStatusList: z.array(STATUS_SCHEMA),
+    // What the outcome selector offers, beside the Status the Posting has
+    statusChoiceList: z.array(STATUS_SCHEMA),
     jobDescription: z.string(),
     artifactList: z.array(ARTIFACT_VERSIONS_SCHEMA),
     recipients: RECIPIENTS_SCHEMA.nullable(),

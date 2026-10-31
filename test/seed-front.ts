@@ -204,6 +204,9 @@ await actions.runQueuedJobs();
 await actions.deleteInstructions({ candidateId: 'lea', module: 'research' });
 
 await actions.changeStatus({ reference: '2026-2285305', status: 'applied' });
+// The Applications whose outcome e2e/edition.test.ts changes, one with JS and one without
+await actions.changeStatus({ reference: '2026-2448056', status: 'applied' });
+await actions.changeStatus({ reference: '2026-2448209', status: 'applied' });
 await actions.archive({ reference: '2026-2290529' });
 
 // Emma reads the interface in English (e2e/locale.test.ts). Her one Posting, imported, keeps the name

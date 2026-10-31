@@ -652,8 +652,9 @@ export function openDatabase(databasePath: string) {
     },
 
     async setStatus(posting: Posting, status: Status): Promise<void> {
-      const appliedAt = findAppliedAt(posting, status, new Date());
-      await prisma.posting.update({ where: { id: posting.id }, data: { status, appliedAt } });
+      const now = new Date();
+      const appliedAt = findAppliedAt(posting, status, now);
+      await prisma.posting.update({ where: { id: posting.id }, data: { status, appliedAt, statusChangedAt: now } });
     },
 
     // The Archived mark alone: the Status and appliedAt stay as they are (ADR-0007)

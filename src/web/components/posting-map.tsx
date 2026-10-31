@@ -118,6 +118,12 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
         <li className="posting-map__key" data-status="applied">
           {t('statusLabelByStatus.applied', { ns: 'common' })}
         </li>
+        <li className="posting-map__key" data-status="hired">
+          {t('statusLabelByStatus.hired', { ns: 'common' })}
+        </li>
+        <li className="posting-map__key" data-status="rejected">
+          {t('statusLabelByStatus.rejected', { ns: 'common' })}
+        </li>
         <li className="posting-map__key" data-status="expired">
           {t('expired', { ns: 'common' })}
         </li>

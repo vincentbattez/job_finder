@@ -35,28 +35,32 @@ export function isExpired(
   return lastDay !== undefined && FRANCE_DAY_FORMAT.format(now) > lastDay;
 }
 
-// Applied once, even if Archived since: the Candidate sent its Chosen Letter. A Posting Applied
-// before appliedAt existed has none.
+// Applied once, even if Archived since: the Candidate sent its Chosen Letter, and its Application
+// started. A Posting Applied before appliedAt existed has none.
 export function hasBeenApplied({ status, appliedAt }: Pick<Posting, 'status' | 'appliedAt'>): boolean {
-  return status === 'applied' || appliedAt !== null;
+  return status !== 'to_apply' || appliedAt !== null;
 }
 
 // When a Posting moving to the status was first Applied: its Chosen Letter, the one sent, stays
 // frozen from then on
 export function findAppliedAt(posting: Pick<Posting, 'status' | 'appliedAt'>, status: Status, now: Date): Date | null {
-  return posting.appliedAt ?? (status === 'applied' || hasBeenApplied(posting) ? now : null);
+  return posting.appliedAt ?? (status !== 'to_apply' || hasBeenApplied(posting) ? now : null);
 }
 
-// The statuses a Posting can move to, whether Archived or not, Archived being a mark beside the
-// Status (ADR-0007). Applied is never undone, since the Chosen Letter was sent.
-export function listNextStatuses(posting: Pick<Posting, 'status' | 'appliedAt'>): Status[] {
-  return hasBeenApplied(posting) ? [] : ['applied'];
+// The outcomes of an Application, In progress being Applied: the Candidate moves freely between them
+const APPLICATION_STATUS_LIST: Status[] = ['applied', 'hired', 'rejected'];
+
+// What the outcome selector offers besides the Status the Posting has, Archived or not (ADR-0007):
+// Applied on a To Apply Posting, then the other outcomes of its Application. Applied is never undone,
+// since the Chosen Letter was sent.
+export function listStatusChoices(posting: Pick<Posting, 'status' | 'appliedAt'>): Status[] {
+  return hasBeenApplied(posting) ? APPLICATION_STATUS_LIST.filter((status) => status !== posting.status) : ['applied'];
 }
 
 // Moving to the status it already has changes nothing
 export function assertStatusChange(posting: PostingStatus, status: Status, locale: Locale): void {
-  const nextStatusList = listNextStatuses(posting);
-  if (status === posting.status || nextStatusList.includes(status)) {
+  const choiceList = listStatusChoices(posting);
+  if (status === posting.status || choiceList.includes(status)) {
     return;
   }
   if (hasBeenApplied(posting)) {
@@ -64,7 +68,7 @@ export function assertStatusChange(posting: PostingStatus, status: Status, local
   }
   const t = tFor(locale, 'error');
   const tCommon = tFor(locale, 'common');
-  const nextLabelList = nextStatusList.map((nextStatus) => tCommon(`statusLabelByStatus.${nextStatus}`));
+  const nextLabelList = choiceList.map((choice) => tCommon(`statusLabelByStatus.${choice}`));
   const values = {
     reference: posting.reference,
     statusLabel: tCommon(`statusLabelByStatus.${posting.status}`),
