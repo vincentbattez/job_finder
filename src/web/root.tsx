@@ -75,8 +75,9 @@ function Page({ children }: Readonly<{ children: ReactNode }>) {
             </Link>
             <nav className="topbar__nav" aria-label={t('layout.navigationLabel')}>
               <NavLink to="/" end>
-                {t('layout.postingsLink')}
+                {t('layout.homeLink')}
               </NavLink>
+              <NavLink to="/postings">{t('layout.postingsLink')}</NavLink>
               <NavLink to="/profile">{t('layout.profileLink')}</NavLink>
               <NavLink to="/instructions">{t('layout.instructionsLink')}</NavLink>
               <NavLink to="/candidates">{t('layout.candidatesLink')}</NavLink>

@@ -18,6 +18,8 @@ async function choose(page: Page, candidateName: string) {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption(candidateName);
   await page.getByRole('button', { name: 'Choisir' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Bonjour ${candidateName}`);
+  await page.goto('/postings');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Offres de ${candidateName}`);
 }
 

@@ -6,7 +6,7 @@ async function openInstructionsOfSacha(page: Page) {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Sacha');
   await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Sacha');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Sacha');
   await page.getByRole('link', { name: 'Consignes', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Consignes de Sacha');
 }

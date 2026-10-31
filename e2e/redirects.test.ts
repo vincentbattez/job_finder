@@ -35,6 +35,14 @@ test.describe('French routes', () => {
     expect(response.headers().location).toBe('/?city=Melun&region=%C3%8Ele-de-France&archived=on');
   });
 
+  // The Posting list moved from the home to /postings: a filter saved before keeps filtering there
+  test('redirects a filter of the Posting list saved on the home permanently to /postings', async ({ page }) => {
+    const response = await page.request.get('/?city=Melun&archived=on', { maxRedirects: 0 });
+
+    expect(response.status()).toBe(301);
+    expect(response.headers().location).toBe('/postings?city=Melun&archived=on');
+  });
+
   test('opens the English page from a French link', async ({ page }) => {
     await page.goto('/candidats');
 

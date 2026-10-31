@@ -28,7 +28,7 @@ test.describe('Candidates', () => {
     await expect(nameBox).toHaveValue(`Ambre Martin ${suffix}`);
     await menu.selectOption({ label: `Ambre Martin ${suffix}` });
     await page.getByRole('button', { name: 'Choisir' }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Offres de Ambre Martin ${suffix}`);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Bonjour Ambre Martin ${suffix}`);
   });
 
   test('refuses an identifier another Candidate has, in the words of the action', async ({ page }) => {

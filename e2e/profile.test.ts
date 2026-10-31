@@ -22,7 +22,7 @@ async function openFreshProfileOf(
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption(name);
   await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Offres de ${name}`);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Bonjour ${name}`);
   await page.getByRole('link', { name: 'Profil', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Profil de ${name}`);
 }
@@ -192,7 +192,7 @@ test.describe('Profile of a Candidate', () => {
     await page.goto('/');
     await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Camille');
     await page.getByRole('button', { name: 'Choisir' }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Camille');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Camille');
 
     await page.getByRole('link', { name: 'Profil', exact: true }).click();
 

@@ -1,4 +1,4 @@
-// The list of a Candidate's Postings, the home page of the front
+// The list of a Candidate's Postings, at /postings
 export const POSTING_LIST_EN = {
   pageTitle: 'Postings · Job Finder',
   heading: '{{candidateName}}’s Postings',

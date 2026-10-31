@@ -25,7 +25,7 @@ async function openNotificationsOf(page: Page, name: string) {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption(name);
   await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Offres de ${name}`);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Bonjour ${name}`);
   await page.getByRole('link', { name: 'Profil', exact: true }).click();
   const notifications = page.getByRole('region', { name: 'Notifications' });
   // Disabled until React hydrates: a click before would go nowhere

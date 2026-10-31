@@ -6,7 +6,7 @@ async function openJadeWatches(page: Page) {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Jade');
   await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Jade');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Jade');
   await page.getByRole('link', { name: 'Profil', exact: true }).click();
   const watches = page.getByRole('region', { name: 'Veilles' });
   // Disabled until React hydrates: a click before would go nowhere
