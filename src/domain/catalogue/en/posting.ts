@@ -46,7 +46,7 @@ export const POSTING_EN = {
   markApplied: 'Mark as Applied',
   outcomeLabel: 'Outcome of the Application',
   outcomeLabelByStatus: {
-    applied: 'In progress',
+    applied: 'Sent',
     hired: 'Hired',
     rejected: 'Rejected',
   } satisfies Record<Exclude<Status, 'to_apply'>, string>,

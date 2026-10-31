@@ -38,7 +38,7 @@ export const POSTING_FR: typeof POSTING_EN = {
   markApplied: 'Marquer comme Postulée',
   outcomeLabel: 'Issue de la Candidature',
   outcomeLabelByStatus: {
-    applied: 'En cours',
+    applied: 'Envoyée',
     hired: 'Obtenue',
     rejected: 'Refusée',
   },

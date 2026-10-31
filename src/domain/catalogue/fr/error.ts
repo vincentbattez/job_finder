@@ -46,7 +46,7 @@ export const ERROR_FR: typeof ERROR_EN = {
 
   statusChange: "L'Offre {{reference}} est {{statusLabel}} : elle ne peut passer qu'en {{nextLabels}}.",
   toApplyAfterOutcome:
-    "L'Offre {{reference}} a un résultat : la remettre En cours d'abord, seule une Offre Postulée sans Entretien revient À traiter.",
+    "L'Offre {{reference}} a un résultat : la remettre Envoyée d'abord, seule une Offre Postulée sans Entretien revient À traiter.",
   toApplyWithInterview:
     "L'Offre {{reference}} a un Entretien : sa Lettre a été envoyée, elle ne revient pas À traiter.",
   letterFrozen:

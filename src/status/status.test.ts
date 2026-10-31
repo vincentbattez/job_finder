@@ -144,7 +144,7 @@ describe('Status change of a Posting', () => {
         'to_apply',
         'en',
       );
-    }).toThrow('Posting 2026-2445600 has an outcome: put it back In progress first');
+    }).toThrow('Posting 2026-2445600 has an outcome: mark it Sent again first');
   });
 
   it('refuses an Application In progress with an Interview back to To Apply', () => {

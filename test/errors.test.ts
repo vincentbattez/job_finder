@@ -158,7 +158,7 @@ describe('an error for an English-speaking Candidate', () => {
     await actions.changeStatus({ reference, status: 'rejected' });
 
     await expect(actions.changeStatus({ reference, status: 'to_apply' })).rejects.toThrow(
-      `Posting ${reference} has an outcome: put it back In progress first, only an Applied Posting without an Interview goes back to To Apply.`,
+      `Posting ${reference} has an outcome: mark it Sent again first, only an Applied Posting without an Interview goes back to To Apply.`,
     );
   });
 

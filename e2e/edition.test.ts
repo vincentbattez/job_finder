@@ -97,14 +97,14 @@ async function changeOutcome(page: Page, reference: string) {
 test('marks an Application Hired, then Rejected, then back In progress', async ({ page }) => {
   const { statusBadge, outcome } = await changeOutcome(page, OUTCOME_REFERENCE);
   await expect(statusBadge).toHaveText('Postulée');
-  await expect(outcome.getByRole('button', { name: 'En cours' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(outcome.getByRole('button', { name: 'Envoyée' })).toHaveAttribute('aria-pressed', 'true');
 
   await outcome.getByRole('button', { name: 'Obtenue' }).click();
   await expect(statusBadge).toHaveText('Obtenue');
   await outcome.getByRole('button', { name: 'Refusée' }).click();
   await expect(statusBadge).toHaveText('Refusée');
   await expect(outcome.getByRole('button', { name: 'Refusée' })).toHaveAttribute('aria-pressed', 'true');
-  await outcome.getByRole('button', { name: 'En cours' }).click();
+  await outcome.getByRole('button', { name: 'Envoyée' }).click();
 
   await expect(statusBadge).toHaveText('Postulée');
   await expect(page.getByRole('button', { name: 'Marquer comme Postulée' })).toHaveCount(0);

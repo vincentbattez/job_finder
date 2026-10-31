@@ -71,7 +71,7 @@ test.describe('/applications', () => {
     await putBackRejected(page, REJECTED_REFERENCE);
     await openApplications(page);
 
-    await findRow(page, 'Refusées', REJECTED_REFERENCE).getByRole('button', { name: 'En cours' }).click();
+    await findRow(page, 'Refusées', REJECTED_REFERENCE).getByRole('button', { name: 'Envoyée' }).click();
 
     await expect(findRow(page, 'En cours', REJECTED_REFERENCE)).toHaveCount(1);
     await expect(findRow(page, 'Refusées', REJECTED_REFERENCE)).toHaveCount(0);
