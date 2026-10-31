@@ -30,7 +30,7 @@
 
   .posting-map__point,
   .posting-map__key {
-    --point: var(--color-status-to-apply);
+    --point: var(--color-status-to-apply-point);
   }
 
   .posting-map__point,
@@ -46,10 +46,15 @@
   }
 
   .posting-map__point[data-status='applied'],
+  .posting-map__key[data-status='applied'] {
+    --point: var(--color-status-applied-point);
+  }
+
   .posting-map__point[data-status='invited'],
   .posting-map__point[data-status='interviewed'],
-  .posting-map__key[data-status='applied'] {
-    --point: var(--color-status-applied);
+  .posting-map__key[data-status='invited'],
+  .posting-map__key[data-status='interviewed'] {
+    --point: var(--color-status-invited-point);
   }
 
   .posting-map__point[data-status='hired'],
@@ -59,12 +64,12 @@
 
   .posting-map__point[data-status='rejected'],
   .posting-map__key[data-status='rejected'] {
-    --point: var(--color-status-rejected);
+    --point: var(--color-status-rejected-point);
   }
 
   .posting-map__point[data-status='expired'],
   .posting-map__key[data-status='expired'] {
-    --point: var(--color-status-expired);
+    --point: var(--color-status-expired-point);
   }
 
   /* Archived keeps the fill of its status, inside the dashed rim of what steps back */
