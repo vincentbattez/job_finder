@@ -95,14 +95,15 @@ export const CLI_EN = {
   chooseUsage: 'Usage: jf choose <posting> <artifact> <version>, for example jf choose 2026-2445600 research 2.',
   versionChosen: '{{artifact}} {{version}} chosen for Posting {{reference}}.\n',
 
-  // jf apply, jf archive, jf to-apply
+  // jf apply, jf archive, jf unarchive
   statusCommandDescription: '{{description}}: jf {{name}} <posting>',
   statusUsage: 'Usage: jf {{name}} <posting>. “jf list <candidate>” lists the Postings.',
   statusChanged: '{{reference}}: {{statusLabel}}\n',
-  applyDescription:
-    'Moves a Posting to Applied, with or without a Letter, which freezes its Letter for good; moves an Applied then Archived Posting back to Applied',
-  archiveDescription: 'Moves a Posting to Archived, Applied or not',
-  toApplyDescription: 'Moves an Archived Posting that was never Applied back to To Apply',
+  applyDescription: 'Moves a Posting to Applied, with or without a Letter, which freezes its Letter for good',
+  archiveDescription: 'Archives a Posting, whatever its Status, which it keeps',
+  unarchiveDescription: 'Unarchives a Posting, which finds its Status as it was',
+  postingArchived: '{{reference}}: Archived\n',
+  postingUnarchived: '{{reference}}: no longer Archived\n',
 
   // jf profile, jf edit
   profileDescription: 'Completes the Profile of a Candidate with Claude Code: jf profile <candidate>',

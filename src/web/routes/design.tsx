@@ -3,7 +3,7 @@ import type { LoaderFunctionArgs, MetaArgs } from 'react-router';
 
 import { localeOf, tFor } from '#/actions/i18n.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
-import { STATE_LIST, StateBadge, StatusBadge, type Status } from '#/web/components/badge.tsx';
+import { showStatus, STATE_LIST, StateBadge, StatusBadge, type Status } from '#/web/components/badge.tsx';
 import { DetectionProgress, DetectionResult, type IRecordedDetection } from '#/web/components/detection.tsx';
 import { MarkdownEditor } from '#/web/components/markdown-editor.tsx';
 import { PostingDetail, type IPostingDetail } from '#/web/components/posting-detail.tsx';
@@ -21,6 +21,7 @@ const SAMPLE_POSTING = {
   employer: 'Cour d’appel de Douai',
   status: 'to_apply',
   isExpired: false,
+  archivedAt: null,
   publishedAt: new Date('2026-10-20'),
   deadline: new Date('2026-11-19'),
   applicationEmail: 'recrutement@example.org',
@@ -133,6 +134,7 @@ const SAMPLE_POSTING_LIST: IPostingRow[] = [
     workplace: 'Tribunal judiciaire de Boulogne-sur-Mer',
     status: 'applied',
     isExpired: true,
+    archivedAt: null,
     publishedAt: new Date('2026-09-25'),
     deadline: new Date('2026-10-23'),
   },
@@ -143,6 +145,7 @@ const SAMPLE_POSTING_LIST: IPostingRow[] = [
     workplace: 'Tribunal judiciaire d’Avesnes-sur-Helpe',
     status: 'to_apply',
     isExpired: true,
+    archivedAt: null,
     publishedAt: new Date('2026-09-14'),
     deadline: new Date('2026-10-15'),
   },
@@ -151,8 +154,9 @@ const SAMPLE_POSTING_LIST: IPostingRow[] = [
     title: 'Attaché de justice (F/H), service de l’application des peines',
     url: 'https://example.org/postings/2026-0000104',
     workplace: 'Tribunal judiciaire d’Amiens',
-    status: 'archived',
+    status: 'applied',
     isExpired: false,
+    archivedAt: new Date('2026-10-28'),
     publishedAt: new Date('2026-09-30'),
     deadline: null,
   },
@@ -230,12 +234,12 @@ const DETECTION_SAMPLE_LIST: { key: string; detection: IRecordedDetection }[] = 
 
 // cspell:enable
 
-// Each look of the badge: Expired shows in place of To Apply
-const STATUS_SAMPLE_LIST: { status: Status; isExpired: boolean }[] = [
-  { status: 'to_apply', isExpired: false },
-  { status: 'applied', isExpired: false },
-  { status: 'to_apply', isExpired: true },
-  { status: 'archived', isExpired: false },
+// Each look of the badge: Expired shows in place of To Apply, Archived in place of the Status
+const STATUS_SAMPLE_LIST: { status: Status; isExpired: boolean; archivedAt: Date | null }[] = [
+  { status: 'to_apply', isExpired: false, archivedAt: null },
+  { status: 'applied', isExpired: false, archivedAt: null },
+  { status: 'to_apply', isExpired: true, archivedAt: null },
+  { status: 'applied', isExpired: false, archivedAt: new Date('2026-10-28') },
 ];
 
 // The chrome of the page reads in the chosen Candidate's locale; the samples stay French Postings, as
@@ -260,9 +264,9 @@ export default function Design() {
       <section aria-labelledby="statuses">
         <h2 id="statuses">{t('design.statuses')}</h2>
         <ul className="badge-list">
-          {STATUS_SAMPLE_LIST.map(({ status, isExpired }) => (
-            <li key={`${status}-${String(isExpired)}`}>
-              <StatusBadge status={status} isExpired={isExpired} />
+          {STATUS_SAMPLE_LIST.map((sample) => (
+            <li key={showStatus(sample)}>
+              <StatusBadge {...sample} />
             </li>
           ))}
         </ul>

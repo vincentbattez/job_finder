@@ -204,7 +204,7 @@ await actions.runQueuedJobs();
 await actions.deleteInstructions({ candidateId: 'lea', module: 'research' });
 
 await actions.changeStatus({ reference: '2026-2285305', status: 'applied' });
-await actions.changeStatus({ reference: '2026-2290529', status: 'archived' });
+await actions.archive({ reference: '2026-2290529' });
 
 // Emma reads the interface in English (e2e/locale.test.ts). Her one Posting, imported, keeps the name
 // of its file: the fake Claude of the seed reads none of its fields, so it has no Deadline.

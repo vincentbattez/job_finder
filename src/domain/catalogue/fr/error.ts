@@ -46,7 +46,7 @@ export const ERROR_FR: typeof ERROR_EN = {
 
   statusChange: "L'Offre {{reference}} est {{statusLabel}} : elle ne peut passer qu'en {{nextLabels}}.",
   statusChangeAfterApplied:
-    "L'Offre {{reference}} est {{statusLabel}} : elle ne peut passer qu'en {{nextLabels}}, Postulée ne s'annulant jamais : sa Lettre retenue est celle envoyée.",
+    "L'Offre {{reference}} a été Postulée : elle ne revient jamais À traiter, sa Lettre retenue étant celle envoyée.",
   letterFrozen:
     "L'Offre {{reference}} a été Postulée : sa Lettre retenue est figée telle qu'envoyée. Elle ne se modifie plus, ne se régénère plus et ne se remplace plus par une autre Version.",
 

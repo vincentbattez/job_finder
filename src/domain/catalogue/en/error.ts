@@ -60,7 +60,7 @@ export const ERROR_EN = {
   // Statuses
   statusChange: 'Posting {{reference}} is {{statusLabel}}: it can only move to {{nextLabels}}.',
   statusChangeAfterApplied:
-    'Posting {{reference}} is {{statusLabel}}: it can only move to {{nextLabels}}, since Applied is never undone: its Chosen Letter is the one sent.',
+    'Posting {{reference}} was Applied: it never goes back to To Apply, since its Chosen Letter is the one sent.',
   letterFrozen:
     'Posting {{reference}} was Applied: its Chosen Letter is frozen as sent. It is no longer edited, regenerated or replaced by another Version.',
 

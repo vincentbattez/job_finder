@@ -117,8 +117,8 @@ test('shows the tools of the Posting list in English to a Candidate with the en 
 });
 
 // Oliver reads the interface in English too, and owns the one Posting this test changes
-// (test/seed-front.ts): imported, its fields unread, with a Research. Archived and put back To
-// Apply, it ends as it started; Applied, which is never undone, is only asked, then cancelled.
+// (test/seed-front.ts): imported, its fields unread, with a Research. Archived then unarchived
+// back to To Apply, it ends as it started; Applied, which is never undone, is only asked, then cancelled.
 test('takes a Candidate with the en locale through a Posting and its Status in English', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Oliver');
@@ -127,10 +127,10 @@ test('takes a Candidate with the en locale through a Posting and its Status in E
   await page.getByRole('button', { name: 'Filter' }).click();
   await page.getByRole('link', { name: 'registry-officer-douai.md' }).click();
   const statusBadge = page.locator('.posting-detail__title .badge');
-  const backToApply = page.getByRole('button', { name: 'Back to To Apply' });
+  const unarchive = page.getByRole('button', { name: 'Unarchive' });
   // Left Archived by a run stopped halfway
-  if (await backToApply.isVisible()) {
-    await backToApply.click();
+  if (await unarchive.isVisible()) {
+    await unarchive.click();
   }
   await expect(statusBadge).toHaveText('To Apply');
 
@@ -179,6 +179,7 @@ test('takes a Candidate with the en locale through a Posting and its Status in E
   await page.getByRole('button', { name: 'Cancel' }).click();
   await page.getByRole('button', { name: 'Archive' }).click();
   await expect(statusBadge).toHaveText('Archived');
-  await backToApply.click();
+  await expect(page.getByRole('button', { name: 'Mark as Applied' })).toBeVisible();
+  await unarchive.click();
   await expect(statusBadge).toHaveText('To Apply');
 });

@@ -15,6 +15,7 @@ export interface IPostingRow {
   workplace: string | null;
   status: Status;
   isExpired: boolean;
+  archivedAt: Date | null;
   publishedAt: Date | null;
   deadline: Date | null;
 }
@@ -60,7 +61,7 @@ export function PostingList({
               </div>
             </td>
             <td>
-              <StatusBadge status={posting.status} isExpired={posting.isExpired} />
+              <StatusBadge status={posting.status} isExpired={posting.isExpired} archivedAt={posting.archivedAt} />
             </td>
             <td className="posting-list__date" data-column="publishedAt" data-label={t('publishedAtColumn')}>
               <DateText date={posting.publishedAt} />

@@ -5,6 +5,9 @@ Choosable
 repost
 reposted
 reposts
+unarchive
+unarchived
+unarchives
 unarchiving
 
 # Tools and their APIs

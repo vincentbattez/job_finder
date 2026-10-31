@@ -12,6 +12,7 @@ interface IMappedPosting {
   title: string;
   status: Status;
   isExpired: boolean;
+  archivedAt: Date | null;
   latitude: number | null;
   longitude: number | null;
 }
@@ -90,7 +91,7 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
           const point = leaflet
             .marker([posting.latitude, posting.longitude], { icon, title: `${posting.title} · ${posting.reference}` })
             .addTo(map);
-          point.getElement()?.setAttribute('data-status', showStatus(posting.status, posting.isExpired));
+          point.getElement()?.setAttribute('data-status', showStatus(posting));
           const openPosting = () => void navigate(`/postings/${posting.reference}`);
           point.on('click', openPosting);
           point.on('keypress', ({ originalEvent }) => {
@@ -121,7 +122,7 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
           {t('expired', { ns: 'common' })}
         </li>
         <li className="posting-map__key" data-status="archived">
-          {t('statusLabelByStatus.archived', { ns: 'common' })}
+          {t('archived', { ns: 'common' })}
         </li>
       </ul>
       {unlocatedCount > 0 && <p className="posting-map__note">{t('unlocatedPostings', { count: unlocatedCount })}</p>}

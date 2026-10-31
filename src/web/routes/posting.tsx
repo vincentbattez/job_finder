@@ -4,7 +4,7 @@ import { localeOf, tFor } from '#/actions/i18n.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { ArtifactVersions } from '#/web/components/artifact-versions.tsx';
-import { StatusButtons } from '#/web/components/edition.tsx';
+import { ArchiveButton, StatusButtons } from '#/web/components/edition.tsx';
 import { ExtractionLaunch } from '#/web/components/extraction-launch.tsx';
 import { PostingDetail } from '#/web/components/posting-detail.tsx';
 import { relayLoader } from '#/web/relay-action.server.ts';
@@ -30,6 +30,7 @@ export default function Posting() {
     <main className="container page">
       <PostingDetail detail={detail} isPage>
         <StatusButtons reference={detail.posting.reference} nextStatusList={detail.nextStatusList} />
+        <ArchiveButton reference={detail.posting.reference} isArchived={detail.posting.archivedAt !== null} />
         {detail.extraction !== null && <ExtractionLaunch reference={detail.posting.reference} {...detail.extraction} />}
       </PostingDetail>
       {detail.artifactList.map((artifactVersions) => (

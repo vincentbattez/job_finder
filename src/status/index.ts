@@ -47,20 +47,10 @@ export function findAppliedAt(posting: Pick<Posting, 'status' | 'appliedAt'>, st
   return posting.appliedAt ?? (status === 'applied' || hasBeenApplied(posting) ? now : null);
 }
 
-// The statuses a Posting can move to. Applied is never undone, since the Chosen Letter was sent: a
-// Applied Posting can be Archived, and comes back from Archived as Applied, never To Apply.
+// The statuses a Posting can move to, whether Archived or not, Archived being a mark beside the
+// Status (ADR-0007). Applied is never undone, since the Chosen Letter was sent.
 export function listNextStatuses(posting: Pick<Posting, 'status' | 'appliedAt'>): Status[] {
-  switch (posting.status) {
-    case 'to_apply': {
-      return ['applied', 'archived'];
-    }
-    case 'applied': {
-      return ['archived'];
-    }
-    case 'archived': {
-      return [hasBeenApplied(posting) ? 'applied' : 'to_apply'];
-    }
-  }
+  return hasBeenApplied(posting) ? [] : ['applied'];
 }
 
 // Moving to the status it already has changes nothing
@@ -68,6 +58,9 @@ export function assertStatusChange(posting: PostingStatus, status: Status, local
   const nextStatusList = listNextStatuses(posting);
   if (status === posting.status || nextStatusList.includes(status)) {
     return;
+  }
+  if (hasBeenApplied(posting)) {
+    throw codedError('status_change_after_applied', { reference: posting.reference }, { locale });
   }
   const t = tFor(locale, 'error');
   const tCommon = tFor(locale, 'common');
@@ -77,7 +70,7 @@ export function assertStatusChange(posting: PostingStatus, status: Status, local
     statusLabel: tCommon(`statusLabelByStatus.${posting.status}`),
     nextLabels: nextLabelList.join(t('orSeparator')),
   };
-  throw codedError(hasBeenApplied(posting) ? 'status_change_after_applied' : 'status_change', values, { locale });
+  throw codedError('status_change', values, { locale });
 }
 
 // Once the Posting was Applied, the Chosen Letter is the one sent, even once the Posting is Archived

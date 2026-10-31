@@ -84,7 +84,7 @@ export const ERROR_CATALOGUE = {
   // Statuses
   // A Posting cannot move to this Status from its own
   status_change: 'error:statusChange',
-  // An Applied Posting cannot move to this Status, Applied being never undone
+  // An Applied Posting cannot go back to To Apply, Applied being never undone, Archived or not
   status_change_after_applied: 'error:statusChangeAfterApplied',
   // The Chosen Letter of an Applied Posting is frozen as sent
   letter_frozen: 'error:letterFrozen',
