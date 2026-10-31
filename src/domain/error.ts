@@ -242,6 +242,7 @@ export const ERROR_CATALOGUE = {
   status_usage: 'cli:statusUsage',
   profile_usage: 'cli:profileUsage',
   instructions_usage: 'cli:instructionsUsage',
+  notes_usage: 'cli:notesUsage',
 } satisfies Record<string, ErrorMessageKey>;
 
 export type ErrorCode = keyof typeof ERROR_CATALOGUE;

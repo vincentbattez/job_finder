@@ -7,6 +7,7 @@ export default [
   route('postings/:reference', 'routes/posting.tsx'),
   route('postings/:reference/status', 'routes/status.ts'),
   route('postings/:reference/archive', 'routes/archive.ts'),
+  route('postings/:reference/notes', 'routes/notes.ts'),
   route('postings/:reference/:artifact/document', 'routes/document.ts'),
   route('postings/:reference/:artifact/chosen', 'routes/chosen-version.ts'),
   route('postings/:reference/visualization/:number', 'routes/visualization.ts'),

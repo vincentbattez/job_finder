@@ -115,6 +115,12 @@ export const CLI_FR: typeof CLI_EN = {
   instructionsReplaced: '{{module}} suivra ces Consignes du Candidat dans ses prochaines Versions.\n',
   instructionsDeleted: '{{module}} revient à ses Consignes par défaut.\n',
 
+  notesDescription:
+    "Montre ou remplace (lues sur l'entrée standard) les Notes d'une Offre, quel que soit son Statut : jf notes <offre> [replace]",
+  notesUsage: 'Usage : jf notes <offre> [replace]. « jf list <candidat> » liste les Offres.',
+  typeNotes: 'Tapez ou collez les Notes en Markdown, puis Ctrl-D :\n',
+  notesReplaced: 'Notes de {{reference}} enregistrées.\n',
+
   workerReady: 'Worker prêt : il lance les jobs en file, un à la fois.\n',
   jobFailed: 'en échec : {{firstLine}}',
   conversionDone: 'rangée dans le Profil',

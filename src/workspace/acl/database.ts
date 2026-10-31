@@ -662,6 +662,10 @@ export function openDatabase(databasePath: string) {
       await prisma.posting.update({ where: { id }, data: { archivedAt } });
     },
 
+    async setNotes({ id }: Posting, notes: string): Promise<void> {
+      await prisma.posting.update({ where: { id }, data: { notes } });
+    },
+
     async createPosting({
       candidateId,
       source,

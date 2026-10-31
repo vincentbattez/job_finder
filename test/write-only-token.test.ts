@@ -52,6 +52,7 @@ const INPUT_BY_ACTION: Record<string, object> = {
   saveDefaultDeadlinePeriod: { months: 6 },
   saveWatch: LEA_WATCH,
   deleteWatch: { watchId: LEA_WATCH_ID },
+  saveNotes: { notes: '# Appel du greffe\n' },
 };
 
 type ActionMap = Record<string, (rawInput: unknown) => Promise<unknown>>;

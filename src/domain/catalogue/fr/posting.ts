@@ -72,6 +72,14 @@ export const POSTING_FR: typeof POSTING_EN = {
   copyMarkdown: 'Copier le Markdown',
   copiedMarkdown: 'Copié',
 
+  notes: {
+    heading: 'Notes',
+    label: 'Notes en Markdown',
+    placeholder:
+      '# Appel du service\n\nCe que vous apprenez sur cette Offre, en Markdown : un appel, le retour d’un entretien…',
+    save: 'Enregistrer les Notes',
+  },
+
   detection: {
     run: 'Lancer une Détection',
     runAgain: 'La relancer',
