@@ -19,13 +19,17 @@ export interface IPostingRow {
   deadline: Date | null;
 }
 
-export function PostingList({ postingList }: Readonly<{ postingList: IPostingRow[] }>) {
+// The Postings the last Detection found are marked New, until the next Detection (#63)
+export function PostingList({
+  postingList,
+  newReferenceList = [],
+}: Readonly<{ postingList: IPostingRow[]; newReferenceList?: string[] }>) {
   const { t } = useTranslation('postingList');
   if (postingList.length === 0) {
     return <EmptyState>{t('noPosting')}</EmptyState>;
   }
   return (
-    <table className="posting-list">
+    <table className="posting-list" id="posting-list">
       <thead>
         <tr>
           <th scope="col">{t('postingColumn')}</th>
@@ -42,6 +46,9 @@ export function PostingList({ postingList }: Readonly<{ postingList: IPostingRow
                 <Link className="posting-list__title" to={`/postings/${posting.reference}`}>
                   {posting.title}
                 </Link>
+                {newReferenceList.includes(posting.reference) && (
+                  <span className="posting-list__new">{t('newMark')}</span>
+                )}
                 {posting.workplace !== null && <span className="posting-list__workplace">{posting.workplace}</span>}
                 {posting.url === null ? (
                   <span className="posting-list__reference">{posting.reference}</span>

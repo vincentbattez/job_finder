@@ -18,6 +18,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     // meta runs outside React: it translates in the locale the loader gives it (ADR-0012)
     locale,
     postingList: candidate === null ? [] : await ACTIONS.listPostings({ candidateId: candidate.id }),
+    detection: candidate === null ? null : await ACTIONS.followDetection({ candidateId: candidate.id }),
   };
 }
 
@@ -26,10 +27,10 @@ export function meta({ loaderData }: MetaArgs<typeof loader>) {
 }
 
 export default function Postings() {
-  const { candidate, postingList } = useLoaderData<typeof loader>();
+  const { candidate, postingList, detection } = useLoaderData<typeof loader>();
   const { t } = useTranslation('postingList');
   const [searchParameters] = useSearchParams();
-  if (candidate === null) {
+  if (candidate === null || detection === null) {
     return (
       <main className="container page">
         <div className="page__head">
@@ -44,7 +45,7 @@ export default function Postings() {
     <main className="container page">
       <div className="page__head">
         <h1>{t('heading', { candidateName: candidate.name })}</h1>
-        <Detection />
+        <Detection overview={detection} />
         <JobDescriptionImport />
         {postingList.length > 0 && <PostingFilters postingList={postingList} />}
       </div>
@@ -52,7 +53,7 @@ export default function Postings() {
       {filteredPostingList.length === 0 && postingList.length > 0 ? (
         <EmptyState>{t('noFilteredPosting')}</EmptyState>
       ) : (
-        <PostingList postingList={filteredPostingList} />
+        <PostingList postingList={filteredPostingList} newReferenceList={detection.newReferenceList} />
       )}
     </main>
   );

@@ -4,6 +4,7 @@ import type { LoaderFunctionArgs, MetaArgs } from 'react-router';
 import { localeOf, tFor } from '#/actions/i18n.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { STATE_LIST, StateBadge, StatusBadge, type Status } from '#/web/components/badge.tsx';
+import { DetectionProgress, DetectionResult, type IRecordedDetection } from '#/web/components/detection.tsx';
 import { MarkdownEditor } from '#/web/components/markdown-editor.tsx';
 import { PostingDetail, type IPostingDetail } from '#/web/components/posting-detail.tsx';
 import { PostingList, type IPostingRow } from '#/web/components/posting-list.tsx';
@@ -141,6 +142,75 @@ const SAMPLE_POSTING_LIST: IPostingRow[] = [
   },
 ];
 
+// A Watch of each Detection sample, before its run
+const SAMPLE_WATCH = {
+  watchId: 'sample-1',
+  label: 'attaché de justice',
+  step: 'done',
+  isFirstLaunch: false,
+  listedCount: 81,
+  readCount: 0,
+  readTotal: 0,
+  newPostingList: [],
+  nearMissList: [{ reference: '2026-0000099', title: 'Attaché d’administration, chef de cabinet' }],
+  notificationFailureList: [],
+} satisfies IRecordedDetection['watchList'][number];
+
+const SAMPLE_DETECTION = {
+  origin: 'automation',
+  startedAt: new Date('2026-10-30T17:00:00Z'),
+  finishedAt: new Date('2026-10-30T17:01:02Z'),
+  error: null,
+  watchList: [SAMPLE_WATCH],
+} satisfies IRecordedDetection;
+
+const SAMPLE_NEW_POSTING_LIST = SAMPLE_POSTING_LIST.map(({ reference, title }) => ({ reference, title }));
+
+// The Detection while it reads, one Watch counted, the other waiting for its total; then each verdict
+const RUNNING_DETECTION: IRecordedDetection = {
+  ...SAMPLE_DETECTION,
+  origin: 'button',
+  finishedAt: null,
+  watchList: [
+    { ...SAMPLE_WATCH, step: 'reading', readCount: 34, readTotal: 81 },
+    { ...SAMPLE_WATCH, watchId: 'sample-2', label: 'greffier', step: 'searching', listedCount: null, readTotal: null },
+  ],
+};
+
+const DETECTION_SAMPLE_LIST: { key: string; detection: IRecordedDetection }[] = [
+  { key: 'nothing-new', detection: SAMPLE_DETECTION },
+  {
+    key: 'new',
+    detection: { ...SAMPLE_DETECTION, watchList: [{ ...SAMPLE_WATCH, newPostingList: SAMPLE_NEW_POSTING_LIST }] },
+  },
+  {
+    key: 'first-launch',
+    detection: {
+      ...SAMPLE_DETECTION,
+      origin: 'cli',
+      watchList: [{ ...SAMPLE_WATCH, isFirstLaunch: true, nearMissList: [], newPostingList: SAMPLE_NEW_POSTING_LIST }],
+    },
+  },
+  {
+    key: 'failed',
+    detection: {
+      ...SAMPLE_DETECTION,
+      origin: 'button',
+      error: 'Le site a répondu HTTP 500 pour la fiche 2026-0000104. Relancer plus tard.',
+      watchList: [
+        {
+          ...SAMPLE_WATCH,
+          step: 'reading',
+          readCount: 3,
+          readTotal: 81,
+          nearMissList: [],
+          newPostingList: SAMPLE_NEW_POSTING_LIST.slice(0, 3),
+        },
+      ],
+    },
+  },
+];
+
 // cspell:enable
 
 // Each look of the badge: Expired shows in place of To Apply
@@ -192,7 +262,14 @@ export default function Design() {
       </section>
       <section aria-labelledby="postings">
         <h2 id="postings">{t('design.postingList')}</h2>
-        <PostingList postingList={SAMPLE_POSTING_LIST} />
+        <PostingList postingList={SAMPLE_POSTING_LIST} newReferenceList={['2026-0000101']} />
+      </section>
+      <section aria-labelledby="detection" className="design-detection">
+        <h2 id="detection">{t('design.detection')}</h2>
+        <DetectionProgress detection={RUNNING_DETECTION} />
+        {DETECTION_SAMPLE_LIST.map(({ key, detection }) => (
+          <DetectionResult key={key} detection={detection} />
+        ))}
       </section>
       <section aria-labelledby="empty-list">
         <h2 id="empty-list">{t('design.emptyList')}</h2>

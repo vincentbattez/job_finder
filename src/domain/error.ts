@@ -2,7 +2,8 @@ import { defaultErrorTranslator } from '#/domain/catalogue/i18n.ts';
 
 // A failure the Candidate can act on, identified by a code that means one thing, whatever its message
 // says (#39 grows this catalogue to every failure). The message, in the i18next resources, says what to do.
-type ErrorCode = 'data_layout_mixed' | 'data_layout_unexpected' | 'config_invalid' | 'config_keys_mixed';
+type ErrorCode =
+  'data_layout_mixed' | 'data_layout_unexpected' | 'config_invalid' | 'config_keys_mixed' | 'detection_running';
 
 class CodedError extends Error {
   readonly code: ErrorCode;
@@ -31,4 +32,6 @@ export const ERROR = {
   // The config an older jf left holds a French key and its English name at once
   configKeysMixed: (configPath: string, frenchKey: string, englishKey: string) =>
     new CodedError('config_keys_mixed', t('configKeysMixed', { configPath, frenchKey, englishKey })),
+  // A Detection is asked for while another one runs, the front's or the daily one: one at a time (#63)
+  detectionRunning: (startedAt: Date) => new CodedError('detection_running', t('detectionRunning', { startedAt })),
 };

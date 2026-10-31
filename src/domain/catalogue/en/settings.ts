@@ -158,6 +158,7 @@ export const SETTINGS_EN = {
     statuses: 'Statuses of a Posting',
     states: 'States of an Artifact',
     postingList: 'List of Postings',
+    detection: 'Detection: its progress, then each verdict',
     emptyList: 'Empty list',
     postingDetail: 'Detail of a Posting',
     editor: 'Markdown editor',

@@ -22,7 +22,11 @@ type ModuleInstructions = Awaited<ReturnType<Actions['listInstructions']>>[numbe
 
 interface ICommand {
   describe: (t: Cli) => string;
-  run: (actions: Actions, argumentList: string[], option: { isWaiting: boolean }) => Promise<void>;
+  run: (
+    actions: Actions,
+    argumentList: string[],
+    option: { isWaiting: boolean; isAutomation: boolean },
+  ) => Promise<void>;
 }
 
 function cliOf(candidate: Parameters<typeof localeOf>[0]): Cli {
@@ -237,8 +241,9 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
   },
   detect: {
     describe: (t) => t('detectDescription'),
-    run: async (actions) => {
-      const detectionList = await actions.detect();
+    // The daily automation says so with --automation (.lpm.yml): the front shows how it was started
+    run: async (actions, argumentList, { isAutomation }) => {
+      const detectionList = await actions.detect({ origin: isAutomation ? 'automation' : 'cli' });
       const candidateList = await actions.listCandidates();
       for (const detection of detectionList) {
         const { watchId, candidateId, isFirstLaunch, newPostingList, nearMissList } = detection;
@@ -446,7 +451,7 @@ function composeHelp(t: Cli): string {
 
 async function run(): Promise<void> {
   const { values, positionals: positionalList } = parseArgs({
-    options: { help: { type: 'boolean', short: 'h' }, wait: { type: 'boolean' } },
+    options: { help: { type: 'boolean', short: 'h' }, wait: { type: 'boolean' }, automation: { type: 'boolean' } },
     allowPositionals: true,
   });
   const [commandName, ...argumentList] = positionalList;
@@ -464,7 +469,10 @@ async function run(): Promise<void> {
   if (obsoleteConfig.path !== null) {
     process.stderr.write(`${DEFAULT_CLI('obsoleteConfig', { configPath: obsoleteConfig.path })}\n`);
   }
-  await command.run(actions, argumentList, { isWaiting: values.wait === true });
+  await command.run(actions, argumentList, {
+    isWaiting: values.wait === true,
+    isAutomation: values.automation === true,
+  });
 }
 
 try {

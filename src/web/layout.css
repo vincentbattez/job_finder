@@ -86,6 +86,12 @@
   color: var(--color-ink-2);
 }
 
+/* The samples of /design: the Detection panels stacked */
+.design-detection {
+  display: grid;
+  gap: var(--space-md);
+}
+
 /* The samples of /design: the badges side by side, as no component lists them */
 .badge-list {
   display: flex;

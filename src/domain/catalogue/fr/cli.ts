@@ -38,7 +38,8 @@ export const CLI_FR: typeof CLI_EN = {
   listDescription: "Liste les Offres d'un Candidat : jf list <candidat>",
   listUsage: 'Usage : jf list <candidat>. « jf candidates » liste les Candidats.',
 
-  detectDescription: 'Cherche les nouvelles Offres de chaque Veille',
+  detectDescription:
+    'Cherche les nouvelles Offres de chaque Veille ; --automation marque celle du jour : jf detect [--automation]',
   detectionSummary: 'Veille {{watchId}} ({{candidateId}}) : {{newPostings}}{{firstLaunch}}\n',
   noNewPosting: 'aucune nouvelle Offre',
   newPostings: '{{newCount}} nouvelles Offres',

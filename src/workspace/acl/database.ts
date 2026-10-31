@@ -15,12 +15,15 @@ import {
   POSTING_SCHEMA,
   PROFILE_JOB_SCHEMA,
   QUEUED_JOB_SCHEMA,
+  RECORDED_DETECTION_SCHEMA,
   SAVED_NOTIFICATION_CHANNEL_SCHEMA,
   VERSION_SCHEMA,
   WATCH_SCHEMA,
   type Artifact,
   type Candidate,
   type DefaultDeadlinePeriod,
+  type DetectionOrigin,
+  type DetectionWatch,
   type Job,
   type JobDescription,
   type ListedPosting,
@@ -31,6 +34,7 @@ import {
   type Posting,
   type ProfileJob,
   type QueuedJob,
+  type RecordedDetection,
   type SavedNotificationChannel,
   type Status,
   type UploadFileName,
@@ -60,6 +64,8 @@ const DEFAULT_DEADLINE_PERIOD_ID = 1;
 // The Default Deadline Period of a new database, that of the example config of older versions
 const DEFAULT_DELAY_MONTHS = 6;
 
+const DETECTION_INCLUDE = { watchList: { orderBy: { id: 'asc' } } } as const;
+
 const JOB_INCLUDE = { posting: { include: POSTING_INCLUDE }, version: { include: VERSION_INCLUDE } };
 
 export interface INewCandidate {
@@ -67,6 +73,21 @@ export interface INewCandidate {
   name: string;
   locale: Locale;
 }
+
+// What a Detection copies of a Watch when it is claimed; the rest it records as it goes
+type DetectionWatchCopy = 'watchId' | 'candidateId' | 'label' | 'isFirstLaunch';
+
+export interface INewDetection {
+  origin: DetectionOrigin;
+  candidateId: string | null;
+  watchList: Pick<DetectionWatch, DetectionWatchCopy>[];
+}
+
+// What a Detection records of a Watch as it goes: its step, its counts, then its verdict
+export type DetectionWatchUpdate = Partial<Omit<DetectionWatch, DetectionWatchCopy>>;
+
+// SQLite refused a second row on a unique index: here, a second running Detection
+const UNIQUE_VIOLATION_SCHEMA = z.object({ code: z.literal('P2002') });
 
 export interface INewPosting {
   candidateId: string;
@@ -144,6 +165,69 @@ export function openDatabase(databasePath: string) {
       }),
       prisma.version.updateMany({ where: { postingId, artifact, number }, data: { isChosen: true } }),
     ];
+  }
+
+  // Records the Detection with its Watches, unless one is already running: the unique running lock
+  // refuses it atomically, even from another process. A Detection left running by a process that
+  // died, untouched since staleBefore, is failed first so it no longer holds the lock.
+  async function claimDetection(
+    { origin, candidateId, watchList }: INewDetection,
+    { staleBefore, interruptedError }: { staleBefore: Date; interruptedError: string },
+  ): Promise<{ detection: RecordedDetection } | { runningSince: Date }> {
+    await failStaleDetections({ staleBefore, interruptedError });
+    try {
+      const detection = RECORDED_DETECTION_SCHEMA.parse(
+        await prisma.detection.create({
+          data: {
+            origin,
+            candidateId,
+            startedAt: new Date(),
+            runningLock: true,
+            watchList: {
+              create: watchList.map((watch) => ({
+                ...watch,
+                newPostingList: [],
+                nearMissList: [],
+                notificationFailureList: [],
+              })),
+            },
+          },
+          include: DETECTION_INCLUDE,
+        }),
+      );
+      return { detection };
+    } catch (error) {
+      if (!UNIQUE_VIOLATION_SCHEMA.safeParse(error).success) {
+        throw error;
+      }
+    }
+    const running = await prisma.detection.findFirst({ where: { runningLock: true }, select: { startedAt: true } });
+    // Finished in between: the lock is free again
+    return running === null
+      ? claimDetection({ origin, candidateId, watchList }, { staleBefore, interruptedError })
+      : { runningSince: running.startedAt };
+  }
+
+  // A Detection left running by a process that died, untouched since staleBefore, no longer runs
+  async function failStaleDetections({
+    staleBefore,
+    interruptedError,
+  }: {
+    staleBefore: Date;
+    interruptedError: string;
+  }): Promise<void> {
+    const staleList = await prisma.detection.findMany({
+      where: { runningLock: true, updatedAt: { lt: staleBefore } },
+      select: { id: true },
+    });
+    for (const { id } of staleList) {
+      await finishDetection(id, interruptedError);
+    }
+  }
+
+  // A failed Detection keeps each Watch at the step it stopped at
+  async function finishDetection(id: number, error: string | null): Promise<void> {
+    await prisma.detection.update({ where: { id }, data: { runningLock: null, finishedAt: new Date(), error } });
   }
 
   return {
@@ -437,6 +521,44 @@ export function openDatabase(databasePath: string) {
 
     async chooseVersion(posting: Posting, { artifact, number }: Version): Promise<void> {
       await prisma.$transaction(chooseStatementList({ postingId: posting.id, artifact, number }));
+    },
+
+    claimDetection,
+
+    failStaleDetections,
+
+    // Each update touches the Detection, which keeps it from going stale
+    async updateDetectionWatch(
+      { id }: RecordedDetection,
+      watchId: string,
+      update: DetectionWatchUpdate,
+    ): Promise<void> {
+      await prisma.$transaction([
+        prisma.detectionWatch.updateMany({ where: { detectionId: id, watchId }, data: update }),
+        prisma.detection.update({ where: { id }, data: { updatedAt: new Date() } }),
+      ]);
+    },
+
+    async finishDetection({ id }: RecordedDetection, error: string | null): Promise<void> {
+      await finishDetection(id, error);
+    },
+
+    // The running Detection and the last finished one that covered the Candidate's Watches, each with
+    // only those Watches
+    async findDetections(
+      candidateId: string,
+    ): Promise<{ running: RecordedDetection | null; last: RecordedDetection | null }> {
+      const include = { watchList: { where: { candidateId }, orderBy: { id: 'asc' } } } as const;
+      const running = await prisma.detection.findFirst({ where: { runningLock: true }, include });
+      const last = await prisma.detection.findFirst({
+        where: { finishedAt: { not: null }, watchList: { some: { candidateId } } },
+        orderBy: { id: 'desc' },
+        include,
+      });
+      return {
+        running: RECORDED_DETECTION_SCHEMA.nullable().parse(running),
+        last: RECORDED_DETECTION_SCHEMA.nullable().parse(last),
+      };
     },
 
     async setDetected({ id }: Watch): Promise<void> {

@@ -10,4 +10,6 @@ export const POSTING_LIST_EN = {
   statusColumn: 'Status',
   publishedAtColumn: 'Published',
   deadlineColumn: 'Deadline',
+  // Beside a Posting the last Detection found, until the next one
+  newMark: 'New',
 };
