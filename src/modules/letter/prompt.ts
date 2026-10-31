@@ -1,6 +1,7 @@
 // The salutation of the example is in the French of the Job Descriptions: cspell:ignore Présidente
 import { describeArtifactLanguage, type IPromptInput } from '#/ai-module/index.ts';
 import { JOB_DESCRIPTION_FILE_NAME } from '#/domain/index.ts';
+import { describeProfile } from '#/profile/prompt.ts';
 
 import { RECIPIENTS_FILE_NAME } from './acl/recipients.ts';
 
@@ -45,10 +46,10 @@ The current folder is the Posting's.
 
 ## What you read
 
-Read everything before writing:
+Read before writing:
 - The Job Description, as it was published: \`${JOB_DESCRIPTION_FILE_NAME}\`.
 ${researchList.map(({ filePath }) => `- The Chosen Research, which establishes what the recruiters expect and in what context: \`${filePath}\`.`).join('\n')}
-- The Candidate's Profile, in \`${profileDirectory}\`: the facts they validated, their CV and their past letters, when they exist. Read each of its files: it is the only source of facts about the Candidate, and their past letters show their style.
+- ${describeProfile(profileDirectory)} Their past letters show their style.
 - ${describeSentLetters(sentList)}
 
 ## The contacts of the Posting, as published

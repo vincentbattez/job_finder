@@ -124,7 +124,7 @@ export const ERROR_EN = {
   uploadGone: '“{{upload}}” is no longer in {{candidateName}}’s Profile: drop it again to convert it.',
   conversionWithoutFile: 'The conversion of “{{upload}}” wrote no Markdown file.\n{{log}}',
   conversionRefused:
-    'The conversion of “{{upload}}” is refused: “{{fileName}}” is neither “cv.md” nor a letter “letter-<employer>-<year>.md”.',
+    'The conversion of “{{upload}}” is refused: “{{fileName}}” is neither “cv.md”, nor a letter “letter-<employer>-<year>.md”, nor an Annex “annex-<subject>.md”.',
   conversionOverwrite:
     '“{{upload}}” converts into “{{fileName}}”, which the Profile already has: it is not overwritten. Delete or rename “{{fileName}}”, then run the conversion again.',
 

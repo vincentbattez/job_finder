@@ -175,13 +175,15 @@ export function createClaudeCode(sessionTimeoutMs: number, killGraceMs = KILL_GR
         '--permission-mode',
         'dontAsk',
         '--tools',
-        'Read,Glob,Grep,Write,Edit,WebSearch,WebFetch',
+        'Read,Glob,Grep,Write,Edit,WebSearch,WebFetch,Agent',
         '--allowedTools',
         'Read',
         'Glob',
         'Grep',
         'WebSearch',
         'WebFetch',
+        // A subagent reads a long Annex for the session and reports only what serves (ADR-0003)
+        'Agent',
         // An absolute path takes a double slash in a permission rule
         `Edit(/${outputDirectory}/**)`,
         ...readDirectoryList.flatMap((readDirectory) => ['--add-dir', readDirectory]),

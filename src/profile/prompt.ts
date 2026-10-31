@@ -2,10 +2,16 @@ import { LANGUAGE_BY_LOCALE, type Candidate } from '#/domain/index.ts';
 
 import { SECTION_LIST } from './facts.ts';
 
-// How a CV or a past letter becomes a file of the Profile, shared by jf profile and the conversion job
-// of an Upload, so both convert alike. A document keeps its own language: it is content.
+// How a CV, a past letter or an Annex becomes a file of the Profile, shared by jf profile and the
+// conversion job of an Upload, so both convert alike. A document keeps its own language: it is content.
 export const CONVERSION_INSTRUCTIONS =
-  'convert it faithfully into Markdown, without rewriting or translating it: a CV into `cv.md`, a cover letter into `letter-<employer>-<year>.md`, the employer in lowercase and without accents, its words joined by hyphens, for example `letter-tj-lille-2025.md`';
+  'convert it faithfully into Markdown, without rewriting or translating it: a CV into `cv.md`, a cover letter into `letter-<employer>-<year>.md`, any other document (a recommendation letter, a transcript, a thesis, an internship report) into the Annex `annex-<subject>.md`; the employer or the subject in lowercase and without accents, its words joined by hyphens, for example `letter-tj-lille-2025.md` or `annex-recommendation-tj-lille.md`';
+
+// The Profile as the Artifacts that read it describe it: its core in full, its Annexes as far as the
+// Posting calls for them, since a thesis read in full costs tens of thousands of tokens (ADR-0003)
+export function describeProfile(profileDirectory: string): string {
+  return `The Candidate's Profile, in \`${profileDirectory}\`, the only source of facts about the Candidate. Read its core in full: \`facts.md\`, the facts they validated, \`cv.md\` and their past letters, \`letter-*.md\`, when they exist. Its Annexes, \`annex-*.md\`, are further documents, sometimes long, such as a recommendation letter, a transcript or a thesis: judge from the Posting and its context which ones are worth reading and how far, from none to all of them; a long one is better searched, or read by a subagent that reports only what serves. Where a file contradicts \`facts.md\`, \`facts.md\` prevails. Never read \`uploads/\`: it holds the originals of these files.`;
+}
 
 // Fixed, with no Instructions to replace it (ADR-0003); the session runs in the Profile folder, its
 // "current folder"
@@ -30,6 +36,6 @@ Non-negotiable rules:
 - Complete the existing files without overwriting them: add or correct only what ${name} validated, and keep the rest as it is.
 - Write only in the current folder, and only Markdown files.
 
-CV and past letters: if ${name} gives you their CV or past cover letters (a PDF, Word or text file, or pasted text), read each document and ${CONVERSION_INSTRUCTIONS}. Then offer to add the facts they hold to \`facts.md\`, always after validation.
+CV, past letters and Annexes: if ${name} gives you their CV, past cover letters or another document about them (a PDF, Word or text file, or pasted text), read each document and ${CONVERSION_INSTRUCTIONS}. Then offer to add the facts they hold to \`facts.md\`, always after validation.
 `;
 }

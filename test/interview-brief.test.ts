@@ -229,6 +229,9 @@ describe('interview brief', () => {
     expect(session?.fixedPrompt).toContain('`job-description.md`');
     expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'research/v1/research.md')}\``);
     expect(session?.fixedPrompt).toContain(`\`${profileDirectory}\``);
+    // Its core is read in full, its Annexes as far as the Posting calls for them, never the originals
+    expect(session?.fixedPrompt).toContain('`annex-*.md`');
+    expect(session?.fixedPrompt).toContain('`uploads/`');
     expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'letter/v1/letter.md')}\``);
     expect(version?.inputList).toEqual([
       { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },

@@ -1,6 +1,7 @@
 import { describeArtifactLanguage, type IPromptInput } from '#/ai-module/index.ts';
 import { JOB_DESCRIPTION_FILE_NAME, type Interview } from '#/domain/index.ts';
 import { parisDateTimeOf } from '#/domain/paris-time.ts';
+import { describeProfile } from '#/profile/prompt.ts';
 
 export const INTERVIEW_BRIEF_FILE_NAME = 'interview-brief.md';
 
@@ -80,10 +81,10 @@ The current folder is the Posting's.
 ${describeInterview(interview)}
 ## What you read
 
-Read everything before writing:
+Read before writing:
 - The Job Description, as it was published: \`${JOB_DESCRIPTION_FILE_NAME}\`.
 ${researchList.map(({ filePath }) => `- The Chosen Research, which establishes what the recruiters expect and in what context: \`${filePath}\`.`).join('\n')}
-- The Candidate's Profile, in \`${profileDirectory}\`: the facts they validated, their CV and their past letters, when they exist. Read each of its files: it is the only source of facts about the Candidate.
+- ${describeProfile(profileDirectory)}
 - ${describeLetter(readVersionList)}
 - ${describePortrait(readVersionList)}
 ${describePreviousBriefs(readVersionList)}

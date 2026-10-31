@@ -116,6 +116,17 @@ describe('conversion of an Upload', () => {
     expect(await profileFileNameListOf(actions)).toEqual(['facts.md', 'letter-tj-lille-2025.md']);
   });
 
+  it('moves any other document, an Annex named after its subject, into the Profile', async () => {
+    const annexRun = { fileByName: { 'annex-recommendation-tj-lille.md': '# Lettre de recommandation\n' } };
+    const { actions } = await openProfile(createFakeAiSession(annexRun));
+    await actions.saveUpload({ candidateId: 'lea', fileName: 'recommandation.pdf', content: CV_PDF });
+
+    await actions.runQueuedJobs();
+
+    expect(await conversionOf(actions)).toMatchObject({ state: 'ready' });
+    expect(await profileFileNameListOf(actions)).toEqual(['annex-recommendation-tj-lille.md', 'facts.md']);
+  });
+
   it('shows why a conversion failed, and runs it again when relaunched', async () => {
     const aiSession = createFakeAiSession({ isSuccess: false }, { fileByName: { 'notes.md': '# Notes\n' } }, CV_RUN);
     const { actions } = await openProfile(aiSession);
@@ -129,7 +140,9 @@ describe('conversion of an Upload', () => {
     await actions.runQueuedJobs();
     const nameFailure = await conversionOf(actions);
     expect(nameFailure?.state).toBe('failed');
-    expect(nameFailure?.log).toContain("« notes.md » n'est ni « cv.md » ni une lettre « letter-<employer>-<year>.md »");
+    expect(nameFailure?.log).toContain(
+      "« notes.md » n'est ni « cv.md », ni une lettre « letter-<employer>-<year>.md », ni une Annexe « annex-<subject>.md »",
+    );
     await actions.convertUpload({ candidateId: 'lea', fileName: 'cv.pdf' });
     await actions.runQueuedJobs();
 

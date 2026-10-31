@@ -20,9 +20,13 @@ Control of the front's top bar that sets the Locale: that of the chosen Candidat
 _Avoid_: language button, language picker
 
 **Profile**:
-What the tool knows about a Candidate in order to write on their behalf: their CV, the Facts they validated and their past letters.
+What the tool knows about a Candidate in order to write on their behalf: their CV, the Facts they validated, their past letters and their Annexes.
 _Avoid_: file, record, CV
 _Formerly_: Profil
+
+**Annex**:
+Document of the Profile beyond the CV, the Facts and the past letters, such as a recommendation letter, a transcript or a thesis.
+_Avoid_: attachment, appendix, supporting document
 
 **Facts**:
 Part of the Profile that lists, by section, what the Candidate validated about themselves: identity, contact details, degrees, experience, skills, motivations, mobility.
@@ -35,7 +39,7 @@ _Avoid_: heading, category, field
 _Formerly_: Rubrique
 
 **Upload**:
-Original document, such as a CV or a past letter as a PDF, that the Candidate drops into their Profile; it is kept as is, and the Profile holds its Markdown conversion.
+Original document, such as a CV, a past letter or an Annex as a PDF, that the Candidate drops into their Profile; it is kept as is, and the Profile holds its Markdown conversion.
 _Avoid_: attachment, file, source file
 _Formerly_: Pièce
 

@@ -77,6 +77,17 @@ describe('the headless launch of Claude Code', () => {
     expect(readRecord(recordDirectory, 'environment')).not.toMatch(/^(?:ANTHROPIC_API_KEY|CLAUDECODE)=/m);
   });
 
+  // A long Annex of the Profile is read by a subagent, which reports only what serves the Artifact
+  it('lets the session delegate its reading to subagents', async () => {
+    const recordDirectory = stubClaude({ subtype: 'success', is_error: false, session_id: 'session-4' });
+
+    await CLAUDE_CODE.runHeadless({ ...SESSION, directory: createDirectory(), outputDirectory: '/v1' });
+
+    const argumentList = readRecord(recordDirectory, 'arguments').split('\0');
+    expect(argumentList[argumentList.indexOf('--tools') + 1]?.split(',')).toContain('Agent');
+    expect(argumentList.slice(argumentList.indexOf('--allowedTools'))).toContain('Agent');
+  });
+
   // The Letter reads the Profile and the Letters already sent, outside the folder of its Posting
   it('lets the session read the folders it is given besides its own', async () => {
     const recordDirectory = stubClaude({ subtype: 'success', is_error: false, session_id: 'session-3' });

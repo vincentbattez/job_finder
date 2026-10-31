@@ -6,9 +6,9 @@ import type { Candidate, SessionResult, UploadFileName } from '#/domain/index.ts
 
 import { composeConversionPrompt, CONVERSION_REQUEST } from './prompt.ts';
 
-// The CV, or a past letter named after its employer and its year: a name of the Profile, so it never
-// leads out of its folder
-const CONVERSION_FILE_NAME_PATTERN = /^(?:cv|letter-[\p{L}\p{N}_.-]+-\d{4})\.md$/u;
+// The CV, a past letter named after its employer and its year, or an Annex named after its subject: a
+// name of the Profile, so it never leads out of its folder
+const CONVERSION_FILE_NAME_PATTERN = /^(?:cv|letter-[\p{L}\p{N}_.-]+-\d{4}|annex-[\p{L}\p{N}_.-]+)\.md$/u;
 
 // The job moves only these into the Profile: any other file the session wrote is refused
 export function isConversionFileName(fileName: string): boolean {
