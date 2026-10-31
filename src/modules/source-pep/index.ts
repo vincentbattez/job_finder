@@ -40,6 +40,8 @@ export const PEP = defineSource({
     return {
       matchingList: listedPostingList.filter((listedPosting) => matchTitle(listedPosting.title) === 'retained'),
       nearMissList: listedPostingList.filter((listedPosting) => matchTitle(listedPosting.title) === 'near-miss'),
+      // The feed keeps a Posting past its Deadline, until the site takes it offline (ADR-0001)
+      publishedReferenceList: listedPostingList.map(({ reference }) => reference),
     };
   },
 

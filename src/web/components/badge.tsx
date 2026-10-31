@@ -17,6 +17,7 @@ interface IShownPosting {
   step: Step;
   isExpired: boolean;
   archivedAt: Date | null;
+  unpublishedAt: Date | null;
 }
 
 // Expired comes from the Deadline, whatever the status (GLOSSARY.md). The badge and the map
@@ -35,6 +36,16 @@ export function ArchivedBadge() {
   );
 }
 
+// Unpublished is a mark beside the Status too, which it keeps: its own badge, in the look of Archived
+export function UnpublishedBadge() {
+  const { t } = useTranslation();
+  return (
+    <span className="badge" data-unpublished="">
+      {t('unpublished')}
+    </span>
+  );
+}
+
 export function StatusBadge(posting: Readonly<IShownPosting>) {
   const { t } = useTranslation();
   const shownStatus = showStatus(posting);
@@ -44,6 +55,7 @@ export function StatusBadge(posting: Readonly<IShownPosting>) {
         {shownStatus === 'expired' ? t(shownStatus) : t(`statusLabelByStatus.${shownStatus}`)}
       </span>
       {posting.archivedAt !== null && <ArchivedBadge />}
+      {posting.unpublishedAt !== null && <UnpublishedBadge />}
     </>
   );
 }

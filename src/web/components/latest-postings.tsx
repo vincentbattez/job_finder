@@ -12,6 +12,7 @@ import './latest-postings.css';
 interface ILatestPosting extends IPostingTile {
   step: Step;
   archivedAt: Date | null;
+  unpublishedAt: Date | null;
   latitude: number | null;
   longitude: number | null;
 }

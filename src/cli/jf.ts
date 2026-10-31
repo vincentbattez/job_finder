@@ -67,11 +67,12 @@ function formatAddress({ email, source }: Recipients['ccList'][number], t: Cli):
 
 function formatPosting(posting: Posting, t: Cli): string {
   const { repostOf, repostList, deadline } = posting;
-  // The Status as computed, then Expired and Archived beside it, which they leave as it is
+  // The Status as computed, then Expired, Archived and Unpublished beside it, which they leave as it is
   const statusLabelList = [
     t(`statusLabelByStatus.${posting.step}`, { ns: 'common' }),
     ...(posting.isExpired ? [t('expired', { ns: 'common' })] : []),
     ...(posting.archivedAt === null ? [] : [t('archived', { ns: 'common' })]),
+    ...(posting.unpublishedAt === null ? [] : [t('unpublished', { ns: 'common' })]),
   ];
   return [
     posting.reference,

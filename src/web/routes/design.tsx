@@ -3,7 +3,15 @@ import type { LoaderFunctionArgs, MetaArgs } from 'react-router';
 
 import { localeOf, tFor } from '#/actions/i18n.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
-import { ArchivedBadge, showStatus, STATE_LIST, StateBadge, StatusBadge, type Step } from '#/web/components/badge.tsx';
+import {
+  ArchivedBadge,
+  showStatus,
+  STATE_LIST,
+  StateBadge,
+  StatusBadge,
+  UnpublishedBadge,
+  type Step,
+} from '#/web/components/badge.tsx';
 import { DetectionProgress, DetectionResult, type IRecordedDetection } from '#/web/components/detection.tsx';
 import { MarkdownEditor } from '#/web/components/markdown-editor.tsx';
 import { PostingDetail, type IPostingDetail, type IPrompt } from '#/web/components/posting-detail.tsx';
@@ -22,6 +30,7 @@ const SAMPLE_POSTING = {
   step: 'to_apply',
   isExpired: false,
   archivedAt: null,
+  unpublishedAt: null,
   publishedAt: new Date('2026-10-20'),
   deadline: new Date('2026-11-19'),
   applicationEmail: 'recrutement@example.org',
@@ -146,6 +155,7 @@ const SAMPLE_POSTING_LIST: IPostingRow[] = [
     step: 'applied',
     isExpired: true,
     archivedAt: null,
+    unpublishedAt: null,
     publishedAt: new Date('2026-09-25'),
     deadline: new Date('2026-10-23'),
   },
@@ -157,6 +167,7 @@ const SAMPLE_POSTING_LIST: IPostingRow[] = [
     step: 'to_apply',
     isExpired: true,
     archivedAt: null,
+    unpublishedAt: new Date('2026-10-27'),
     publishedAt: new Date('2026-09-14'),
     deadline: new Date('2026-10-15'),
   },
@@ -168,6 +179,7 @@ const SAMPLE_POSTING_LIST: IPostingRow[] = [
     step: 'applied',
     isExpired: false,
     archivedAt: new Date('2026-10-28'),
+    unpublishedAt: null,
     publishedAt: new Date('2026-09-30'),
     deadline: null,
   },
@@ -245,15 +257,18 @@ const DETECTION_SAMPLE_LIST: { key: string; detection: IRecordedDetection }[] = 
 
 // cspell:enable
 
-// Each look of the badge: Expired shows in place of To Apply; Archived has its own badge beside the Status
-const STATUS_SAMPLE_LIST: { step: Step; isExpired: boolean; archivedAt: null }[] = [
-  { step: 'to_apply', isExpired: false, archivedAt: null },
-  { step: 'applied', isExpired: false, archivedAt: null },
-  { step: 'invited', isExpired: false, archivedAt: null },
-  { step: 'interviewed', isExpired: false, archivedAt: null },
-  { step: 'hired', isExpired: false, archivedAt: null },
-  { step: 'rejected', isExpired: false, archivedAt: null },
-  { step: 'to_apply', isExpired: true, archivedAt: null },
+// Each look of the badge: Expired shows in place of To Apply; Archived and Unpublished have their own
+// badges beside the Status
+// Neither Archived nor Unpublished
+const UNMARKED = { archivedAt: null, unpublishedAt: null };
+const STATUS_SAMPLE_LIST: ({ step: Step; isExpired: boolean } & typeof UNMARKED)[] = [
+  { step: 'to_apply', isExpired: false, ...UNMARKED },
+  { step: 'applied', isExpired: false, ...UNMARKED },
+  { step: 'invited', isExpired: false, ...UNMARKED },
+  { step: 'interviewed', isExpired: false, ...UNMARKED },
+  { step: 'hired', isExpired: false, ...UNMARKED },
+  { step: 'rejected', isExpired: false, ...UNMARKED },
+  { step: 'to_apply', isExpired: true, ...UNMARKED },
 ];
 
 // The chrome of the page reads in the chosen Candidate's locale; the samples stay French Postings, as
@@ -285,6 +300,9 @@ export default function Design() {
           ))}
           <li>
             <ArchivedBadge />
+          </li>
+          <li>
+            <UnpublishedBadge />
           </li>
         </ul>
       </section>

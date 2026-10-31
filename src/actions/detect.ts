@@ -148,6 +148,18 @@ export function createDetectActions({
     return startInZone(inZonePosting, repostOf);
   }
 
+  // A stored Posting of the Watch's Source is Unpublished while the Source no longer lists it, whatever
+  // the title the Watch searches for; one the Source lists again is no longer (ADR-0001)
+  async function markUnpublished({ watch, postingList }: IWatchRun, publishedReferenceList: string[]) {
+    const now = new Date();
+    for (const posting of postingList) {
+      const isUnpublished = !publishedReferenceList.includes(posting.reference);
+      if (posting.source === watch.source && isUnpublished !== (posting.unpublishedAt !== null)) {
+        await workspace.setUnpublishedAt(posting, isUnpublished ? now : null);
+      }
+    }
+  }
+
   // A Posting is known by its reference, never by its publication date, which the site changes
   // (ADR-0001). Each Watch has its own Zone: a Posting stored out of the Zone of one is read again
   // by each other Watch that has not read it yet.
@@ -164,7 +176,7 @@ export function createDetectActions({
     const outOfZonePostingList = await workspace.listOutOfZonePostingsSince(watch);
     const locale = await findLocale(candidateId);
     const sourceModule = findSource(source, locale, watch.id);
-    const { matchingList, nearMissList } = await sourceModule.search(watch, locale);
+    const { matchingList, nearMissList, publishedReferenceList } = await sourceModule.search(watch, locale);
     const run = {
       detection,
       watch,
@@ -173,6 +185,7 @@ export function createDetectActions({
       locale,
       locate: locateCity,
     };
+    await markUnpublished(run, publishedReferenceList);
     const newPostingList: Posting[] = [];
     // Oldest first, as published: a Repost found by the same Detection as the Posting it
     // publishes again, as on the first launch, is saved after it

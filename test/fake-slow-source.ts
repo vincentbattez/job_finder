@@ -35,6 +35,10 @@ const SLOW_SOURCE_POSTING_COUNT = 81;
 const SEARCH_DURATION_MS = 1500;
 const READ_DURATION_MS = 60;
 
+// Every reference the fake Source ever listed: like a real Source, it keeps them published whatever the
+// Watch, so none of its Postings is Unpublished
+const LISTED_REFERENCE_SET = new Set<string>();
+
 const TITLE_PARAMETER = parameter(z.string().min(1), { label: textKeyOf('fakeSlowSource', 'titleLabel') });
 const REFERENCE_PREFIX_PARAMETER = parameter(z.string().optional(), {
   label: textKeyOf('fakeSlowSource', 'referencePrefixLabel'),
@@ -62,9 +66,11 @@ export const createSlowSource = defineSource({
     const prefix = referencePrefix ?? String(runStamp);
     const matchingList: ListedPosting[] = [];
     for (let number = 1; number <= SLOW_SOURCE_POSTING_COUNT; number += 1) {
+      const reference = `${prefix}-${String(number).padStart(3, '0')}`;
+      LISTED_REFERENCE_SET.add(reference);
       matchingList.push(
         LISTED_POSTING_SCHEMA.parse({
-          reference: `${prefix}-${String(number).padStart(3, '0')}`,
+          reference,
           title: `${title} ${String(number)}`,
           url: null,
           publishedAt: new Date(runStamp),
@@ -81,6 +87,7 @@ export const createSlowSource = defineSource({
           publishedAt: new Date(runStamp),
         }),
       ],
+      publishedReferenceList: [...LISTED_REFERENCE_SET],
     };
   },
 

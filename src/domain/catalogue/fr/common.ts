@@ -10,6 +10,8 @@ export const COMMON_FR: typeof COMMON_EN = {
     rejected: 'Refusée',
   },
   archived: 'Archivée',
+  // cspell:ignore Dépubliée
+  unpublished: 'Dépubliée',
   expired: 'Expirée',
   artifactLabelByArtifact: {
     research: 'Recherche',

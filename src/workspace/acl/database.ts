@@ -723,6 +723,10 @@ export function openDatabase(databasePath: string) {
       await prisma.posting.update({ where: { id }, data: { archivedAt } });
     },
 
+    async setUnpublishedAt({ id }: Posting, unpublishedAt: Date | null): Promise<void> {
+      await prisma.posting.update({ where: { id }, data: { unpublishedAt } });
+    },
+
     async setNotes({ id }: Posting, notes: string): Promise<void> {
       await prisma.posting.update({ where: { id }, data: { notes } });
     },

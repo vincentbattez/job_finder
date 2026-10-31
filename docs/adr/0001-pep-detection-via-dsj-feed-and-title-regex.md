@@ -17,4 +17,5 @@ Measured on 2026-10-29, on 82 court attaché Postings online:
 - Without `top`, the feed stops at the 20 most recent Postings. The parameter is therefore mandatory.
 - The site silently ignores an unknown filter id and then returns every Posting. The Detection checks that the title of the RSS channel matches the requested filter, and fails otherwise.
 - Postings stay in the feed after their Deadline, and their `pubDate` can change. We deduplicate on the reference (`YYYY-NNNNNNN`), never on the date.
+- A Posting leaves the feed only once the site takes it offline, and its detail page then redirects to the home page (12 out of 12 on 2026-10-31). A stored Posting the feed no longer lists is therefore Unpublished, without reading its page.
 - The feed holds neither the Deadline, nor contacts, nor place of work: these come from the detail page, saved at Detection time.
