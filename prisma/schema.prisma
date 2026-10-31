@@ -3,6 +3,8 @@ generator client {
   output              = "../src/workspace/generated"
   // Node runs the generated TypeScript as is, without a build
   importFileExtension = "ts"
+  // The Versions of a Posting, without an Interview, are numbered under a unique index of their own
+  previewFeatures     = ["partialIndexes"]
 }
 
 datasource db {
@@ -155,7 +157,9 @@ model Version {
   job                      Job?         @relation(fields: [jobId], references: [id])
   jobId                    Int?         @unique
 
+  // SQLite tells two NULLs apart: the Versions of a Posting, without an Interview, need their own index
   @@unique([postingId, interviewId, artifact, number])
+  @@unique([postingId, artifact, number], where: { interviewId: null })
 }
 
 enum Artifact {

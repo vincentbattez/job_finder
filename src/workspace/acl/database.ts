@@ -470,6 +470,8 @@ export function openDatabase(databasePath: string) {
         where: { postingId: posting.id, interviewId, artifact: module },
         _max: { number: true },
       });
+      // Read before the transaction, the number stays unique by the indexes of Version: one taken meanwhile
+      // fails the job rather than doubling a Version
       const [, version] = await prisma.$transaction([
         prisma.job.update({ where: { id }, data: { state: 'running' } }),
         prisma.version.create({
