@@ -99,6 +99,12 @@ export default defineConfig(
     rules: { 'no-restricted-exports': 'off' },
   },
   {
+    // A fixture project runs in a Vitest of its own, which loads its config through a default
+    // export; it reaches the reporter it exercises through its parent folders, test/ having no alias
+    files: ['test/fixtures/*/vitest.config.ts'],
+    rules: { 'no-restricted-exports': 'off', 'no-restricted-imports': 'off' },
+  },
+  {
     // Claude Code is installed by the user, not by the repo, so its launcher finds it on the PATH
     files: ['src/ai-session/acl/claude-code.ts'],
     rules: { 'sonarjs/no-os-command-from-path': 'off' },
