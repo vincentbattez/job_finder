@@ -104,6 +104,12 @@ export default defineConfig(
     rules: { 'sonarjs/no-os-command-from-path': 'off' },
   },
   {
+    // The global setup points TMPDIR at a root it has just made with mkdtemp (mode 0700), so only
+    // its run writes there: not a publicly writable folder
+    files: ['test/global-setup.ts'],
+    rules: { 'sonarjs/publicly-writable-directories': 'off' },
+  },
+  {
     // Over plain http on the LAN (ADR-0002) the Clipboard API is withheld: copying goes through the
     // deprecated execCommand, which every browser still runs
     files: ['src/web/components/copy-command.tsx'],

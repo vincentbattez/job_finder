@@ -8,7 +8,7 @@ import type { IHeadlessSession } from '#/ai-session/acl/claude-code.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { FAKE_HOME_ASSISTANT_TOKEN } from './fake-home-assistant.ts';
-import { createSlowSource } from './fake-slow-source.ts';
+import { defineSlowSource } from './fake-slow-source.ts';
 import { createLea } from './lea.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
@@ -125,7 +125,9 @@ mkdirSync(dataDirectory, { recursive: true });
 const actions = await createActions({
   dataDirectory,
   fetch: createRecordedFetch().fetch,
-  sourceFactoryList: [...SOURCE_LIST, createSlowSource],
+  // No one watches the seed's Detections: the slow Source waits for nothing here, the front's one
+  // (test/e2e-actions.server.ts) keeps the delays e2e/detection.test.ts needs
+  sourceFactoryList: [...SOURCE_LIST, defineSlowSource({ searchMs: 0, readMs: 0 })],
   aiSession: {
     ...createFakeAiSession(),
     runHeadless: (session: IHeadlessSession) =>
