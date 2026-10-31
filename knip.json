@@ -4,7 +4,8 @@
     "src/cli/jf.ts",
     "test/create-lea-database.ts",
     "test/create-detected-folder.ts",
-    "test/detect-in-process.ts"
+    "test/detect-in-process.ts",
+    "test/fixtures/time-budget/vitest.config.ts"
   ],
   "project": ["src/**/*.{ts,tsx}", "test/**/*.ts", "e2e/**/*.ts", "prisma/**/*.{ts,prisma}"],
   "lefthook": true,
