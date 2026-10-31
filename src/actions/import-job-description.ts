@@ -27,7 +27,7 @@ export async function runExtraction(
     locale,
   );
   // Imported by the Candidate, it gets its Research whatever the Zone
-  await workspace.createJob(filledPosting, 'research');
+  await workspace.createJob(filledPosting, 'research', { isAutomatic: true });
   return { job: await workspace.finishJobWithoutVersion(job, { log: session.log, sessionId: session.sessionId }) };
 }
 

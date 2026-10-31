@@ -6,6 +6,7 @@ import { z } from 'zod/v4';
 // sessions last a second (test/e2e-actions.server.ts).
 const LETTER_REFERENCE = '2026-2420931';
 const FAILED_RESEARCH_REFERENCE = '2026-2412591';
+const NOTIFICATION_FAILED_REFERENCE = '2026-2445609';
 
 // The worker takes the job, then its session lasts a second, and the Posting page reads the state again
 // every two seconds
@@ -62,5 +63,16 @@ test.describe('launching the modules of a Posting', () => {
         message:
           'ATTACHE(E) DE JUSTICE - affecté(e) auprès des magistrats du siège - TJ NARBONNE\nTRIBUNAL JUDICIAIRE DE NARBONNE',
       });
+  });
+
+  // Read only: Léa was not warned her Research is ready, which the seed's refused token caused
+  test('shows by a ready Research why its notification was not sent', async ({ page }) => {
+    await page.goto(`/postings/${NOTIFICATION_FAILED_REFERENCE}`);
+    const research = page.getByRole('region', { name: 'Recherche' });
+
+    await expect(research.getByRole('status')).toHaveText('Prêt');
+    await expect(research.getByRole('alert')).toContainText(
+      `Notification « Recherche prête » de l'Offre ${NOTIFICATION_FAILED_REFERENCE} non envoyée : `,
+    );
   });
 });

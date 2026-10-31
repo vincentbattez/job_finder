@@ -50,12 +50,15 @@ async function findArtifactState(
     return ARTIFACT_STATE_SCHEMA.parse({
       state: lastVersion === undefined ? 'absent' : STATE_BY_VERSION_STATE[lastVersion.state],
       failure: null,
+      notificationFailure: null,
     });
   }
-  const { state, errorCode, log } = lastJob;
+  const { state, errorCode, log, notificationErrorCode, notificationFailure } = lastJob;
   return ARTIFACT_STATE_SCHEMA.parse({
     state: STATE_BY_JOB_STATE[state],
     failure: state === 'failed' ? { errorCode, log } : null,
+    notificationFailure:
+      notificationErrorCode === null ? null : { errorCode: notificationErrorCode, message: notificationFailure ?? '' },
   });
 }
 

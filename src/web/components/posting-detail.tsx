@@ -25,6 +25,8 @@ export interface IArtifactVersions {
   state: State;
   // Why its last job failed: the code and the log, which starts with the code's message
   failure: { errorCode: string | null; log: string } | null;
+  // Why the notification of its last job, such as « Research ready », was not sent
+  notificationFailure: { errorCode: string; message: string } | null;
   // The module that produces the Artifact, and why it cannot run now
   module: { refusal: string | null };
   // Given by the action: jf edit opens its Chosen Version

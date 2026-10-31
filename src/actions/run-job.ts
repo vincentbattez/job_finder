@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { IAiModule } from '#/ai-module/index.ts';
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
 import { tFor } from '#/domain/catalogue/i18n.ts';
-import { codedError } from '#/domain/coded-error.ts';
+import { codedError, type CodedError } from '#/domain/coded-error.ts';
 import {
   ARTIFACT_SCHEMA,
   type Artifact,
@@ -210,7 +210,7 @@ export function createJobRunner(
   return async function runJob(
     job: Job & { module: Artifact },
     locale: Locale,
-  ): Promise<{ job: Job; version: Version }> {
+  ): Promise<{ job: Job; version: Version; failure: CodedError | undefined }> {
     const { posting, module } = job;
     const aiModule = AI_MODULE_BY_ARTIFACT[module];
     const { versionList: inputList, directoryList } = await findInputs(workspace, posting, module, locale);
@@ -261,7 +261,7 @@ export function createJobRunner(
     if (errorCode === null) {
       aiModule.completeVersion?.(outputDirectory);
     }
-    return workspace.finishJob(
+    const finished = await workspace.finishJob(
       { job, version },
       {
         errorCode,
@@ -269,5 +269,6 @@ export function createJobRunner(
         sessionId: session.sessionId,
       },
     );
+    return { ...finished, failure: problem };
   };
 }

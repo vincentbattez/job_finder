@@ -136,6 +136,7 @@ describe('the failure of a module', () => {
     expect(await actions.readArtifactState({ reference: REFERENCE, artifact: 'research' })).toEqual({
       state: 'ready',
       failure: null,
+      notificationFailure: null,
     });
   });
 });

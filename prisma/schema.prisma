@@ -137,19 +137,26 @@ enum VersionState {
 
 // A job works on a Posting, or on the Profile of a Candidate: the conversion of one of its Uploads
 model Job {
-  id          Int        @id @default(autoincrement())
-  module      String
-  posting     Posting?   @relation(fields: [postingId], references: [id], onDelete: Restrict)
-  postingId   Int?
-  candidate   Candidate? @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  candidateId String?
-  upload      String?
-  state       JobState   @default(queued)
-  log         String     @default("")
+  id                    Int        @id @default(autoincrement())
+  module                String
+  posting               Posting?   @relation(fields: [postingId], references: [id], onDelete: Restrict)
+  postingId             Int?
+  candidate             Candidate? @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId           String?
+  upload                String?
+  state                 JobState   @default(queued)
+  log                   String     @default("")
   // The code of the catalogue a failed job failed under, read by the front and the CLI (ADR-0015)
-  errorCode   String?
-  sessionId   String?
-  version     Version?
+  errorCode             String?
+  // Queued by the Detection or by an extraction, not by the Candidate: no one waits for it in front
+  // of the screen, so its failure is notified
+  isAutomatic           Boolean    @default(false)
+  // The notification of the job that could not be sent: its code and its message, which the Posting
+  // page shows, the job keeping its own state
+  notificationErrorCode String?
+  notificationFailure   String?
+  sessionId             String?
+  version               Version?
 }
 
 enum JobState {

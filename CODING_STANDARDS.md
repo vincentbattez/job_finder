@@ -7,7 +7,7 @@ The generic rules of the code. The why of a decision is in its ADR (`docs/adr/`)
 - **The least code that achieves the result.** We write what the ticket asks for. A family of interchangeable modules (Sources, Notification Channels) keeps a single module until a second one is asked for, but its contract is generic from the first one (ADR-0010).
 - **A rule that matters is checked by the machine**: a test, the typecheck or the lint. A rule that is only written ends up bypassed by oversight.
 - **Idempotence.** Running a command, a Detection or a job again gives the same result, with no duplicate.
-- **Visible failure.** An error stops the command with a non-zero exit code and a message, in the Candidate's locale, that says what to do. Silence always means "nothing to report". Every error comes from the catalogue of Error Codes, `src/domain/error.ts`, through `codedError`; a boundary that catches anything ties a foreign error to a code with `codedErrorOf` (ADR-0015). **(CI)**
+- **Visible failure.** An error stops the command with a non-zero exit code and a message, in the Candidate's locale, that says what to do. Silence always means "nothing to report". Every error comes from the catalogue of Error Codes, `src/domain/error.ts`, through `codedError`; a boundary that catches anything ties a foreign error to a code with `codedErrorOf` (ADR-0015). A failure no one waits for in front of the screen, such as that of a job the Detection queued or of a notification, is notified or kept on its job for the Posting page: the business code (`src/actions/`, `src/modules/`, `src/workspace/`) never writes to `process.stderr` nor `process.stdout`, which only the CLI and the worker, which display, do. **(CI)**
 
 ## Architecture
 

@@ -24,11 +24,14 @@ async function formatJobs(actions: Actions, jobList: Job[]): Promise<string> {
         const outcome = job.state === 'done' ? t('conversionDone') : failure(t);
         return t('conversionJob', { jobId: job.id, upload: job.upload, candidateId: job.candidateId, outcome });
       }
-      const { id, module, posting, state, version } = job;
+      const { id, module, posting, state, version, notificationErrorCode, notificationFailure } = job;
       const t = tOf(posting.candidateId);
       const artifact = version === null ? module : `${module} v${String(version.number)}`;
       const outcome = state === 'done' ? t('artifactDone') : failure(t);
-      return t('artifactJob', { jobId: id, artifact, reference: posting.reference, outcome });
+      // Also kept on the job, which the Posting page shows: the log only helps whoever reads it
+      const notificationLine =
+        notificationErrorCode === null ? '' : `[${notificationErrorCode}] ${notificationFailure ?? ''}\n`;
+      return t('artifactJob', { jobId: id, artifact, reference: posting.reference, outcome }) + notificationLine;
     })
     .join('');
 }

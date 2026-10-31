@@ -250,6 +250,11 @@ export const JOB_SCHEMA = z
     log: z.string(),
     // The code of the catalogue a failed job failed under (ADR-0015)
     errorCode: ERROR_CODE_SCHEMA.nullable(),
+    // Queued by the Detection or by an extraction: no one waits for it, so its failure is notified
+    isAutomatic: z.boolean(),
+    // The notification of the job that could not be sent, its code and its message (ADR-0015)
+    notificationErrorCode: ERROR_CODE_SCHEMA.nullable(),
+    notificationFailure: z.string().nullable(),
     sessionId: z.string().nullable(),
     version: VERSION_SCHEMA.nullable(),
   })
@@ -333,12 +338,18 @@ export type State = z.infer<typeof STATE_SCHEMA>;
 // starts with the code's message (ADR-0015)
 const JOB_FAILURE_SCHEMA = z.object({ errorCode: ERROR_CODE_SCHEMA.nullable(), log: z.string() }).brand<'Domain'>();
 
+// The code of a notification not sent, and its message, which names the notification and why
+const NOTIFICATION_FAILURE_SCHEMA = z.object({ errorCode: ERROR_CODE_SCHEMA, message: z.string() }).brand<'Domain'>();
+
 const ARTIFACT_STATE_SHAPE = {
   // That of its last job, from the moment it is queued, unless a Version came after it; then that of
   // its latest Version; absent before any
   state: STATE_SCHEMA,
   // Why its last job failed, null unless the state is that of a failed job
   failure: JOB_FAILURE_SCHEMA.nullable(),
+  // Why the notification of its last job was not sent, such as « Research ready »: the Candidate
+  // was not warned
+  notificationFailure: NOTIFICATION_FAILURE_SCHEMA.nullable(),
 };
 
 // Where an Artifact stands, as jf versions reads it

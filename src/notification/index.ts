@@ -164,6 +164,20 @@ export function composeTestNotification(candidateName: string): NotificationComp
   };
 }
 
+// A Research queued automatically failed: the reason is its code's message, already in the
+// Candidate's locale
+export function composeResearchFailedNotification(posting: Posting, reason: string): NotificationComposer {
+  return (locale) => ({
+    title: tOf(locale)('researchFailedTitle'),
+    message: [
+      posting.title,
+      jurisdictionOf(posting, locale),
+      reason,
+      tOf(locale)('researchFailedLine', { reference: posting.reference }),
+    ].join('\n'),
+  });
+}
+
 export function composeResearchReadyNotification(posting: Posting): NotificationComposer {
   return (locale) => ({
     title: tOf(locale)('researchReadyTitle'),

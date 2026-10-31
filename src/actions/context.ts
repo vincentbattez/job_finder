@@ -1,8 +1,8 @@
 import { z } from 'zod/v4';
 
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { localeOf, tFor } from '#/domain/catalogue/i18n.ts';
-import { codedError } from '#/domain/coded-error.ts';
+import { localeOf } from '#/domain/catalogue/i18n.ts';
+import { codedError, type CodedError } from '#/domain/coded-error.ts';
 import { LOCATION_SCHEMA, type Candidate, type Locale, type Location, type Posting } from '#/domain/index.ts';
 import { createApiGeo } from '#/geo/acl/api-geo.ts';
 import { createUploadConversion } from '#/modules/conversion/index.ts';
@@ -119,18 +119,18 @@ export async function openContext({
   }
 
   // A notification not sent undoes and skips nothing: it comes back as the failure to report
-  async function notify(posting: Posting, composeNotification: NotificationComposer): Promise<string | undefined> {
+  async function notify(posting: Posting, composeNotification: NotificationComposer): Promise<CodedError | undefined> {
     try {
       await sendNotification(posting.candidateId, composeNotification);
       return undefined;
     } catch (error) {
       const locale = await findLocale(posting.candidateId);
       const { title } = composeNotification(locale);
-      return tFor(locale, 'notification')('notSent', {
-        title,
-        reference: posting.reference,
-        reason: messageOf(error),
-      });
+      return codedError(
+        'notification_not_sent',
+        { title, reference: posting.reference, reason: messageOf(error) },
+        { locale, cause: error },
+      );
     }
   }
 

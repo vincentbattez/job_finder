@@ -76,6 +76,8 @@ export const ERROR_CATALOGUE = {
   source_format_changed: 'error:moduleFailure',
   // A notification of the Detection was not sent
   notifications_not_sent: 'error:notificationsNotSent',
+  // A notification, of the Detection or of a job, was not sent
+  notification_not_sent: 'notification:notSent',
 
   // Statuses
   // A Posting cannot move to this Status from its own
