@@ -1,5 +1,6 @@
 import { useFetcher } from 'react-router';
 
+import type { Application } from '#/web/components/application-row.tsx';
 import type { Status } from '#/web/components/badge.tsx';
 import { OutcomeSelector as OutcomeSelectorView } from '#/web/components/outcome-selector.tsx';
 import type { IRefusal } from '#/web/failure.ts';
@@ -22,5 +23,17 @@ export function OutcomeSelector({ reference, status, statusChoiceList, returnTo 
       {returnTo !== undefined && <input type="hidden" name="returnTo" value={returnTo} />}
       <OutcomeSelectorView status={status} statusChoiceList={statusChoiceList} error={fetcher.data?.error} />
     </fetcher.Form>
+  );
+}
+
+// The selector of each Application row, which brings back to the page of the row, JS or not
+export function renderRowOutcomeSelector(returnTo: string) {
+  return ({ posting, statusChoiceList }: Application) => (
+    <OutcomeSelector
+      reference={posting.reference}
+      status={posting.status}
+      statusChoiceList={statusChoiceList}
+      returnTo={returnTo}
+    />
   );
 }

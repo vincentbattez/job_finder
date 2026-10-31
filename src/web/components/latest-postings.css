@@ -6,14 +6,6 @@
     min-width: 0;
   }
 
-  .latest-postings__head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--space-xs) var(--space-md);
-  }
-
   .latest-postings__body {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));

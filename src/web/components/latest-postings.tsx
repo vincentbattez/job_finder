@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router';
 
 import type { Step } from './badge.tsx';
 import { EmptyState } from './empty-state.tsx';
 import { PostingMap } from './posting-map.tsx';
 import { PostingTile, type IPostingTile } from './posting-tile.tsx';
+import { SectionHead } from './section-head.tsx';
 
 import './latest-postings.css';
 
@@ -21,10 +21,11 @@ export function LatestPostings({ postingList }: Readonly<{ postingList: ILatestP
   const { t } = useTranslation('home');
   return (
     <section aria-labelledby="latest-postings-heading" className="latest-postings">
-      <div className="latest-postings__head">
-        <h2 id="latest-postings-heading">{t('latestHeading')}</h2>
-        <Link to="/postings">{t('allPostingsLink')}</Link>
-      </div>
+      <SectionHead
+        headingId="latest-postings-heading"
+        heading={t('latestHeading')}
+        link={{ to: '/postings', label: t('allPostingsLink') }}
+      />
       {postingList.length === 0 ? (
         <EmptyState>{t('noLatestPosting')}</EmptyState>
       ) : (

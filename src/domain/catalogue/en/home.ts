@@ -3,6 +3,7 @@ export const HOME_EN = {
   pageTitle: 'Home · Job Finder',
   heading: 'Hello {{candidateName}}',
   inProgressHeading: 'Applications in progress',
+  allApplicationsLink: 'All Applications',
   noApplicationInProgress: 'No Application in progress. Mark a Posting Applied to follow it here.',
   latestHeading: 'Latest Postings',
   allPostingsLink: 'All Postings',

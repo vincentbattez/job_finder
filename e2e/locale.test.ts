@@ -37,6 +37,7 @@ test('shows the menu and the Profile in English to a Candidate with the en local
   await expect(page.getByRole('button', { name: 'Choose' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Pages' }).getByRole('link')).toHaveText([
     'Home',
+    'Applications',
     'Postings',
     'Profile',
     'Instructions',
