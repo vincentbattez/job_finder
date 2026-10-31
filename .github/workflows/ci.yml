@@ -13,6 +13,8 @@ concurrency:
 
 env:
   MISE_ENABLE_TOOLS: node
+  # The postinstall hook reinstalls node_modules on every mise install; in CI, npm ci does it
+  MISE_NO_HOOKS: 1
 
 # Three jobs side by side: the run lasts as long as the slowest, the end-to-end tests
 jobs:
