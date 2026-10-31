@@ -64,6 +64,16 @@ export const POSTING_FR: typeof POSTING_EN = {
   visualizationFrameTitle: 'Visualisation v{{versionNumber}}',
   chooseVersion: 'Retenir cette Version',
 
+  prompt: {
+    toggle: 'Prompt',
+    fixedPart: 'Partie fixe',
+    instructions: 'Consignes',
+    readVersions: 'Artefacts que lit ce Prompt',
+    noReadVersion: 'Aucun : il ne lit que la Fiche de poste et, pour certains, le Profil.',
+    readVersion: '{{reference}} · {{artifactLabel}} v{{versionNumber}}',
+    readVersionOfInterview: '{{reference}} · Entretien {{interviewNumber}} · {{artifactLabel}} v{{versionNumber}}',
+  },
+
   documentLabel: 'Markdown',
   documentPlaceholder: '# Titre\n\nLe texte du document, en Markdown',
   save: 'Enregistrer',

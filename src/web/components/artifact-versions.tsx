@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { interviewSectionIdOf } from '#/actions/interview-section.ts';
 
+import { ArtifactPrompt } from './artifact-prompt.tsx';
 import { Badge, StateBadge } from './badge.tsx';
 import { CopyCommand } from './copy-command.tsx';
 import { DateText } from './date.tsx';
@@ -62,21 +63,22 @@ function VersionFiles({
   );
 }
 
-// Every Version of an Artifact, oldest first: the Chosen Version opens, the others stay folded,
-// and so do the Instructions each was produced with, to compare two Versions. An Artifact of an
-// Interview has its section under that Interview, a heading a level below.
+// Every Version of an Artifact, oldest first, the Chosen one open, beside the Prompt of a run not refused;
+// an Artifact of an Interview has its section under that Interview, a heading a level below
 export function ArtifactVersions({
   reference,
   interviewNumber = null,
   artifact,
   isEditable,
+  prompt,
   versionList,
   launch,
   renderChooseButton,
   renderDocument,
 }: Readonly<
-  Pick<IArtifactVersions, 'artifact' | 'isEditable' | 'versionList'> &
-    IArtifactVersionsSlots & { reference: string; interviewNumber?: number | null }
+  Pick<IArtifactVersions, 'artifact' | 'isEditable' | 'versionList'> & {
+    prompt: IArtifactVersions['module']['prompt'];
+  } & IArtifactVersionsSlots & { reference: string; interviewNumber?: number | null }
 >) {
   const { t } = useTranslation('posting');
   const headingId = useId();
@@ -89,7 +91,14 @@ export function ArtifactVersions({
       data-artifact={artifact}
       aria-labelledby={headingId}
     >
-      <HEADING_TAG id={headingId}>{t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' })}</HEADING_TAG>
+      <div className="artifact-versions__head">
+        <HEADING_TAG id={headingId} className="artifact-versions__title">
+          {t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' })}
+        </HEADING_TAG>
+        {prompt !== null && (
+          <ArtifactPrompt reference={reference} prompt={prompt} isUnderInterview={interviewNumber !== null} />
+        )}
+      </div>
       {launch}
       {isEditable && <CopyCommand command={`jf edit ${editArgumentList.join(' ')}`} />}
       {versionList.length === 0 ? (

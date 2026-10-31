@@ -24,6 +24,7 @@ export function ArtifactVersions({
       interviewNumber={interviewNumber}
       artifact={artifact}
       isEditable={isEditable}
+      prompt={module.prompt}
       versionList={versionList}
       launch={
         <ModuleLaunch

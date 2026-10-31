@@ -22,6 +22,14 @@ export const STATE_BY_VERSION_STATE: Record<VersionState, State> = {
   failed: 'failed',
 };
 
+// Its Fixed Part and its Instructions as raw text, and the Chosen Versions it reads, of this Posting or
+// of another one
+export interface IPrompt {
+  fixedPart: string;
+  instructions: string;
+  readVersionList: { reference: string; artifact: Artifact; interviewNumber: number | null; number: number }[];
+}
+
 export interface IArtifactVersions {
   artifact: Artifact;
   state: State;
@@ -31,8 +39,9 @@ export interface IArtifactVersions {
   notificationFailure: { errorCode: ErrorCode; message: string } | null;
   // Why its last job, queued or running, does not move: the worker is stopped or stuck
   workerFailure: { errorCode: ErrorCode; message: string } | null;
-  // The module that produces the Artifact, and why it cannot run now
-  module: { refusal: string | null };
+  // The module that produces the Artifact, and why it cannot run now; else the Prompt a run started now
+  // would receive
+  module: { refusal: string | null; prompt: IPrompt | null };
   // Given by the action: jf edit opens its Chosen Version
   isEditable: boolean;
   versionList: {

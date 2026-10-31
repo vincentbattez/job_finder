@@ -404,6 +404,19 @@ export const SECTION_SCHEMA = z
 
 export type Section = z.infer<typeof SECTION_SCHEMA>;
 
+// A Prompt as raw text, the folder of the Version still to be created as a placeholder, and each Version
+// it reads, named by its Posting, its Interview if attached to one, its Artifact and its number
+const PROMPT_READ_VERSION_SCHEMA = z.object({
+  reference: z.string(),
+  artifact: ARTIFACT_SCHEMA,
+  interviewNumber: z.int().nullable(),
+  number: z.int(),
+});
+
+const PROMPT_SCHEMA = z
+  .object({ fixedPart: z.string(), instructions: z.string(), readVersionList: z.array(PROMPT_READ_VERSION_SCHEMA) })
+  .brand<'Domain'>();
+
 // A Markdown file of a Version, and whether the Candidate may correct it by hand
 const DOCUMENT_SCHEMA = z.object({ ...MARKDOWN_FILE_SHAPE, isModifiable: z.boolean() });
 
@@ -452,8 +465,9 @@ export type ArtifactState = z.infer<typeof ARTIFACT_STATE_SCHEMA>;
 const ARTIFACT_VERSIONS_SCHEMA = z.object({
   artifact: ARTIFACT_SCHEMA,
   ...ARTIFACT_STATE_SHAPE,
-  // The module that produces it: why it cannot run now, null when it can
-  module: z.object({ refusal: z.string().nullable() }),
+  // The module that produces it: why it cannot run now, null when it can; else the Prompt a run started
+  // now would receive, with the Chosen Versions it reads, null while it is refused
+  module: z.object({ refusal: z.string().nullable(), prompt: PROMPT_SCHEMA.nullable() }),
   // Whether jf edit opens it now: it has a Chosen Version, and is neither a Visualization nor the
   // Letter of an Applied Posting
   isEditable: z.boolean(),

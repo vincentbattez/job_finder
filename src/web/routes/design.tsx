@@ -6,7 +6,7 @@ import { readCandidate } from '#/web/candidate.server.ts';
 import { ArchivedBadge, showStatus, STATE_LIST, StateBadge, StatusBadge, type Step } from '#/web/components/badge.tsx';
 import { DetectionProgress, DetectionResult, type IRecordedDetection } from '#/web/components/detection.tsx';
 import { MarkdownEditor } from '#/web/components/markdown-editor.tsx';
-import { PostingDetail, type IPostingDetail } from '#/web/components/posting-detail.tsx';
+import { PostingDetail, type IPostingDetail, type IPrompt } from '#/web/components/posting-detail.tsx';
 import { PostingList, type IPostingRow } from '#/web/components/posting-list.tsx';
 import { relayLoader } from '#/web/relay-action.server.ts';
 
@@ -57,6 +57,17 @@ function sampleVersion(number: number, state: 'running' | 'ready' | 'failed') {
   };
 }
 
+// The Prompt of a Letter, which reads the Chosen Research of its Posting and a Letter already sent
+const SAMPLE_LETTER_PROMPT = {
+  fixedPart:
+    'You write the Draft of a cover letter for a job Posting.\n\n## What you produce\n\n- `letter/v<next>/draft.md`, a very long line that wraps rather than scroll sideways, as the session reads it.',
+  instructions: '- Une page au plus.\n- Un ton sobre.',
+  readVersionList: [
+    { reference: SAMPLE_POSTING.reference, artifact: 'research', interviewNumber: null, number: 1 },
+    { reference: '2026-2445609', artifact: 'letter', interviewNumber: null, number: 2 },
+  ],
+} satisfies IPrompt;
+
 // One Artifact in each state, that of its latest Version
 const SAMPLE_POSTING_DETAIL: IPostingDetail = {
   posting: SAMPLE_POSTING,
@@ -68,7 +79,7 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
       failure: null,
       notificationFailure: null,
       workerFailure: null,
-      module: { refusal: null },
+      module: { refusal: null, prompt: null },
       isEditable: true,
       versionList: [sampleVersion(1, 'ready')],
     },
@@ -78,7 +89,7 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
       failure: null,
       notificationFailure: null,
       workerFailure: null,
-      module: { refusal: null },
+      module: { refusal: null, prompt: SAMPLE_LETTER_PROMPT },
       isEditable: true,
       versionList: [sampleVersion(1, 'ready'), sampleVersion(2, 'running')],
     },
@@ -91,7 +102,7 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
       },
       notificationFailure: null,
       workerFailure: null,
-      module: { refusal: null },
+      module: { refusal: null, prompt: null },
       isEditable: false,
       versionList: [sampleVersion(1, 'failed')],
     },
@@ -101,7 +112,7 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
       failure: null,
       notificationFailure: null,
       workerFailure: null,
-      module: { refusal: 'Il faut d’abord une Fiche d’entretien retenue.' },
+      module: { refusal: 'Il faut d’abord une Fiche d’entretien retenue.', prompt: null },
       isEditable: false,
       versionList: [],
     },

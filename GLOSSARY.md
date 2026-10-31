@@ -214,6 +214,14 @@ Directions that tell the AI how to produce a type of Artifact; each type has def
 _Avoid_: prompt, template, guidelines
 _Formerly_: Consignes
 
+**Prompt**:
+Everything an AI session producing an Artifact receives: its Fixed Part, then the Instructions in effect.
+_Avoid_: instructions, template
+
+**Fixed Part**:
+The part of a Prompt that comes with the type of Artifact and that no Instructions can lift: its objective, the files it reads and writes, its rules.
+_Avoid_: system prompt, base prompt
+
 **Research**:
 Artifact that establishes, with sources, what the recruiters expect for a Posting and in which context (employer, department, place).
 _Avoid_: analysis, study, report
