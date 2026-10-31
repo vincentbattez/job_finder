@@ -1,6 +1,7 @@
 import { codedErrorOf } from '#/domain/coded-error.ts';
 import type { DomainValue } from '#/domain/index.ts';
 
+import { createApplicationActions } from './applications.ts';
 import { createCandidateActions } from './candidates.ts';
 import { openContext, type IActionsOption } from './context.ts';
 import { createDetectActions } from './detect.ts';
@@ -38,6 +39,7 @@ export async function createActions(option: IActionsOption) {
     ...createImportActions(context),
     ...createStatusActions(context),
     ...createNotesActions(context),
+    ...createApplicationActions(context),
     ...createInterviewActions(context),
     ...createProfileActions(context),
     ...createUploadActions(context),

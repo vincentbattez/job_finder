@@ -40,6 +40,8 @@ export default defineConfig(
       '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
       // SQLite and JSON both use null for a missing value
       'unicorn/no-null': 'off',
+      // Application is a term of GLOSSARY.md, never shortened to app
+      'unicorn/name-replacements': ['error', { replacements: { application: false, applications: false } }],
       '@typescript-eslint/no-unused-vars': 'off',
       'unused-imports/no-unused-imports': 'error',
       'unused-imports/no-unused-vars': 'error',

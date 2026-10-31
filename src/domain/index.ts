@@ -157,6 +157,23 @@ export const POSTING_SCHEMA = z
 
 export type Posting = z.infer<typeof POSTING_SCHEMA>;
 
+// An Application as its row shows it, on the home and on /applications
+export const APPLICATION_SCHEMA = z
+  .object({
+    posting: POSTING_SCHEMA,
+    // What the outcome selector offers, beside the Status the Posting has
+    statusChoiceList: z.array(STATUS_SCHEMA),
+    // The next Interview, else the last one once none is upcoming; null without any
+    nextInterview: INTERVIEW_SCHEMA.nullable(),
+    hasUpcomingInterview: z.boolean(),
+    interviewCount: z.int(),
+    // The first lines of the Notes, as plain text
+    notesExcerpt: z.string(),
+  })
+  .brand<'Domain'>();
+
+export type Application = z.infer<typeof APPLICATION_SCHEMA>;
+
 // What a Detection found for one Watch, why each notification it could not send failed, and why
 // its Postings stay off the map, API Géo being down. On the first launch, the Postings already
 // online are imported without triggering anything.
