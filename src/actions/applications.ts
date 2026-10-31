@@ -1,5 +1,14 @@
-import { APPLICATION_SCHEMA, type Application, type Interview, type Posting } from '#/domain/index.ts';
-import { findInterviewEnd, hasTakenPlace, listStatusChoices } from '#/status/index.ts';
+import {
+  APPLICATION_SCHEMA,
+  APPLICATION_SECTION_NAME_SCHEMA,
+  APPLICATION_SECTION_SCHEMA,
+  type Application,
+  type ApplicationSection,
+  type ApplicationSectionName,
+  type Interview,
+  type Posting,
+} from '#/domain/index.ts';
+import { findInterviewEnd, hasBeenApplied, hasTakenPlace, listStatusChoices } from '#/status/index.ts';
 
 import type { ActionContext } from './context.ts';
 
@@ -38,6 +47,14 @@ function findLastChangeAt(posting: Posting, interviewList: Interview[], now: Dat
   return Math.max(0, ...timeList, ...pastEndList);
 }
 
+// The most recently changed first
+function compareLastChanges(
+  [, firstChangeAt]: [Application, number],
+  [, secondChangeAt]: [Application, number],
+): number {
+  return secondChangeAt - firstChangeAt;
+}
+
 // An upcoming Interview first, the nearest first, then the most recently changed (GLOSSARY.md « In progress »)
 function compareApplications(
   [first, firstChangeAt]: [Application, number],
@@ -49,7 +66,16 @@ function compareApplications(
   if (first.hasUpcomingInterview && first.nextInterview !== null && second.nextInterview !== null) {
     return first.nextInterview.startAt.getTime() - second.nextInterview.startAt.getTime();
   }
-  return secondChangeAt - firstChangeAt;
+  return compareLastChanges([first, firstChangeAt], [second, secondChangeAt]);
+}
+
+// The section of /applications a Posting goes in; none for a To Apply Posting still followed
+function findSection(posting: Posting): ApplicationSectionName | null {
+  if (posting.archivedAt !== null) {
+    return hasBeenApplied(posting) ? 'archived' : 'archived_without_application';
+  }
+  const sectionByStatus = { to_apply: null, applied: 'in_progress', hired: 'hired', rejected: 'rejected' } as const;
+  return sectionByStatus[posting.status];
 }
 
 export function createApplicationActions({ workspace, findCandidate }: ActionContext) {
@@ -80,6 +106,26 @@ export function createApplicationActions({ workspace, findCandidate }: ActionCon
           .map((posting) => readApplication(posting, now)),
       );
       return rowList.toSorted(compareApplications).map(([application]) => application);
+    },
+
+    // The historical record of /applications: every Application, and the Postings archived without one,
+    // each section in its order with the most recently changed first
+    async listApplications(rawInput: unknown): Promise<ApplicationSection[]> {
+      const candidate = await findCandidate(rawInput);
+      const now = new Date();
+      const postingList = await workspace.listPostings(candidate.id);
+      const rowList = await Promise.all(
+        postingList.filter((posting) => findSection(posting) !== null).map((posting) => readApplication(posting, now)),
+      );
+      return APPLICATION_SECTION_NAME_SCHEMA.options.map((section) =>
+        APPLICATION_SECTION_SCHEMA.parse({
+          section,
+          applicationList: rowList
+            .filter(([application]) => findSection(application.posting) === section)
+            .toSorted(compareLastChanges)
+            .map(([application]) => application),
+        }),
+      );
     },
   };
 }

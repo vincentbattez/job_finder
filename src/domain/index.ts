@@ -174,6 +174,27 @@ export const APPLICATION_SCHEMA = z
 
 export type Application = z.infer<typeof APPLICATION_SCHEMA>;
 
+// The sections of /applications, in the order it shows them: an Archived one leaves its outcome's section
+export const APPLICATION_SECTION_NAME_SCHEMA = z.enum([
+  'in_progress',
+  'hired',
+  'rejected',
+  'archived',
+  'archived_without_application',
+]);
+
+export type ApplicationSectionName = z.infer<typeof APPLICATION_SECTION_NAME_SCHEMA>;
+
+// A section of /applications and its rows, the most recently changed first
+export const APPLICATION_SECTION_SCHEMA = z
+  .object({
+    section: APPLICATION_SECTION_NAME_SCHEMA,
+    applicationList: z.array(APPLICATION_SCHEMA),
+  })
+  .brand<'Domain'>();
+
+export type ApplicationSection = z.infer<typeof APPLICATION_SECTION_SCHEMA>;
+
 // What a Detection found for one Watch, why each notification it could not send failed, and why
 // its Postings stay off the map, API Géo being down. On the first launch, the Postings already
 // online are imported without triggering anything.
