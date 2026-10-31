@@ -12,7 +12,7 @@ import { RepostFacts, type IRepost } from './repost.tsx';
 
 import './posting-detail.css';
 
-type Artifact = 'research' | 'letter' | 'interview_brief' | 'visualization';
+type Artifact = 'research' | 'letter' | 'portrait' | 'interview_brief' | 'visualization';
 
 type VersionState = 'running' | 'ready' | 'failed';
 

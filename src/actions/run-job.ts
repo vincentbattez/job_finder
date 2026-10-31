@@ -16,6 +16,7 @@ import {
 } from '#/domain/index.ts';
 import { INTERVIEW_BRIEF_MODULE } from '#/modules/interview-brief/index.ts';
 import { LETTER_MODULE } from '#/modules/letter/index.ts';
+import { PORTRAIT_MODULE } from '#/modules/portrait/index.ts';
 import { RESEARCH_MODULE } from '#/modules/research/index.ts';
 import { VISUALIZATION_MODULE } from '#/modules/visualization/index.ts';
 import { assertLetterModifiable, findLetterFreeze, hasBeenApplied } from '#/status/index.ts';
@@ -36,6 +37,7 @@ export interface ITarget {
 const AI_MODULE_BY_ARTIFACT: Record<Artifact, IAiModule> = {
   research: RESEARCH_MODULE,
   letter: LETTER_MODULE,
+  portrait: PORTRAIT_MODULE,
   interview_brief: INTERVIEW_BRIEF_MODULE,
   visualization: VISUALIZATION_MODULE,
 };

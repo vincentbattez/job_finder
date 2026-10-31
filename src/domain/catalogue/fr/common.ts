@@ -14,6 +14,7 @@ export const COMMON_FR: typeof COMMON_EN = {
   artifactLabelByArtifact: {
     research: 'Recherche',
     letter: 'Lettre',
+    portrait: 'Portrait',
     interview_brief: 'Fiche d’entretien',
     visualization: 'Visualisation',
   },

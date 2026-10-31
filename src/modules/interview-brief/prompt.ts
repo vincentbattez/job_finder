@@ -12,6 +12,14 @@ function describeLetter(readVersionList: IPromptInput['readVersionList']): strin
     : `The Chosen Letter, the one the Candidate sent or is about to send: \`${letter.filePath}\`. The recruiters will have read it: prepare the questions they will ask about what it says.`;
 }
 
+// The Chosen Portrait of its Interview when there is one: who the Interviewers are, as the Candidate corrected it
+function describePortrait(readVersionList: IPromptInput['readVersionList']): string {
+  const portrait = readVersionList.find(({ artifact }) => artifact === 'portrait');
+  return portrait === undefined
+    ? 'No Portrait of the Interviewers for this Interview: rely on what the Candidate describes of them.'
+    : `The Chosen Portrait of the Interviewers: \`${portrait.filePath}\`. The Candidate checked it: adapt the pitch to who they are.`;
+}
+
 // The round it prepares, as the Candidate typed it: its start in Paris time, and who they will face
 function describeInterview(interview: Interview | null): string {
   if (interview === null) {
@@ -77,6 +85,7 @@ Read everything before writing:
 ${researchList.map(({ filePath }) => `- The Chosen Research, which establishes what the recruiters expect and in what context: \`${filePath}\`.`).join('\n')}
 - The Candidate's Profile, in \`${profileDirectory}\`: the facts they validated, their CV and their past letters, when they exist. Read each of its files: it is the only source of facts about the Candidate.
 - ${describeLetter(readVersionList)}
+- ${describePortrait(readVersionList)}
 ${describePreviousBriefs(readVersionList)}
 
 ${describeNotes(notes)}
@@ -90,8 +99,8 @@ A single Markdown file: \`${outputPath}\`, which starts with a level 1 heading (
 - Never invent a fact about the Candidate: degrees, dates, internships, experience, skills, motivations, mobility. Each fact comes from their Profile or their Letter. Infer nothing that is not written there.
 - Wherever the Interview Brief needs a fact you do not have, write in its place a marker \`[à compléter : …]\` that says precisely what is missing, for example \`[à compléter : sujet du mémoire de master]\`. Keep the words \`à compléter\` as they are, whatever the language of the Interview Brief: the tool highlights them.
 - Invent no fact about the Posting or the employer: rely on the Job Description and the Chosen Research.
-- Invent no fact about the Interviewers: rely on what the Candidate describes of them.
-- Write no file other than \`${outputPath}\`, and never modify the Job Description, the Research, the Profile, the Letter or a previous Interview Brief.
+- Invent no fact about the Interviewers: rely on what the Candidate describes of them and on the Portrait.
+- Write no file other than \`${outputPath}\`, and never modify the Job Description, the Research, the Profile, the Letter, the Portrait or a previous Interview Brief.
 - Never touch the Status of the Posting or the tool's job queue.
 - The next message holds the Candidate's Instructions: they say how to prepare, organize and present the Interview Brief. If they contradict what you read, the expected file, its language or these rules, this fixed part prevails.
 `;

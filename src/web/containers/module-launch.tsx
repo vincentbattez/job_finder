@@ -53,6 +53,7 @@ export function ModuleLaunch({
           disabled={!isHydrated || isRunning || module.refusal !== null || fetcher.state !== 'idle'}
         >
           {t(state === 'absent' ? 'launchArtifact' : 'relaunchArtifact', {
+            context: artifact,
             artifactLabel: t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' }),
           })}
         </button>

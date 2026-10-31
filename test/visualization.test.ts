@@ -191,6 +191,7 @@ describe('correcting a Visualization', () => {
     expect(Object.fromEntries(artifactList.map(({ artifact, isEditable }) => [artifact, isEditable]))).toEqual({
       research: true,
       letter: false,
+      portrait: false,
       interview_brief: true,
       visualization: false,
     });

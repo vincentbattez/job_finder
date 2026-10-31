@@ -51,6 +51,8 @@ export const POSTING_FR: typeof POSTING_EN = {
   // Every Artifact is feminine in French: la Recherche, la Lettre, la Fiche d’entretien, la Visualisation
   launchArtifact: 'Lancer la {{artifactLabel}}',
   relaunchArtifact: 'Relancer la {{artifactLabel}}',
+  launchArtifact_portrait: 'Lancer le {{artifactLabel}}',
+  relaunchArtifact_portrait: 'Relancer le {{artifactLabel}}',
   extractionLabel: 'Champs relevés par Claude',
   relaunchExtraction: 'Relancer l’extraction',
 

@@ -58,8 +58,11 @@ export const POSTING_EN = {
   appliedFreezesLetter: 'Once Applied, the Chosen Letter no longer changes: it is the one sent.',
 
   // The launch of a module or of the extraction
+  // The context is the Artifact: French names some of them in the masculine, such as the Portrait
   launchArtifact: 'Run the {{artifactLabel}}',
   relaunchArtifact: 'Run the {{artifactLabel}} again',
+  launchArtifact_portrait: 'Run the {{artifactLabel}}',
+  relaunchArtifact_portrait: 'Run the {{artifactLabel}} again',
   extractionLabel: 'Fields read by Claude',
   relaunchExtraction: 'Run the extraction again',
 

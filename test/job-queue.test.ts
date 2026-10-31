@@ -211,6 +211,7 @@ describe('the job queue', () => {
     ).toEqual([
       { artifact: 'research', state: 'queued', errorCode: null },
       { artifact: 'letter', state: 'absent', errorCode: null },
+      { artifact: 'portrait', state: 'absent', errorCode: null },
       { artifact: 'interview_brief', state: 'in_progress', errorCode: 'job_overdue' },
       { artifact: 'visualization', state: 'absent', errorCode: null },
     ]);

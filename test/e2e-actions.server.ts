@@ -20,7 +20,7 @@ if (!dataDirectory.startsWith(tmpdir())) {
   throw new Error(`JF_DATA_DIRECTORY doit être un dossier temporaire, pas « ${dataDirectory} ».`);
 }
 
-// What the fake Claude writes for each module, whatever the Posting: a Research, an
+// What the fake Claude writes for each module, whatever the Posting: a Research, a Portrait, an
 // Interview Brief and its Visualization in their format, and a Letter whose recipients come from no
 // field of the Posting, so they hold for any of them
 const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
@@ -47,6 +47,9 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
       salutation: { text: 'Madame, Monsieur,', source: null },
       justification: 'Aucun champ de l’Offre ne donne d’adresse.',
     }),
+  },
+  portrait: {
+    'portrait.md': '# Portrait factice\n\nMme Durand, juge des enfants ([justice.fr](https://www.justice.fr/)).\n',
   },
   interview_brief: {
     'interview-brief.md': [

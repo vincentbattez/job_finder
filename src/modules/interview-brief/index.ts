@@ -20,9 +20,10 @@ export const INTERVIEW_BRIEF_MODULE = {
   // A first round and a job-specific interview are not prepared the same way
   isAttachedToInterview: true,
   // The Interview Brief builds on the Chosen Research of its Posting, and on its Chosen Letter
-  // once there is one, to prepare the questions on what the Candidate wrote
+  // once there is one, to prepare the questions on what the Candidate wrote; on the Chosen Portrait of
+  // its Interview too, when there is one, to adapt the pitch to the Interviewers
   requiredArtifactList: ['research'],
-  optionalArtifactList: ['letter'],
+  optionalArtifactList: ['letter', 'portrait'],
   // What the previous rounds covered, and what the Candidate learned since, in the Notes
   previousInterviewArtifactList: ['interview_brief'],
   isReadingNotes: true,

@@ -145,6 +145,7 @@ describe('interview brief', () => {
       {
         number: 1,
         chosenList: [
+          { artifact: 'portrait', chosen: [] },
           { artifact: 'interview_brief', chosen: [1] },
           { artifact: 'visualization', chosen: [] },
         ],
@@ -152,6 +153,7 @@ describe('interview brief', () => {
       {
         number: 2,
         chosenList: [
+          { artifact: 'portrait', chosen: [] },
           { artifact: 'interview_brief', chosen: [1] },
           { artifact: 'visualization', chosen: [] },
         ],
@@ -159,7 +161,7 @@ describe('interview brief', () => {
     ]);
   });
 
-  it('shows apart from the Artifacts of the Posting, the Research and the Letter', async () => {
+  it('shows with the Portrait, apart from the Artifacts of the Posting, the Research and the Letter', async () => {
     const { actions } = await applyWithInterview(createFakeAiSession(RESEARCH_RUN));
 
     const { artifactList, interviewList } = await actions.readPosting({ reference: REFERENCE });
@@ -169,7 +171,7 @@ describe('interview brief', () => {
       interviewList.map(({ artifactList: interviewArtifactList }) =>
         interviewArtifactList.map(({ artifact }) => artifact),
       ),
-    ).toEqual([['interview_brief', 'visualization']]);
+    ).toEqual([['portrait', 'interview_brief', 'visualization']]);
   });
 
   it('refuses to run without a Chosen Research, before queuing anything', async () => {

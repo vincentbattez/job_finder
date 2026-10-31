@@ -248,7 +248,7 @@ export const DETECTION_OVERVIEW_SCHEMA = z
 
 export type DetectionOverview = z.infer<typeof DETECTION_OVERVIEW_SCHEMA>;
 
-export const ARTIFACT_SCHEMA = z.enum(['research', 'letter', 'interview_brief', 'visualization']);
+export const ARTIFACT_SCHEMA = z.enum(['research', 'letter', 'portrait', 'interview_brief', 'visualization']);
 
 export type Artifact = z.infer<typeof ARTIFACT_SCHEMA>;
 

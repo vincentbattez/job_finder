@@ -27,6 +27,7 @@ const RUN_BY_ARTIFACT: Record<Artifact, { fileByName: Record<string, string> }> 
       }),
     },
   },
+  portrait: { fileByName: { 'portrait.md': '# Portrait : M. Lefebvre\n\nJuge des enfants à Béthune.\n' } },
   interview_brief: {
     fileByName: {
       'interview-brief.md': [
@@ -44,7 +45,7 @@ const RUN_BY_ARTIFACT: Record<Artifact, { fileByName: Record<string, string> }> 
 };
 
 // The Artifacts attached to an Interview, which run once the Posting is Applied and has one
-const INTERVIEW_ARTIFACT_LIST: readonly Artifact[] = ['interview_brief', 'visualization'];
+const INTERVIEW_ARTIFACT_LIST: readonly Artifact[] = ['portrait', 'interview_brief', 'visualization'];
 
 // Launches a module where its Artifact is attached: on the Posting, or on its first Interview
 async function runModule(actions: Actions, module: Artifact) {
@@ -216,10 +217,12 @@ describe('the modules the Posting page offers', () => {
     // An Interview Brief prepares an Interview, which only an Application has
     expect(Object.keys(toApply)).toEqual(['research', 'letter']);
     // In the words of the front, beside the button of the missing Artifact: no command to type
-    expect(Object.keys(before)).toEqual(['research', 'letter', 'interview_brief', 'visualization']);
+    expect(Object.keys(before)).toEqual(['research', 'letter', 'portrait', 'interview_brief', 'visualization']);
     expect(before).toMatchObject({
       research: { refusal: null },
       letter: { refusal: /a été Postulée : sa Lettre retenue est figée/ },
+      // The Portrait reads the Research when there is one, and runs without it
+      portrait: { refusal: null },
       interview_brief: {
         refusal:
           "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Fiche d’entretien : lancez d'abord la Recherche.",

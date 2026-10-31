@@ -161,6 +161,7 @@ model Version {
 enum Artifact {
   research
   letter
+  portrait
   interview_brief
   visualization
 }

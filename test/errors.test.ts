@@ -27,7 +27,7 @@ describe('an error', () => {
     const { actions } = await detectPostings();
 
     await expect(actions[call]({ reference: REFERENCE, artifact: 'lettr', number: '1' })).rejects.toThrow(
-      'Artefact inconnu : lettr. Artefacts : research, letter, brief, visualization.',
+      'Artefact inconnu : lettr. Artefacts : research, letter, portrait, brief, visualization.',
     );
   });
 
@@ -173,7 +173,7 @@ describe('an error for an English-speaking Candidate', () => {
     const { actions, reference } = await createEmma();
 
     await expect(actions.listVersions({ reference, artifact: 'lettr' })).rejects.toThrow(
-      'Unknown Artifact: lettr. Artifacts: research, letter, brief, visualization.',
+      'Unknown Artifact: lettr. Artifacts: research, letter, portrait, brief, visualization.',
     );
   });
 

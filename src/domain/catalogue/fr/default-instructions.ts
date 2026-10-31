@@ -9,6 +9,14 @@ Commence par une synthèse de quelques lignes : ce que les recruteurs attendent,
 
 Ouvre sur ce poste précis et sur ce qui attire le Candidat dans ce service et ce lieu. Mets ensuite son parcours en regard de ce que les recruteurs attendent, tel que la Recherche l'établit : deux ou trois points forts, chacun appuyé sur un fait de son Profil. Termine par sa disponibilité pour un entretien. Garde la voix et le style de ses lettres passées, et reprends les corrections qu'il a faites sur ses Lettres déjà envoyées. Évite les formules creuses et les superlatifs.
 `,
+  portrait: `Fais le portrait de chaque Interlocuteur que le Candidat rencontrera à cet Entretien, pour qu'il comprenne à qui il parle et adapte son discours.
+
+Tiens-toi aux informations professionnelles et publiques : parcours et fonctions occupées, publications, interventions, prises de position sur le métier. N'écris rien sur sa vie privée.
+
+Cite tes sources : un lien Markdown vers la page qui établit chaque information. Quand tu n'es pas sûr qu'une page parle de la bonne personne, par exemple en cas d'homonyme, dis-le clairement et explique pourquoi, plutôt que de trancher.
+
+Juge toi-même jusqu'où creuser, et va à l'essentiel utile pour cet Entretien : ce que l'Interlocuteur regardera probablement, et les sujets sur lesquels le Candidat peut le rejoindre.
+`,
   interview_brief: `Prépare le Candidat à cet Entretien de cette Offre précise, pas à un entretien en général. Il relira la Fiche d'entretien la veille et s'entraînera à voix haute avec elle : préfère les listes courtes et les faits précis aux longs paragraphes.
 
 Adapte le discours aux Interlocuteurs : un premier tour avec les ressources humaines, un responsable du service ou un spécialiste du métier n'attendent pas les mêmes réponses. Mets en avant ce qu'ils regarderont, dans les mots de leur propre métier, et appuie-toi sur les tours précédents et les Notes plutôt que de les répéter.

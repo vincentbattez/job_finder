@@ -158,6 +158,10 @@
     --tint: var(--p-tue);
   }
 
+  .posting-detail__compartment[data-artifact='portrait'] {
+    --tint: var(--p-thu);
+  }
+
   .posting-detail__compartment[data-artifact='interview_brief'] {
     --tint: var(--p-wed);
   }

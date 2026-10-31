@@ -17,6 +17,7 @@ export const COMMON_EN = {
   artifactLabelByArtifact: {
     research: 'Research',
     letter: 'Letter',
+    portrait: 'Portrait',
     interview_brief: 'Interview Brief',
     visualization: 'Visualization',
   } satisfies Record<Artifact, string>,
