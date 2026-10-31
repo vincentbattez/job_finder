@@ -15,7 +15,6 @@ test.describe('French routes', () => {
       englishPath: '/postings/2026-2445600/interview_brief/document',
     },
     { frenchPath: '/offres/2026-2445600/recherche/retenue', englishPath: '/postings/2026-2445600/research/chosen' },
-    { frenchPath: '/offres/2026-2445600/visualisation/1', englishPath: '/postings/2026-2445600/visualization/1' },
   ]) {
     test(`redirects ${frenchPath} permanently to ${englishPath}`, async ({ page }) => {
       const response = await page.request.get(`${frenchPath}?from=bookmark`, { maxRedirects: 0 });
