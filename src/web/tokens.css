@@ -81,11 +81,16 @@
   --display-weight: 700;
 
   /* Statuses of a Posting, each a color for text or a map point and a soft one behind it: grey,
-     green and red as the map of issue #20 asks, so Expired is red against Dose's grey */
+     green and red as the map of issue #20 asks, so Expired is red against Dose's grey; Hired takes
+     the full accent, Rejected a brown apart from Expired's red */
   --color-status-to-apply: oklch(40% 0.012 165deg);
   --color-status-to-apply-soft: oklch(92.5% 0.008 165deg);
   --color-status-applied: var(--color-accent-deep);
   --color-status-applied-soft: var(--color-accent-soft);
+  --color-status-hired: var(--color-accent-ink);
+  --color-status-hired-soft: var(--color-accent);
+  --color-status-rejected: oklch(44% 0.08 60deg);
+  --color-status-rejected-soft: oklch(93% 0.03 60deg);
   --color-status-expired: oklch(46% 0.17 27deg);
   --color-status-expired-soft: oklch(93.5% 0.035 27deg);
   --color-status-archived: var(--color-muted);

@@ -5,6 +5,8 @@ export const COMMON_EN = {
   statusLabelByStatus: {
     to_apply: 'To Apply',
     applied: 'Applied',
+    hired: 'Hired',
+    rejected: 'Rejected',
   } satisfies Record<Status, string>,
   // A mark beside the Status, which the Posting keeps (ADR-0007)
   archived: 'Archived',

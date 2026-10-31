@@ -25,6 +25,16 @@
     --badge-soft: var(--color-status-applied-soft);
   }
 
+  .badge[data-status='hired'] {
+    --badge-ink: var(--color-status-hired);
+    --badge-soft: var(--color-status-hired-soft);
+  }
+
+  .badge[data-status='rejected'] {
+    --badge-ink: var(--color-status-rejected);
+    --badge-soft: var(--color-status-rejected-soft);
+  }
+
   .badge[data-status='expired'] {
     --badge-ink: var(--color-status-expired);
     --badge-soft: var(--color-status-expired-soft);

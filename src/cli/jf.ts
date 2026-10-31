@@ -425,6 +425,9 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     },
   },
   apply: changeStatusCommand('applied', 'apply', (t) => t('applyDescription')),
+  hired: changeStatusCommand('hired', 'hired', (t) => t('hiredDescription')),
+  rejected: changeStatusCommand('rejected', 'rejected', (t) => t('rejectedDescription')),
+  'in-progress': changeStatusCommand('applied', 'in-progress', (t) => t('inProgressDescription')),
   archive: {
     describe: (t) => t('statusCommandDescription', { description: t('archiveDescription'), name: 'archive' }),
     run: async (actions, [reference]) => {

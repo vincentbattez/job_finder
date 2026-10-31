@@ -129,8 +129,8 @@ describe('status of a Posting', () => {
     expect(await findStatus('2026-2360411')).toBe('applied');
   });
 
-  // The front shows a button for each of them, and none other; archiving changes none of them
-  it('gives the statuses each Posting can move to, Archived or not', async () => {
+  // The outcome selector offers each of them, and none other; archiving changes none of them
+  it('gives the Status choices of each Posting, Archived or not', async () => {
     await actions.changeStatus({ reference: '2026-2445629', status: 'applied' });
     await actions.archive({ reference: '2026-2445671' });
 
@@ -138,19 +138,84 @@ describe('status of a Posting', () => {
       ['2026-2445584', '2026-2445629', '2026-2445671'].map((reference) => actions.readPosting({ reference })),
     );
 
-    expect(detailList.map(({ nextStatusList }) => nextStatusList)).toEqual([['applied'], [], ['applied']]);
+    expect(detailList.map(({ statusChoiceList }) => statusChoiceList)).toEqual([
+      ['applied'],
+      ['hired', 'rejected'],
+      ['applied'],
+    ]);
+  });
+
+  // An employer sometimes answers without inviting; a wrong click is put back In progress
+  it('marks an Application Hired, then Rejected, then back In progress, each change dated', async () => {
+    await actions.changeStatus({ reference: '2026-2448056', status: 'applied' });
+    vi.setSystemTime(new Date('2026-10-30T09:00:00Z'));
+    await actions.changeStatus({ reference: '2026-2448056', status: 'hired' });
+    const hired = await findPosting(actions, '2026-2448056');
+    vi.setSystemTime(new Date('2026-10-30T10:00:00Z'));
+    await actions.changeStatus({ reference: '2026-2448056', status: 'rejected' });
+    const rejected = await findPosting(actions, '2026-2448056');
+    vi.setSystemTime(new Date('2026-10-30T11:00:00Z'));
+
+    await actions.changeStatus({ reference: '2026-2448056', status: 'applied' });
+
+    vi.setSystemTime(new Date('2026-10-29T12:00:00Z'));
+    expect([hired, rejected, await findPosting(actions, '2026-2448056')]).toMatchObject([
+      { status: 'hired', statusChangedAt: new Date('2026-10-30T09:00:00Z') },
+      { status: 'rejected', statusChangedAt: new Date('2026-10-30T10:00:00Z') },
+      { status: 'applied', statusChangedAt: new Date('2026-10-30T11:00:00Z') },
+    ]);
+  });
+
+  // The Application keeps the day it started: its Chosen Letter was sent that day
+  it('keeps when it was Applied once Hired, its Letter staying frozen', async () => {
+    await actions.changeStatus({ reference: '2026-2448209', status: 'applied' });
+    vi.setSystemTime(new Date('2026-10-30T09:00:00Z'));
+
+    await actions.changeStatus({ reference: '2026-2448209', status: 'hired' });
+
+    vi.setSystemTime(new Date('2026-10-29T12:00:00Z'));
+    expect(await findPosting(actions, '2026-2448209')).toMatchObject({
+      status: 'hired',
+      appliedAt: new Date('2026-10-29T12:00:00Z'),
+    });
+    await expect(actions.runModule({ module: 'letter', reference: '2026-2448209' })).rejects.toThrow(
+      /a été Postulée : sa Lettre retenue est figée/,
+    );
+  });
+
+  it('refuses an outcome to a To Apply Posting, whose Application has not started', async () => {
+    await expect(actions.changeStatus({ reference: '2026-2448213', status: 'hired' })).rejects.toThrow(
+      "L'Offre 2026-2448213 est À traiter : elle ne peut passer qu'en Postulée.",
+    );
+    expect(await findPosting(actions, '2026-2448213')).toMatchObject({ status: 'to_apply', statusChangedAt: null });
+  });
+
+  it('never brings a Rejected Application back to To Apply', async () => {
+    await actions.changeStatus({ reference: '2026-2448215', status: 'applied' });
+    await actions.changeStatus({ reference: '2026-2448215', status: 'rejected' });
+
+    await expect(actions.changeStatus({ reference: '2026-2448215', status: 'to_apply' })).rejects.toMatchObject({
+      code: 'status_change_after_applied',
+    });
+    expect(await findStatus('2026-2448215')).toBe('rejected');
   });
 
   it('refuses to archive an unknown Posting', async () => {
     await expect(actions.archive({ reference: '2026-0000000' })).rejects.toThrow(/Offre inconnue : 2026-0000000/);
   });
 
+  // Its Status did not change, nor does the day of its last change
   it('marks an Applied Posting as Applied again without complaint', async () => {
     await actions.changeStatus({ reference: '2026-2360445', status: 'applied' });
+    vi.setSystemTime(new Date('2026-10-30T12:00:00Z'));
 
     await actions.changeStatus({ reference: '2026-2360445', status: 'applied' });
 
-    expect(await findStatus('2026-2360445')).toBe('applied');
+    vi.setSystemTime(new Date('2026-10-29T12:00:00Z'));
+    expect(await findPosting(actions, '2026-2360445')).toMatchObject({
+      status: 'applied',
+      statusChangedAt: new Date('2026-10-29T12:00:00Z'),
+    });
   });
 
   it('refuses an unknown Posting', async () => {

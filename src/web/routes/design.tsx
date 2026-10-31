@@ -238,6 +238,8 @@ const DETECTION_SAMPLE_LIST: { key: string; detection: IRecordedDetection }[] = 
 const STATUS_SAMPLE_LIST: { status: Status; isExpired: boolean; archivedAt: Date | null }[] = [
   { status: 'to_apply', isExpired: false, archivedAt: null },
   { status: 'applied', isExpired: false, archivedAt: null },
+  { status: 'hired', isExpired: false, archivedAt: null },
+  { status: 'rejected', isExpired: false, archivedAt: null },
   { status: 'to_apply', isExpired: true, archivedAt: null },
   { status: 'applied', isExpired: false, archivedAt: new Date('2026-10-28') },
 ];

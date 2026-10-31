@@ -95,11 +95,14 @@ export const CLI_EN = {
   chooseUsage: 'Usage: jf choose <posting> <artifact> <version>, for example jf choose 2026-2445600 research 2.',
   versionChosen: '{{artifact}} {{version}} chosen for Posting {{reference}}.\n',
 
-  // jf apply, jf archive, jf unarchive
+  // jf apply, jf hired, jf rejected, jf in-progress, jf archive, jf unarchive
   statusCommandDescription: '{{description}}: jf {{name}} <posting>',
   statusUsage: 'Usage: jf {{name}} <posting>. “jf list <candidate>” lists the Postings.',
   statusChanged: '{{reference}}: {{statusLabel}}\n',
   applyDescription: 'Moves a Posting to Applied, with or without a Letter, which freezes its Letter for good',
+  hiredDescription: 'Marks an Application Hired: the Candidate gets the job',
+  rejectedDescription: 'Marks an Application Rejected: the employer did not pick the Candidate',
+  inProgressDescription: 'Puts a Hired or Rejected Application back In progress, which is Applied',
   archiveDescription: 'Archives a Posting, whatever its Status, which it keeps',
   unarchiveDescription: 'Unarchives a Posting, which finds its Status as it was',
   postingArchived: '{{reference}}: Archived\n',

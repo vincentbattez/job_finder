@@ -82,6 +82,8 @@ model Posting {
   // When the Posting was first marked Applied: its Chosen Letter, the one sent, stays frozen even
   // once it is Archived
   appliedAt        DateTime?
+  // When its stored Status last changed, null if never: it sorts the Applications
+  statusChangedAt  DateTime?
   // When the Candidate archived it, null while they follow it: a mark beside the Status, which
   // unarchiving leaves as it was (ADR-0007)
   archivedAt       DateTime?
@@ -96,9 +98,12 @@ model Posting {
   @@unique([candidateId, source, reference])
 }
 
+// Invited and Interviewed are computed from the Interviews, never stored (ADR-0009)
 enum PostingStatus {
   to_apply
   applied
+  hired
+  rejected
 }
 
 // A Version of the letter Artifact holds a pair: the Draft, never changed, and the Letter.

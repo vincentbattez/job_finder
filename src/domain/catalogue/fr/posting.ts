@@ -35,9 +35,12 @@ export const POSTING_FR: typeof POSTING_EN = {
   noCc: 'Aucune',
   salutationTerm: 'Formule d’appel',
 
-  statusButtonLabelByStatus: {
-    to_apply: 'Remettre À traiter',
-    applied: 'Marquer comme Postulée',
+  markApplied: 'Marquer comme Postulée',
+  outcomeLabel: 'Issue de la Candidature',
+  outcomeLabelByStatus: {
+    applied: 'En cours',
+    hired: 'Obtenue',
+    rejected: 'Refusée',
   },
   archive: 'Archiver',
   unarchive: 'Désarchiver',

@@ -15,7 +15,10 @@ export function createStatusActions({ workspace, findPosting, findLocale }: Acti
       const { reference, status } = STATUS_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
       assertStatusChange(posting, status, await findLocale(posting.candidateId));
-      await workspace.setStatus(posting, status);
+      // Moving to the Status it already has keeps the day of its last change
+      if (status !== posting.status) {
+        await workspace.setStatus(posting, status);
+      }
     },
 
     // Whatever its Status, which stays as it is (ADR-0007); archiving again keeps the first date,
