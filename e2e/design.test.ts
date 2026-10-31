@@ -13,6 +13,8 @@ test.describe('design system page', () => {
     await expect(section.getByRole('listitem')).toHaveText([
       'À traiter',
       'Postulée',
+      'Convoquée',
+      'Entretien passé',
       'Obtenue',
       'Refusée',
       'Expirée',

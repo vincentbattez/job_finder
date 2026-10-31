@@ -53,6 +53,8 @@ const INPUT_BY_ACTION: Record<string, object> = {
   saveWatch: LEA_WATCH,
   deleteWatch: { watchId: LEA_WATCH_ID },
   saveNotes: { notes: '# Appel du greffe\n' },
+  // The Posting is Applied by changeStatus first, which runs before: an Interview needs an Application
+  addInterview: { start: '2026-11-19T14:00', place: 'Béthune', interviewers: 'Mme Durand' },
 };
 
 type ActionMap = Record<string, (rawInput: unknown) => Promise<unknown>>;
@@ -151,7 +153,7 @@ async function saveChannel(module: INotificationChannel, parameters: Record<stri
     artifact: 'research',
     number: 1,
     jobId: 1,
-    status: 'to_apply',
+    status: 'applied',
     fileName: 'research.md',
     markdown: '# Research\n',
     instructions: 'Citer chaque source.',

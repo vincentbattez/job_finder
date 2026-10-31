@@ -89,6 +89,12 @@ export const ERROR_CATALOGUE = {
   // The Chosen Letter of an Applied Posting is frozen as sent
   letter_frozen: 'error:letterFrozen',
 
+  // Interviews
+  // An Interview is added to a To Apply Posting, which has no Application yet
+  interview_without_application: 'error:interviewWithoutApplication',
+  // The Posting has no Interview with this number
+  unknown_interview: 'error:unknownInterview',
+
   // Modules, jobs and Versions
   // No module has this name
   unknown_module: 'error:unknownModule',
@@ -243,6 +249,7 @@ export const ERROR_CATALOGUE = {
   profile_usage: 'cli:profileUsage',
   instructions_usage: 'cli:instructionsUsage',
   notes_usage: 'cli:notesUsage',
+  interviews_usage: 'cli:interviewsUsage',
 } satisfies Record<string, ErrorMessageKey>;
 
 export type ErrorCode = keyof typeof ERROR_CATALOGUE;

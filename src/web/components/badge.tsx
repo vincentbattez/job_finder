@@ -6,12 +6,15 @@ import type { State } from '#/actions/state.ts';
 
 import './badge.css';
 
-// The statuses as the actions give them
+// The stored Status, as the actions give it
 export type Status = Awaited<ReturnType<Actions['listPostings']>>[number]['status'];
+
+// The Status as the actions compute it, Invited or Interviewed from the Interviews (ADR-0009)
+export type Step = Awaited<ReturnType<Actions['listPostings']>>[number]['step'];
 
 // What the badge and the map read of a Posting
 interface IShownPosting {
-  status: Status;
+  step: Step;
   isExpired: boolean;
   archivedAt: Date | null;
 }
@@ -19,11 +22,11 @@ interface IShownPosting {
 // Expired comes from the Deadline, whatever the status (GLOSSARY.md). The badge and the map
 // show it only in place of To Apply: an Applied Posting stays green past its Deadline. Archived is a
 // mark beside the Status (ADR-0007): shown in its place while it lasts, the Status back once unarchived.
-export function showStatus({ status, isExpired, archivedAt }: IShownPosting): Status | 'expired' | 'archived' {
+export function showStatus({ step, isExpired, archivedAt }: IShownPosting): Step | 'expired' | 'archived' {
   if (archivedAt !== null) {
     return 'archived';
   }
-  return status === 'to_apply' && isExpired ? 'expired' : status;
+  return step === 'to_apply' && isExpired ? 'expired' : step;
 }
 
 export function StatusBadge(posting: Readonly<IShownPosting>) {

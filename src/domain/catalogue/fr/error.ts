@@ -50,6 +50,11 @@ export const ERROR_FR: typeof ERROR_EN = {
   letterFrozen:
     "L'Offre {{reference}} a été Postulée : sa Lettre retenue est figée telle qu'envoyée. Elle ne se modifie plus, ne se régénère plus et ne se remplace plus par une autre Version.",
 
+  interviewWithoutApplication:
+    "L'Offre {{reference}} est À traiter : la marquer Postulée d'abord, un Entretien appartient à sa Candidature.",
+  unknownInterview:
+    "L'Offre {{reference}} n'a pas d'Entretien {{number}}. « jf interviews {{reference}} » liste ses Entretiens.",
+
   unknownModule: 'Module inconnu : {{name}}. Modules : {{names}}.',
   unknownArtifact: 'Artefact inconnu : {{name}}. Artefacts : {{names}}.',
   missingArtifactForFront:

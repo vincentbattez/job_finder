@@ -64,6 +64,12 @@ export const ERROR_EN = {
   letterFrozen:
     'Posting {{reference}} was Applied: its Chosen Letter is frozen as sent. It is no longer edited, regenerated or replaced by another Version.',
 
+  // Interviews
+  interviewWithoutApplication:
+    'Posting {{reference}} is To Apply: mark it Applied first, an Interview belongs to its Application.',
+  unknownInterview:
+    'Posting {{reference}} has no Interview {{number}}. “jf interviews {{reference}}” lists its Interviews.',
+
   // Modules, jobs and Versions
   workerNotRunning:
     'The worker is not running: job {{jobId}} is not moving. Start it: “lpm service worker start -p job_finder”, then read “lpm logs worker -p job_finder” if it stops again.',

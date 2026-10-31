@@ -12,12 +12,14 @@ import type { ErrorCode } from '#/domain/error.ts';
 import {
   CANDIDATE_SCHEMA,
   DEFAULT_DEADLINE_PERIOD_SCHEMA,
+  INTERVIEW_SCHEMA,
   JOB_SCHEMA,
   POSTING_SCHEMA,
   PROFILE_JOB_SCHEMA,
   QUEUED_JOB_SCHEMA,
   RECORDED_DETECTION_SCHEMA,
   SAVED_NOTIFICATION_CHANNEL_SCHEMA,
+  STATUS_SCHEMA,
   VERSION_SCHEMA,
   WATCH_SCHEMA,
   type Artifact,
@@ -25,6 +27,7 @@ import {
   type DefaultDeadlinePeriod,
   type DetectionOrigin,
   type DetectionWatch,
+  type Interview,
   type Job,
   type JobDescription,
   type ListedPosting,
@@ -42,7 +45,7 @@ import {
   type Version,
   type Watch,
 } from '#/domain/index.ts';
-import { findAppliedAt, isExpired } from '#/status/index.ts';
+import { findAppliedAt, findStep, isExpired } from '#/status/index.ts';
 import { PrismaClient } from '#/workspace/generated/client.ts';
 
 import type { Config } from './config.ts';
@@ -59,7 +62,39 @@ const LINKED_POSTING_SELECT = { select: { reference: true } };
 const POSTING_INCLUDE = {
   repostOf: LINKED_POSTING_SELECT,
   repostList: { ...LINKED_POSTING_SELECT, orderBy: { reference: 'asc' } },
+  // What its step is computed from
+  interviewList: { select: { startAt: true, durationMinutes: true } },
 } as const;
+
+const INTERVIEW_TIME_SCHEMA = z.object({ startAt: z.date(), durationMinutes: z.int() });
+
+// What the step of a Posting row is computed from; the other fields pass through
+const STEP_ROW_SCHEMA = z.looseObject({
+  status: STATUS_SCHEMA,
+  interviewList: z.array(INTERVIEW_TIME_SCHEMA),
+});
+
+// The step depends on the time, so every Posting read computes it rather than storing it, like Expired
+// (ADR-0009); anything but a Posting row, such as the null Posting of a Profile job, is left as it is
+function withStep(row: unknown): unknown {
+  const parsed = STEP_ROW_SCHEMA.safeParse(row);
+  return parsed.success ? { ...parsed.data, step: findStep(parsed.data, parsed.data.interviewList, new Date()) } : row;
+}
+
+const JOB_ROW_SCHEMA = z.looseObject({ posting: z.unknown() });
+
+function withPostingStep(row: unknown): unknown {
+  const parsed = JOB_ROW_SCHEMA.safeParse(row);
+  return parsed.success ? { ...parsed.data, posting: withStep(parsed.data.posting) } : row;
+}
+
+// The domain schemas, over a database row that has yet to get its step
+const POSTING_READ_SCHEMA = z.preprocess(withStep, POSTING_SCHEMA);
+const JOB_READ_SCHEMA = z.preprocess(withPostingStep, JOB_SCHEMA);
+const QUEUED_JOB_READ_SCHEMA = z.preprocess(withPostingStep, QUEUED_JOB_SCHEMA);
+
+// By date, the number telling apart two at the same time
+const INTERVIEW_ORDER_LIST: { startAt?: 'asc'; number?: 'asc' }[] = [{ startAt: 'asc' }, { number: 'asc' }];
 // The single row of the Default Deadline Period every Candidate shares
 const DEFAULT_DEADLINE_PERIOD_ID = 1;
 // The Default Deadline Period of a new database, that of the example config of older versions
@@ -94,6 +129,9 @@ export type DetectionWatchUpdate = Partial<Omit<DetectionWatch, DetectionWatchCo
 
 // SQLite refused a second row on a unique index: here, a second running Detection
 const UNIQUE_VIOLATION_SCHEMA = z.object({ code: z.literal('P2002') });
+
+// What the Candidate types of an Interview; its number and its edits are counted by the database
+export type InterviewFields = Pick<Interview, 'startAt' | 'durationMinutes' | 'place' | 'interviewers'>;
 
 export interface INewPosting {
   candidateId: string;
@@ -360,7 +398,7 @@ export function openDatabase(databasePath: string) {
     },
 
     async listPostings(candidateId: string): Promise<Posting[]> {
-      return z.array(POSTING_SCHEMA).parse(
+      return z.array(POSTING_READ_SCHEMA).parse(
         await prisma.posting.findMany({
           where: { candidateId },
           orderBy: { reference: 'desc' },
@@ -372,7 +410,7 @@ export function openDatabase(databasePath: string) {
     // The To Apply Postings still followed that arrived last, through a Detection in the Zone or an
     // import, which no Zone holds but the Candidate chose (ADR-0003)
     async listLatestPostings(candidateId: string, count: number): Promise<Posting[]> {
-      return z.array(POSTING_SCHEMA).parse(
+      return z.array(POSTING_READ_SCHEMA).parse(
         await prisma.posting.findMany({
           where: {
             candidateId,
@@ -389,14 +427,14 @@ export function openDatabase(databasePath: string) {
 
     // A job the Candidate launches is not automatic: they see it run, and fail, on the screen
     async createJob(posting: Posting, module: Module, { isAutomatic = false } = {}): Promise<Job> {
-      return JOB_SCHEMA.parse(
+      return JOB_READ_SCHEMA.parse(
         await prisma.job.create({ data: { module, postingId: posting.id, isAutomatic }, include: JOB_INCLUDE }),
       );
     },
 
     // The job keeps its state: only its notification failed
     async failNotification({ id }: Job, { code, message }: { code: ErrorCode; message: string }): Promise<Job> {
-      return JOB_SCHEMA.parse(
+      return JOB_READ_SCHEMA.parse(
         await prisma.job.update({
           where: { id },
           data: { notificationErrorCode: code, notificationFailure: message },
@@ -463,7 +501,7 @@ export function openDatabase(databasePath: string) {
         ...(isReady ? chooseStatementList(versionWhere) : []),
       ]);
       return {
-        job: JOB_SCHEMA.parse(await prisma.job.findUniqueOrThrow({ where: { id: job.id }, include: JOB_INCLUDE })),
+        job: JOB_READ_SCHEMA.parse(await prisma.job.findUniqueOrThrow({ where: { id: job.id }, include: JOB_INCLUDE })),
         version: VERSION_SCHEMA.parse(
           await prisma.version.findUniqueOrThrow({
             where: { postingId_artifact_number: versionWhere },
@@ -475,14 +513,14 @@ export function openDatabase(databasePath: string) {
 
     // A job that ran without a Version, such as an extraction, is done
     async finishJobWithoutVersion({ id }: Job, { log, sessionId }: { log: string; sessionId: string | null }) {
-      return JOB_SCHEMA.parse(
+      return JOB_READ_SCHEMA.parse(
         await prisma.job.update({ where: { id }, data: { state: 'done', log, sessionId }, include: JOB_INCLUDE }),
       );
     },
 
     async listJobs(posting: Posting): Promise<Job[]> {
       return z
-        .array(JOB_SCHEMA)
+        .array(JOB_READ_SCHEMA)
         .parse(
           await prisma.job.findMany({ where: { postingId: posting.id }, include: JOB_INCLUDE, orderBy: { id: 'asc' } }),
         );
@@ -491,7 +529,7 @@ export function openDatabase(databasePath: string) {
     // A job of a Posting: those of a Profile are followed on its page
     async findJob(id: number): Promise<Job | null> {
       const job = await prisma.job.findUnique({ where: { id, postingId: { not: null } }, include: JOB_INCLUDE });
-      return job === null ? null : JOB_SCHEMA.parse(job);
+      return job === null ? null : JOB_READ_SCHEMA.parse(job);
     },
 
     // The oldest queued job, now running, unless a job is already running: a single Claude session
@@ -507,7 +545,7 @@ export function openDatabase(databasePath: string) {
       const [claimed] = claimedList;
       return claimed === undefined
         ? null
-        : QUEUED_JOB_SCHEMA.parse(
+        : QUEUED_JOB_READ_SCHEMA.parse(
             await prisma.job.findUniqueOrThrow({ where: { id: claimed.id }, include: JOB_INCLUDE }),
           );
     },
@@ -546,7 +584,7 @@ export function openDatabase(databasePath: string) {
         }),
       ]);
       return z
-        .array(QUEUED_JOB_SCHEMA)
+        .array(QUEUED_JOB_READ_SCHEMA)
         .parse(
           await prisma.job.findMany({ where: { id: { in: idList } }, include: JOB_INCLUDE, orderBy: { id: 'asc' } }),
         );
@@ -628,7 +666,7 @@ export function openDatabase(databasePath: string) {
     // one last went through, all of them on its first launch: they may be in the Zone of this one
     async listOutOfZonePostingsSince({ candidateId, source, detectedAt }: Watch): Promise<Posting[]> {
       const since = detectedAt === null ? {} : { detectedAt: { gt: detectedAt } };
-      return z.array(POSTING_SCHEMA).parse(
+      return z.array(POSTING_READ_SCHEMA).parse(
         await prisma.posting.findMany({
           where: { candidateId, source, isInZone: false, ...since },
           include: POSTING_INCLUDE,
@@ -638,20 +676,20 @@ export function openDatabase(databasePath: string) {
 
     // A Posting is in the Zone as soon as it is in that of one of its Candidate's Watches
     async setInZone({ id }: Posting): Promise<Posting> {
-      return POSTING_SCHEMA.parse(
+      return POSTING_READ_SCHEMA.parse(
         await prisma.posting.update({ where: { id }, data: { isInZone: true }, include: POSTING_INCLUDE }),
       );
     },
 
     async findPostings(reference: string): Promise<Posting[]> {
       return z
-        .array(POSTING_SCHEMA)
+        .array(POSTING_READ_SCHEMA)
         .parse(await prisma.posting.findMany({ where: { reference }, include: POSTING_INCLUDE }));
     },
 
     async listUnlocatedPostings(): Promise<Posting[]> {
       return z
-        .array(POSTING_SCHEMA)
+        .array(POSTING_READ_SCHEMA)
         .parse(await prisma.posting.findMany({ where: { latitude: null }, include: POSTING_INCLUDE }));
     },
 
@@ -666,7 +704,7 @@ export function openDatabase(databasePath: string) {
     ) {
       const { deadline, employer, workplace, applicationEmail, contact1, contact2 } = jobDescription;
       const data = { title, deadline, employer, workplace, applicationEmail, contact1, contact2, ...location };
-      return POSTING_SCHEMA.parse(await prisma.posting.update({ where: { id }, data, include: POSTING_INCLUDE }));
+      return POSTING_READ_SCHEMA.parse(await prisma.posting.update({ where: { id }, data, include: POSTING_INCLUDE }));
     },
 
     async setStatus(posting: Posting, status: Status): Promise<void> {
@@ -684,6 +722,40 @@ export function openDatabase(databasePath: string) {
       await prisma.posting.update({ where: { id }, data: { notes } });
     },
 
+    // By date, the next round after the previous one
+    async listInterviews({ id }: Posting): Promise<Interview[]> {
+      return z
+        .array(INTERVIEW_SCHEMA)
+        .parse(await prisma.interview.findMany({ where: { postingId: id }, orderBy: INTERVIEW_ORDER_LIST }));
+    },
+
+    // Null when the Posting has no Interview with that number
+    async findInterview({ id }: Posting, number: number): Promise<Interview | null> {
+      return INTERVIEW_SCHEMA.nullable().parse(
+        await prisma.interview.findUnique({ where: { postingId_number: { postingId: id, number } } }),
+      );
+    },
+
+    // Numbered after the last Interview of its Posting, like a Version
+    async createInterview({ id }: Posting, fields: InterviewFields): Promise<void> {
+      await prisma.$transaction(async (transaction) => {
+        const { _max: max } = await transaction.interview.aggregate({
+          where: { postingId: id },
+          _max: { number: true },
+        });
+        await transaction.interview.create({ data: { ...fields, postingId: id, number: (max.number ?? 0) + 1 } });
+      });
+    },
+
+    // Each edit counts, so a calendar importing it again updates its event
+    async updateInterview({ id }: Interview, fields: InterviewFields): Promise<void> {
+      await prisma.interview.update({ where: { id }, data: { ...fields, editCount: { increment: 1 } } });
+    },
+
+    async deleteInterview({ id }: Interview): Promise<void> {
+      await prisma.interview.delete({ where: { id } });
+    },
+
     async createPosting({
       candidateId,
       source,
@@ -696,7 +768,7 @@ export function openDatabase(databasePath: string) {
       const { reference, title, url, publishedAt } = listedPosting;
       const { deadline, employer, workplace, applicationEmail, contact1, contact2 } = jobDescription;
       const data = { candidateId, source, reference, title, url, publishedAt, deadline, employer, workplace };
-      return POSTING_SCHEMA.parse(
+      return POSTING_READ_SCHEMA.parse(
         await prisma.posting.create({
           data: {
             ...data,

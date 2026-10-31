@@ -131,6 +131,16 @@ export const CLI_EN = {
   notesUsage: 'Usage: jf notes <posting> [replace]. “jf list <candidate>” lists the Postings.',
   typeNotes: 'Type or paste the Notes in Markdown, then Ctrl-D:\n',
   notesReplaced: 'Notes of {{reference}} saved.\n',
+  // jf interviews
+  interviewsDescription:
+    'Lists the Interviews of an Application by date, or adds, edits or deletes one, the start in Paris time: jf interviews <posting> [add | edit <number> | delete <number>] [--start 2026-11-19T14:00] [--duration <minutes>] [--place <place>] [--interviewers <text>]',
+  interviewsUsage:
+    'Usage: jf interviews <posting> [add --start 2026-11-19T14:00 | edit <number> | delete <number>] [--duration <minutes>] [--place <place>] [--interviewers <text>]. “jf interviews <posting>” lists the numbers.',
+  noInterview: 'No Interview for {{reference}}.\n',
+  interviewMinutes: '{{minutes}} min',
+  interviewAdded: 'Interview added to {{reference}}.\n',
+  interviewEdited: 'Interview {{number}} of {{reference}} saved.\n',
+  interviewDeleted: 'Interview {{number}} of {{reference}} deleted.\n',
 
   // The worker, in lpm logs worker
   workerReady: 'Worker ready: it runs the queued jobs, one at a time.\n',

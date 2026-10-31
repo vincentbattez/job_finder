@@ -20,12 +20,20 @@ type Posting = Awaited<ReturnType<Actions['listPostings']>>[number];
 type Recipients = Awaited<ReturnType<Actions['readRecipients']>>;
 type ModuleInstructions = Awaited<ReturnType<Actions['listInstructions']>>[number];
 
+// The fields of an Interview jf interviews takes as options, any left out keeping its value on an edit
+interface IInterviewOption {
+  start?: string | undefined;
+  durationMinutes?: string | undefined;
+  place?: string | undefined;
+  interviewers?: string | undefined;
+}
+
 interface ICommand {
   describe: (t: Cli) => string;
   run: (
     actions: Actions,
     argumentList: string[],
-    option: { isWaiting: boolean; isAutomation: boolean },
+    option: { isWaiting: boolean; isAutomation: boolean; interview: IInterviewOption },
   ) => Promise<void>;
 }
 
@@ -58,9 +66,9 @@ function formatAddress({ email, source }: Recipients['ccList'][number], t: Cli):
 
 function formatPosting(posting: Posting, t: Cli): string {
   const { repostOf, repostList, deadline } = posting;
-  // Expired and Archived beside the Status, which they leave as it is
+  // The Status as computed, then Expired and Archived beside it, which they leave as it is
   const statusLabelList = [
-    t(`statusLabelByStatus.${posting.status}`, { ns: 'common' }),
+    t(`statusLabelByStatus.${posting.step}`, { ns: 'common' }),
     ...(posting.isExpired ? [t('expired', { ns: 'common' })] : []),
     ...(posting.archivedAt === null ? [] : [t('archived', { ns: 'common' })]),
   ];
@@ -231,6 +239,25 @@ async function runInstructionsOperation(
     default: {
       throw codedError('unknown_operation', { operation }, { locale });
     }
+  }
+}
+
+// One line per Interview, by date: its number, its start in Paris, its duration, its place and its
+// Interviewers on one line
+async function printInterviews(actions: Actions, reference: string, t: Cli): Promise<void> {
+  const interviewList = await actions.listInterviews({ reference });
+  if (interviewList.length === 0) {
+    process.stdout.write(t('noInterview', { reference }));
+  }
+  for (const { number, startAt, durationMinutes, place, interviewers } of interviewList) {
+    const columnList = [
+      `#${String(number)}`,
+      t('dateTime', { ns: 'common', date: startAt }),
+      t('interviewMinutes', { minutes: durationMinutes }),
+      place === '' ? '—' : place,
+      interviewers === '' ? '—' : interviewers.replaceAll('\n', ' / '),
+    ];
+    process.stdout.write(`${columnList.join('\t')}\n`);
   }
 }
 
@@ -501,6 +528,40 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       process.stdout.write(t('notesReplaced', { reference }));
     },
   },
+  // Numbered per Posting, listed by date; the start is typed in Paris time, as on the front
+  interviews: {
+    describe: (t) => t('interviewsDescription'),
+    run: async (actions, [reference, operation, number], { interview }) => {
+      if (reference === undefined) {
+        throw codedError('interviews_usage');
+      }
+      const t = await cliOfPosting(actions, reference);
+      switch (operation) {
+        case undefined: {
+          await printInterviews(actions, reference, t);
+          return;
+        }
+        case 'add': {
+          await actions.addInterview({ reference, place: '', interviewers: '', ...interview });
+          process.stdout.write(t('interviewAdded', { reference }));
+          return;
+        }
+        case 'edit': {
+          await actions.editInterview({ reference, number, ...interview });
+          process.stdout.write(t('interviewEdited', { reference, number }));
+          return;
+        }
+        case 'delete': {
+          await actions.deleteInterview({ reference, number });
+          process.stdout.write(t('interviewDeleted', { reference, number }));
+          return;
+        }
+        default: {
+          throw codedError('interviews_usage');
+        }
+      }
+    },
+  },
   edit: {
     describe: (t) => t('editDescription'),
     run: async (actions, argumentList) => {
@@ -528,7 +589,16 @@ function composeHelp(t: Cli): string {
 
 async function run(): Promise<void> {
   const { values, positionals: positionalList } = parseArgs({
-    options: { help: { type: 'boolean', short: 'h' }, wait: { type: 'boolean' }, automation: { type: 'boolean' } },
+    options: {
+      help: { type: 'boolean', short: 'h' },
+      wait: { type: 'boolean' },
+      automation: { type: 'boolean' },
+      // The fields of an Interview, for jf interviews
+      start: { type: 'string' },
+      duration: { type: 'string' },
+      place: { type: 'string' },
+      interviewers: { type: 'string' },
+    },
     allowPositionals: true,
   });
   const [commandName, ...argumentList] = positionalList;
@@ -549,6 +619,15 @@ async function run(): Promise<void> {
   await command.run(actions, argumentList, {
     isWaiting: values.wait === true,
     isAutomation: values.automation === true,
+    // Only those given: an edit keeps the others
+    interview: Object.fromEntries(
+      Object.entries({
+        start: values.start,
+        durationMinutes: values.duration,
+        place: values.place,
+        interviewers: values.interviewers,
+      }).filter(([, value]) => value !== undefined),
+    ),
   });
 }
 

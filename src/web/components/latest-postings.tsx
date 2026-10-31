@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
-import type { Status } from './badge.tsx';
+import type { Step } from './badge.tsx';
 import { EmptyState } from './empty-state.tsx';
 import { PostingMap } from './posting-map.tsx';
 import { PostingTile, type IPostingTile } from './posting-tile.tsx';
@@ -10,7 +10,7 @@ import './latest-postings.css';
 
 // What a tile and a point of the map read of a Posting
 interface ILatestPosting extends IPostingTile {
-  status: Status;
+  step: Step;
   archivedAt: Date | null;
   latitude: number | null;
   longitude: number | null;

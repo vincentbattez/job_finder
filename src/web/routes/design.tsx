@@ -3,7 +3,7 @@ import type { LoaderFunctionArgs, MetaArgs } from 'react-router';
 
 import { localeOf, tFor } from '#/actions/i18n.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
-import { showStatus, STATE_LIST, StateBadge, StatusBadge, type Status } from '#/web/components/badge.tsx';
+import { showStatus, STATE_LIST, StateBadge, StatusBadge, type Step } from '#/web/components/badge.tsx';
 import { DetectionProgress, DetectionResult, type IRecordedDetection } from '#/web/components/detection.tsx';
 import { MarkdownEditor } from '#/web/components/markdown-editor.tsx';
 import { PostingDetail, type IPostingDetail } from '#/web/components/posting-detail.tsx';
@@ -19,7 +19,7 @@ const SAMPLE_POSTING = {
   url: 'https://example.org/postings/2026-0000101',
   workplace: 'Tribunal judiciaire de Béthune',
   employer: 'Cour d’appel de Douai',
-  status: 'to_apply',
+  step: 'to_apply',
   isExpired: false,
   archivedAt: null,
   publishedAt: new Date('2026-10-20'),
@@ -132,7 +132,7 @@ const SAMPLE_POSTING_LIST: IPostingRow[] = [
     title: 'Attaché de justice (F/H), parquet',
     url: 'https://example.org/postings/2026-0000102',
     workplace: 'Tribunal judiciaire de Boulogne-sur-Mer',
-    status: 'applied',
+    step: 'applied',
     isExpired: true,
     archivedAt: null,
     publishedAt: new Date('2026-09-25'),
@@ -143,7 +143,7 @@ const SAMPLE_POSTING_LIST: IPostingRow[] = [
     title: 'Attaché de justice (F/H), pôle mineurs',
     url: 'https://example.org/postings/2026-0000103',
     workplace: 'Tribunal judiciaire d’Avesnes-sur-Helpe',
-    status: 'to_apply',
+    step: 'to_apply',
     isExpired: true,
     archivedAt: null,
     publishedAt: new Date('2026-09-14'),
@@ -154,7 +154,7 @@ const SAMPLE_POSTING_LIST: IPostingRow[] = [
     title: 'Attaché de justice (F/H), service de l’application des peines',
     url: 'https://example.org/postings/2026-0000104',
     workplace: 'Tribunal judiciaire d’Amiens',
-    status: 'applied',
+    step: 'applied',
     isExpired: false,
     archivedAt: new Date('2026-10-28'),
     publishedAt: new Date('2026-09-30'),
@@ -235,13 +235,15 @@ const DETECTION_SAMPLE_LIST: { key: string; detection: IRecordedDetection }[] = 
 // cspell:enable
 
 // Each look of the badge: Expired shows in place of To Apply, Archived in place of the Status
-const STATUS_SAMPLE_LIST: { status: Status; isExpired: boolean; archivedAt: Date | null }[] = [
-  { status: 'to_apply', isExpired: false, archivedAt: null },
-  { status: 'applied', isExpired: false, archivedAt: null },
-  { status: 'hired', isExpired: false, archivedAt: null },
-  { status: 'rejected', isExpired: false, archivedAt: null },
-  { status: 'to_apply', isExpired: true, archivedAt: null },
-  { status: 'applied', isExpired: false, archivedAt: new Date('2026-10-28') },
+const STATUS_SAMPLE_LIST: { step: Step; isExpired: boolean; archivedAt: Date | null }[] = [
+  { step: 'to_apply', isExpired: false, archivedAt: null },
+  { step: 'applied', isExpired: false, archivedAt: null },
+  { step: 'invited', isExpired: false, archivedAt: null },
+  { step: 'interviewed', isExpired: false, archivedAt: null },
+  { step: 'hired', isExpired: false, archivedAt: null },
+  { step: 'rejected', isExpired: false, archivedAt: null },
+  { step: 'to_apply', isExpired: true, archivedAt: null },
+  { step: 'applied', isExpired: false, archivedAt: new Date('2026-10-28') },
 ];
 
 // The chrome of the page reads in the chosen Candidate's locale; the samples stay French Postings, as

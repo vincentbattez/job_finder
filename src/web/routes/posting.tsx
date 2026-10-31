@@ -7,6 +7,7 @@ import { PostingDetail } from '#/web/components/posting-detail.tsx';
 import { ArtifactVersions } from '#/web/containers/artifact-versions.tsx';
 import { ArchiveButton } from '#/web/containers/edition.tsx';
 import { ExtractionLaunch } from '#/web/containers/extraction-launch.tsx';
+import { Interviews } from '#/web/containers/interviews.tsx';
 import { Notes } from '#/web/containers/notes.tsx';
 import { OutcomeSelector } from '#/web/containers/outcome-selector.tsx';
 import { relayLoader } from '#/web/relay-action.server.ts';
@@ -40,6 +41,12 @@ export default function Posting() {
         {detail.extraction !== null && <ExtractionLaunch reference={detail.posting.reference} {...detail.extraction} />}
       </PostingDetail>
       <Notes reference={detail.posting.reference} notes={detail.posting.notes} />
+      <Interviews
+        reference={detail.posting.reference}
+        posting={detail.posting}
+        hasApplication={detail.hasApplication}
+        interviewList={detail.interviewList}
+      />
       {detail.artifactList.map((artifactVersions) => (
         <ArtifactVersions key={artifactVersions.artifact} reference={detail.posting.reference} {...artifactVersions} />
       ))}

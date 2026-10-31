@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
-import { StatusBadge, type Status } from './badge.tsx';
+import { StatusBadge, type Step } from './badge.tsx';
 import { DateText } from './date.tsx';
 import { EmptyState } from './empty-state.tsx';
 
@@ -13,7 +13,7 @@ export interface IPostingRow {
   title: string;
   url: string | null;
   workplace: string | null;
-  status: Status;
+  step: Step;
   isExpired: boolean;
   archivedAt: Date | null;
   publishedAt: Date | null;
@@ -61,7 +61,7 @@ export function PostingList({
               </div>
             </td>
             <td>
-              <StatusBadge status={posting.status} isExpired={posting.isExpired} archivedAt={posting.archivedAt} />
+              <StatusBadge step={posting.step} isExpired={posting.isExpired} archivedAt={posting.archivedAt} />
             </td>
             <td className="posting-list__date" data-column="publishedAt" data-label={t('publishedAtColumn')}>
               <DateText date={posting.publishedAt} />

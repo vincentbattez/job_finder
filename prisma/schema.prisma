@@ -96,8 +96,28 @@ model Posting {
   isInZone         Boolean
   versionList      Version[]
   jobList          Job[]
+  interviewList    Interview[]
 
   @@unique([candidateId, source, reference])
+}
+
+// An Interview of an Application, one per round, numbered per Posting like a Version. Only a Posting
+// that has an Application gets one; the Status reads them to show Invited or Interviewed (ADR-0009).
+model Interview {
+  id              Int      @id @default(autoincrement())
+  posting         Posting  @relation(fields: [postingId], references: [id])
+  postingId       Int
+  number          Int
+  startAt         DateTime
+  durationMinutes Int      @default(60)
+  // Free text, prefilled by the front with the place of work and the City of the Posting
+  place           String
+  // Free text: name, role, anything the Candidate knows of them
+  interviewers    String
+  // Grows at each edit: the SEQUENCE of its iCal event, so a calendar updates the event
+  editCount       Int      @default(0)
+
+  @@unique([postingId, number])
 }
 
 // Invited and Interviewed are computed from the Interviews, never stored (ADR-0009)

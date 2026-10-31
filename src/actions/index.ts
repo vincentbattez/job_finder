@@ -8,6 +8,7 @@ import { createEditionActions } from './edition.ts';
 import { createFactsActions } from './facts.ts';
 import { createImportActions } from './import-job-description.ts';
 import { createInstructionsActions } from './instructions.ts';
+import { createInterviewActions } from './interviews.ts';
 import { createJobActions } from './jobs.ts';
 import { createNotesActions } from './notes.ts';
 import { createNotificationChannelActions } from './notification-channel.ts';
@@ -37,6 +38,7 @@ export async function createActions(option: IActionsOption) {
     ...createImportActions(context),
     ...createStatusActions(context),
     ...createNotesActions(context),
+    ...createInterviewActions(context),
     ...createProfileActions(context),
     ...createUploadActions(context),
     ...createNotificationChannelActions(context),

@@ -207,6 +207,10 @@ await actions.changeStatus({ reference: '2026-2285305', status: 'applied' });
 // The Applications whose outcome e2e/edition.test.ts changes, one with JS and one without
 await actions.changeStatus({ reference: '2026-2448056', status: 'applied' });
 await actions.changeStatus({ reference: '2026-2448209', status: 'applied' });
+// The Applications whose Interviews e2e/interviews.test.ts adds, edits and deletes, one with JS and one
+// without
+await actions.changeStatus({ reference: '2026-2448213', status: 'applied' });
+await actions.changeStatus({ reference: '2026-2448215', status: 'applied' });
 await actions.archive({ reference: '2026-2290529' });
 
 // Emma reads the interface in English (e2e/locale.test.ts). Her one Posting, imported, keeps the name

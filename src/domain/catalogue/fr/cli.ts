@@ -120,6 +120,15 @@ export const CLI_FR: typeof CLI_EN = {
   notesUsage: 'Usage : jf notes <offre> [replace]. « jf list <candidat> » liste les Offres.',
   typeNotes: 'Tapez ou collez les Notes en Markdown, puis Ctrl-D :\n',
   notesReplaced: 'Notes de {{reference}} enregistrées.\n',
+  interviewsDescription:
+    "Liste les Entretiens d'une Candidature par date, ou en ajoute, modifie ou supprime un, le début à l'heure de Paris : jf interviews <offre> [add | edit <numéro> | delete <numéro>] [--start 2026-11-19T14:00] [--duration <minutes>] [--place <lieu>] [--interviewers <texte>]",
+  interviewsUsage:
+    'Usage : jf interviews <offre> [add --start 2026-11-19T14:00 | edit <numéro> | delete <numéro>] [--duration <minutes>] [--place <lieu>] [--interviewers <texte>]. « jf interviews <offre> » liste les numéros.',
+  noInterview: 'Aucun Entretien pour {{reference}}.\n',
+  interviewMinutes: '{{minutes}} min',
+  interviewAdded: 'Entretien ajouté à {{reference}}.\n',
+  interviewEdited: 'Entretien {{number}} de {{reference}} enregistré.\n',
+  interviewDeleted: 'Entretien {{number}} de {{reference}} supprimé.\n',
 
   workerReady: 'Worker prêt : il lance les jobs en file, un à la fois.\n',
   jobFailed: 'en échec : {{firstLine}}',

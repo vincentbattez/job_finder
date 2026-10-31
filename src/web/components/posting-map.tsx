@@ -3,14 +3,14 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
-import { showStatus, type Status } from './badge.tsx';
+import { showStatus, type Step } from './badge.tsx';
 
 import './posting-map.css';
 
 interface IMappedPosting {
   reference: string;
   title: string;
-  status: Status;
+  step: Step;
   isExpired: boolean;
   archivedAt: Date | null;
   latitude: number | null;

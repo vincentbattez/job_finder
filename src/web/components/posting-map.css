@@ -46,6 +46,8 @@
   }
 
   .posting-map__point[data-status='applied'],
+  .posting-map__point[data-status='invited'],
+  .posting-map__point[data-status='interviewed'],
   .posting-map__key[data-status='applied'] {
     --point: var(--color-status-applied);
   }

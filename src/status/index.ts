@@ -1,6 +1,6 @@
 import { tFor } from '#/domain/catalogue/i18n.ts';
 import { codedError } from '#/domain/coded-error.ts';
-import type { Locale, Posting, Status } from '#/domain/index.ts';
+import type { Interview, Locale, Posting, Status, Step } from '#/domain/index.ts';
 
 // What the status rules read of a Posting
 type PostingStatus = Pick<Posting, 'reference' | 'status' | 'appliedAt'>;
@@ -33,6 +33,26 @@ export function isExpired(
 ): boolean {
   const lastDay = findLastDay(posting, defaultDelayMonths);
   return lastDay !== undefined && FRANCE_DAY_FORMAT.format(now) > lastDay;
+}
+
+const MINUTE_MS = 60_000;
+
+// Taken place once its start plus its duration has passed: an Interview in progress is still to come
+function hasTakenPlace({ startAt, durationMinutes }: Pick<Interview, 'startAt' | 'durationMinutes'>, now: Date) {
+  return startAt.getTime() + durationMinutes * MINUTE_MS <= now.getTime();
+}
+
+// Computed, never stored, since it depends on the time (ADR-0009): an outcome wins over the Interviews,
+// and an Application with none stays Applied
+export function findStep(
+  { status }: Pick<Posting, 'status'>,
+  interviewList: readonly Pick<Interview, 'startAt' | 'durationMinutes'>[],
+  now: Date,
+): Step {
+  if (status !== 'applied' || interviewList.length === 0) {
+    return status;
+  }
+  return interviewList.every((interview) => hasTakenPlace(interview, now)) ? 'interviewed' : 'invited';
 }
 
 // Applied once, even if Archived since: the Candidate sent its Chosen Letter, and its Application

@@ -93,6 +93,29 @@ export const STATUS_SCHEMA = z.enum(['to_apply', 'applied', 'hired', 'rejected']
 
 export type Status = z.infer<typeof STATUS_SCHEMA>;
 
+// The Status as read: the stored one, Applied showing as Invited or Interviewed from its Interviews
+// (ADR-0009)
+const STEP_SCHEMA = z.enum(['to_apply', 'applied', 'invited', 'interviewed', 'hired', 'rejected']);
+
+export type Step = z.infer<typeof STEP_SCHEMA>;
+
+// An Interview of an Application, numbered per Posting like a Version. Its start is an instant, which the
+// Candidate types and reads in Paris time; editCount grows at each edit, so a calendar updates the event
+// rather than duplicating it.
+export const INTERVIEW_SCHEMA = z
+  .object({
+    id: z.int(),
+    number: z.int(),
+    startAt: z.date(),
+    durationMinutes: z.int().positive(),
+    place: z.string(),
+    interviewers: z.string(),
+    editCount: z.int(),
+  })
+  .brand<'Domain'>();
+
+export type Interview = z.infer<typeof INTERVIEW_SCHEMA>;
+
 // Another Posting of the Candidate, named by its reference
 const LINKED_POSTING_SCHEMA = z.object({ reference: z.string() });
 
@@ -114,6 +137,8 @@ export const POSTING_SCHEMA = z
     contact1: z.string().nullable(),
     contact2: z.string().nullable(),
     status: STATUS_SCHEMA,
+    // Computed on read from its Interviews and the time, never stored (ADR-0009)
+    step: STEP_SCHEMA,
     // When it was first marked Applied, null if never
     appliedAt: z.date().nullable(),
     // When its Status last changed, null if never
@@ -392,6 +417,9 @@ export const POSTING_DETAIL_SCHEMA = z
     posting: POSTING_SCHEMA,
     // What the outcome selector offers, beside the Status the Posting has
     statusChoiceList: z.array(STATUS_SCHEMA),
+    // Whether it has an Application, which alone gets Interviews; they come by date
+    hasApplication: z.boolean(),
+    interviewList: z.array(INTERVIEW_SCHEMA),
     jobDescription: z.string(),
     artifactList: z.array(ARTIFACT_VERSIONS_SCHEMA),
     recipients: RECIPIENTS_SCHEMA.nullable(),

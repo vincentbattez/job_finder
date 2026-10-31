@@ -92,6 +92,28 @@ export const POSTING_EN = {
     save: 'Save the Notes',
   },
 
+  // The Interviews of an Application, one per round, by date
+  interviews: {
+    heading: 'Interviews',
+    applyFirst: 'An Interview belongs to an Application: mark the Posting Applied to add one.',
+    noInterview: 'No Interview yet.',
+    title: 'Interview {{number}}',
+    start: 'Start',
+    duration: 'Duration (minutes)',
+    minutes: '{{minutes}} min',
+    place: 'Place',
+    interviewers: 'Interviewers',
+    interviewersPlaceholder: 'Name, role, what you know about them',
+    startPlaceholder: '2026-11-19T14:00',
+    placePlaceholder: 'Room 3 of the court, or by video',
+    newInterview: 'New Interview',
+    add: 'Add the Interview',
+    edit: 'Edit Interview {{number}}',
+    save: 'Save the Interview',
+    delete: 'Delete Interview {{number}}',
+    deleteForGood: 'Delete Interview {{number}} for good',
+  },
+
   // The tools of the Posting list: the Detection, the import, the filters and the map
   // The Detection beside the name of the list: the last one, then its progress while one runs (#63)
   detection: {

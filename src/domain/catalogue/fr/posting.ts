@@ -80,6 +80,27 @@ export const POSTING_FR: typeof POSTING_EN = {
     save: 'Enregistrer les Notes',
   },
 
+  interviews: {
+    heading: 'Entretiens',
+    applyFirst: 'Un Entretien appartient à une Candidature : marquer l’Offre Postulée pour en ajouter un.',
+    noInterview: 'Aucun Entretien pour l’instant.',
+    title: 'Entretien {{number}}',
+    start: 'Début',
+    duration: 'Durée (minutes)',
+    minutes: '{{minutes}} min',
+    place: 'Lieu',
+    interviewers: 'Interlocuteurs',
+    interviewersPlaceholder: 'Nom, fonction, ce que vous savez d’eux',
+    startPlaceholder: '2026-11-19T14:00',
+    placePlaceholder: 'Salle 3 du tribunal, ou en visioconférence',
+    newInterview: 'Nouvel Entretien',
+    add: 'Ajouter l’Entretien',
+    edit: 'Modifier l’Entretien {{number}}',
+    save: 'Enregistrer l’Entretien',
+    delete: 'Supprimer l’Entretien {{number}}',
+    deleteForGood: 'Supprimer définitivement l’Entretien {{number}}',
+  },
+
   detection: {
     run: 'Lancer une Détection',
     runAgain: 'La relancer',

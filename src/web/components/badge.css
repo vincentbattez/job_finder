@@ -20,7 +20,10 @@
     white-space: nowrap;
   }
 
-  .badge[data-status='applied'] {
+  /* Invited and Interviewed are In progress too: the tint of Applied, the label tells the step */
+  .badge[data-status='applied'],
+  .badge[data-status='invited'],
+  .badge[data-status='interviewed'] {
     --badge-ink: var(--color-status-applied);
     --badge-soft: var(--color-status-applied-soft);
   }
