@@ -13,6 +13,8 @@ concurrency:
 
 env:
   MISE_ENABLE_TOOLS: node
+  # The postinstall hook reinstalls node_modules on every mise install; in CI, npm ci does it
+  MISE_NO_HOOKS: 1
 
 # Three jobs side by side: the run lasts as long as the slowest, the end-to-end tests
 jobs:
@@ -36,17 +38,37 @@ jobs:
       - name: Vitest
         run: mise run test:unit
 
+  # Two shards once the e2e became the slowest job (#115): each VM seeds its own data folder and
+  # starts its own servers, so each shard has its own Detection lock (ADR-0014). Playwright shards
+  # by test under fullyParallel, a serial describe counting as one: the Detection group stays whole
   e2e:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ['1/2', '2/2']
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+      # The browser only changes with @playwright/test: keyed on its version, the cache survives
+      # a lockfile change that leaves Playwright alone
+      - name: Read the Playwright version
+        id: playwright
+        run: echo "version=$(jq -r .version node_modules/@playwright/test/package.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      # Headless, the tests only need Chromium's headless shell, not the full browser
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      # Headless, the tests only need Chromium's headless shell, not the full browser. No --with-deps:
+      # the runner already has every shared library, apt would only add fallback fonts (#111)
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps --only-shell chromium
+        run: npx playwright install --only-shell chromium
       - name: Playwright
-        run: mise run test:e2e
+        run: mise run test:e2e -- --shard=${{ matrix.shard }}
+      # The page snapshot and the trace of each failed test, to read a failure the log does not explain
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: playwright-test-results-${{ strategy.job-index }}
+          path: test-results/
+          if-no-files-found: ignore

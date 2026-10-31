@@ -1,13 +1,10 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type IFront } from './candidate.ts';
 
 // Emma reads the interface in English (test/seed-front.ts): her one Posting, imported, has no
 // Deadline
-test('shows the Posting list in English to a Candidate with the en locale', async ({ page }) => {
-  await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Emma');
-  await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Emma');
-  await page.goto('/postings');
+test('shows the Posting list in English to a Candidate with the en locale', async ({ page, asCandidate, openPage }) => {
+  await asCandidate('emma');
+  await openPage('/postings');
 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Postings');
   await expect(page).toHaveTitle('Postings · Job Finder');
@@ -24,15 +21,19 @@ test('shows the Posting list in English to a Candidate with the en locale', asyn
 });
 
 // Emma's pages are read, never changed: she is shared with the test above
-async function chooseEmma(page: Page) {
-  await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Emma');
-  await page.getByRole('button', { name: 'Choisir' }).click();
+// Her home, once asCandidate chose her
+async function openHomeOfEmma({ page, openPage }: IFront) {
+  await openPage('/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Emma');
 }
 
-test('shows the menu and the Profile in English to a Candidate with the en locale', async ({ page }) => {
-  await chooseEmma(page);
+test('shows the menu and the Profile in English to a Candidate with the en locale', async ({
+  page,
+  asCandidate,
+  openPage,
+}) => {
+  await asCandidate('emma');
+  await openHomeOfEmma({ page, openPage });
   await expect(page.getByRole('combobox', { name: 'Candidate' })).toHaveValue('emma');
   await expect(page.getByRole('button', { name: 'Choose' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Pages' }).getByRole('link')).toHaveText([
@@ -69,8 +70,13 @@ test('shows the menu and the Profile in English to a Candidate with the en local
   await expect(notifications.getByRole('button', { name: 'Send a test notification' })).toBeVisible();
 });
 
-test('shows the Instructions and the Candidates in English to a Candidate with the en locale', async ({ page }) => {
-  await chooseEmma(page);
+test('shows the Instructions and the Candidates in English to a Candidate with the en locale', async ({
+  page,
+  asCandidate,
+  openPage,
+}) => {
+  await asCandidate('emma');
+  await openHomeOfEmma({ page, openPage });
 
   await page.getByRole('link', { name: 'Instructions', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Instructions');
@@ -91,19 +97,21 @@ test('shows the Instructions and the Candidates in English to a Candidate with t
   ]);
 });
 
-test('shows the design page in English to a Candidate with the en locale', async ({ page }) => {
-  await chooseEmma(page);
-  await page.goto('/design');
+test('shows the design page in English to a Candidate with the en locale', async ({ page, asCandidate, openPage }) => {
+  await asCandidate('emma');
+  await openHomeOfEmma({ page, openPage });
+  await openPage('/design');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Design system');
   await expect(page).toHaveTitle('Job Finder design system');
 });
 
-test('shows the tools of the Posting list in English to a Candidate with the en locale', async ({ page }) => {
-  await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Emma');
-  await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Emma');
-  await page.goto('/postings');
+test('shows the tools of the Posting list in English to a Candidate with the en locale', async ({
+  page,
+  asCandidate,
+  openPage,
+}) => {
+  await asCandidate('emma');
+  await openPage('/postings');
 
   // A Detection another test runs hides the button behind its progress, in English too (ADR-0014)
   await expect(
@@ -125,12 +133,14 @@ test('shows the tools of the Posting list in English to a Candidate with the en 
 // Oliver reads the interface in English too, and owns the one Posting this test changes
 // (test/seed-front.ts): imported, its fields unread, with a Research. Archived then unarchived
 // back to To Apply, it ends as it started; Applied, which freezes its Letter, is only asked, then cancelled.
-test('takes a Candidate with the en locale through a Posting and its Status in English', async ({ page }) => {
-  await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Oliver');
-  await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Oliver');
-  await page.goto('/postings');
+test('takes a Candidate with the en locale through a Posting and its Status in English', async ({
+  page,
+  asCandidate,
+  openPage,
+}) => {
+  await asCandidate('oliver');
+  await openPage('/postings');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Oliver’s Postings');
   await page.getByRole('checkbox', { name: 'Show the Archived' }).check();
   await page.getByRole('button', { name: 'Filter' }).click();
   await page.getByRole('link', { name: 'registry-officer-douai.md' }).click();

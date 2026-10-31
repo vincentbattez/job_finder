@@ -1,14 +1,30 @@
 name: Setup
-description: Node through mise, then the npm dependencies from the npm cache
+description: Node through mise, then node_modules from the cache, or npm ci on a lockfile change
 
 runs:
   using: composite
   steps:
+    # No mise cache: restoring its 102 MB took longer than installing Node, and a new entry per
+    # mise.toml edit was filling the repo's cache quota (#114)
     - uses: jdx/mise-action@v5
-    - uses: actions/cache@v6
       with:
-        path: ~/.npm
-        key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-        restore-keys: npm-${{ runner.os }}-
-    - run: npm ci
+        cache: false
+    - id: node
+      run: echo "version=$(node --version)" >> "$GITHUB_OUTPUT"
+      shell: bash
+    # node_modules itself, not ~/.npm: with the npm cache alone, npm ci still took 45-55 s per job.
+    # better-sqlite3 is native, so the Node version is in the key; no restore-keys, a partial
+    # node_modules would make npm ci start over anyway
+    - id: node-modules
+      uses: actions/cache@v6
+      with:
+        path: node_modules
+        key: node-modules-${{ runner.os }}-${{ steps.node.outputs.version }}-${{ hashFiles('package-lock.json') }}
+    - if: steps.node-modules.outputs.cache-hit != 'true'
+      run: npm ci --no-audit --no-fund
+      shell: bash
+    # The Prisma client lives in src/workspace/generated, outside git and node_modules (ADR-0004):
+    # npm ci generates it through postinstall, a cache hit has to
+    - if: steps.node-modules.outputs.cache-hit == 'true'
+      run: mise run db:generate
       shell: bash

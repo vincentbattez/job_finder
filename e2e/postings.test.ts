@@ -1,5 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
+import { expect, test } from './candidate.ts';
 import { findOverflowing } from './overflow.ts';
 
 // The front runs on the data that test/seed-front.ts made through the actions, with the HTTP of
@@ -7,7 +8,8 @@ import { findOverflowing } from './overflow.ts';
 // no Watch
 const BETHUNE_TITLE = 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE';
 
-// The menu leads to the home of the Candidate chosen, then their Postings open at /postings
+// The menu leads to the home of the Candidate chosen, then their Postings open at /postings: the two
+// tests of the menu go through it, the others choose with asCandidate
 async function chooseCandidate(page: Page, name: string) {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption(name);
@@ -45,8 +47,9 @@ test.describe('Postings of a Candidate', () => {
     await expect(page.getByText('Aucune Offre pour l’instant')).toBeVisible();
   });
 
-  test('opens a Posting with its Job Description and its raw contacts', async ({ page }) => {
-    await chooseCandidate(page, 'Léa');
+  test('opens a Posting with its Job Description and its raw contacts', async ({ page, asCandidate, openPage }) => {
+    await asCandidate('lea');
+    await openPage('/postings');
 
     await page.getByRole('link', { name: BETHUNE_TITLE }).click();
 
@@ -119,14 +122,15 @@ test.describe('Postings of a Candidate', () => {
     await expect(page.getByRole('region', { name: 'Fiche d’entretien' }).getByRole('code')).toHaveCount(0);
   });
 
-  test('fits a phone screen, the list as the Posting page', async ({ page }) => {
+  test('fits a phone screen, the list as the Posting page', async ({ page, asCandidate, openPage }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await chooseCandidate(page, 'Léa');
+    await asCandidate('lea');
+    await openPage('/postings');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Léa');
 
     await expect.poll(() => findOverflowing(page)).toEqual([]);
 
-    await page.goto('/postings/2026-2445600');
+    await openPage('/postings/2026-2445600');
     await page.locator('li > details > summary', { hasText: 'v2' }).click();
     await page.getByText('Lire la Fiche de poste').click();
 

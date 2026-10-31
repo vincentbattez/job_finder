@@ -99,9 +99,21 @@ export default defineConfig(
     rules: { 'no-restricted-exports': 'off' },
   },
   {
+    // A fixture project runs in a Vitest of its own, which loads its config through a default
+    // export; it reaches the reporter it exercises through its parent folders, test/ having no alias
+    files: ['test/fixtures/*/vitest.config.ts'],
+    rules: { 'no-restricted-exports': 'off', 'no-restricted-imports': 'off' },
+  },
+  {
     // Claude Code is installed by the user, not by the repo, so its launcher finds it on the PATH
     files: ['src/ai-session/acl/claude-code.ts'],
     rules: { 'sonarjs/no-os-command-from-path': 'off' },
+  },
+  {
+    // The global setup points TMPDIR at a root it has just made with mkdtemp (mode 0700), so only
+    // its run writes there: not a publicly writable folder
+    files: ['test/global-setup.ts'],
+    rules: { 'sonarjs/publicly-writable-directories': 'off' },
   },
   {
     // Over plain http on the LAN (ADR-0002) the Clipboard API is withheld: copying goes through the

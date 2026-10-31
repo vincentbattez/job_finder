@@ -1,19 +1,21 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type IFront } from './candidate.ts';
 
 // Sacha's Instructions are the ones these tests change; test/seed-front.ts leaves them to the default
 // ones. Léa's Posting 2026-2409247 has a Research made with the default Instructions, then one with hers.
-async function openInstructionsOfSacha(page: Page) {
-  await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Sacha');
-  await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Sacha');
-  await page.getByRole('link', { name: 'Consignes', exact: true }).click();
+// Sacha's, once asCandidate chose him
+async function openInstructionsOfSacha({ page, openPage }: IFront) {
+  await openPage('/instructions');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Consignes de Sacha');
 }
 
 test.describe('Instructions of a Candidate', () => {
-  test('shows the default Instructions of each module, and never the fixed part as editable', async ({ page }) => {
-    await openInstructionsOfSacha(page);
+  test('shows the default Instructions of each module, and never the fixed part as editable', async ({
+    page,
+    asCandidate,
+    openPage,
+  }) => {
+    await asCandidate('sacha');
+    await openInstructionsOfSacha({ page, openPage });
 
     await expect(page.getByRole('heading', { level: 2 })).toHaveText([
       'Recherche',
@@ -35,8 +37,11 @@ test.describe('Instructions of a Candidate', () => {
 
   test('creates the Candidate’s own Instructions, modifies them, then deletes them for the default ones', async ({
     page,
+    asCandidate,
+    openPage,
   }) => {
-    await openInstructionsOfSacha(page);
+    await asCandidate('sacha');
+    await openInstructionsOfSacha({ page, openPage });
     const letter = page.getByRole('region', { name: 'Lettre' });
 
     await letter.getByRole('textbox').fill('Une lettre courte, au ton direct.\n');

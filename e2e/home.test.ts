@@ -1,15 +1,15 @@
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
+import { expect, test, type IFront } from './candidate.ts';
 import { findOverflowing } from './overflow.ts';
 
 // test/seed-front.ts gives Léa the 9 To Apply Postings of her Zone, the courts of appeal of Douai and
 // Amiens, from one Detection; no e2e test changes them. Camille has no Watch, hence no Posting.
 const BETHUNE_TITLE = 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE';
 
-async function chooseCandidate(page: Page, name: string) {
-  await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption(name);
-  await page.getByRole('button', { name: 'Choisir' }).click();
+// The home of the Candidate asCandidate chose
+async function openHomeOf({ page, openPage }: IFront, name: string) {
+  await openPage('/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Bonjour ${name}`);
 }
 
@@ -39,9 +39,14 @@ async function putBackInProgress(page: Page, reference: string) {
 }
 
 test.describe('Applications in progress', () => {
-  test('shows each one with its next Interview and its Notes, and none Archived or To Apply', async ({ page }) => {
+  test('shows each one with its next Interview and its Notes, and none Archived or To Apply', async ({
+    page,
+    asCandidate,
+    openPage,
+  }) => {
     await putBackInProgress(page, APPLICATION_REFERENCE);
-    await chooseCandidate(page, 'Léa');
+    await asCandidate('lea');
+    await openHomeOf({ page, openPage }, 'Léa');
 
     const row = findApplicationRow(page, APPLICATION_REFERENCE);
     await expect(row.locator('.badge')).toHaveText('Convoquée');
@@ -60,9 +65,10 @@ test.describe('Applications in progress', () => {
     await expect(section.locator('a[href="/postings/2026-2445600"]')).toHaveCount(0);
   });
 
-  test('marks an Application Rejected from its row, which leaves the home', async ({ page }) => {
+  test('marks an Application Rejected from its row, which leaves the home', async ({ page, asCandidate, openPage }) => {
     await putBackInProgress(page, APPLICATION_REFERENCE);
-    await chooseCandidate(page, 'Léa');
+    await asCandidate('lea');
+    await openHomeOf({ page, openPage }, 'Léa');
     const row = findApplicationRow(page, APPLICATION_REFERENCE);
 
     await row.getByRole('button', { name: 'Refusée' }).click();
@@ -74,9 +80,14 @@ test.describe('Applications in progress', () => {
   test.describe('before React runs', () => {
     test.use({ javaScriptEnabled: false });
 
-    test('marks an Application Hired from its row through a plain form, back on the home', async ({ page }) => {
+    test('marks an Application Hired from its row through a plain form, back on the home', async ({
+      page,
+      asCandidate,
+      openPage,
+    }) => {
       await putBackInProgress(page, APPLICATION_WITHOUT_JS_REFERENCE);
-      await chooseCandidate(page, 'Léa');
+      await asCandidate('lea');
+      await openHomeOf({ page, openPage }, 'Léa');
 
       await findApplicationRow(page, APPLICATION_WITHOUT_JS_REFERENCE).getByRole('button', { name: 'Obtenue' }).click();
 
@@ -93,8 +104,13 @@ test.describe('home', () => {
     await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
   });
 
-  test('shows the 6 latest Postings of the Zone as tiles, and the same ones on the map', async ({ page }) => {
-    await chooseCandidate(page, 'Léa');
+  test('shows the 6 latest Postings of the Zone as tiles, and the same ones on the map', async ({
+    page,
+    asCandidate,
+    openPage,
+  }) => {
+    await asCandidate('lea');
+    await openHomeOf({ page, openPage }, 'Léa');
 
     const latestPostings = findLatestPostings(page);
     const tileList = latestPostings.getByRole('article');
@@ -108,8 +124,9 @@ test.describe('home', () => {
     await expect(bethune.getByText('Expirée')).toHaveCount(0);
   });
 
-  test('leads to every Posting, from the home and from the menu', async ({ page }) => {
-    await chooseCandidate(page, 'Léa');
+  test('leads to every Posting, from the home and from the menu', async ({ page, asCandidate, openPage }) => {
+    await asCandidate('lea');
+    await openHomeOf({ page, openPage }, 'Léa');
 
     await findLatestPostings(page).getByRole('link', { name: 'Toutes les Offres' }).click();
     await expect(page).toHaveURL('/postings');
@@ -121,17 +138,19 @@ test.describe('home', () => {
     await expect(page).toHaveURL('/postings');
   });
 
-  test('says when no Posting arrived in the Zone yet', async ({ page }) => {
-    await chooseCandidate(page, 'Camille');
+  test('says when no Posting arrived in the Zone yet', async ({ page, asCandidate, openPage }) => {
+    await asCandidate('camille');
+    await openHomeOf({ page, openPage }, 'Camille');
 
     await expect(findLatestPostings(page).getByRole('article')).toHaveCount(0);
     await expect(findLatestPostings(page)).toContainText('Aucune Offre à traiter dans votre Zone pour l’instant');
     await expect(findApplicationsInProgress(page)).toContainText('Aucune Candidature en cours');
   });
 
-  test('fits a phone screen', async ({ page }) => {
+  test('fits a phone screen', async ({ page, asCandidate, openPage }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await chooseCandidate(page, 'Léa');
+    await asCandidate('lea');
+    await openHomeOf({ page, openPage }, 'Léa');
     await expect(findLatestPostings(page).getByRole('article')).toHaveCount(6);
 
     await expect.poll(() => findOverflowing(page)).toEqual([]);

@@ -1,5 +1,7 @@
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { z } from 'zod/v4';
+
+import { expect, test } from './candidate.ts';
 
 // Where the fake Home Assistant of playwright.config.ts listens, and the only token it accepts
 function readFakeHomeAssistant() {
@@ -20,13 +22,10 @@ async function readZoeNotifications(page: Page) {
 }
 
 // Each test changes the Notification Channel of a Candidate of its own (test/seed-front.ts), and
-// passes whatever an earlier run left there
+// passes whatever an earlier run left there; asCandidate chose them first
 async function openNotificationsOf(page: Page, name: string) {
-  await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption(name);
-  await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Bonjour ${name}`);
-  await page.getByRole('link', { name: 'Profil', exact: true }).click();
+  await page.goto('/profile');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Profil de ${name}`);
   const notifications = page.getByRole('region', { name: 'Notifications' });
   // Disabled until React hydrates: a click before would go nowhere
   await expect(notifications.getByRole('button', { name: 'Tester le Canal' })).toBeEnabled();
@@ -36,7 +35,10 @@ async function openNotificationsOf(page: Page, name: string) {
 
 // The generic form of the family, built from the descriptor of the module home-assistant (ADR-0010)
 test.describe('Notification Channel of a Candidate', () => {
-  test('tests, lists, saves and notifies through Home Assistant, and never sends the token back', async ({ page }) => {
+  test('tests, lists, saves and notifies through Home Assistant, and never sends the token back', async ({
+    page,
+    asCandidate,
+  }) => {
     const { homeAssistantUrl, homeAssistantToken } = readFakeHomeAssistant();
     // Everything the server answers the page: its loaders and its fetchers
     const responseList: string[] = [];
@@ -47,6 +49,7 @@ test.describe('Notification Channel of a Candidate', () => {
         // A redirect has no body to read
       }
     });
+    await asCandidate('zoe');
     const notifications = await openNotificationsOf(page, 'Zoé');
 
     await notifications.getByRole('textbox', { name: 'Adresse de Home Assistant' }).fill(homeAssistantUrl);
@@ -99,8 +102,9 @@ test.describe('Notification Channel of a Candidate', () => {
     await expect(notifications.getByText('configuré ✓')).toBeVisible();
   });
 
-  test('says Home Assistant refused a wrong token, and saves nothing', async ({ page }) => {
+  test('says Home Assistant refused a wrong token, and saves nothing', async ({ page, asCandidate }) => {
     const { homeAssistantUrl } = readFakeHomeAssistant();
+    await asCandidate('yanis');
     const notifications = await openNotificationsOf(page, 'Yanis');
     // No test saves Yanis's Channel; compared to what it was, so a run cut short leaves nothing to undo
     const address = notifications.getByRole('textbox', { name: 'Adresse de Home Assistant' });

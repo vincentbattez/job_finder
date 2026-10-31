@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './candidate.ts';
 
 // The fake Claude of test/e2e-actions.server.ts extracts this Job Description, in Grenoble
 const JOB_DESCRIPTION = readFileSync(
@@ -22,14 +22,14 @@ const CANDIDATE_NAME = 'Hugo';
 
 test('imports a Job Description dropped on the Postings: it shows at once, then the worker reads its fields and runs its Research', async ({
   page,
+  asCandidate,
+  openPage,
 }) => {
   // The tiles of the map come from OpenStreetMap over the internet: its points show without them
   await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
-  await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption(CANDIDATE_NAME);
-  await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Bonjour ${CANDIDATE_NAME}`);
-  await page.goto('/postings');
+  await asCandidate('hugo');
+  await openPage('/postings');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Offres de ${CANDIDATE_NAME}`);
   // The drop needs React, which enables the field once it runs
   await expect(page.getByLabel('Importer une Fiche de poste')).toBeEnabled();
 

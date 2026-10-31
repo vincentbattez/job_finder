@@ -44,7 +44,15 @@ export default defineConfig({
   // The GitHub runner has 2 vCPUs, so Playwright's default of half the cores ran the tests one at a
   // time; they mostly wait on the front, so two side by side fit
   ...(process.env.CI !== undefined && { workers: 2 }),
-  use: { baseURL: BASE_URL },
+  use: {
+    baseURL: BASE_URL,
+    // src/web/root.tsx loads its fonts from Google Fonts, the only network dependency of these tests,
+    // which run without network (CODING_STANDARDS, Tests). Chromium resolves both hosts to nothing: the
+    // pages render on the fallback fonts and the run loses 7 to 9 % of its duration (#113)
+    launchOptions: {
+      args: ['--host-resolver-rules=MAP fonts.googleapis.com ~NOTFOUND, MAP fonts.gstatic.com ~NOTFOUND'],
+    },
+  },
   // How a test reaches the fake Home Assistant, to read the notifications it received or save its
   // token in a Notification Channel (e2e/notifications.test.ts), and the data
   // folder, to put back the Profile it changes (e2e/profile.test.ts)
@@ -67,6 +75,8 @@ export default defineConfig({
       url: `${BASE_URL}/design`,
       // A server already running on the port may read data/: always start the one seeded above
       reuseExistingServer: false,
+      // In CI the dev server's log goes to the job's: it says when Vite re-optimizes and reloads
+      ...(process.env.CI !== undefined && { stdout: 'pipe' as const }),
     },
     {
       // The worker, in its own process like the lpm service: it runs the jobs the front queues,

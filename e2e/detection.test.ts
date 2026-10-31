@@ -1,8 +1,9 @@
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-import { expect, test, type Page } from '@playwright/test';
 import { z } from 'zod/v4';
+
+import { expect, test, type IFront } from './candidate.ts';
 
 // A single Detection runs at a time, whoever starts it (ADR-0014): these tests run one after the other,
 // each on Candidates of its own, which no other test file detects. They follow the slow fake Source
@@ -13,13 +14,12 @@ test.describe.configure({ mode: 'serial' });
 
 // The slow Source searches for 1.5 s, then reads 81 Job Descriptions; the page reads it every 2 s
 const VERDICT_TIMEOUT_MS = 30_000;
+// How long a raw write of these tests waits for the server's own writes to release the database
+const BUSY_TIMEOUT_MS = 5000;
 
-async function choose(page: Page, candidateName: string) {
-  await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption(candidateName);
-  await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Bonjour ${candidateName}`);
-  await page.goto('/postings');
+// The Postings of the Candidate asCandidate chose
+async function openPostingsOf({ page, openPage }: IFront, candidateName: string) {
+  await openPage('/postings');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Offres de ${candidateName}`);
 }
 
@@ -27,13 +27,20 @@ async function choose(page: Page, candidateName: string) {
 // database, as the Profile form resets it only when the Parameters change.
 function restartFirstLaunch(watchId: string) {
   const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
-  const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'));
+  // The dev server and the worker write to this database too, and the previous test's Detection may
+  // still be committing: without a busy timeout, SQLite answers "database is locked" at once
+  const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
   database.prepare('UPDATE "Watch" SET "detectedAt" = NULL WHERE "id" = ?').run(watchId);
   database.close();
 }
 
-test('shows the last Detection on landing, then a Detection of no new Posting as a titled block', async ({ page }) => {
-  await choose(page, 'Lou');
+test('shows the last Detection on landing, then a Detection of no new Posting as a titled block', async ({
+  page,
+  asCandidate,
+  openPage,
+}) => {
+  await asCandidate('lou');
+  await openPostingsOf({ page, openPage }, 'Lou');
   await expect(page.getByText('Dernière Détection')).toBeVisible();
 
   await page.getByRole('button', { name: 'Lancer une Détection' }).click();
@@ -56,9 +63,12 @@ test('shows the last Detection on landing, then a Detection of no new Posting as
 
 test('shows the progress of a first launch, after a reload too, then what it imported in one screen', async ({
   page,
+  asCandidate,
+  openPage,
 }) => {
   restartFirstLaunch('iris-1');
-  await choose(page, 'Iris');
+  await asCandidate('iris');
+  await openPostingsOf({ page, openPage }, 'Iris');
 
   await page.getByRole('button', { name: 'Lancer une Détection' }).click();
 
@@ -84,8 +94,9 @@ test('shows the progress of a first launch, after a reload too, then what it imp
   expect(resultBox?.height ?? Infinity).toBeLessThanOrEqual(viewportHeight);
 });
 
-test('names the first new Postings and marks them all New in the list', async ({ page }) => {
-  await choose(page, 'Jules');
+test('names the first new Postings and marks them all New in the list', async ({ page, asCandidate, openPage }) => {
+  await asCandidate('jules');
+  await openPostingsOf({ page, openPage }, 'Jules');
 
   await page.getByRole('button', { name: 'Lancer une Détection' }).click();
 
@@ -100,8 +111,13 @@ test('names the first new Postings and marks them all New in the list', async ({
   await expect(page.locator('#posting-list').getByText('Nouvelle', { exact: true })).toHaveCount(81);
 });
 
-test('tells a failure, what was done before it, and offers to run it again', async ({ page }) => {
-  await choose(page, 'Théo');
+test('tells a failure, what was done before it, and offers to run it again', async ({
+  page,
+  asCandidate,
+  openPage,
+}) => {
+  await asCandidate('theo');
+  await openPostingsOf({ page, openPage }, 'Théo');
   // Left over by an earlier run: the button runs it again
   await page.getByRole('button', { name: /Lancer une Détection|La relancer/ }).click();
 
@@ -115,12 +131,19 @@ test('tells a failure, what was done before it, and offers to run it again', asy
   await expect(page.getByRole('button', { name: 'La relancer' })).toBeVisible();
 });
 
-test('shows a Detection of another Candidate running, without letting a second one start', async ({ page }) => {
-  await choose(page, 'Iris');
+test('shows a Detection of another Candidate running, without letting a second one start', async ({
+  page,
+  asCandidate,
+  openPage,
+}) => {
+  await asCandidate('iris');
+  await openPostingsOf({ page, openPage }, 'Iris');
   await page.getByRole('button', { name: 'Lancer une Détection' }).click();
   await expect(page.getByRole('region', { name: 'Détection en cours' })).toBeVisible();
 
-  await choose(page, 'Lou');
+  await asCandidate('lou');
+
+  await openPostingsOf({ page, openPage }, 'Lou');
 
   const progress = page.getByRole('region', { name: 'Détection en cours' });
   await expect(progress).toContainText('Une Détection cherche dans les Veilles d’un autre Candidat');

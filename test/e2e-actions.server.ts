@@ -7,7 +7,7 @@ import { SOURCE_LIST } from '#/actions/modules.ts';
 import type { IHeadlessSession } from '#/ai-session/acl/claude-code.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createSlowSource } from './fake-slow-source.ts';
+import { defineSlowSource } from './fake-slow-source.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
 // In the e2e tests, vite.config.ts serves this module in place of src/web/acl/actions.server.ts, and
@@ -75,6 +75,8 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
 
 // Long enough for the front to show the Artifact in progress before it is ready
 const SESSION_DURATION_MS = 1000;
+// Long enough for the front to show each step of a Detection's progress, short enough for an e2e test
+const SLOW_SOURCE_DELAYS = { searchMs: 1500, readMs: 60 };
 
 // A session's module is the Artifact its Version folder belongs to: <posting>/<artifact>/v<n>, or
 // <posting>/interviews/<number>/<artifact>/v<n> for an Artifact of an Interview. The
@@ -103,5 +105,5 @@ export const ACTIONS = await createActions({
   aiSession,
   fetch: createRecordedFetch().fetch,
   // The slow fake Source beside the registry: the Watches of e2e/detection.test.ts follow it
-  sourceFactoryList: [...SOURCE_LIST, createSlowSource],
+  sourceFactoryList: [...SOURCE_LIST, defineSlowSource(SLOW_SOURCE_DELAYS)],
 });
