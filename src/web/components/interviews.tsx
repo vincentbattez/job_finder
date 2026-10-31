@@ -1,6 +1,8 @@
 import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { Actions } from '#/actions/index.ts';
+import { DEFAULT_DURATION_MINUTES } from '#/actions/interview-duration.ts';
 import { parisDateTimeOf } from '#/actions/paris-time.ts';
 
 import { ButtonRow } from './button-row.tsx';
@@ -9,15 +11,9 @@ import { IcalButton } from './ical-button.tsx';
 
 import './interviews.css';
 
-// An Interview as the actions give it, its start an instant read in Paris time
-interface IInterview {
-  number: number;
-  startAt: Date;
-  durationMinutes: number;
-  place: string;
-  interviewers: string;
-  editCount: number;
-}
+// An Interview as the actions give it to the Posting page, its start an instant read in Paris time; its
+// Artifacts are laid out by its Container
+type Interview = Omit<Awaited<ReturnType<Actions['readPosting']>>['interviewList'][number], 'artifactList'>;
 
 // The form of the section its Container posts, under a key telling it apart; it lays out the fields
 // with the refusal of the action, if any
@@ -25,9 +21,6 @@ type FormRenderer = (formKey: string, renderFieldList: (error: string | null | u
 
 // The Artifacts of an Interview, its Interview Brief and its Visualization, which its Container lays out
 type ArtifactsRenderer = (interviewNumber: number) => ReactNode;
-
-// The duration the action gives an Interview when none is typed: the field starts on it
-const DEFAULT_DURATION_MINUTES = 60;
 
 // Where an Interview most often takes place: the place of work, then its City when it does not name it
 function defaultPlaceOf({ workplace, city }: Readonly<{ workplace: string | null; city: string | null }>): string {
@@ -42,7 +35,7 @@ function InterviewFields({
   error,
 }: Readonly<{
   intent: 'add' | 'edit';
-  interview: IInterview | null;
+  interview: Interview | null;
   defaultPlace: string;
   error: string | null | undefined;
 }>) {
@@ -108,7 +101,7 @@ function InterviewItem({
   renderArtifacts,
 }: Readonly<{
   reference: string;
-  interview: IInterview;
+  interview: Interview;
   renderForm: FormRenderer;
   renderArtifacts: ArtifactsRenderer;
 }>) {
@@ -167,7 +160,7 @@ export function Interviews({
 }: Readonly<{
   posting: { reference: string; workplace: string | null; city: string | null };
   hasApplication: boolean;
-  interviewList: IInterview[];
+  interviewList: Interview[];
   renderForm: FormRenderer;
   renderArtifacts: ArtifactsRenderer;
 }>) {

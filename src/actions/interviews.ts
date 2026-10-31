@@ -11,16 +11,14 @@ import {
   type Posting,
   type Version,
 } from '#/domain/index.ts';
+import { DEFAULT_DURATION_MINUTES } from '#/domain/interview-duration.ts';
 import { interviewSectionIdOf } from '#/domain/interview-section.ts';
 import { dateOfParisDateTime } from '#/domain/paris-time.ts';
 import { formatCalendar } from '#/ical/index.ts';
-import { hasBeenApplied } from '#/status/index.ts';
+import { findInterviewEnd, hasBeenApplied } from '#/status/index.ts';
 
 import { REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
 import { findChosenVersion } from './run-job.ts';
-
-// An hour, unless the Candidate says otherwise
-const DEFAULT_DURATION_MINUTES = 60;
 
 // Typed in Paris time, as a datetime-local field or the CLI gives it: « 2026-11-19T14:00 »
 const START_SCHEMA = z
@@ -53,8 +51,6 @@ const ICAL_INPUT_SCHEMA = INTERVIEW_INPUT_SCHEMA.extend({ origin: z.url().transf
 // The sections of the Posting page to review before the Interview, by their anchor: those of the Posting,
 // then the Interview Brief of the Interview, in its section
 const REVIEWED_ARTIFACT_LIST = ['research', 'letter'] as const;
-
-const MINUTE_MS = 60_000;
 
 // What the Candidate reviews from their phone before the Interview: the official ad, if the Posting has
 // one, then the Posting page and its sections, and the page of the Chosen Visualization of the Interview
@@ -144,7 +140,7 @@ export function createInterviewActions({ workspace, findPosting, findLocale }: A
         uid: `interview-${String(interview.id)}@job-finder`,
         sequence: interview.editCount,
         startAt: interview.startAt,
-        endAt: new Date(interview.startAt.getTime() + interview.durationMinutes * MINUTE_MS),
+        endAt: findInterviewEnd(interview),
         summary: summarize(posting, locale),
         location: interview.place,
         description: describeLinks(
@@ -165,7 +161,7 @@ export function createInterviewActions({ workspace, findPosting, findLocale }: A
       });
     },
 
-    // With its Artifacts: their Versions, their jobs and their files (spec #45, story 24)
+    // With its Artifacts: their Versions, their jobs and their files, which belong to it alone
     async deleteInterview(rawInput: unknown): Promise<void> {
       const { posting, interview } = await findInterview(rawInput);
       await workspace.deleteInterview(posting, interview);

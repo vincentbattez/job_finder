@@ -1,13 +1,9 @@
-import { z } from 'zod/v4';
-
 import { STATUS_SCHEMA } from '#/domain/index.ts';
 import { assertStatusChange } from '#/status/index.ts';
 
-import type { ActionContext } from './context.ts';
+import { REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
 
-const STATUS_INPUT_SCHEMA = z.object({ reference: z.string(), status: STATUS_SCHEMA });
-
-const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
+const STATUS_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({ status: STATUS_SCHEMA });
 
 export function createStatusActions({ workspace, findPosting, findLocale }: ActionContext) {
   return {

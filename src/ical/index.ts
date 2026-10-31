@@ -82,7 +82,7 @@ function foldLine(line: string): string {
   return partList.join('\r\n ');
 }
 
-// An iCal file of one event, written by hand since the format is simple (spec #45): a day-before
+// An iCal file of one event, written by hand since the format is simple enough to spare a dependency: a day-before
 // alarm, which Apple Calendar honors and Google Calendar replaces with its own reminders
 export function formatCalendar(event: ICalendarEvent): string {
   const lineList = [

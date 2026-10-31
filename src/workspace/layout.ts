@@ -47,9 +47,9 @@ const LAYOUT_STEP_LIST: ILayoutStep[] = [
   },
 ];
 
-// The Interview Brief and the Visualization of a Posting, which the migration of spec #45 deleted
-// from the database: they belong to an Interview now, in its own folder (#52). The step can go once
-// every data/ is migrated.
+// The Interview Brief and the Visualization of a Posting, which the migration version_interview deleted
+// from the database: they belong to an Interview now, in its own folder. The step can go once every
+// data/ is migrated.
 const OBSOLETE_ENTRY_LIST = ['candidates/*/postings/*/interview_brief', 'candidates/*/postings/*/visualization'];
 
 // The names of a folder a segment of a step matches, each with what its `*` stands for

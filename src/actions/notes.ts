@@ -1,8 +1,8 @@
 import { z } from 'zod/v4';
 
-import type { ActionContext } from './context.ts';
+import { REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
 
-const NOTES_INPUT_SCHEMA = z.object({ reference: z.string(), notes: z.string() });
+const NOTES_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({ notes: z.string() });
 
 export function createNotesActions({ workspace, findPosting }: ActionContext) {
   return {
