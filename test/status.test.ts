@@ -58,71 +58,91 @@ describe('status of a Posting', () => {
     ]);
   });
 
-  it('archives a Posting', async () => {
-    await actions.changeStatus({ reference: '2026-2445609', status: 'archived' });
+  // Archived is a mark beside the Status, never a Status (ADR-0007)
+  it('archives a To Apply Posting, which keeps its Status', async () => {
+    await actions.archive({ reference: '2026-2445609' });
 
-    expect(await findStatus('2026-2445609')).toBe('archived');
+    expect(await findPosting(actions, '2026-2445609')).toMatchObject({
+      status: 'to_apply',
+      archivedAt: new Date('2026-10-29T12:00:00Z'),
+    });
   });
 
   it('archives an Applied Posting, whose Chosen Letter stays the one sent', async () => {
     await actions.changeStatus({ reference: '2026-2445183', status: 'applied' });
 
-    await actions.changeStatus({ reference: '2026-2445183', status: 'archived' });
+    await actions.archive({ reference: '2026-2445183' });
 
-    expect(await findStatus('2026-2445183')).toBe('archived');
+    expect(await findPosting(actions, '2026-2445183')).toMatchObject({
+      status: 'applied',
+      appliedAt: new Date('2026-10-29T12:00:00Z'),
+      archivedAt: new Date('2026-10-29T12:00:00Z'),
+    });
     await expect(actions.runModule({ module: 'letter', reference: '2026-2445183' })).rejects.toThrow(
       /L'Offre 2026-2445183 a été Postulée : sa Lettre retenue est figée/,
     );
   });
 
-  // Applied is never undone: the Chosen Letter was sent
-  it('brings an Archived Posting once Applied back to Applied, never to To Apply', async () => {
+  // Unarchiving only removes the mark: the Posting is found exactly where it was
+  it('unarchives an Applied Posting without moving its Status nor its appliedAt', async () => {
     await actions.changeStatus({ reference: '2026-2350473', status: 'applied' });
-    await actions.changeStatus({ reference: '2026-2350473', status: 'archived' });
+    await actions.archive({ reference: '2026-2350473' });
 
-    await expect(actions.changeStatus({ reference: '2026-2350473', status: 'to_apply' })).rejects.toThrow(
-      /L'Offre 2026-2350473 est Archivée : elle ne peut passer qu'en Postulée/,
-    );
-    await actions.changeStatus({ reference: '2026-2350473', status: 'applied' });
-    expect(await findStatus('2026-2350473')).toBe('applied');
+    await actions.unarchive({ reference: '2026-2350473' });
+
+    expect(await findPosting(actions, '2026-2350473')).toMatchObject({
+      status: 'applied',
+      appliedAt: new Date('2026-10-29T12:00:00Z'),
+      archivedAt: null,
+    });
   });
 
-  it('never brings an Applied Posting back to To Apply', async () => {
+  it('unarchives a Posting never Applied, which stays To Apply', async () => {
+    await actions.archive({ reference: '2026-2199164' });
+
+    await actions.unarchive({ reference: '2026-2199164' });
+
+    expect(await findPosting(actions, '2026-2199164')).toMatchObject({ status: 'to_apply', archivedAt: null });
+  });
+
+  // Archiving again keeps the day it was first archived, which sorts the Archived
+  it('archives an Archived Posting again without moving its archiving date', async () => {
+    await actions.archive({ reference: '2026-2445637' });
+    vi.setSystemTime(new Date('2026-10-30T12:00:00Z'));
+
+    await actions.archive({ reference: '2026-2445637' });
+
+    vi.setSystemTime(new Date('2026-10-29T12:00:00Z'));
+    expect(await findPosting(actions, '2026-2445637')).toMatchObject({
+      archivedAt: new Date('2026-10-29T12:00:00Z'),
+    });
+  });
+
+  // Applied is never undone: the Chosen Letter was sent
+  it('never brings an Applied Posting back to To Apply, Archived or not', async () => {
     await actions.changeStatus({ reference: '2026-2360411', status: 'applied' });
+    await actions.archive({ reference: '2026-2360411' });
 
     await expect(actions.changeStatus({ reference: '2026-2360411', status: 'to_apply' })).rejects.toThrow(
-      /L'Offre 2026-2360411 est Postulée : elle ne peut passer qu'en Archivée/,
+      /L'Offre 2026-2360411 a été Postulée : elle ne revient jamais À traiter/,
     );
     expect(await findStatus('2026-2360411')).toBe('applied');
   });
 
-  it('brings an Archived Posting never Applied back to To Apply', async () => {
-    await actions.changeStatus({ reference: '2026-2199164', status: 'archived' });
-
-    await actions.changeStatus({ reference: '2026-2199164', status: 'to_apply' });
-
-    expect(await findStatus('2026-2199164')).toBe('to_apply');
-  });
-
-  // The front shows a button for each of them, and none other
-  it('gives the statuses each Posting can move to', async () => {
+  // The front shows a button for each of them, and none other; archiving changes none of them
+  it('gives the statuses each Posting can move to, Archived or not', async () => {
     await actions.changeStatus({ reference: '2026-2445629', status: 'applied' });
-    await actions.changeStatus({ reference: '2026-2445637', status: 'archived' });
-    await actions.changeStatus({ reference: '2026-2445671', status: 'applied' });
-    await actions.changeStatus({ reference: '2026-2445671', status: 'archived' });
+    await actions.archive({ reference: '2026-2445671' });
 
     const detailList = await Promise.all(
-      ['2026-2445584', '2026-2445629', '2026-2445637', '2026-2445671'].map((reference) =>
-        actions.readPosting({ reference }),
-      ),
+      ['2026-2445584', '2026-2445629', '2026-2445671'].map((reference) => actions.readPosting({ reference })),
     );
 
-    expect(detailList.map(({ nextStatusList }) => nextStatusList)).toEqual([
-      ['applied', 'archived'],
-      ['archived'],
-      ['to_apply'],
-      ['applied'],
-    ]);
+    expect(detailList.map(({ nextStatusList }) => nextStatusList)).toEqual([['applied'], [], ['applied']]);
+  });
+
+  it('refuses to archive an unknown Posting', async () => {
+    await expect(actions.archive({ reference: '2026-0000000' })).rejects.toThrow(/Offre inconnue : 2026-0000000/);
   });
 
   it('marks an Applied Posting as Applied again without complaint', async () => {

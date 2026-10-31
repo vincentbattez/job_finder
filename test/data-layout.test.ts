@@ -193,10 +193,11 @@ describe('the French data folder', () => {
     expect(
       postingList
         .toSorted((first, second) => first.reference.localeCompare(second.reference))
-        .map(({ reference, status, appliedAt, deadline, repostOf, repostList }) => ({
+        .map(({ reference, status, appliedAt, archivedAt, deadline, repostOf, repostList }) => ({
           reference,
           status,
           appliedAt,
+          isArchived: archivedAt !== null,
           deadline,
           repostOf,
           repostList,
@@ -206,6 +207,7 @@ describe('the French data folder', () => {
         reference: '2026-1',
         status: 'applied',
         appliedAt: new Date('2026-10-20T09:00:00Z'),
+        isArchived: false,
         deadline: new Date('2026-11-20T00:00:00Z'),
         repostOf: null,
         repostList: [{ reference: '2026-3' }],
@@ -214,14 +216,17 @@ describe('the French data folder', () => {
         reference: '2026-2445600',
         status: 'to_apply',
         appliedAt: null,
+        isArchived: false,
         deadline: null,
         repostOf: null,
         repostList: [],
       },
       {
         reference: '2026-3',
-        status: 'archived',
+        // Archived, never Applied: To Apply, with the Archived mark (ADR-0007)
+        status: 'to_apply',
         appliedAt: null,
+        isArchived: true,
         deadline: null,
         repostOf: { reference: '2026-1' },
         repostList: [],
@@ -244,7 +249,7 @@ describe('the French data folder', () => {
     const actions = await createActions({ dataDirectory });
 
     const { nextStatusList, artifactList } = await actions.readPosting({ reference: '2026-1' });
-    expect(nextStatusList).toEqual(['archived']);
+    expect(nextStatusList).toEqual([]);
     expect(artifactList.find(({ artifact }) => artifact === 'letter')).toMatchObject({ isEditable: false });
     await expect(actions.runModule({ module: 'letter', reference: '2026-1' })).rejects.toThrow(/figée/);
     const draftPath = path.join(

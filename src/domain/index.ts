@@ -88,7 +88,7 @@ export const LOCATION_SCHEMA = z.object(LOCATION_SHAPE).brand<'Domain'>();
 
 export type Location = z.infer<typeof LOCATION_SCHEMA>;
 
-export const STATUS_SCHEMA = z.enum(['to_apply', 'applied', 'archived']);
+export const STATUS_SCHEMA = z.enum(['to_apply', 'applied']);
 
 export type Status = z.infer<typeof STATUS_SCHEMA>;
 
@@ -115,6 +115,8 @@ export const POSTING_SCHEMA = z
     status: STATUS_SCHEMA,
     // When it was first marked Applied, null if never
     appliedAt: z.date().nullable(),
+    // When the Candidate archived it, null while they follow it: a mark beside the Status (ADR-0007)
+    archivedAt: z.date().nullable(),
     isInZone: z.boolean(),
     isExpired: z.boolean(),
     // The Posting it publishes again, and the Postings that publish it again

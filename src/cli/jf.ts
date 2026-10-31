@@ -58,13 +58,18 @@ function formatAddress({ email, source }: Recipients['ccList'][number], t: Cli):
 
 function formatPosting(posting: Posting, t: Cli): string {
   const { repostOf, repostList, deadline } = posting;
-  const statusLabel = t(`statusLabelByStatus.${posting.status}`, { ns: 'common' });
+  // Expired and Archived beside the Status, which they leave as it is
+  const statusLabelList = [
+    t(`statusLabelByStatus.${posting.status}`, { ns: 'common' }),
+    ...(posting.isExpired ? [t('expired', { ns: 'common' })] : []),
+    ...(posting.archivedAt === null ? [] : [t('archived', { ns: 'common' })]),
+  ];
   return [
     posting.reference,
     posting.title,
     posting.workplace ?? '—',
     deadline === null ? '—' : t('deadline', { deadline }),
-    posting.isExpired ? `${statusLabel}, ${t('expired', { ns: 'common' })}` : statusLabel,
+    statusLabelList.join(', '),
     posting.isInZone ? t('inZone') : t('outOfZone'),
     // The link of a Repost, both ways, only on the Postings that have one
     ...(repostOf === null ? [] : [t('repostOf', { reference: repostOf.reference })]),
@@ -420,8 +425,28 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
     },
   },
   apply: changeStatusCommand('applied', 'apply', (t) => t('applyDescription')),
-  archive: changeStatusCommand('archived', 'archive', (t) => t('archiveDescription')),
-  'to-apply': changeStatusCommand('to_apply', 'to-apply', (t) => t('toApplyDescription')),
+  archive: {
+    describe: (t) => t('statusCommandDescription', { description: t('archiveDescription'), name: 'archive' }),
+    run: async (actions, [reference]) => {
+      if (reference === undefined) {
+        throw codedError('status_usage', { name: 'archive' });
+      }
+      await actions.archive({ reference });
+      const t = await cliOfPosting(actions, reference);
+      process.stdout.write(t('postingArchived', { reference }));
+    },
+  },
+  unarchive: {
+    describe: (t) => t('statusCommandDescription', { description: t('unarchiveDescription'), name: 'unarchive' }),
+    run: async (actions, [reference]) => {
+      if (reference === undefined) {
+        throw codedError('status_usage', { name: 'unarchive' });
+      }
+      await actions.unarchive({ reference });
+      const t = await cliOfPosting(actions, reference);
+      process.stdout.write(t('postingUnarchived', { reference }));
+    },
+  },
   profile: {
     describe: (t) => t('profileDescription'),
     run: async (actions, [candidateId]) => {

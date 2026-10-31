@@ -13,7 +13,8 @@ jf import posting.md lea                        # imports a Markdown Job Descrip
 jf run extraction import-1a2b3c4d5e            # runs the field extraction of an imported Posting again, after a failure
 jf list lea                                    # lists a Candidate's Postings, with their Status and the Expired ones
 jf apply 2026-2445600                          # makes a Posting Applied, which freezes its Letter for good: Applied is never undone
-jf archive 2026-2445600                        # archives a Posting, Applied or not; jf apply makes it Applied again if it was, otherwise jf to-apply makes it To Apply again
+jf archive 2026-2445600                        # archives a Posting, whatever its Status, which it keeps (ADR-0007)
+jf unarchive 2026-2445600                      # unarchives it: it finds its Status as it was
 jf run research 2026-2445600                   # queues a new Version of a Posting's Research; --wait waits for the worker to produce it
 jf run letter 2026-2445600                     # queues a new Version of the Letter, on the Chosen Version of the Research
 jf run brief 2026-2445600                      # queues a new Version of the Interview Brief, on the Chosen Research, and the Chosen Letter if there is one

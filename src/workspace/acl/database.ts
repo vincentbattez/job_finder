@@ -656,6 +656,11 @@ export function openDatabase(databasePath: string) {
       await prisma.posting.update({ where: { id: posting.id }, data: { status, appliedAt } });
     },
 
+    // The Archived mark alone: the Status and appliedAt stay as they are (ADR-0007)
+    async setArchivedAt({ id }: Posting, archivedAt: Date | null): Promise<void> {
+      await prisma.posting.update({ where: { id }, data: { archivedAt } });
+    },
+
     async createPosting({
       candidateId,
       source,

@@ -5,8 +5,9 @@ export const COMMON_EN = {
   statusLabelByStatus: {
     to_apply: 'To Apply',
     applied: 'Applied',
-    archived: 'Archived',
   } satisfies Record<Status, string>,
+  // A mark beside the Status, which the Posting keeps (ADR-0007)
+  archived: 'Archived',
   // Shown in place of To Apply once the Deadline is past (GLOSSARY.md)
   expired: 'Expired',
   artifactLabelByArtifact: {

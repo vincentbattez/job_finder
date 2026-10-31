@@ -70,12 +70,6 @@ describe('Chosen Letter of a Posting', () => {
     }).toThrow(/L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/);
   });
 
-  it('stays frozen once the Applied Posting is Archived', () => {
-    expect(() => {
-      assertLetterModifiable({ reference: '2026-2445600', status: 'archived', appliedAt: new Date() }, 'fr');
-    }).toThrow(/a été Postulée/);
-  });
-
   // Applied before the tool kept the date
   it('is frozen for an Applied Posting without a date', () => {
     expect(() => {
@@ -83,9 +77,9 @@ describe('Chosen Letter of a Posting', () => {
     }).toThrow(/a été Postulée/);
   });
 
-  it.each(['to_apply', 'archived'] as const)('can still change while the Posting, never Applied, is %s', (status) => {
+  it('can still change while the Posting was never Applied', () => {
     expect(() => {
-      assertLetterModifiable({ reference: '2026-2445600', status, appliedAt: null }, 'fr');
+      assertLetterModifiable({ reference: '2026-2445600', status: 'to_apply', appliedAt: null }, 'fr');
     }).not.toThrow();
   });
 });

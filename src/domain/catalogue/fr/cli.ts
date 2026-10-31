@@ -91,10 +91,11 @@ export const CLI_FR: typeof CLI_EN = {
   statusCommandDescription: '{{description}} : jf {{name}} <offre>',
   statusUsage: 'Usage : jf {{name}} <offre>. « jf list <candidat> » liste les Offres.',
   statusChanged: '{{reference}} : {{statusLabel}}\n',
-  applyDescription:
-    'Passe une Offre en Postulée, avec ou sans Lettre, ce qui fige sa Lettre pour de bon ; remet en Postulée une Offre Postulée puis Archivée',
-  archiveDescription: 'Passe une Offre en Archivée, Postulée ou non',
-  toApplyDescription: "Remet À traiter une Offre Archivée qui n'a jamais été Postulée",
+  applyDescription: 'Passe une Offre en Postulée, avec ou sans Lettre, ce qui fige sa Lettre pour de bon',
+  archiveDescription: 'Archive une Offre, quel que soit son Statut, qu’elle garde',
+  unarchiveDescription: 'Désarchive une Offre, qui retrouve son Statut tel qu’il était',
+  postingArchived: '{{reference}} : Archivée\n',
+  postingUnarchived: '{{reference}} : plus Archivée\n',
 
   profileDescription: "Complète le Profil d'un Candidat avec Claude Code : jf profile <candidat>",
   profileUsage: 'Usage : jf profile <candidat>. « jf candidates » liste les Candidats.',

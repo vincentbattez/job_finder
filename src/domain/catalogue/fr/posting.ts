@@ -38,8 +38,9 @@ export const POSTING_FR: typeof POSTING_EN = {
   statusButtonLabelByStatus: {
     to_apply: 'Remettre À traiter',
     applied: 'Marquer comme Postulée',
-    archived: 'Archiver',
   },
+  archive: 'Archiver',
+  unarchive: 'Désarchiver',
   confirmApplied: 'Confirmer : Postulée',
   cancel: 'Annuler',
   appliedFreezesLetter: 'Une fois Postulée, la Lettre retenue ne change plus : c’est celle envoyée.',

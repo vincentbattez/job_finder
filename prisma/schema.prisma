@@ -82,6 +82,9 @@ model Posting {
   // When the Posting was first marked Applied: its Chosen Letter, the one sent, stays frozen even
   // once it is Archived
   appliedAt        DateTime?
+  // When the Candidate archived it, null while they follow it: a mark beside the Status, which
+  // unarchiving leaves as it was (ADR-0007)
+  archivedAt       DateTime?
   repostOf         Posting?      @relation("Repost", fields: [repostOfId], references: [id])
   repostOfId       Int?
   repostList       Posting[]     @relation("Repost")
@@ -96,7 +99,6 @@ model Posting {
 enum PostingStatus {
   to_apply
   applied
-  archived
 }
 
 // A Version of the letter Artifact holds a pair: the Draft, never changed, and the Letter.

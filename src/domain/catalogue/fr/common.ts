@@ -4,8 +4,8 @@ export const COMMON_FR: typeof COMMON_EN = {
   statusLabelByStatus: {
     to_apply: 'À traiter',
     applied: 'Postulée',
-    archived: 'Archivée',
   },
+  archived: 'Archivée',
   expired: 'Expirée',
   artifactLabelByArtifact: {
     research: 'Recherche',

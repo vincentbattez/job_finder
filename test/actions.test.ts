@@ -30,6 +30,8 @@ const HOME_ASSISTANT_CONNECTION_MIGRATION = '20261030090736_job_profil';
 const NOTIFICATION_CHANNEL_MIGRATION = '20261030110155_canal_notification';
 // The last migration before the row of the settings became that of the Default Deadline Period
 const SETTINGS_MIGRATION = '20261030114047_settings';
+// The last migration before Archived left the Status for a mark beside it (ADR-0007)
+const BEFORE_ARCHIVED_MARK_MIGRATION = '20261031000306_job_started_at_and_worker_heartbeat';
 
 function listLeaProfileFiles(dataDirectory: string): string[] {
   return readdirSync(path.join(dataDirectory, 'candidates', 'lea', 'profile'));
@@ -143,6 +145,52 @@ describe('actions', () => {
 
     expect(await actions.readDefaultDeadlinePeriod()).toEqual({ months: 7 });
     expect(await actions.listCandidates()).toEqual([]);
+  });
+
+  // The main checkout migrates the real data/: each Archived Posting finds the Status it had, Applied
+  // if it ever was, and keeps the mark, its Letter frozen if it was sent (ADR-0007)
+  it('turns the Archived Status into the Archived mark, without loss', async () => {
+    const dataDirectory = createEmptyDataDirectory();
+    const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_ARCHIVED_MARK_MIGRATION));
+    database.exec(`INSERT INTO Candidate (id, name) VALUES ('lea', 'Léa');
+      INSERT INTO Posting (id, candidateId, source, reference, title, status, appliedAt, isInZone)
+      VALUES (1, 'lea', 'pep', '2026-1', 'Greffier', 'archived', '2026-10-20T09:00:00.000+00:00', 1);
+      INSERT INTO Posting (id, candidateId, source, reference, title, status, isInZone)
+      VALUES (2, 'lea', 'pep', '2026-2', 'Greffier', 'archived', 1);
+      INSERT INTO Posting (id, candidateId, source, reference, title, status, appliedAt, isInZone)
+      VALUES (3, 'lea', 'pep', '2026-3', 'Greffier', 'applied', '2026-10-21T09:00:00.000+00:00', 1);
+      INSERT INTO Posting (id, candidateId, source, reference, title, isInZone) VALUES (4, 'lea', 'pep', '2026-4', 'Greffier', 1);`);
+    database.close();
+    const before = Date.now();
+
+    const actions = await createActions({ dataDirectory });
+
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(
+      postingList
+        .toSorted((first, second) => first.reference.localeCompare(second.reference))
+        .map(({ reference, status, appliedAt, archivedAt }) => ({
+          reference,
+          status,
+          appliedAt,
+          isArchived: archivedAt !== null,
+        })),
+    ).toEqual([
+      { reference: '2026-1', status: 'applied', appliedAt: new Date('2026-10-20T09:00:00Z'), isArchived: true },
+      { reference: '2026-2', status: 'to_apply', appliedAt: null, isArchived: true },
+      { reference: '2026-3', status: 'applied', appliedAt: new Date('2026-10-21T09:00:00Z'), isArchived: false },
+      { reference: '2026-4', status: 'to_apply', appliedAt: null, isArchived: false },
+    ]);
+    // Dated from the migration, the day it was archived having never been kept; SQLite keeps seconds
+    const archivedAt = postingList.find(({ reference }) => reference === '2026-2')?.archivedAt;
+    expect(archivedAt?.getTime()).toBeGreaterThanOrEqual(Math.floor(before / 1000) * 1000);
+    await expect(actions.runModule({ module: 'letter', reference: '2026-1' })).rejects.toMatchObject({
+      code: 'letter_frozen',
+    });
+    await actions.unarchive({ reference: '2026-1' });
+    expect(await actions.listPostings({ candidateId: 'lea' })).toContainEqual(
+      expect.objectContaining({ reference: '2026-1', status: 'applied', archivedAt: null }),
+    );
   });
 
   it('refuses to list the Postings of an unknown Candidate', async () => {

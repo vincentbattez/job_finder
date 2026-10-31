@@ -46,8 +46,10 @@ export const POSTING_EN = {
   statusButtonLabelByStatus: {
     to_apply: 'Back to To Apply',
     applied: 'Mark as Applied',
-    archived: 'Archive',
   } satisfies Record<Status, string>,
+  // The Archived mark, beside the Status buttons (ADR-0007)
+  archive: 'Archive',
+  unarchive: 'Unarchive',
   confirmApplied: 'Confirm: Applied',
   cancel: 'Cancel',
   appliedFreezesLetter: 'Once Applied, the Chosen Letter no longer changes: it is the one sent.',
