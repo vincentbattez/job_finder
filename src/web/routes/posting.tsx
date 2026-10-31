@@ -7,6 +7,7 @@ import { PostingDetail } from '#/web/components/posting-detail.tsx';
 import { ArtifactVersions } from '#/web/containers/artifact-versions.tsx';
 import { ArchiveButton, StatusButtons } from '#/web/containers/edition.tsx';
 import { ExtractionLaunch } from '#/web/containers/extraction-launch.tsx';
+import { Notes } from '#/web/containers/notes.tsx';
 import { relayLoader } from '#/web/relay-action.server.ts';
 
 export function loader({ params, request }: LoaderFunctionArgs) {
@@ -33,6 +34,7 @@ export default function Posting() {
         <ArchiveButton reference={detail.posting.reference} isArchived={detail.posting.archivedAt !== null} />
         {detail.extraction !== null && <ExtractionLaunch reference={detail.posting.reference} {...detail.extraction} />}
       </PostingDetail>
+      <Notes reference={detail.posting.reference} notes={detail.posting.notes} />
       {detail.artifactList.map((artifactVersions) => (
         <ArtifactVersions key={artifactVersions.artifact} reference={detail.posting.reference} {...artifactVersions} />
       ))}

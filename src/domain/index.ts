@@ -117,6 +117,8 @@ export const POSTING_SCHEMA = z
     appliedAt: z.date().nullable(),
     // When the Candidate archived it, null while they follow it: a mark beside the Status (ADR-0007)
     archivedAt: z.date().nullable(),
+    // Free Markdown the Candidate keeps on it, whatever its Status; empty by default
+    notes: z.string(),
     isInZone: z.boolean(),
     isExpired: z.boolean(),
     // The Posting it publishes again, and the Postings that publish it again

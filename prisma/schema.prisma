@@ -85,6 +85,8 @@ model Posting {
   // When the Candidate archived it, null while they follow it: a mark beside the Status, which
   // unarchiving leaves as it was (ADR-0007)
   archivedAt       DateTime?
+  // Free Markdown the Candidate keeps on it, whatever its Status, and rewrites at will
+  notes            String        @default("")
   repostOf         Posting?      @relation("Repost", fields: [repostOfId], references: [id])
   repostOfId       Int?
   repostList       Posting[]     @relation("Repost")

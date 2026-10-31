@@ -1,0 +1,11 @@
+/* Between the Posting and its Artifacts, the Candidate's own words under a hairline rule */
+@layer components {
+  .notes {
+    display: grid;
+    align-content: start;
+    gap: var(--space-md);
+    min-width: 0;
+    padding-top: var(--space-md);
+    border-top: var(--rule-hair) solid var(--color-rule);
+  }
+}

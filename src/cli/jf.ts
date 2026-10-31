@@ -181,10 +181,11 @@ async function chooseArtifact(actions: Actions, [givenReference, givenArtifact]:
   }
 }
 
-// Typed or redirected from a file: the Instructions end with the input (Ctrl-D in a terminal)
-async function readStandardInput(t: Cli): Promise<string> {
+// Typed or redirected from a file: the Markdown ends with the input (Ctrl-D in a terminal), the
+// invitation only shown in a terminal
+async function readStandardInput(invitation: string): Promise<string> {
   if (process.stdin.isTTY) {
-    process.stderr.write(t('typeInstructions'));
+    process.stderr.write(invitation);
   }
   let text = '';
   for await (const chunk of process.stdin) {
@@ -214,7 +215,11 @@ async function runInstructionsOperation(
       return;
     }
     case 'replace': {
-      await actions.saveInstructions({ candidateId, module, instructions: await readStandardInput(t) });
+      await actions.saveInstructions({
+        candidateId,
+        module,
+        instructions: await readStandardInput(t('typeInstructions')),
+      });
       process.stdout.write(t('instructionsReplaced', { module }));
       return;
     }
@@ -474,6 +479,23 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       }
       const instructions = await actions.readInstructions({ candidateId, module });
       await runInstructionsOperation(actions, locale, { ...instructions, candidateId }, operation);
+    },
+  },
+  // The same Markdown editing as jf instructions: shown, or replaced by the standard input
+  notes: {
+    describe: (t) => t('notesDescription'),
+    run: async (actions, [reference, operation]) => {
+      if (reference === undefined || (operation !== undefined && operation !== 'replace')) {
+        throw codedError('notes_usage');
+      }
+      const t = await cliOfPosting(actions, reference);
+      if (operation === undefined) {
+        const { posting } = await actions.readPosting({ reference });
+        process.stdout.write(posting.notes);
+        return;
+      }
+      await actions.saveNotes({ reference, notes: await readStandardInput(t('typeNotes')) });
+      process.stdout.write(t('notesReplaced', { reference }));
     },
   },
   edit: {

@@ -122,6 +122,13 @@ export const CLI_EN = {
   instructionsReplaced: '{{module}} will follow these Candidate’s Instructions in its next Versions.\n',
   instructionsDeleted: '{{module}} goes back to its default Instructions.\n',
 
+  // jf notes
+  notesDescription:
+    'Shows or replaces (read on the standard input) the Notes of a Posting, whatever its Status: jf notes <posting> [replace]',
+  notesUsage: 'Usage: jf notes <posting> [replace]. “jf list <candidate>” lists the Postings.',
+  typeNotes: 'Type or paste the Notes in Markdown, then Ctrl-D:\n',
+  notesReplaced: 'Notes of {{reference}} saved.\n',
+
   // The worker, in lpm logs worker
   workerReady: 'Worker ready: it runs the queued jobs, one at a time.\n',
   jobFailed: 'failed: {{firstLine}}',

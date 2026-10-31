@@ -9,6 +9,7 @@ import { createFactsActions } from './facts.ts';
 import { createImportActions } from './import-job-description.ts';
 import { createInstructionsActions } from './instructions.ts';
 import { createJobActions } from './jobs.ts';
+import { createNotesActions } from './notes.ts';
 import { createNotificationChannelActions } from './notification-channel.ts';
 import { createPostingActions } from './postings.ts';
 import { createProfileActions } from './profile.ts';
@@ -35,6 +36,7 @@ export async function createActions(option: IActionsOption) {
     ...createWatchActions(context),
     ...createImportActions(context),
     ...createStatusActions(context),
+    ...createNotesActions(context),
     ...createProfileActions(context),
     ...createUploadActions(context),
     ...createNotificationChannelActions(context),

@@ -80,6 +80,15 @@ export const POSTING_EN = {
   copyMarkdown: 'Copy the Markdown',
   copiedMarkdown: 'Copied',
 
+  // The Notes of the Posting, whatever its Status
+  notes: {
+    heading: 'Notes',
+    label: 'Notes in Markdown',
+    placeholder:
+      '# Call to the department\n\nWhat you learn about this Posting: a call, the feedback from an interview…',
+    save: 'Save the Notes',
+  },
+
   // The tools of the Posting list: the Detection, the import, the filters and the map
   // The Detection beside the name of the list: the last one, then its progress while one runs (#63)
   detection: {
