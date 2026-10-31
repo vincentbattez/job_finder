@@ -369,6 +369,24 @@ export function openDatabase(databasePath: string) {
       );
     },
 
+    // The To Apply Postings still followed that arrived last, through a Detection in the Zone or an
+    // import, which no Zone holds but the Candidate chose (ADR-0003)
+    async listLatestPostings(candidateId: string, count: number): Promise<Posting[]> {
+      return z.array(POSTING_SCHEMA).parse(
+        await prisma.posting.findMany({
+          where: {
+            candidateId,
+            status: 'to_apply',
+            archivedAt: null,
+            OR: [{ isInZone: true }, { source: 'import' }],
+          },
+          orderBy: [{ detectedAt: 'desc' }, { id: 'desc' }],
+          take: count,
+          include: POSTING_INCLUDE,
+        }),
+      );
+    },
+
     // A job the Candidate launches is not automatic: they see it run, and fail, on the screen
     async createJob(posting: Posting, module: Module, { isAutomatic = false } = {}): Promise<Job> {
       return JOB_SCHEMA.parse(

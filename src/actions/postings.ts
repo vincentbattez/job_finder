@@ -31,6 +31,9 @@ import { findJobStall } from './stalled-job.ts';
 
 const VISUALIZATION_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
 
+// The latest Postings of the home: enough to see at a glance what just arrived
+const LATEST_POSTING_COUNT = 6;
+
 const STATE_BY_VERSION_STATE = { running: 'in_progress', ready: 'ready', failed: 'failed' } as const;
 const STATE_BY_JOB_STATE = { queued: 'queued', running: 'in_progress', done: 'ready', failed: 'failed' } as const;
 
@@ -112,6 +115,12 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
     async listPostings(rawInput: unknown): Promise<Posting[]> {
       const candidate = await findCandidate(rawInput);
       return workspace.listPostings(candidate.id);
+    },
+
+    // What the home shows of what just arrived, as tiles and on the map
+    async listLatestPostings(rawInput: unknown): Promise<Posting[]> {
+      const candidate = await findCandidate(rawInput);
+      return workspace.listLatestPostings(candidate.id, LATEST_POSTING_COUNT);
     },
 
     async readPosting(rawInput: unknown): Promise<PostingDetail> {
