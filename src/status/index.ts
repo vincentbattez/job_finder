@@ -5,6 +5,9 @@ import type { Interview, Locale, Posting, Status, Step } from '#/domain/index.ts
 // What the status rules read of a Posting
 type PostingStatus = Pick<Posting, 'reference' | 'status' | 'appliedAt'>;
 
+// What the Status choices read of a Posting: an Interview proves its Letter was sent
+type PostingWithInterview = Pick<Posting, 'status' | 'appliedAt'> & { hasInterview: boolean };
+
 // A calendar day in France, as « 2026-11-20 », so that two days compare as strings
 const FRANCE_DAY_FORMAT = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' });
 
@@ -67,29 +70,38 @@ export function hasBeenApplied({ status, appliedAt }: Pick<Posting, 'status' | '
 }
 
 // When a Posting moving to the status was first Applied: its Chosen Letter, the one sent, stays
-// frozen from then on
+// frozen from then on. Back to To Apply, it was never sent: the Application never started.
 export function findAppliedAt(posting: Pick<Posting, 'status' | 'appliedAt'>, status: Status, now: Date): Date | null {
-  return posting.appliedAt ?? (status !== 'to_apply' || hasBeenApplied(posting) ? now : null);
+  return status === 'to_apply' ? null : (posting.appliedAt ?? now);
 }
 
 // The outcomes of an Application, In progress being Applied: the Candidate moves freely between them
 const APPLICATION_STATUS_LIST: Status[] = ['applied', 'hired', 'rejected'];
 
 // What the outcome selector offers besides the Status the Posting has, Archived or not (ADR-0007):
-// Applied on a To Apply Posting, then the other outcomes of its Application. Applied is never undone,
-// since the Chosen Letter was sent.
-export function listStatusChoices(posting: Pick<Posting, 'status' | 'appliedAt'>): Status[] {
-  return hasBeenApplied(posting) ? APPLICATION_STATUS_LIST.filter((status) => status !== posting.status) : ['applied'];
+// Applied on a To Apply Posting, then the other outcomes of its Application. An Applied Posting goes
+// back to To Apply when its Letter was never sent; an outcome or an Interview proves it was.
+export function listStatusChoices(posting: PostingWithInterview): Status[] {
+  if (!hasBeenApplied(posting)) {
+    return ['applied'];
+  }
+  const outcomeList = APPLICATION_STATUS_LIST.filter((status) => status !== posting.status);
+  return posting.status === 'applied' && !posting.hasInterview ? ['to_apply', ...outcomeList] : outcomeList;
 }
 
 // Moving to the status it already has changes nothing
-export function assertStatusChange(posting: PostingStatus, status: Status, locale: Locale): void {
+export function assertStatusChange(
+  posting: PostingStatus & PostingWithInterview,
+  status: Status,
+  locale: Locale,
+): void {
   const choiceList = listStatusChoices(posting);
   if (status === posting.status || choiceList.includes(status)) {
     return;
   }
   if (hasBeenApplied(posting)) {
-    throw codedError('status_change_after_applied', { reference: posting.reference }, { locale });
+    const code = posting.status === 'applied' ? 'to_apply_with_interview' : 'to_apply_after_outcome';
+    throw codedError(code, { reference: posting.reference }, { locale });
   }
   const t = tFor(locale, 'error');
   const tCommon = tFor(locale, 'common');

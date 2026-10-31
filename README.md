@@ -12,7 +12,8 @@ jf detect                                      # looks for the new Postings of e
 jf import posting.md lea                        # imports a Markdown Job Description found elsewhere: the worker extracts its fields with Claude, then queues its Research; --wait waits for the extraction
 jf run extraction import-1a2b3c4d5e            # runs the field extraction of an imported Posting again, after a failure
 jf list lea                                    # lists a Candidate's Postings, with their Status and the Expired ones
-jf apply 2026-2445600                          # makes a Posting Applied, which freezes its Letter for good: Applied is never undone
+jf apply 2026-2445600                          # makes a Posting Applied once its Letter is sent, which freezes its Letter; writing the Letter never does
+jf to-apply 2026-2445600                       # puts an Applied Posting whose Letter was never sent, without an Interview, back to To Apply, its Letter free again
 jf hired 2026-2445600                          # marks its Application Hired; jf rejected, Rejected; jf in-progress takes the outcome back
 jf archive 2026-2445600                        # archives a Posting, whatever its Status, which it keeps (ADR-0007)
 jf unarchive 2026-2445600                      # unarchives it: it finds its Status as it was

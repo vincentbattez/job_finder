@@ -10,4 +10,4 @@ A Posting has on one side a Status, which says where its Application stands (To 
 ## Consequences
 
 - The migration gives already Archived Postings the Applied Status if `appliedAt` is set, otherwise To Apply, and puts the mark on them.
-- A Posting has an Application as soon as its Status is no longer To Apply. Since an Application never goes back to To Apply, this criterion is enough even for an Archived Posting.
+- A Posting has an Application as soon as its Status is no longer To Apply. An Application only goes back to To Apply when the Candidate undoes an Applied never sent, which erases it with its `appliedAt`: this criterion stays enough even for an Archived Posting.

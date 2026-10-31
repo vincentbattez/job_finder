@@ -38,7 +38,7 @@ export const POSTING_FR: typeof POSTING_EN = {
   markApplied: 'Marquer comme Postulée',
   outcomeLabel: 'Issue de la Candidature',
   outcomeLabelByStatus: {
-    applied: 'En cours',
+    applied: 'Envoyée',
     hired: 'Obtenue',
     rejected: 'Refusée',
   },
@@ -47,6 +47,9 @@ export const POSTING_FR: typeof POSTING_EN = {
   confirmApplied: 'Confirmer : Postulée',
   cancel: 'Annuler',
   appliedFreezesLetter: 'Une fois Postulée, la Lettre retenue ne change plus : c’est celle envoyée.',
+  markNotSent: 'Pas encore envoyée',
+  confirmToApply: 'Confirmer : À traiter',
+  toApplyFreesLetter: 'L’Offre revient À traiter et sa Lettre retenue redevient modifiable.',
 
   // Every Artifact is feminine in French: la Recherche, la Lettre, la Fiche d’entretien, la Visualisation
   launchArtifact: 'Lancer la {{artifactLabel}}',

@@ -87,7 +87,7 @@ export function createApplicationActions({ workspace, findCandidate }: ActionCon
     const upcomingInterview = interviewList.find((interview) => !hasTakenPlace(interview, now));
     return APPLICATION_SCHEMA.parse({
       posting,
-      statusChoiceList: listStatusChoices(posting),
+      statusChoiceList: listStatusChoices({ ...posting, hasInterview: interviewList.length > 0 }),
       nextInterview: upcomingInterview ?? interviewList.at(-1) ?? null,
       hasUpcomingInterview: upcomingInterview !== undefined,
       interviewCount: interviewList.length,

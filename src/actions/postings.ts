@@ -169,7 +169,7 @@ export function createPostingActions({ workspace, findCandidate, findPosting, fi
       const interviewList = await workspace.listInterviews(posting);
       return POSTING_DETAIL_SCHEMA.parse({
         posting,
-        statusChoiceList: listStatusChoices(posting),
+        statusChoiceList: listStatusChoices({ ...posting, hasInterview: interviewList.length > 0 }),
         hasApplication: hasBeenApplied(posting),
         interviewList: await Promise.all(
           interviewList.map(async (interview: Interview) => ({

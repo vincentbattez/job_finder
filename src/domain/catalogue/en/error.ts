@@ -59,8 +59,9 @@ export const ERROR_EN = {
 
   // Statuses
   statusChange: 'Posting {{reference}} is {{statusLabel}}: it can only move to {{nextLabels}}.',
-  statusChangeAfterApplied:
-    'Posting {{reference}} was Applied: it never goes back to To Apply, since its Chosen Letter is the one sent.',
+  toApplyAfterOutcome:
+    'Posting {{reference}} has an outcome: mark it Sent again first, only an Applied Posting without an Interview goes back to To Apply.',
+  toApplyWithInterview: 'Posting {{reference}} has an Interview: its Letter was sent, it does not go back to To Apply.',
   letterFrozen:
     'Posting {{reference}} was Applied: its Chosen Letter is frozen as sent. It is no longer edited, regenerated or replaced by another Version.',
 

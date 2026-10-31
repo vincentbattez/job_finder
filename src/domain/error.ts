@@ -84,8 +84,10 @@ export const ERROR_CATALOGUE = {
   // Statuses
   // A Posting cannot move to this Status from its own
   status_change: 'error:statusChange',
-  // An Applied Posting cannot go back to To Apply, Applied being never undone, Archived or not
-  status_change_after_applied: 'error:statusChangeAfterApplied',
+  // A Hired or Rejected Posting cannot go back to To Apply: only In progress is undone, Archived or not
+  to_apply_after_outcome: 'error:toApplyAfterOutcome',
+  // An Applied Posting with an Interview cannot go back to To Apply: the Interview proves its Letter was sent
+  to_apply_with_interview: 'error:toApplyWithInterview',
   // The Chosen Letter of an Applied Posting is frozen as sent
   letter_frozen: 'error:letterFrozen',
 

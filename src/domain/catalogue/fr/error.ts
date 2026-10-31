@@ -45,8 +45,10 @@ export const ERROR_FR: typeof ERROR_EN = {
   notificationsNotSent: '{{failures}}',
 
   statusChange: "L'Offre {{reference}} est {{statusLabel}} : elle ne peut passer qu'en {{nextLabels}}.",
-  statusChangeAfterApplied:
-    "L'Offre {{reference}} a été Postulée : elle ne revient jamais À traiter, sa Lettre retenue étant celle envoyée.",
+  toApplyAfterOutcome:
+    "L'Offre {{reference}} a un résultat : la remettre Envoyée d'abord, seule une Offre Postulée sans Entretien revient À traiter.",
+  toApplyWithInterview:
+    "L'Offre {{reference}} a un Entretien : sa Lettre a été envoyée, elle ne revient pas À traiter.",
   letterFrozen:
     "L'Offre {{reference}} a été Postulée : sa Lettre retenue est figée telle qu'envoyée. Elle ne se modifie plus, ne se régénère plus et ne se remplace plus par une autre Version.",
 

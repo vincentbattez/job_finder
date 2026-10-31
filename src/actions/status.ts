@@ -10,7 +10,12 @@ export function createStatusActions({ workspace, findPosting, findLocale }: Acti
     async changeStatus(rawInput: unknown): Promise<void> {
       const { reference, status } = STATUS_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
-      assertStatusChange(posting, status, await findLocale(posting.candidateId));
+      const interviewList = await workspace.listInterviews(posting);
+      assertStatusChange(
+        { ...posting, hasInterview: interviewList.length > 0 },
+        status,
+        await findLocale(posting.candidateId),
+      );
       // Moving to the Status it already has keeps the day of its last change
       if (status !== posting.status) {
         await workspace.setStatus(posting, status);

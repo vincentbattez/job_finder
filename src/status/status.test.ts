@@ -85,15 +85,17 @@ describe('Chosen Letter of a Posting', () => {
 });
 
 // The selector offers only these: Applied on a To Apply Posting, then the other two of In progress
-// (Applied), Hired and Rejected on an Application
+// (Applied), Hired and Rejected on an Application, and To Apply on an Applied one never sent: an
+// Interview proves it was
 describe('Status choices of a Posting', () => {
   it.each([
-    { status: 'to_apply', appliedAt: null, expectedList: ['applied'] },
-    { status: 'applied', appliedAt: new Date(), expectedList: ['hired', 'rejected'] },
-    { status: 'hired', appliedAt: new Date(), expectedList: ['applied', 'rejected'] },
-    { status: 'rejected', appliedAt: new Date(), expectedList: ['applied', 'hired'] },
-  ] as const)('are $expectedList from $status', ({ status, appliedAt, expectedList }) => {
-    expect(listStatusChoices({ status, appliedAt })).toEqual(expectedList);
+    { status: 'to_apply', appliedAt: null, hasInterview: false, expectedList: ['applied'] },
+    { status: 'applied', appliedAt: new Date(), hasInterview: false, expectedList: ['to_apply', 'hired', 'rejected'] },
+    { status: 'applied', appliedAt: new Date(), hasInterview: true, expectedList: ['hired', 'rejected'] },
+    { status: 'hired', appliedAt: new Date(), hasInterview: false, expectedList: ['applied', 'rejected'] },
+    { status: 'rejected', appliedAt: new Date(), hasInterview: false, expectedList: ['applied', 'hired'] },
+  ] as const)('are $expectedList from $status with an Interview: $hasInterview', (posting) => {
+    expect(listStatusChoices(posting)).toEqual(posting.expectedList);
   });
 });
 
@@ -109,8 +111,14 @@ describe('Status change of a Posting', () => {
     { from: 'hired', to: 'applied' },
     { from: 'rejected', to: 'applied' },
     { from: 'hired', to: 'hired' },
+    { from: 'applied', to: 'to_apply' },
   ] as const)('allows $from to $to', ({ from, to }) => {
-    const posting = { reference: '2026-2445600', status: from, appliedAt: from === 'to_apply' ? null : APPLIED_AT };
+    const posting = {
+      reference: '2026-2445600',
+      status: from,
+      appliedAt: from === 'to_apply' ? null : APPLIED_AT,
+      hasInterview: false,
+    };
 
     expect(() => {
       assertStatusChange(posting, to, 'fr');
@@ -120,15 +128,33 @@ describe('Status change of a Posting', () => {
   // An outcome only comes once the Application started
   it.each(['hired', 'rejected'] as const)('refuses To Apply to %s', (status) => {
     expect(() => {
-      assertStatusChange({ reference: '2026-2445600', status: 'to_apply', appliedAt: null }, status, 'en');
+      assertStatusChange(
+        { reference: '2026-2445600', status: 'to_apply', appliedAt: null, hasInterview: false },
+        status,
+        'en',
+      );
     }).toThrow('Posting 2026-2445600 is To Apply: it can only move to Applied.');
   });
 
-  // The Chosen Letter was sent: an Application never goes back to To Apply, whatever its outcome
-  it.each(['applied', 'hired', 'rejected'] as const)('refuses %s back to To Apply', (status) => {
+  // An outcome came from the employer, so the Letter was sent: only In progress goes back to To Apply
+  it.each(['hired', 'rejected'] as const)('refuses %s back to To Apply', (status) => {
     expect(() => {
-      assertStatusChange({ reference: '2026-2445600', status, appliedAt: APPLIED_AT }, 'to_apply', 'en');
-    }).toThrow('Posting 2026-2445600 was Applied: it never goes back to To Apply');
+      assertStatusChange(
+        { reference: '2026-2445600', status, appliedAt: APPLIED_AT, hasInterview: false },
+        'to_apply',
+        'en',
+      );
+    }).toThrow('Posting 2026-2445600 has an outcome: mark it Sent again first');
+  });
+
+  it('refuses an Application In progress with an Interview back to To Apply', () => {
+    expect(() => {
+      assertStatusChange(
+        { reference: '2026-2445600', status: 'applied', appliedAt: APPLIED_AT, hasInterview: true },
+        'to_apply',
+        'en',
+      );
+    }).toThrow('Posting 2026-2445600 has an Interview: its Letter was sent');
   });
 });
 

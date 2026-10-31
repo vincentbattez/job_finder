@@ -124,7 +124,7 @@ test('shows the tools of the Posting list in English to a Candidate with the en 
 
 // Oliver reads the interface in English too, and owns the one Posting this test changes
 // (test/seed-front.ts): imported, its fields unread, with a Research. Archived then unarchived
-// back to To Apply, it ends as it started; Applied, which is never undone, is only asked, then cancelled.
+// back to To Apply, it ends as it started; Applied, which freezes its Letter, is only asked, then cancelled.
 test('takes a Candidate with the en locale through a Posting and its Status in English', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Candidat' }).selectOption('Oliver');
@@ -180,8 +180,8 @@ test('takes a Candidate with the en locale through a Posting and its Status in E
   await expect(letter.getByRole('button', { name: 'Run the Letter' })).toBeVisible();
   await expect(letter.getByText('No Version yet.')).toBeVisible();
 
-  await expect(page.getByText('Once Applied, the Chosen Letter no longer changes: it is the one sent.')).toBeVisible();
   await page.getByRole('button', { name: 'Mark as Applied' }).click();
+  await expect(page.getByText('Once Applied, the Chosen Letter no longer changes: it is the one sent.')).toBeVisible();
   await page.getByRole('button', { name: 'Cancel' }).click();
   await page.getByRole('button', { name: 'Archive' }).click();
   await expect(statusBadge).toHaveText(['To Apply', 'Archived']);
