@@ -113,6 +113,16 @@ export const POSTING_EN = {
     delete: 'Delete Interview {{number}}',
     deleteForGood: 'Delete Interview {{number}} for good',
     ical: 'Add to calendar (iCal)',
+    next: 'Next Interview',
+    last: 'Last Interview',
+    count_one: '{{count}} Interview',
+    count_other: '{{count}} Interviews',
+  },
+
+  // An Application row, on the home and on /applications
+  applicationRow: {
+    statusChangedAt: 'Status changed',
+    notesExcerpt: 'Notes',
   },
 
   // The iCal file of an Interview: the event in the calendar and the links its description gives

@@ -37,9 +37,14 @@ export function isExpired(
 
 const MINUTE_MS = 60_000;
 
+// When an Interview ends, its start plus its duration
+export function findInterviewEnd({ startAt, durationMinutes }: Pick<Interview, 'startAt' | 'durationMinutes'>): Date {
+  return new Date(startAt.getTime() + durationMinutes * MINUTE_MS);
+}
+
 // Taken place once its start plus its duration has passed: an Interview in progress is still to come
-function hasTakenPlace({ startAt, durationMinutes }: Pick<Interview, 'startAt' | 'durationMinutes'>, now: Date) {
-  return startAt.getTime() + durationMinutes * MINUTE_MS <= now.getTime();
+export function hasTakenPlace(interview: Pick<Interview, 'startAt' | 'durationMinutes'>, now: Date): boolean {
+  return findInterviewEnd(interview).getTime() <= now.getTime();
 }
 
 // Computed, never stored, since it depends on the time (ADR-0009): an outcome wins over the Interviews,
