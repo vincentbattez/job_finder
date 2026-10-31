@@ -122,6 +122,12 @@ export function PostingMap({ postingList }: Readonly<{ postingList: IMappedPosti
         <li className="posting-map__key" data-status="applied">
           {t('statusLabelByStatus.applied', { ns: 'common' })}
         </li>
+        <li className="posting-map__key" data-status="invited">
+          {t('statusLabelByStatus.invited', { ns: 'common' })}
+        </li>
+        <li className="posting-map__key" data-status="interviewed">
+          {t('statusLabelByStatus.interviewed', { ns: 'common' })}
+        </li>
         <li className="posting-map__key" data-status="hired">
           {t('statusLabelByStatus.hired', { ns: 'common' })}
         </li>

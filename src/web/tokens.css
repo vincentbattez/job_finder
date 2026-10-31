@@ -80,31 +80,42 @@
   --tracking-display: -0.03em;
   --display-weight: 700;
 
-  /* Statuses of a Posting, each a color for text or a map point and a soft one behind it: grey,
-     green and red as the map of issue #20 asks, so Expired is red against Dose's grey; Hired takes
-     the full accent, Rejected a brown apart from Expired's red */
-  --color-status-to-apply: oklch(40% 0.012 165deg);
-  --color-status-to-apply-soft: oklch(92.5% 0.008 165deg);
-  --color-status-applied: var(--color-accent-deep);
-  --color-status-applied-soft: var(--color-accent-soft);
+  /* Statuses of a Posting, each a color for text or a map point and a soft one behind it: pink
+     for To apply, yellow for Applied, a soft green for Invited and Interviewed, the full accent for
+     Hired, red for Rejected, a medium grey for Expired */
+  --color-status-to-apply: oklch(48% 0.14 350deg);
+  --color-status-to-apply-soft: oklch(93.5% 0.04 350deg);
+  --color-status-applied: oklch(45% 0.095 85deg);
+  --color-status-applied-soft: oklch(93% 0.085 95deg);
+  --color-status-invited: var(--color-accent-deep);
+  --color-status-invited-soft: var(--color-accent-soft);
   --color-status-hired: var(--color-accent-ink);
   --color-status-hired-soft: var(--color-accent);
-  --color-status-rejected: oklch(44% 0.08 60deg);
-  --color-status-rejected-soft: oklch(93% 0.03 60deg);
-  --color-status-expired: oklch(46% 0.17 27deg);
-  --color-status-expired-soft: oklch(93.5% 0.035 27deg);
+  --color-status-rejected: oklch(46% 0.17 27deg);
+  --color-status-rejected-soft: oklch(93.5% 0.035 27deg);
+  --color-status-expired: oklch(36% 0.01 165deg);
+  --color-status-expired-soft: oklch(86% 0.006 165deg);
   --color-status-archived: var(--color-muted);
   --color-status-archived-soft: var(--color-paper);
 
-  /* States of an Artifact, on the same signals: ready reads like Applied, failed like Expired */
+  /* The same statuses as a point on the map, bright enough to stand out on the tiles,
+     Invited lighter than Hired's green */
+  --color-status-to-apply-point: oklch(72% 0.15 350deg);
+  --color-status-applied-point: oklch(86% 0.17 95deg);
+  --color-status-invited-point: oklch(76% 0.14 158deg);
+  --color-status-rejected-point: oklch(56% 0.2 27deg);
+  --color-status-expired-point: oklch(62% 0.01 165deg);
+
+  /* States of an Artifact, on their own signals: grey while it is written, green once ready,
+     red on failure */
   --color-state-absent: var(--color-muted);
   --color-state-absent-soft: var(--color-paper);
-  --color-state-in-progress: var(--color-status-to-apply);
-  --color-state-in-progress-soft: var(--color-status-to-apply-soft);
-  --color-state-ready: var(--color-status-applied);
-  --color-state-ready-soft: var(--color-status-applied-soft);
-  --color-state-failed: var(--color-status-expired);
-  --color-state-failed-soft: var(--color-status-expired-soft);
+  --color-state-in-progress: oklch(40% 0.012 165deg);
+  --color-state-in-progress-soft: oklch(92.5% 0.008 165deg);
+  --color-state-ready: var(--color-accent-deep);
+  --color-state-ready-soft: var(--color-accent-soft);
+  --color-state-failed: var(--color-status-rejected);
+  --color-state-failed-soft: var(--color-status-rejected-soft);
 
   /* Leaflet's own colors for the links of the map, which the links of base would turn to the text's */
   --color-leaflet-link: #0078a8;

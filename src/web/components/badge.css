@@ -20,12 +20,16 @@
     white-space: nowrap;
   }
 
-  /* Invited and Interviewed are In progress too: the tint of Applied, the label tells the step */
-  .badge[data-status='applied'],
-  .badge[data-status='invited'],
-  .badge[data-status='interviewed'] {
+  .badge[data-status='applied'] {
     --badge-ink: var(--color-status-applied);
     --badge-soft: var(--color-status-applied-soft);
+  }
+
+  /* Invited and Interviewed share one soft green, the label tells the Step */
+  .badge[data-status='invited'],
+  .badge[data-status='interviewed'] {
+    --badge-ink: var(--color-status-invited);
+    --badge-soft: var(--color-status-invited-soft);
   }
 
   .badge[data-status='hired'] {
