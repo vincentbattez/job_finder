@@ -100,6 +100,8 @@ describe('the Applications in progress', () => {
   it('show the last Interview once none is upcoming, and none without any', async () => {
     expect(await findApplication('2026-2445183')).toMatchObject({
       posting: { step: 'interviewed' },
+      // The end of its Interview, after its Status last changed
+      lastChangeAt: new Date('2026-11-08T10:00:00Z'),
       nextInterview: { number: 1, startAt: new Date('2026-11-08T09:00:00Z') },
       hasUpcomingInterview: false,
       interviewCount: 1,
@@ -184,6 +186,8 @@ describe('the Applications by section', () => {
     await changeStatusOn('2026-11-01', '2026-2338409', 'applied');
     await changeStatusOn('2026-11-02', '2026-2338409', 'hired');
     await archiveOn('2026-11-03', '2026-2338409');
+    // Its Interview past on 2026-11-09 changes it last, but it was archived first
+    await addInterview('2026-2338409', '2026-11-09T10:00');
     // Archived without an Application
     await archiveOn('2026-11-05', '2026-2199164');
     await archiveOn('2026-11-06', '2026-2445637');
@@ -194,7 +198,7 @@ describe('the Applications by section', () => {
     return actions.listApplications({ candidateId: 'lea' });
   }
 
-  it('come in order, each with the most recently changed first, and leave out the To Apply Postings', async () => {
+  it('come in order, the most recently changed first or, once Archived, the most recently archived, and leave out the To Apply Postings', async () => {
     const sectionList = await listSections();
 
     expect(
@@ -226,6 +230,7 @@ describe('the Applications by section', () => {
       posting: { status: 'to_apply' },
       statusChoiceList: ['applied'],
       nextInterview: null,
+      lastChangeAt: new Date('2026-11-05T09:00:00Z'),
     });
   });
 

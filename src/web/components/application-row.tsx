@@ -22,7 +22,7 @@ interface IApplicationRow {
 // Where an Application stands at a glance, its outcome changed without opening the Posting page; the
 // home and /applications share it
 export function ApplicationRow({ application, outcomeSelector }: Readonly<IApplicationRow>) {
-  const { posting, nextInterview, hasUpcomingInterview, interviewCount, notesExcerpt } = application;
+  const { posting, nextInterview, hasUpcomingInterview, interviewCount, notesExcerpt, lastChangeAt } = application;
   const { t } = useTranslation('posting');
   const titleId = useId();
   const whereList = [posting.employer, posting.city].filter((part) => part !== null);
@@ -51,9 +51,9 @@ export function ApplicationRow({ application, outcomeSelector }: Readonly<IAppli
             </dd>
           </>
         )}
-        <dt>{t('applicationRow.statusChangedAt')}</dt>
+        <dt>{t('applicationRow.lastChangeAt')}</dt>
         <dd>
-          <DateText date={posting.statusChangedAt ?? posting.appliedAt} />
+          <DateText date={lastChangeAt} />
         </dd>
         {notesExcerpt !== '' && (
           <>

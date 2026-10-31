@@ -169,6 +169,8 @@ export const APPLICATION_SCHEMA = z
     interviewCount: z.int(),
     // The first lines of the Notes, as plain text
     notesExcerpt: z.string(),
+    // The last time it moved: its Status changed, it was archived or an Interview took place
+    lastChangeAt: z.date(),
   })
   .brand<'Domain'>();
 
@@ -185,7 +187,8 @@ export const APPLICATION_SECTION_NAME_SCHEMA = z.enum([
 
 export type ApplicationSectionName = z.infer<typeof APPLICATION_SECTION_NAME_SCHEMA>;
 
-// A section of /applications and its rows, the most recently changed first
+// A section of /applications and its rows, the most recently changed first, the most recently archived
+// first in the Archived ones
 export const APPLICATION_SECTION_SCHEMA = z
   .object({
     section: APPLICATION_SECTION_NAME_SCHEMA,

@@ -109,7 +109,7 @@ export const POSTING_FR: typeof POSTING_EN = {
   },
 
   applicationRow: {
-    statusChangedAt: 'Statut changé le',
+    lastChangeAt: 'Dernier changement le',
     notesExcerpt: 'Notes',
   },
 

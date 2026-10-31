@@ -124,7 +124,7 @@ export const POSTING_EN = {
 
   // An Application row, on the home and on /applications
   applicationRow: {
-    statusChangedAt: 'Status changed',
+    lastChangeAt: 'Last change',
     notesExcerpt: 'Notes',
   },
 

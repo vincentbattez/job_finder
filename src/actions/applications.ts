@@ -37,37 +37,39 @@ function excerptOf(notes: string): string {
 }
 
 // The last time the Application moved: its Status changed, it was archived or an Interview took place
-function findLastChangeAt(posting: Posting, interviewList: Interview[], now: Date): number {
+function findLastChangeAt(posting: Posting, interviewList: Interview[], now: Date): Date {
   const timeList = [posting.statusChangedAt ?? posting.appliedAt, posting.archivedAt]
     .filter((date) => date !== null)
     .map((date) => date.getTime());
   const pastEndList = interviewList
     .filter((interview) => hasTakenPlace(interview, now))
     .map((interview) => findInterviewEnd(interview).getTime());
-  return Math.max(0, ...timeList, ...pastEndList);
+  return new Date(Math.max(0, ...timeList, ...pastEndList));
 }
 
 // The most recently changed first
-function compareLastChanges(
-  [, firstChangeAt]: [Application, number],
-  [, secondChangeAt]: [Application, number],
-): number {
-  return secondChangeAt - firstChangeAt;
+function compareLastChanges(first: Application, second: Application): number {
+  return second.lastChangeAt.getTime() - first.lastChangeAt.getTime();
+}
+
+// The most recently archived first: the archiving date sorts the Archived sections (ADR-0007)
+function compareArchivedAt(first: Application, second: Application): number {
+  return (second.posting.archivedAt?.getTime() ?? 0) - (first.posting.archivedAt?.getTime() ?? 0);
 }
 
 // An upcoming Interview first, the nearest first, then the most recently changed (GLOSSARY.md « In progress »)
-function compareApplications(
-  [first, firstChangeAt]: [Application, number],
-  [second, secondChangeAt]: [Application, number],
-): number {
+function compareApplications(first: Application, second: Application): number {
   if (first.hasUpcomingInterview !== second.hasUpcomingInterview) {
     return first.hasUpcomingInterview ? -1 : 1;
   }
   if (first.hasUpcomingInterview && first.nextInterview !== null && second.nextInterview !== null) {
     return first.nextInterview.startAt.getTime() - second.nextInterview.startAt.getTime();
   }
-  return compareLastChanges([first, firstChangeAt], [second, secondChangeAt]);
+  return compareLastChanges(first, second);
 }
+
+// The sections the archiving date sorts (ADR-0007)
+const ARCHIVED_SECTION_SET = new Set<ApplicationSectionName>(['archived', 'archived_without_application']);
 
 // The section of /applications a Posting goes in; none for a To Apply Posting still followed
 function findSection(posting: Posting): ApplicationSectionName | null {
@@ -79,19 +81,19 @@ function findSection(posting: Posting): ApplicationSectionName | null {
 }
 
 export function createApplicationActions({ workspace, findCandidate }: ActionContext) {
-  // A row and what sorts it: its Interviews come by date (workspace.listInterviews)
-  async function readApplication(posting: Posting, now: Date): Promise<[Application, number]> {
+  // A row: its Interviews come by date (workspace.listInterviews)
+  async function readApplication(posting: Posting, now: Date): Promise<Application> {
     const interviewList = await workspace.listInterviews(posting);
     const upcomingInterview = interviewList.find((interview) => !hasTakenPlace(interview, now));
-    const application = APPLICATION_SCHEMA.parse({
+    return APPLICATION_SCHEMA.parse({
       posting,
       statusChoiceList: listStatusChoices(posting),
       nextInterview: upcomingInterview ?? interviewList.at(-1) ?? null,
       hasUpcomingInterview: upcomingInterview !== undefined,
       interviewCount: interviewList.length,
       notesExcerpt: excerptOf(posting.notes),
+      lastChangeAt: findLastChangeAt(posting, interviewList, now),
     });
-    return [application, findLastChangeAt(posting, interviewList, now)];
   }
 
   return {
@@ -100,30 +102,29 @@ export function createApplicationActions({ workspace, findCandidate }: ActionCon
       const candidate = await findCandidate(rawInput);
       const now = new Date();
       const postingList = await workspace.listPostings(candidate.id);
-      const rowList = await Promise.all(
+      const applicationList = await Promise.all(
         postingList
           .filter(({ status, archivedAt }) => status === 'applied' && archivedAt === null)
           .map((posting) => readApplication(posting, now)),
       );
-      return rowList.toSorted(compareApplications).map(([application]) => application);
+      return applicationList.toSorted(compareApplications);
     },
 
     // The historical record of /applications: every Application, and the Postings archived without one,
-    // each section in its order with the most recently changed first
+    // each section in its order with the most recently changed first, the Archived ones the most recently archived first
     async listApplications(rawInput: unknown): Promise<ApplicationSection[]> {
       const candidate = await findCandidate(rawInput);
       const now = new Date();
       const postingList = await workspace.listPostings(candidate.id);
-      const rowList = await Promise.all(
+      const applicationList = await Promise.all(
         postingList.filter((posting) => findSection(posting) !== null).map((posting) => readApplication(posting, now)),
       );
       return APPLICATION_SECTION_NAME_SCHEMA.options.map((section) =>
         APPLICATION_SECTION_SCHEMA.parse({
           section,
-          applicationList: rowList
-            .filter(([application]) => findSection(application.posting) === section)
-            .toSorted(compareLastChanges)
-            .map(([application]) => application),
+          applicationList: applicationList
+            .filter(({ posting }) => findSection(posting) === section)
+            .toSorted(ARCHIVED_SECTION_SET.has(section) ? compareArchivedAt : compareLastChanges),
         }),
       );
     },
