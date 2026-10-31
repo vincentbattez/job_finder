@@ -4,6 +4,7 @@ export const HOME_FR: typeof HOME_EN = {
   pageTitle: 'Accueil · Job Finder',
   heading: 'Bonjour {{candidateName}}',
   inProgressHeading: 'Candidatures en cours',
+  allApplicationsLink: 'Toutes les Candidatures',
   noApplicationInProgress: 'Aucune Candidature en cours. Marquer une Offre Postulée pour la suivre ici.',
   latestHeading: 'Dernières Offres',
   allPostingsLink: 'Toutes les Offres',

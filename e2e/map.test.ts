@@ -2,8 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 
 // test/seed-front.ts locates Léa's Postings through API Géo's recorded responses, and gives the three
 // Melun Postings, whose Deadline passed in the summer of 2026, a status each. No e2e test adds a
-// Posting to her: she keeps the 80 the Detection found, an Archived one aside.
-const LEA_POSTING_COUNT = 80;
+// Posting to her: she keeps the 81 the Detection found, three Archived aside (one of them for
+// e2e/map.test.ts, two for e2e/applications.test.ts).
+const LEA_POSTING_COUNT = 78;
 const BETHUNE_TITLE = 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE';
 
 async function chooseLea(page: Page) {

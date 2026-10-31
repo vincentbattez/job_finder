@@ -5,6 +5,7 @@ export const SETTINGS_EN = {
   layout: {
     navigationLabel: 'Pages',
     homeLink: 'Home',
+    applicationsLink: 'Applications',
     postingsLink: 'Postings',
     profileLink: 'Profile',
     instructionsLink: 'Instructions',

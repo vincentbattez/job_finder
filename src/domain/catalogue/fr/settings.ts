@@ -4,6 +4,7 @@ export const SETTINGS_FR: typeof SETTINGS_EN = {
   layout: {
     navigationLabel: 'Pages',
     homeLink: 'Accueil',
+    applicationsLink: 'Candidatures',
     postingsLink: 'Offres',
     profileLink: 'Profil',
     instructionsLink: 'Consignes',

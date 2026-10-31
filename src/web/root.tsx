@@ -77,6 +77,7 @@ function Page({ children }: Readonly<{ children: ReactNode }>) {
               <NavLink to="/" end>
                 {t('layout.homeLink')}
               </NavLink>
+              <NavLink to="/applications">{t('layout.applicationsLink')}</NavLink>
               <NavLink to="/postings">{t('layout.postingsLink')}</NavLink>
               <NavLink to="/profile">{t('layout.profileLink')}</NavLink>
               <NavLink to="/instructions">{t('layout.instructionsLink')}</NavLink>

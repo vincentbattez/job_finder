@@ -6,6 +6,7 @@ async function expectFrench(page: Page, heading: string) {
   await expect(page).toHaveTitle('Accueil · Job Finder');
   await expect(page.getByRole('navigation', { name: 'Pages' }).getByRole('link')).toHaveText([
     'Accueil',
+    'Candidatures',
     'Offres',
     'Profil',
     'Consignes',
@@ -19,6 +20,7 @@ async function expectEnglish(page: Page, heading: string) {
   await expect(page).toHaveTitle('Home · Job Finder');
   await expect(page.getByRole('navigation', { name: 'Pages' }).getByRole('link')).toHaveText([
     'Home',
+    'Applications',
     'Postings',
     'Profile',
     'Instructions',

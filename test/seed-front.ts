@@ -223,6 +223,20 @@ await actions.addInterview({
 });
 await actions.saveNotes({ reference: '2026-2448220', notes: '# Appel du greffe\n\nRappeler **lundi**.\n' });
 await actions.changeStatus({ reference: '2026-2448225', status: 'applied' });
+// One Posting per section of /applications for e2e/applications.test.ts, out of the Hauts-de-France and of
+// Melun, which e2e/map.test.ts counts: Hired, two Rejected whose outcome it changes from their row (with JS and
+// without), an Archived Application and a Posting archived without one
+for (const [reference, status] of [
+  ['2026-2289933', 'hired'],
+  ['2026-2315264', 'rejected'],
+  ['2026-2399015', 'rejected'],
+  ['2026-2340735', 'applied'],
+]) {
+  await actions.changeStatus({ reference, status: 'applied' });
+  await actions.changeStatus({ reference, status });
+}
+await actions.archive({ reference: '2026-2340735' });
+await actions.archive({ reference: '2026-2380466' });
 
 // Emma reads the interface in English (e2e/locale.test.ts). Her one Posting, imported, keeps the name
 // of its file: the fake Claude of the seed reads none of its fields, so it has no Deadline.
