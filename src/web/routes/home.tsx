@@ -4,6 +4,7 @@ import { redirect, useLoaderData, type LoaderFunctionArgs, type MetaArgs } from 
 import { localeOf, tFor } from '#/actions/i18n.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
+import { ApplicationsInProgress, loadApplicationsInProgress } from '#/web/containers/applications-in-progress.tsx';
 import { LatestPostings, loadLatestPostings } from '#/web/containers/latest-postings.tsx';
 import { relayLoader } from '#/web/relay-action.server.ts';
 
@@ -22,6 +23,7 @@ export function loader({ request }: LoaderFunctionArgs) {
       candidate,
       // meta runs outside React: it translates in the locale the loader gives it (ADR-0012)
       locale,
+      applicationList: candidate === null ? [] : await loadApplicationsInProgress(ACTIONS, candidate.id),
       latestPostingList: candidate === null ? [] : await loadLatestPostings(ACTIONS, candidate.id),
     };
   });
@@ -32,7 +34,7 @@ export function meta({ loaderData }: MetaArgs<typeof loader>) {
 }
 
 export default function Home() {
-  const { candidate, latestPostingList } = useLoaderData<typeof loader>();
+  const { candidate, applicationList, latestPostingList } = useLoaderData<typeof loader>();
   const { t } = useTranslation('home');
   if (candidate === null) {
     return (
@@ -49,6 +51,7 @@ export default function Home() {
       <div className="page__head">
         <h1>{t('heading', { candidateName: candidate.name })}</h1>
       </div>
+      <ApplicationsInProgress applicationList={applicationList} />
       <LatestPostings postingList={latestPostingList} />
     </main>
   );
