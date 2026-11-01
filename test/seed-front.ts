@@ -215,7 +215,7 @@ await actions.changeStatus({ reference: '2026-2448213', status: 'applied' });
 await actions.changeStatus({ reference: '2026-2448215', status: 'applied' });
 await actions.archive({ reference: '2026-2290529' });
 // The Applications in progress whose outcome e2e/home.test.ts changes from their row: one with JS, with an
-// upcoming Interview and Notes, and one without JS
+// upcoming Interview and Notes, and one without JS; their Interviews, the nearest, keep them among the 3 the home shows
 await actions.changeStatus({ reference: '2026-2448220', status: 'applied' });
 await actions.addInterview({
   reference: '2026-2448220',
@@ -225,6 +225,12 @@ await actions.addInterview({
 });
 await actions.saveNotes({ reference: '2026-2448220', notes: '# Appel du greffe\n\nRappeler **lundi**.\n' });
 await actions.changeStatus({ reference: '2026-2448225', status: 'applied' });
+await actions.addInterview({
+  reference: '2026-2448225',
+  start: '2030-01-20T10:00',
+  place: 'Tribunal judiciaire',
+  interviewers: 'Mme Durand',
+});
 // One Posting per section of /applications for e2e/applications.test.ts, out of the Hauts-de-France and of
 // Melun, which e2e/map.test.ts counts: Hired, two Rejected whose outcome it changes from their row (with JS and
 // without), an Archived Application and a Posting archived without one

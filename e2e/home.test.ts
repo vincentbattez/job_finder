@@ -39,7 +39,7 @@ async function putBackInProgress(page: Page, reference: string) {
 }
 
 test.describe('Applications in progress', () => {
-  test('shows each one with its next Interview and its Notes, and none Archived or To Apply', async ({
+  test('shows the first 3 with their next Interview and their Notes, and none Archived or To Apply', async ({
     page,
     asCandidate,
     openPage,
@@ -61,6 +61,8 @@ test.describe('Applications in progress', () => {
       `/postings/${APPLICATION_REFERENCE}/interviews/1/ical`,
     );
     const section = findApplicationsInProgress(page);
+    // Léa has more in progress: one row of the home holds 3, /applications lists them all
+    await expect(section.getByRole('article')).toHaveCount(3);
     await expect(section.locator('a[href="/postings/2026-2290529"]')).toHaveCount(0);
     await expect(section.locator('a[href="/postings/2026-2445600"]')).toHaveCount(0);
   });
