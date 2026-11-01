@@ -1,6 +1,7 @@
 import { expect, test, type Locator } from '@playwright/test';
 
 import { prepareInterview } from './interview.ts';
+import { unfoldChosenVersion } from './version.ts';
 
 // The Sens Posting, which test/seed-front.ts leaves without any Artifact and that no other test
 // touches: the test marks it Applied, gives it an Interview and produces its Research and the Interview
@@ -30,6 +31,7 @@ test('launches the Visualization of the Chosen Interview Brief, shows it in a fr
   await launch(visualization, 'Visualisation');
 
   await expect(visualization.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
+  await unfoldChosenVersion(visualization);
   const frame = visualization.getByTitle('Visualisation v1');
   await expect(frame).toHaveAttribute('sandbox', '');
   await expect(frame.contentFrame().getByRole('table')).toContainText('Missions, Partenaires, Service');
@@ -51,5 +53,6 @@ test('launches the Visualization of the Chosen Interview Brief, shows it in a fr
   await expect(visualization.locator('li > details > summary')).toHaveText([/^v1\s*Prêt/, /^v2\s*Prêt\s*Retenue/], {
     timeout: READY_TIMEOUT_MS,
   });
+  await unfoldChosenVersion(visualization);
   await expect(visualization.getByTitle('Visualisation v2')).toBeVisible();
 });

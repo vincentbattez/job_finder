@@ -63,7 +63,7 @@ function VersionFiles({
   );
 }
 
-// Every Version of an Artifact, oldest first, the Chosen one open, beside the Prompt of a run not refused;
+// Every Version of an Artifact, oldest first, each folded until asked, beside the Prompt of a run not refused;
 // an Artifact of an Interview has its section under that Interview, a heading a level below
 export function ArtifactVersions({
   reference,
@@ -107,7 +107,7 @@ export function ArtifactVersions({
         <ol className="artifact-versions__list">
           {versionList.map(({ version, isChoosable, documentList }) => (
             <li key={version.number}>
-              <details className="artifact-versions__version" open={version.isChosen}>
+              <details className="artifact-versions__version">
                 <summary>
                   <span className="artifact-versions__reference">
                     {t('versionNumber', { versionNumber: version.number })}

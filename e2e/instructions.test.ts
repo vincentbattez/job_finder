@@ -1,4 +1,5 @@
 import { expect, test, type IFront } from './candidate.ts';
+import { unfoldChosenVersion } from './version.ts';
 
 // Sacha's Instructions are the ones these tests change; test/seed-front.ts leaves them to the default
 // ones. Léa's Posting 2026-2409247 has a Research made with the default Instructions, then one with hers.
@@ -71,8 +72,9 @@ test.describe('Instructions of a Candidate', () => {
       /^v1.*Consignes par défaut/,
       /^v2.*Consignes du Candidat/,
     ]);
-    // v2, the Chosen Version, is open; its Instructions stay folded until asked
+    // v2, the Chosen Version, unfolds like any other; its Instructions stay folded until asked
     const v2 = research.locator('li').filter({ has: page.locator('summary', { hasText: /^v2/ }) });
+    await unfoldChosenVersion(research);
     await expect(research.getByText('Creuse la ville.')).toBeHidden();
     await v2.getByText('Consignes de cette Version').click();
     await expect(v2.getByText('Creuse la ville.')).toBeVisible();

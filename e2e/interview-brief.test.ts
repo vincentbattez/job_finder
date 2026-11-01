@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { prepareInterview } from './interview.ts';
 import { findOverflowing } from './overflow.ts';
+import { unfoldChosenVersion } from './version.ts';
 
 // A Posting that test/seed-front.ts leaves without any Artifact and that no other test touches: the
 // test marks it Applied, gives it an Interview and produces its Research first. The e2e worker runs
@@ -48,6 +49,7 @@ test('launches the Interview Brief of an Interview once the Posting has a Chosen
 
   await expect(brief.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
   await expect(brief.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
+  await unfoldChosenVersion(brief);
   await expect(brief.getByText(`jf edit ${REFERENCE} interview_brief 1`)).toBeVisible();
   const document = brief.getByRole('figure', { name: 'interview-brief.md' });
   const editor = document.getByRole('textbox', { name: 'Markdown' });
@@ -57,6 +59,7 @@ test('launches the Interview Brief of an Interview once the Posting has a Chosen
   await document.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(document.getByText('Modifications non enregistrées')).toBeHidden();
   await page.reload();
+  await unfoldChosenVersion(brief);
   await expect(editor).toHaveValue(CORRECTED_BRIEF);
   await expect(brief.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
   // Under its Interview, the Interview Brief still fits a phone screen

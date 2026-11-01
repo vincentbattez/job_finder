@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 
 import { expect, test } from './candidate.ts';
 import { findOverflowing } from './overflow.ts';
+import { unfoldChosenVersion } from './version.ts';
 
 // The front runs on the data that test/seed-front.ts made through the actions, with the HTTP of
 // the PEP Source recorded on 2026-10-29: Léa follows the attaché de justice Postings, Camille has
@@ -86,7 +87,7 @@ test.describe('Postings of a Candidate', () => {
     await expect(recipients).toContainText('Le mail de candidature est celui de la présidence');
   });
 
-  test('shows every Version of an Artifact and tells the Chosen Version', async ({ page }) => {
+  test('shows every Version of an Artifact folded and tells the Chosen Version', async ({ page }) => {
     await page.goto('/postings/2026-2445600');
 
     const research = page.getByRole('region', { name: 'Recherche' });
@@ -94,6 +95,8 @@ test.describe('Postings of a Candidate', () => {
       /^v1\s*Prêt\s*Retenue/,
       /^v2\s*Prêt\s*Consignes par défaut\s*\d/,
     ]);
+    await expect(research.getByRole('heading', { name: /^Recherche retenue/ })).toBeHidden();
+    await unfoldChosenVersion(research);
     await expect(research.getByRole('heading', { name: /^Recherche retenue/ })).toBeVisible();
     await expect(research.getByRole('heading', { name: /^Recherche relancée/ })).toBeHidden();
     await research.locator('li > details > summary', { hasText: 'v2' }).click();

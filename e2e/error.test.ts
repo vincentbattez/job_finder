@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { unfoldChosenVersion } from './version.ts';
+
 // These tests change no data: each failure leaves the Béthune Posting as test/seed-front.ts made it,
 // its Research v1 chosen and v2 ready
 const BETHUNE_REFERENCE = '2026-2445600';
@@ -44,7 +46,9 @@ test('refuses an unknown Version next to its button, without an error page', asy
 
 test('keeps the text typed when saving a document fails', async ({ page }) => {
   await page.goto(`/postings/${BETHUNE_REFERENCE}`);
-  const document = page.getByRole('region', { name: 'Recherche' }).getByRole('figure', { name: 'research.md' });
+  const research = page.getByRole('region', { name: 'Recherche' });
+  await unfoldChosenVersion(research);
+  const document = research.getByRole('figure', { name: 'research.md' });
   const textbox = document.getByRole('textbox', { name: 'Markdown' });
   // React resets a textarea it takes over: typing waits for it to be editable
   await expect(textbox).toBeEditable();

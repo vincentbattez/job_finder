@@ -1,4 +1,5 @@
 import { expect, test, type IFront } from './candidate.ts';
+import { unfoldChosenVersion } from './version.ts';
 
 // Emma reads the interface in English (test/seed-front.ts): her one Posting, imported, has no
 // Deadline
@@ -182,6 +183,7 @@ test('takes a Candidate with the en locale through a Posting and its Status in E
   await expect(research.getByRole('button', { name: 'Run the Research again' })).toBeVisible();
   await expect(research.getByText('Default Instructions')).toBeVisible();
   await expect(research.getByText('Chosen', { exact: true })).toBeVisible();
+  await unfoldChosenVersion(research);
   await expect(research.getByText('Instructions of this Version')).toBeVisible();
   await expect(research.getByText('Preview')).toBeVisible();
   await expect(research.getByRole('button', { name: 'Save' })).toBeVisible();

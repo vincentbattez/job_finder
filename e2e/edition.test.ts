@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { unfoldChosenVersion } from './version.ts';
+
 // These journeys change data, each on its own Posting that test/seed-front.ts prepared: Bastia has a
 // Research and a Letter, Versailles two Research. The read tests keep Béthune 2026-2445600.
 const BASTIA_REFERENCE = '2026-2426147';
@@ -22,6 +24,7 @@ test('corrects a Letter, saves it, marks the Posting as Applied, finds the Lette
   const letter = page.getByRole('region', { name: 'Lettre' });
   const draft = letter.getByRole('figure', { name: 'draft.md' });
   const correction = letter.getByRole('figure', { name: 'letter.md' });
+  await unfoldChosenVersion(letter);
   // The Draft reads as the AI wrote it; the Letter, its copy, opens in the editor
   await expect(draft.getByRole('textbox')).toHaveCount(0);
   await expect(draft.locator('mark')).toHaveText(['[à compléter : diplôme et année d’obtention]']);
@@ -33,6 +36,7 @@ test('corrects a Letter, saves it, marks the Posting as Applied, finds the Lette
   await correction.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(correction.getByText('Modifications non enregistrées')).toBeHidden();
   await page.reload();
+  await unfoldChosenVersion(letter);
   await expect(correction.getByRole('textbox', { name: 'Markdown' })).toHaveValue(CORRECTED_LETTER);
   await expect(draft).toContainText('[à compléter : diplôme et année d’obtention]');
   await expect(async () => {
@@ -51,7 +55,7 @@ test('corrects a Letter, saves it, marks the Posting as Applied, finds the Lette
   await expect(page.getByText('Postulée', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Marquer comme Postulée' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Archiver' })).toBeVisible();
-  await expect(letter.getByRole('textbox')).toHaveCount(0);
+  await expect(letter.getByRole('textbox', { includeHidden: true })).toHaveCount(0);
   await expect(correction).toContainText('Titulaire d’un master 2 de droit privé obtenu en 2025.');
 
   // A Letter written is not a Letter sent: the Candidate undoes Applied, and the Letter changes again
@@ -70,6 +74,7 @@ test('changes the Chosen Version of an Artifact', async ({ page }) => {
     /^v1\s*Prêt\s*Consignes par défaut\s*\d/,
     /^v2\s*Prêt\s*Retenue/,
   ]);
+  await unfoldChosenVersion(research);
   await expect(research.getByRole('textbox', { name: 'Markdown' })).toHaveValue(/^# Recherche relancée/);
 
   await research.locator('li > details > summary', { hasText: 'v1' }).click();

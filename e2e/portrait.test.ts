@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { prepareInterview } from './interview.ts';
+import { unfoldChosenVersion } from './version.ts';
 
 // A Posting that test/seed-front.ts leaves without any Artifact and that no other test touches: the test
 // marks it Applied and gives it an Interview. The e2e worker runs the jobs with the fake Claude, whose
@@ -24,6 +25,7 @@ test('launches the Portrait of an Interview without a Research, then corrects it
 
   await expect(portrait.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
   await expect(portrait.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
+  await unfoldChosenVersion(portrait);
   await expect(portrait.getByText(`jf edit ${REFERENCE} portrait 1`)).toBeVisible();
   const document = portrait.getByRole('figure', { name: 'portrait.md' });
   const editor = document.getByRole('textbox', { name: 'Markdown' });
@@ -32,5 +34,6 @@ test('launches the Portrait of an Interview without a Research, then corrects it
   await document.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(document.getByText('Modifications non enregistrées')).toBeHidden();
   await page.reload();
+  await unfoldChosenVersion(portrait);
   await expect(editor).toHaveValue(CORRECTED_PORTRAIT);
 });
