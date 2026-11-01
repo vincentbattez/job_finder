@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
   // Vite's scan of the routes stops at the #/ imports, so it would find these only once a page needs
   // them, then reload that page mid-hydration: bundled up front instead. The CI log of the e2e showed
   // the two i18next packages optimized on the first page of a run, which then never hydrated.
-  optimizeDeps: { include: ['react-markdown', 'leaflet', 'react-i18next', 'i18next'] },
+  optimizeDeps: { include: ['react-markdown', 'remark-gfm', 'leaflet', 'react-i18next', 'i18next'] },
   // The e2e tests (playwright.config.ts) serve the front with the actions of test/, which fake the
   // external boundaries, whatever the path a module imports them by
   resolve: {

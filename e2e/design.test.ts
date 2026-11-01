@@ -68,6 +68,18 @@ test.describe('design system page', () => {
     await expect(editor.getByRole('heading', { name: 'Objet de la lettre' })).toBeVisible();
   });
 
+  // A Research sums up its figures in GitHub tables, which plain Markdown would show as raw pipes
+  test('previews a Markdown table as a table', async ({ page }) => {
+    const editor = page.getByRole('region', { name: 'Éditeur Markdown' });
+    await editor
+      .getByRole('textbox', { name: 'Lettre' })
+      .fill('| Ressort | Population |\n|---|---|\n| Béziers | 323 000 |');
+
+    const table = editor.getByRole('table');
+    await expect(table.getByRole('columnheader')).toHaveText(['Ressort', 'Population']);
+    await expect(table.getByRole('cell')).toHaveText(['Béziers', '323 000']);
+  });
+
   // Léa reads the front on her phone through the VPN (ADR-0002). overflow-x: clip hides a horizontal
   // scrollbar, so the check is that nothing runs past the right edge, where it would be cut off.
   test('fits a phone screen', async ({ page }) => {
