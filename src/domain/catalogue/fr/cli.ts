@@ -102,9 +102,9 @@ export const CLI_FR: typeof CLI_EN = {
   applyDescription: 'Passe une Offre en Postulée, avec ou sans Lettre, ce qui fige sa Lettre',
   toApplyDescription:
     'Remet À traiter une Offre Postulée sans Entretien dont la Lettre n’a jamais été envoyée, sa Lettre de nouveau libre',
-  hiredDescription: 'Marque une Candidature Obtenue : le Candidat a le poste',
+  hiredDescription: 'Marque une Candidature comme Poste obtenu : le Candidat a le poste',
   rejectedDescription: "Marque une Candidature Refusée : l'employeur n'a pas retenu le Candidat",
-  inProgressDescription: 'Remet En cours, soit Postulée, une Candidature Obtenue ou Refusée',
+  inProgressDescription: 'Remet En cours, soit Postulée, une Candidature qui a son issue, Poste obtenu ou Refusée',
   archiveDescription: 'Archive une Offre, quel que soit son Statut, qu’elle garde',
   unarchiveDescription: 'Désarchive une Offre, qui retrouve son Statut tel qu’il était',
   postingArchived: '{{reference}} : Archivée\n',

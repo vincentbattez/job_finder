@@ -7,8 +7,9 @@ import { useIsHydrated } from '#/web/components/use-is-hydrated.ts';
 
 import './outcome-selector.css';
 
-// The outcomes of an Application in the order the selector shows them, In progress being Applied
-const OUTCOME_LIST = ['applied', 'hired', 'rejected'] as const satisfies Status[];
+// The outcomes of an Application in the order the selector shows them; back In progress removes the
+// outcome rather than being one, so it gets its own button
+const OUTCOME_LIST = ['hired', 'rejected'] as const satisfies Status[];
 
 // The two moves that freeze or free the Chosen Letter, each confirmed by a second click
 const CONFIRMED_BUTTON_BY_STATUS = {
@@ -74,8 +75,9 @@ function ConfirmedButton({ status, error }: Readonly<IConfirmedButton>) {
 }
 
 // Offers only what the Candidate can choose, inside the form of its Container: Applied on a To Apply
-// Posting, then In progress, Hired or Rejected on an Application, its outcome pressed, and To Apply
-// again on one In progress whose Letter was never sent. The step shows in the badge beside it (ADR-0009).
+// Posting, then Hired or Rejected on an Application, its outcome pressed, back In progress apart once it
+// has one, and To Apply again on one In progress whose Letter was never sent. The step shows in the
+// badge beside it (ADR-0009).
 export function OutcomeSelector({ status, statusChoiceList, error }: Readonly<IOutcomeSelector>) {
   const { t } = useTranslation('posting');
   if (status === 'to_apply') {
@@ -98,6 +100,11 @@ export function OutcomeSelector({ status, statusChoiceList, error }: Readonly<IO
             </button>
           ))}
         </div>
+        {statusChoiceList.includes('applied') && (
+          <button className="button" type="submit" name="status" value="applied">
+            {t('backInProgress')}
+          </button>
+        )}
         {error != null && <p role="alert">{error}</p>}
       </ButtonRow>
       {statusChoiceList.includes('to_apply') && <ConfirmedButton status="to_apply" />}

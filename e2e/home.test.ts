@@ -91,7 +91,9 @@ test.describe('Applications in progress', () => {
       await asCandidate('lea');
       await openHomeOf({ page, openPage }, 'Léa');
 
-      await findApplicationRow(page, APPLICATION_WITHOUT_JS_REFERENCE).getByRole('button', { name: 'Obtenue' }).click();
+      await findApplicationRow(page, APPLICATION_WITHOUT_JS_REFERENCE)
+        .getByRole('button', { name: 'Poste obtenu' })
+        .click();
 
       await expect(page).toHaveURL('/');
       await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Léa');

@@ -11,7 +11,7 @@ const REJECTED_WITHOUT_JS_REFERENCE = '2026-2399015';
 const ARCHIVED_REFERENCE = '2026-2340735';
 const ARCHIVED_WITHOUT_APPLICATION_REFERENCE = '2026-2380466';
 
-const SECTION_HEADING_LIST = ['Obtenues', 'En cours', 'Refusées', 'Archivées', 'Archivées sans Candidature'];
+const SECTION_HEADING_LIST = ['Postes obtenus', 'En cours', 'Refusées', 'Archivées', 'Archivées sans Candidature'];
 
 // Léa's, once asCandidate chose her
 async function openApplications({ page, openPage }: IFront) {
@@ -42,7 +42,7 @@ test.describe('/applications', () => {
     await openApplications({ page, openPage });
 
     await expect(page.getByRole('heading', { level: 2 })).toHaveText(SECTION_HEADING_LIST);
-    await expect(findRow(page, 'Obtenues', HIRED_REFERENCE).locator('.badge')).toHaveText('Obtenue');
+    await expect(findRow(page, 'Postes obtenus', HIRED_REFERENCE).locator('.badge')).toHaveText('Poste obtenu');
     await expect(findRow(page, 'Refusées', REJECTED_REFERENCE).locator('.badge')).toHaveText('Refusée');
     // Archived is a mark beside the step, which it keeps (ADR-0007)
     await expect(findRow(page, 'Archivées', ARCHIVED_REFERENCE).locator('.badge')).toHaveText(['Postulée', 'Archivée']);
@@ -75,7 +75,7 @@ test.describe('/applications', () => {
     await asCandidate('lea');
     await openApplications({ page, openPage });
 
-    await findRow(page, 'Refusées', REJECTED_REFERENCE).getByRole('button', { name: 'Envoyée' }).click();
+    await findRow(page, 'Refusées', REJECTED_REFERENCE).getByRole('button', { name: 'Remettre en cours' }).click();
 
     await expect(findRow(page, 'En cours', REJECTED_REFERENCE)).toHaveCount(1);
     await expect(findRow(page, 'Refusées', REJECTED_REFERENCE)).toHaveCount(0);
@@ -123,10 +123,12 @@ test.describe('/applications', () => {
       await asCandidate('lea');
       await openApplications({ page, openPage });
 
-      await findRow(page, 'Refusées', REJECTED_WITHOUT_JS_REFERENCE).getByRole('button', { name: 'Obtenue' }).click();
+      await findRow(page, 'Refusées', REJECTED_WITHOUT_JS_REFERENCE)
+        .getByRole('button', { name: 'Poste obtenu' })
+        .click();
 
       await expect(page).toHaveURL('/applications');
-      await expect(findRow(page, 'Obtenues', REJECTED_WITHOUT_JS_REFERENCE)).toHaveCount(1);
+      await expect(findRow(page, 'Postes obtenus', REJECTED_WITHOUT_JS_REFERENCE)).toHaveCount(1);
     });
   });
 });

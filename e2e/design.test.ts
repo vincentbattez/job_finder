@@ -15,7 +15,7 @@ test.describe('design system page', () => {
       'Postulée',
       'Convoquée',
       'Entretien passé',
-      'Obtenue',
+      'Poste obtenu',
       'Refusée',
       'Expirée',
       'Archivée',
