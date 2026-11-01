@@ -181,8 +181,8 @@ export type Application = z.infer<typeof APPLICATION_SCHEMA>;
 
 // The sections of /applications, in the order it shows them: an Archived one leaves its outcome's section
 export const APPLICATION_SECTION_NAME_SCHEMA = z.enum([
-  'in_progress',
   'hired',
+  'in_progress',
   'rejected',
   'archived',
   'archived_without_application',

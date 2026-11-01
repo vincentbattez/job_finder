@@ -207,8 +207,8 @@ describe('the Applications by section', () => {
         applicationList.map(({ posting }) => posting.reference),
       ]),
     ).toEqual([
-      ['in_progress', ['2026-2445609', '2026-2445600']],
       ['hired', ['2026-2360445', '2026-2445183']],
+      ['in_progress', ['2026-2445609', '2026-2445600']],
       ['rejected', ['2026-2231960', '2026-2360411']],
       ['archived', ['2026-2350473', '2026-2338409']],
       ['archived_without_application', ['2026-2445637', '2026-2199164']],

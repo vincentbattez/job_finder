@@ -11,7 +11,7 @@ const REJECTED_WITHOUT_JS_REFERENCE = '2026-2399015';
 const ARCHIVED_REFERENCE = '2026-2340735';
 const ARCHIVED_WITHOUT_APPLICATION_REFERENCE = '2026-2380466';
 
-const SECTION_HEADING_LIST = ['En cours', 'Obtenues', 'Refusées', 'Archivées', 'Archivées sans Candidature'];
+const SECTION_HEADING_LIST = ['Obtenues', 'En cours', 'Refusées', 'Archivées', 'Archivées sans Candidature'];
 
 // Léa's, once asCandidate chose her
 async function openApplications({ page, openPage }: IFront) {
