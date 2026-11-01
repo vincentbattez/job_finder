@@ -68,6 +68,7 @@ export const SETTINGS_FR: typeof SETTINGS_EN = {
     save: 'Enregistrer les Faits',
   },
   profileFile: {
+    content: 'Contenu',
     contentOf: 'Contenu de {{fileName}}',
     contentPlaceholder: '# Titre\n\n## Rubrique\n\n- Un fait par ligne, en Markdown',
     save: 'Enregistrer',

@@ -1,9 +1,20 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
+import type { Locator } from '@playwright/test';
 import { z } from 'zod/v4';
 
 import { expect, test, type AsCandidate, type IFront } from './candidate.ts';
+
+// The editor of a file of the Profile is folded until asked, and again once a save redraws the file:
+// its text reads folded or not, but it takes typing only unfolded
+function contentOf(file: Locator) {
+  return file.getByRole('textbox', { name: /^Contenu/, includeHidden: true });
+}
+
+async function unfoldContent(file: Locator) {
+  await file.getByText('Contenu', { exact: true }).click();
+}
 
 // Each test changes the Profile of a Candidate of its own (test/seed-front.ts), which it puts back
 // first, as jf profile would have written it: a test that failed halfway leaves nothing behind
@@ -38,16 +49,16 @@ test.describe('Profile of a Candidate', () => {
       'Notifications',
     ]);
     const facts = page.getByRole('region', { name: 'facts.md' });
-    await expect(facts.getByRole('textbox')).toHaveValue('# Faits\n\n## Mobilité\n\n- Lille et alentours\n');
-    await facts.getByRole('textbox').fill('# Faits\n\n## Mobilité\n\n- Lille, Arras et Béthune\n');
+    await expect(contentOf(facts)).toHaveValue('# Faits\n\n## Mobilité\n\n- Lille et alentours\n');
+    await expect(contentOf(facts)).toBeHidden();
+    await unfoldContent(facts);
+    await contentOf(facts).fill('# Faits\n\n## Mobilité\n\n- Lille, Arras et Béthune\n');
     await expect(facts.getByText('Modifications non enregistrées')).toBeVisible();
     await facts.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(facts.getByText('Modifications non enregistrées')).toBeHidden();
     await page.reload();
-    await expect(page.getByRole('region', { name: 'facts.md' }).getByRole('textbox')).toHaveValue(
-      '# Faits\n\n## Mobilité\n\n- Lille, Arras et Béthune\n',
-    );
-    await expect(page.getByRole('region', { name: 'cv.md' }).getByRole('textbox')).toHaveValue(
+    await expect(contentOf(facts)).toHaveValue('# Faits\n\n## Mobilité\n\n- Lille, Arras et Béthune\n');
+    await expect(contentOf(page.getByRole('region', { name: 'cv.md' }))).toHaveValue(
       '# CV de Sacha\n\n## Formation\n\n- Master 2 droit public\n',
     );
   });
@@ -60,19 +71,19 @@ test.describe('Profile of a Candidate', () => {
     await creation.getByRole('button', { name: 'Créer le fichier' }).click();
     await expect(creation.getByRole('alert')).toContainText("« ../facts.md » n'est pas un nom de fichier du Profil");
     await creation.getByRole('textbox', { name: 'Nom du fichier' }).fill('letter-tj-lille-2025.md');
-    await creation.getByRole('textbox', { name: /^Contenu/ }).fill('# Lettre au TJ de Lille\n');
+    await unfoldContent(creation);
+    await contentOf(creation).fill('# Lettre au TJ de Lille\n');
     await creation.getByRole('button', { name: 'Créer le fichier' }).click();
 
     const letter = page.getByRole('region', { name: 'letter-tj-lille-2025.md' });
-    await expect(letter.getByRole('textbox')).toHaveValue('# Lettre au TJ de Lille\n');
+    await expect(contentOf(letter)).toHaveValue('# Lettre au TJ de Lille\n');
     await expect(creation.getByRole('textbox', { name: 'Nom du fichier' })).toHaveValue('');
-    await letter.getByRole('textbox').fill('# Lettre au TJ de Lille\n\nMadame la Présidente,\n');
+    await unfoldContent(letter);
+    await contentOf(letter).fill('# Lettre au TJ de Lille\n\nMadame la Présidente,\n');
     await letter.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(letter.getByText('Modifications non enregistrées')).toBeHidden();
     await page.reload();
-    await expect(page.getByRole('region', { name: 'letter-tj-lille-2025.md' }).getByRole('textbox')).toHaveValue(
-      '# Lettre au TJ de Lille\n\nMadame la Présidente,\n',
-    );
+    await expect(contentOf(letter)).toHaveValue('# Lettre au TJ de Lille\n\nMadame la Présidente,\n');
 
     await letter.getByText('Supprimer letter-tj-lille-2025.md…').click();
     await letter.getByRole('button', { name: 'Supprimer définitivement letter-tj-lille-2025.md' }).click();
@@ -96,7 +107,7 @@ test.describe('Profile of a Candidate', () => {
   }) => {
     await openFreshProfileOf({ page, asCandidate, openPage }, { id: 'ines', name: 'Inès' });
 
-    const factsMarkdown = page.getByRole('region', { name: 'facts.md' }).getByRole('textbox');
+    const factsMarkdown = contentOf(page.getByRole('region', { name: 'facts.md' }));
     const factsForm = page.getByRole('region', { name: 'Faits', exact: true });
     await factsForm.getByRole('textbox', { name: 'Identité' }).fill('Inès Morel');
     const experiences = factsForm.getByRole('group', { name: 'Expériences' });
@@ -109,6 +120,7 @@ test.describe('Profile of a Candidate', () => {
     await expect(factsMarkdown).toHaveValue(/## Mobilité\n/);
 
     const markdown = await factsMarkdown.inputValue();
+    await unfoldContent(page.getByRole('region', { name: 'facts.md' }));
     await factsMarkdown.fill(
       `${markdown.replace('Inès Morel', 'Inès Morel-Durand')}\n## Compétences\n\nDroit public\n`,
     );
@@ -175,8 +187,9 @@ test.describe('Profile of a Candidate', () => {
     await expect(conversion.getByRole('status')).toHaveText('En cours');
     await expect(conversion.getByRole('status')).toHaveText('Prêt');
     const cv = page.getByRole('region', { name: 'cv.md' });
-    await expect(cv.getByRole('textbox')).toHaveValue('# CV converti\n\n## Formation\n\n- Master 2 droit public\n');
-    await cv.getByRole('textbox').fill('# CV de Rose\n\n## Formation\n\n- Master 2 droit public, Lille\n');
+    await expect(contentOf(cv)).toHaveValue('# CV converti\n\n## Formation\n\n- Master 2 droit public\n');
+    await unfoldContent(cv);
+    await contentOf(cv).fill('# CV de Rose\n\n## Formation\n\n- Master 2 droit public, Lille\n');
     await cv.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(cv.getByText('Modifications non enregistrées')).toBeHidden();
 
@@ -184,16 +197,14 @@ test.describe('Profile of a Candidate', () => {
     await uploads.getByLabel('Déposer une Pièce').setInputFiles(cvPdfPath);
     await expect(conversion.getByRole('status')).toHaveText('En échec');
     await expect(conversion).toContainText("que le Profil a déjà : il n'est pas écrasé");
-    await expect(cv.getByRole('textbox')).toHaveValue(
-      '# CV de Rose\n\n## Formation\n\n- Master 2 droit public, Lille\n',
-    );
+    await expect(contentOf(cv)).toHaveValue('# CV de Rose\n\n## Formation\n\n- Master 2 droit public, Lille\n');
 
     await cv.getByText('Supprimer cv.md…').click();
     await cv.getByRole('button', { name: 'Supprimer définitivement cv.md' }).click();
     await expect(cv).toHaveCount(0);
     await conversion.getByRole('button', { name: 'Relancer la conversion de cv.pdf' }).click();
     await expect(conversion.getByRole('status')).toHaveText('Prêt');
-    await expect(cv.getByRole('textbox')).toHaveValue('# CV converti\n\n## Formation\n\n- Master 2 droit public\n');
+    await expect(contentOf(cv)).toHaveValue('# CV converti\n\n## Formation\n\n- Master 2 droit public\n');
   });
 
   test('says how to fill an empty Profile', async ({ page, asCandidate, openPage }) => {

@@ -43,6 +43,17 @@
     outline-color: var(--color-focus);
   }
 
+  /* The editor unfolds under a quiet summary */
+  .profile-file__content summary {
+    color: var(--color-accent-deep);
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .profile-file__content[open] summary {
+    margin-bottom: var(--space-sm);
+  }
+
   /* Not a file yet: named in the voice of the page, not as on disk */
   .profile-file[data-new] h2 {
     font: 600 var(--text-md) / 1.4 var(--font-body);

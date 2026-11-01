@@ -10,6 +10,17 @@ import './profile-file.css';
 // The forms its Container hands in, each around the fields it posts
 type RenderForm = (fieldList: ReactNode) => ReactNode;
 
+// The editor of a file, folded: a Profile of long files would otherwise run screens long
+function FoldedContent({ children }: Readonly<{ children: ReactNode }>) {
+  const { t } = useTranslation('settings');
+  return (
+    <details className="profile-file__content">
+      <summary>{t('profileFile.content')}</summary>
+      {children}
+    </details>
+  );
+}
+
 // One Markdown file of the Profile, such as facts.md, edited in place
 export function ProfileFile({
   fileName,
@@ -26,13 +37,15 @@ export function ProfileFile({
       {renderForm(
         <>
           <input type="hidden" name="fileName" value={fileName} />
-          <MarkdownEditor
-            name="markdown"
-            label={t('profileFile.contentOf', { fileName })}
-            defaultValue={markdown}
-            placeholder={t('profileFile.contentPlaceholder')}
-            onChange={setEditedMarkdown}
-          />
+          <FoldedContent>
+            <MarkdownEditor
+              name="markdown"
+              label={t('profileFile.contentOf', { fileName })}
+              defaultValue={markdown}
+              placeholder={t('profileFile.contentPlaceholder')}
+              onChange={setEditedMarkdown}
+            />
+          </FoldedContent>
           <ButtonRow>
             <button type="submit" name="intent" value="save" className="button button--primary">
               {t('profileFile.save')}
@@ -81,12 +94,14 @@ export function ProfileFileCreation({ error, renderForm }: Readonly<{ error: str
               spellCheck={false}
             />
           </div>
-          <MarkdownEditor
-            name="markdown"
-            label={t('profileFile.creationContent')}
-            defaultValue=""
-            placeholder={t('profileFile.creationContentPlaceholder')}
-          />
+          <FoldedContent>
+            <MarkdownEditor
+              name="markdown"
+              label={t('profileFile.creationContent')}
+              defaultValue=""
+              placeholder={t('profileFile.creationContentPlaceholder')}
+            />
+          </FoldedContent>
           <ButtonRow>
             <button type="submit" name="intent" value="create" className="button button--primary">
               {t('profileFile.create')}

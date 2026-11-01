@@ -70,6 +70,7 @@ export const SETTINGS_EN = {
     save: 'Save the Facts',
   },
   profileFile: {
+    content: 'Content',
     contentOf: 'Content of {{fileName}}',
     contentPlaceholder: '# Title\n\n## Section\n\n- One fact per line, in Markdown',
     save: 'Save',
