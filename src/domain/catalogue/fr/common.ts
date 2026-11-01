@@ -6,7 +6,7 @@ export const COMMON_FR: typeof COMMON_EN = {
     applied: 'Postulée',
     invited: 'Convoquée',
     interviewed: 'Entretien passé',
-    hired: 'Obtenue',
+    hired: 'Poste obtenu',
     rejected: 'Refusée',
   },
   archived: 'Archivée',

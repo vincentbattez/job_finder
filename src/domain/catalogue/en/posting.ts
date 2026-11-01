@@ -46,10 +46,10 @@ export const POSTING_EN = {
   markApplied: 'Mark as Applied',
   outcomeLabel: 'Outcome of the Application',
   outcomeLabelByStatus: {
-    applied: 'Sent',
     hired: 'Hired',
     rejected: 'Rejected',
-  } satisfies Record<Exclude<Status, 'to_apply'>, string>,
+  } satisfies Record<Exclude<Status, 'to_apply' | 'applied'>, string>,
+  backInProgress: 'Put back in progress',
   // The Archived mark, beside the outcome selector (ADR-0007)
   archive: 'Archive',
   unarchive: 'Unarchive',
