@@ -1,4 +1,4 @@
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
 
@@ -134,8 +134,15 @@ describe('the e-mail Notification Channel of a Candidate', () => {
   });
 });
 
-describe('the notification of a new Posting by e-mail', () => {
-  it('goes to the address the Candidate saved', async () => {
+const BETHUNE_TITLE = 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE';
+
+describe('the Detection Summary by e-mail', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Léa reads it in her mailbox: the whole of it, laid out as a page, and as plain text for a mailbox without HTML
+  it('goes to the address the Candidate saved, every section in full', async () => {
     const { host, port, user, password, emailList } = await startSmtpServer();
     const dataDirectory = createDataDirectory();
     const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout([REFERENCE, OTHER_REFERENCE]) } });
@@ -143,12 +150,36 @@ describe('the notification of a new Posting by e-mail', () => {
     await earlierActions.detect();
     const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
     await saveChannel(actions, { host, port, user, password, to: LEA_ADDRESS });
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-01T06:00:00Z'));
 
     await actions.detect();
 
-    expect(emailList.map(({ toList, subject }) => ({ toList, subject }))).toEqual([
-      { toList: [LEA_ADDRESS], subject: 'Nouvelle Offre dans la Zone' },
-      { toList: [LEA_ADDRESS], subject: 'Nouvelle Offre dans la Zone' },
+    expect(emailList).toHaveLength(1);
+    const [email] = emailList;
+    expect(email).toMatchObject({ toList: [LEA_ADDRESS], subject: '2 nouvelles Offres' });
+    expect(email?.text.split('\n').slice(0, 12)).toEqual([
+      'Nouvelles Offres',
+      '',
+      `• ${BETHUNE_TITLE}`,
+      `  Tribunal Judiciaire de Béthune · Date limite : 20/11/2026 · Réf. ${REFERENCE}`,
+      `  https://choisirleservicepublic.gouv.fr/offre-emploi/${REFERENCE}/?tracking=1&idOrigine=502`,
+      '',
+      "• Attaché de justice affecté auprès des magistrats du siège - Service de l'instruction - TJ BETHUNE",
+      `  Tribunal Judiciaire de Béthune · Date limite : 20/11/2026 · Réf. ${OTHER_REFERENCE}`,
+      `  https://choisirleservicepublic.gouv.fr/offre-emploi/${OTHER_REFERENCE}/?tracking=1&idOrigine=502`,
+      '',
+      'Détection',
+      '',
     ]);
+    expect(email?.text).toContain('• Lancée le dimanche 1 novembre 2026 à 07:00\n  par jf detect');
+    expect(email?.text).toContain('Veilles\n\n• attaché de justice\n  Place de l’Emploi Public · 2 nouvelles Offres');
+    expect(email?.text).toContain('Titres écartés de peu\n\n• Attaché d');
+    // Each Posting links to its page at the Source, each title escaped
+    expect(email?.html).toContain('<h2');
+    expect(email?.html).toContain(
+      `<a href="https://choisirleservicepublic.gouv.fr/offre-emploi/${REFERENCE}/?tracking=1&amp;idOrigine=502"`,
+    );
+    expect(email?.html).toContain('Service de l&#39;instruction');
   });
 });

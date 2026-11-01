@@ -4,6 +4,7 @@ import { tFor } from '#/domain/catalogue/i18n.ts';
 import { codedError } from '#/domain/coded-error.ts';
 import type { Locale } from '#/domain/index.ts';
 import { COPY_NAMESPACE } from '#/modules/notification-smtp/copy.ts';
+import { emailOf } from '#/modules/notification-smtp/email.ts';
 import type { INotification } from '#/notification/index.ts';
 import { messageOf } from '#/text/index.ts';
 
@@ -83,13 +84,13 @@ export async function checkLogin(access: IAccess, locale: Locale): Promise<void>
   await exchange(access, locale, (transport) => transport.verify());
 }
 
-// The notification as a plain-text e-mail, from the mailbox to the address to notify
+// The notification as an e-mail, from the mailbox to the address to notify
 export async function sendEmail(
   access: IAccess & { to: string },
-  { title, message }: INotification,
+  notification: INotification,
   locale: Locale,
 ): Promise<void> {
   await exchange(access, locale, (transport, user) =>
-    transport.sendMail({ from: user, to: access.to, subject: title, text: message }),
+    transport.sendMail({ from: user, to: access.to, ...emailOf(notification, locale) }),
   );
 }

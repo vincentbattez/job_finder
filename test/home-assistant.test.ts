@@ -231,7 +231,7 @@ describe('the Notification Channel Home Assistant of a Candidate', () => {
   });
 });
 
-describe('the notification of a new Posting', () => {
+describe('the Detection Summary', () => {
   it('goes to the Home Assistant the Candidate saved', async () => {
     const homeAssistant = await startHomeAssistant();
     const actions = await detectBeforeBethune(createDataDirectory());
@@ -239,10 +239,13 @@ describe('the notification of a new Posting', () => {
 
     await actions.detect();
 
-    expect(homeAssistant.notificationList.map(({ service }) => service)).toEqual([
-      'mobile_app_iphone_de_lea',
-      'mobile_app_iphone_de_lea',
+    // The Detection Summary, as short as a phone notification: its sections are the e-mail's
+    expect(homeAssistant.notificationList.map(({ service, title }) => ({ service, title }))).toEqual([
+      { service: 'mobile_app_iphone_de_lea', title: '2 nouvelles Offres' },
     ]);
+    expect(homeAssistant.notificationList[0]?.message).toMatch(
+      /^• Attaché de justice .*\n• Attaché de justice .*\nDétection du /,
+    );
   });
 
   it("goes to each Candidate's own Home Assistant", async () => {
@@ -259,13 +262,7 @@ describe('the notification of a new Posting', () => {
 
     await actions.detect();
 
-    expect(lea.notificationList.map(({ service }) => service)).toEqual([
-      'mobile_app_iphone_de_lea',
-      'mobile_app_iphone_de_lea',
-    ]);
-    expect(camille.notificationList.map(({ service }) => service)).toEqual([
-      'mobile_app_pixel_de_camille',
-      'mobile_app_pixel_de_camille',
-    ]);
+    expect(lea.notificationList.map(({ service }) => service)).toEqual(['mobile_app_iphone_de_lea']);
+    expect(camille.notificationList.map(({ service }) => service)).toEqual(['mobile_app_pixel_de_camille']);
   });
 });

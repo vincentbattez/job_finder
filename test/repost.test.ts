@@ -117,16 +117,18 @@ describe('the Repost of an Applied Posting', () => {
 
     expect(await actions.runQueuedJobs()).toEqual([]);
     expect(aiSession.headlessSessionList).toEqual([]);
-    expect(notificationChannel.sentList).toEqual([
+    expect(notificationChannel.sentList.map(({ target, title }) => ({ target, title }))).toEqual([
+      { target: 'notify.mobile_app_iphone_de_lea', title: '1 nouvelle Offre' },
+    ]);
+    const [summary] = notificationChannel.sentList;
+    expect(summary?.message).toMatch(
+      /^• Attaché de justice affecté auprès des magistrats du parquet — Tribunal Judiciaire de Boulogne-sur-mer · Republication, déjà Postulée\n/,
+    );
+    expect(summary?.sectionList?.[0]?.lineList).toEqual([
       {
-        target: 'notify.mobile_app_iphone_de_lea',
-        title: "Republication d'une Offre Postulée",
-        message: [
-          'Attaché de justice affecté auprès des magistrats du parquet',
-          'Tribunal Judiciaire de Boulogne-sur-mer',
-          `Republication de l'Offre ${REFERENCE}, Postulée : aucune Recherche lancée`,
-          'Date limite : 03/08/2026',
-        ].join('\n'),
+        text: 'Attaché de justice affecté auprès des magistrats du parquet',
+        detail: `Tribunal Judiciaire de Boulogne-sur-mer · Date limite : 03/08/2026 · Réf. ${REPOST_REFERENCE} · Republication de l'Offre ${REFERENCE}, Postulée : aucune Recherche lancée`,
+        url: `https://choisirleservicepublic.gouv.fr/offre-emploi/${REPOST_REFERENCE}/?tracking=1&idOrigine=502`,
       },
     ]);
   });
@@ -142,7 +144,9 @@ describe('the Repost of an Applied Posting out of the Zone', () => {
     await actions.detect();
 
     expect(await findPosting(actions, REPOST_REFERENCE)).toMatchObject({ isInZone: false });
-    expect(notificationChannel.sentList).toMatchObject([{ title: "Republication d'une Offre Postulée" }]);
+    expect(notificationChannel.sentList.map(({ message }) => message)).toEqual([
+      expect.stringContaining('· Republication, déjà Postulée\n'),
+    ]);
     expect(await actions.runQueuedJobs()).toEqual([]);
   });
 
@@ -156,7 +160,9 @@ describe('the Repost of an Applied Posting out of the Zone', () => {
 
     await actions.detect();
 
-    expect(notificationChannel.sentList).toMatchObject([{ title: "Republication d'une Offre Postulée" }]);
+    expect(notificationChannel.sentList.map(({ message }) => message)).toEqual([
+      expect.stringContaining('· Republication, déjà Postulée\n'),
+    ]);
   });
 });
 
@@ -166,16 +172,16 @@ describe('the Repost of a Posting not Applied', () => {
 
     await actions.detect();
 
-    expect(notificationChannel.sentList).toEqual([
+    expect(notificationChannel.sentList.map(({ target, title }) => ({ target, title }))).toEqual([
+      { target: 'notify.mobile_app_iphone_de_lea', title: '1 nouvelle Offre' },
+    ]);
+    const [summary] = notificationChannel.sentList;
+    expect(summary?.message).toMatch(/ — Tribunal Judiciaire de Boulogne-sur-mer · Republication\n/);
+    expect(summary?.sectionList?.[0]?.lineList).toEqual([
       {
-        target: 'notify.mobile_app_iphone_de_lea',
-        title: 'Republication dans la Zone',
-        message: [
-          'Attaché de justice affecté auprès des magistrats du parquet',
-          'Tribunal Judiciaire de Boulogne-sur-mer',
-          `Republication de l'Offre ${REFERENCE} : sa Recherche part de celle de cette Offre`,
-          'Date limite : 03/08/2026',
-        ].join('\n'),
+        text: 'Attaché de justice affecté auprès des magistrats du parquet',
+        detail: `Tribunal Judiciaire de Boulogne-sur-mer · Date limite : 03/08/2026 · Réf. ${REPOST_REFERENCE} · Republication de l'Offre ${REFERENCE} : sa Recherche part de celle de cette Offre`,
+        url: `https://choisirleservicepublic.gouv.fr/offre-emploi/${REPOST_REFERENCE}/?tracking=1&idOrigine=502`,
       },
     ]);
   });

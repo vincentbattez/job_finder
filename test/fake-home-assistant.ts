@@ -22,7 +22,8 @@ const SERVICE_DOMAIN_LIST = [
 
 const NOTIFY_PATH_PATTERN = /^\/api\/services\/notify\/([^/]+)$/;
 
-const NOTIFICATION_BODY_SCHEMA = z.object({ title: z.string(), message: z.string() });
+// Like Home Assistant's notify schema, which refuses a key it does not know
+const NOTIFICATION_BODY_SCHEMA = z.strictObject({ title: z.string(), message: z.string() });
 
 function readNotification(rawBody: string) {
   try {

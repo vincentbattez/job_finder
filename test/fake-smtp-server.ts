@@ -12,6 +12,8 @@ interface IReceivedEmail {
   toList: string[];
   subject: string;
   text: string;
+  // Its HTML part, which only an e-mail laid out as a page has
+  html?: string;
 }
 
 // Stands in for the SMTP server of the Candidate's mailbox, an external boundary: on a free port,
@@ -29,12 +31,13 @@ export async function startFakeSmtpServer() {
     callback: (error?: Error) => void,
   ) {
     try {
-      const { subject = '', text = '' } = await simpleParser(stream);
+      const { subject = '', text = '', html } = await simpleParser(stream);
       emailList.push({
         from: mailFrom === false ? '' : mailFrom.address,
         toList: recipientList.map(({ address }) => address),
         subject,
         text: text.trimEnd(),
+        ...(html !== false && { html }),
       });
       callback();
     } catch (error) {

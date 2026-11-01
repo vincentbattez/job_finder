@@ -322,8 +322,9 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
           process.stderr.write(`${detection.locationFailure}\n`);
         }
       }
-      // What the Detection found is printed first; a notification not sent then fails the run in lpm
-      const failureList = detectionList.flatMap(({ notificationFailureList }) => notificationFailureList);
+      // What the Detection found is printed first; a Detection Summary not sent then fails the run in lpm,
+      // said once even when it told the Postings of several Watches
+      const failureList = [...new Set(detectionList.flatMap(({ notificationFailureList }) => notificationFailureList))];
       if (failureList.length > 0) {
         throw codedError('notifications_not_sent', { failures: failureList.join('\n') });
       }

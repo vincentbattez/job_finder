@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createActions } from '#/actions/index.ts';
 
@@ -38,26 +38,109 @@ async function detectBefore(referenceList: string[], aiSession = createFakeAiSes
   return { actions, notificationChannel };
 }
 
-describe('the notification of a new Posting in the Zone', () => {
-  it('tells the Candidate its title, its jurisdiction and its Deadline, for each new Posting in the Zone only', async () => {
+// The PEP link of a Posting, as its feed gives it
+function linkOf(reference: string): string {
+  return `https://choisirleservicepublic.gouv.fr/offre-emploi/${reference}/?tracking=1&idOrigine=502`;
+}
+
+const BETHUNE_TITLE = 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE';
+const OTHER_BETHUNE_TITLE =
+  "Attaché de justice affecté auprès des magistrats du siège - Service de l'instruction - TJ BETHUNE";
+
+describe('the Detection Summary', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('tells the Candidate, once per Detection, its new Postings in the Zone, when it ran, its Watches and its Near Misses', async () => {
     const { actions, notificationChannel } = await detectBefore([REFERENCE, OTHER_REFERENCE, OUT_OF_ZONE_REFERENCE]);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-01T06:00:00Z'));
 
     await actions.detect();
 
     expect(notificationChannel.sentList).toEqual([
       {
         target: LEA_TARGET,
-        title: 'Nouvelle Offre dans la Zone',
+        title: '2 nouvelles Offres',
         message:
-          'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE\nTribunal Judiciaire de Béthune\nDate limite : 20/11/2026',
-      },
-      {
-        target: LEA_TARGET,
-        title: 'Nouvelle Offre dans la Zone',
-        message:
-          "Attaché de justice affecté auprès des magistrats du siège - Service de l'instruction - TJ BETHUNE\nTribunal Judiciaire de Béthune\nDate limite : 20/11/2026",
+          `• ${BETHUNE_TITLE} — Tribunal Judiciaire de Béthune\n` +
+          `• ${OTHER_BETHUNE_TITLE} — Tribunal Judiciaire de Béthune\n` +
+          'Détection du 01/11/2026 07:00 · 4 titres écartés de peu',
+        sectionList: [
+          {
+            heading: 'Nouvelles Offres',
+            lineList: [
+              {
+                text: BETHUNE_TITLE,
+                detail: 'Tribunal Judiciaire de Béthune · Date limite : 20/11/2026 · Réf. 2026-2445600',
+                url: linkOf(REFERENCE),
+              },
+              {
+                text: OTHER_BETHUNE_TITLE,
+                detail: 'Tribunal Judiciaire de Béthune · Date limite : 20/11/2026 · Réf. 2026-2445609',
+                url: linkOf(OTHER_REFERENCE),
+              },
+            ],
+          },
+          {
+            heading: 'Détection',
+            lineList: [{ text: 'Lancée le dimanche 1 novembre 2026 à 07:00', detail: 'par jf detect', url: null }],
+          },
+          {
+            heading: 'Veilles',
+            lineList: [
+              {
+                text: 'attaché de justice',
+                detail: 'Place de l’Emploi Public · 2 nouvelles Offres · 4 titres écartés de peu',
+                url: null,
+              },
+            ],
+          },
+          {
+            heading: 'Titres écartés de peu',
+            lineList: [
+              {
+                text: "Attaché d'administration- chef de cabinet procureur en charge de la communication   du TJ de Paris",
+                detail: 'Réf. 2026-2432800',
+                url: linkOf('2026-2432800'),
+              },
+              {
+                text: 'Chef du pôle des attachés de justice et des assistants spécialisés - RHG6 (H/F)',
+                detail: 'Réf. 2026-2431315',
+                url: linkOf('2026-2431315'),
+              },
+              {
+                text: "Attaché d'administration : CHEF(FE) DE CABINET DU PRESIDENT DU TRIBUNAL DE BETHUNE",
+                detail: 'Réf. 2026-2282889',
+                url: linkOf('2026-2282889'),
+              },
+              {
+                text: "ATTACHE - CHEF(FE) DE CABINET DE LA PROCUREURE GENERALE DE LA COUR D'APPEL D'ANGERS",
+                detail: 'Réf. 2026-2354768',
+                url: linkOf('2026-2354768'),
+              },
+            ],
+          },
+        ],
       },
     ]);
+  });
+
+  // A phone shows a few lines: past 5 Postings, the message counts the others, which the e-mail lists
+  it('lists 5 Postings on the phone and counts the others, all of them in its sections', async () => {
+    const { actions: detectedActions } = await detectPostings();
+    const postingList = await detectedActions.listPostings({ candidateId: 'lea' });
+    const inZoneList = postingList.filter(({ isInZone }) => isInZone);
+    const { actions, notificationChannel } = await detectBefore(inZoneList.map(({ reference }) => reference));
+
+    await actions.detect();
+
+    const [summary] = notificationChannel.sentList;
+    expect(inZoneList.length).toBeGreaterThan(5);
+    expect(summary?.message.split('\n')).toHaveLength(7);
+    expect(summary?.message).toContain(`\n+${String(inZoneList.length - 5)} autres Offres\nDétection du `);
+    expect(summary?.sectionList?.[0]?.lineList).toHaveLength(inZoneList.length);
   });
 
   it('sends nothing on the first launch, which imports the Postings already online', async () => {
@@ -208,7 +291,7 @@ describe('the notification of a Research queued automatically that failed', () =
 describe('a notification that cannot be sent', () => {
   const ERROR_MESSAGE = 'Home Assistant injoignable.';
 
-  it('reports each notification not sent with what the Detection found, once every new Posting is saved and its Research queued', async () => {
+  it('reports the Detection Summary not sent with what the Detection found, once every new Posting is saved and its Research queued', async () => {
     const dataDirectory = createDataDirectory();
     const aiSession = createFakeAiSession(RESEARCH, RESEARCH);
     const earlierFetch = createRecordedFetch({
@@ -229,10 +312,9 @@ describe('a notification that cannot be sent', () => {
 
     // jf detect prints the new Postings, then each failure, and exits in error
     expect(detectionList[0]?.newPostingList.map(({ reference }) => reference)).toEqual([REFERENCE, OTHER_REFERENCE]);
-    // Both notifications were tried
+    // One Detection Summary tells both, and its failure comes back once
     expect(detectionList[0]?.notificationFailureList).toEqual([
-      `Notification « Nouvelle Offre dans la Zone » de l'Offre ${REFERENCE} non envoyée : ${ERROR_MESSAGE}`,
-      `Notification « Nouvelle Offre dans la Zone » de l'Offre ${OTHER_REFERENCE} non envoyée : ${ERROR_MESSAGE}`,
+      `Récapitulatif de Détection « 2 nouvelles Offres » non envoyé : ${ERROR_MESSAGE}`,
     ]);
     const postingList = await actions.listPostings({ candidateId: 'lea' });
     expect(postingList.map(({ reference }) => reference)).toEqual(expect.arrayContaining([REFERENCE, OTHER_REFERENCE]));
@@ -340,15 +422,29 @@ const EMMA_TARGET = 'notify.mobile_app_emma';
 describe('a notification in the Candidate’s locale', () => {
   it('tells an English-speaking Candidate of a new Posting in English', async () => {
     const { actions, notificationChannel } = await detectBeforeForEmma([REFERENCE]);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-01T06:00:00Z'));
 
     await actions.detect();
+    vi.useRealTimers();
 
-    expect(notificationChannel.sentList).toEqual([
+    expect(notificationChannel.sentList).toMatchObject([
       {
         target: EMMA_TARGET,
-        title: 'New Posting in the Zone',
-        message:
-          'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE\nTribunal Judiciaire de Béthune\nDeadline: Nov 20, 2026',
+        title: '1 new Posting',
+        message: `• ${BETHUNE_TITLE} — Tribunal Judiciaire de Béthune\nDetection of 11/1/26, 7:00 AM · 4 Near Misses`,
+        sectionList: [
+          {
+            heading: 'New Posting',
+            lineList: [{ detail: 'Tribunal Judiciaire de Béthune · Deadline: Nov 20, 2026 · Ref. 2026-2445600' }],
+          },
+          {
+            heading: 'Detection',
+            lineList: [{ text: 'Started on Sunday, November 1, 2026 at 7:00 AM', detail: 'by jf detect' }],
+          },
+          { heading: 'Watches' },
+          { heading: 'Near Misses' },
+        ],
       },
     ]);
   });

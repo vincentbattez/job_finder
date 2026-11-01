@@ -80,13 +80,14 @@ export async function listNotifyServices(access: IAccess, locale: Locale): Promi
 
 // Calls a notify service, such as notify.mobile_app_iphone_de_lea, which pushes the notification to
 // the phone of its app
+// A phone notification holds the title and the message only: the notify service refuses any other key
 export async function callNotifyService(
   { service, ...access }: { url: string; token: string; service: string },
-  notification: INotification,
+  { title, message }: INotification,
   locale: Locale,
 ): Promise<void> {
   const servicePath = `/api/services/notify/${service.replace(/^notify\./, '')}`;
-  const response = await request(access, locale, servicePath, notification);
+  const response = await request(access, locale, servicePath, { title, message });
   if (!response.ok) {
     throw codedError(
       'channel_status',

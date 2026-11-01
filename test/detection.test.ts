@@ -375,7 +375,7 @@ const CUT_REFERENCE = '2026-2445609';
 
 describe('a second Detection cut off mid-way', () => {
   // Saved, they are known from now on: a notification lost now would never come at the next Detection
-  it('notifies the Postings saved before the cut, then fails', async () => {
+  it('tells the Postings saved before the cut in a Detection Summary, then fails', async () => {
     const dataDirectory = createDataDirectory();
     const notificationChannel = createFakeNotificationChannel();
     const earlierActions = await createActions({
@@ -400,7 +400,7 @@ describe('a second Detection cut off mid-way', () => {
     expect(
       notificationChannel.sentList.map(({ title, message }) => `${title}: ${message.split('\n', 1).join('')}`),
     ).toEqual([
-      'Nouvelle Offre dans la Zone: Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE',
+      '1 nouvelle Offre: • Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE — Tribunal Judiciaire de Béthune',
     ]);
     const postingList = await actions.listPostings({ candidateId: 'lea' });
     expect(postingList.map(({ reference }) => reference)).toContain(SAVED_BEFORE_CUT_REFERENCE);
@@ -469,7 +469,10 @@ describe('a detection while API Géo is down', () => {
         latitude: null,
         longitude: null,
       });
-      expect(notificationChannel.sentList).toHaveLength(BETHUNE_REFERENCE_LIST.length);
+      // One Detection Summary tells them all
+      expect(notificationChannel.sentList).toMatchObject([
+        { title: `${String(BETHUNE_REFERENCE_LIST.length)} nouvelles Offres` },
+      ]);
       const { last } = await actions.followDetection({ candidateId: 'lea' });
       expect(last).toMatchObject({ error: null, watchList: [{ step: 'done' }] });
       expect(last?.watchList[0]?.locationFailure).toMatch(report);

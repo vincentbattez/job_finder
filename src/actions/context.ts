@@ -124,19 +124,34 @@ export async function openContext({
   }
 
   // A notification not sent undoes and skips nothing: it comes back as the failure to report
-  async function notify(posting: Posting, composeNotification: NotificationComposer): Promise<CodedError | undefined> {
+  async function trySending(
+    candidateId: string,
+    composeNotification: NotificationComposer,
+    failureOf: (title: string, reason: string, locale: Locale, cause: unknown) => CodedError,
+  ): Promise<CodedError | undefined> {
     try {
-      await sendNotification(posting.candidateId, composeNotification);
+      await sendNotification(candidateId, composeNotification);
       return undefined;
     } catch (error) {
-      const locale = await findLocale(posting.candidateId);
-      const { title } = composeNotification(locale);
-      return codedError(
-        'notification_not_sent',
-        { title, reference: posting.reference, reason: messageOf(error) },
-        { locale, cause: error },
-      );
+      const locale = await findLocale(candidateId);
+      return failureOf(composeNotification(locale).title, messageOf(error), locale, error);
     }
+  }
+
+  function notify(posting: Posting, composeNotification: NotificationComposer): Promise<CodedError | undefined> {
+    return trySending(posting.candidateId, composeNotification, (title, reason, locale, cause) =>
+      codedError('notification_not_sent', { title, reference: posting.reference, reason }, { locale, cause }),
+    );
+  }
+
+  // The Detection Summary, which tells several Postings of the Candidate at once
+  function notifyCandidate(
+    candidateId: string,
+    composeNotification: NotificationComposer,
+  ): Promise<CodedError | undefined> {
+    return trySending(candidateId, composeNotification, (title, reason, locale, cause) =>
+      codedError('summary_not_sent', { title, reason }, { locale, cause }),
+    );
   }
 
   return {
@@ -156,6 +171,7 @@ export async function openContext({
     findPosting,
     locate,
     notify,
+    notifyCandidate,
   };
 }
 

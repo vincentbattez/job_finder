@@ -1,7 +1,7 @@
 import { z } from 'zod/v4';
 
 import { defaultErrorTranslator } from '#/domain/catalogue/i18n.ts';
-import { codedError, codedErrorOf } from '#/domain/coded-error.ts';
+import { codedError, codedErrorOf, type CodedError } from '#/domain/coded-error.ts';
 import {
   DETECTION_ORIGIN_SCHEMA,
   DETECTION_OVERVIEW_SCHEMA,
@@ -18,12 +18,7 @@ import {
   type Watch,
 } from '#/domain/index.ts';
 import { readCity } from '#/geo/city.ts';
-import {
-  composeNewPostingNotification,
-  composeRepostAppliedNotification,
-  composeRepostNotification,
-  type NotificationComposer,
-} from '#/notification/index.ts';
+import { composeDetectionSummary, type ISummarizedPosting, type ISummarizedWatch } from '#/notification/index.ts';
 import { findRepostedPosting } from '#/repost/index.ts';
 import type { ISourceReadResult } from '#/source/index.ts';
 import { hasBeenApplied } from '#/status/index.ts';
@@ -56,16 +51,25 @@ interface IClaimedDetection {
   watchList: Watch[];
 }
 
-interface INotifiedPosting {
-  posting: Posting;
-  notification: NotificationComposer;
+// What a Detection found for one Watch, and the Postings its Detection Summary tells once every Watch is done
+interface IFoundPostings {
+  watch: Watch;
+  detection: Omit<z.input<typeof DETECTION_SCHEMA>, 'notificationFailureList' | 'locationFailure'>;
+  summarizedList: ISummarizedPosting[];
 }
 
-// What a Detection found for one Watch, and the notifications to send once every Watch is done
-interface IFoundPostings {
-  detection: Omit<z.input<typeof DETECTION_SCHEMA>, 'notificationFailureList' | 'locationFailure'>;
-  notificationList: INotifiedPosting[];
+// What the Detection Summary shows of one Watch
+interface IWatchSummary {
+  watch: Watch;
+  summarizedList: ISummarizedPosting[];
+  nearMissList: ISummarizedWatch['nearMissList'];
 }
+
+const watchSummaryOf = ({ watch, summarizedList, detection: { nearMissList } }: IFoundPostings): IWatchSummary => ({
+  watch,
+  summarizedList,
+  nearMissList,
+});
 
 // What the Detection of one Watch knows while it reads the Postings of its Source
 interface IWatchRun {
@@ -88,12 +92,21 @@ export function createDetectActions({
   findSource,
   findLocale,
   locate,
-  notify,
+  notifyCandidate,
 }: ActionContext) {
+  function descriptionOf({ source }: Watch): SourceModule | undefined {
+    return sourceList.find(({ description: { id } }) => id === source)?.description;
+  }
+
+  function sourceNameOf(watch: Watch): string {
+    return descriptionOf(watch)?.name ?? watch.source;
+  }
+
   // What the Candidate reads to tell a Watch apart: its first text Parameter, such as the searched
   // title, in the order its Source declares them, never its identifier (#63)
-  function labelOf({ source, parameters }: Watch): string {
-    const description = sourceList.find(({ description: { id } }) => id === source)?.description;
+  function labelOf(watch: Watch): string {
+    const { source, parameters } = watch;
+    const description = descriptionOf(watch);
     const label = description?.parameterList
       .map(({ name }) => parameters[name])
       .find((value): value is string => typeof value === 'string' && value !== '');
@@ -101,11 +114,12 @@ export function createDetectActions({
   }
 
   // In the Zone, a Posting gets its Research (ADR-0003)
-  async function startInZone(posting: Posting, repostOf: Posting | undefined): Promise<NotificationComposer> {
+  async function startInZone(posting: Posting, repostOf: Posting | undefined): Promise<ISummarizedPosting> {
     await workspace.createJob(posting, 'research', { isAutomatic: true });
-    return repostOf === undefined
-      ? composeNewPostingNotification(posting)
-      : composeRepostNotification(posting, repostOf);
+    return {
+      posting,
+      repost: repostOf === undefined ? null : { repostedReference: repostOf.reference, isApplied: false },
+    };
   }
 
   // The Postings already online at the first launch start nothing (ADR-0003). The Repost of an
@@ -114,7 +128,7 @@ export function createDetectActions({
     { watch: { candidateId, source }, isFirstLaunch, postingList, locale, locate: locateCity }: IWatchRun,
     listedPosting: ListedPosting,
     { jobDescription, isInZone }: ISourceReadResult,
-  ): Promise<{ posting: Posting; notification: NotificationComposer | undefined }> {
+  ): Promise<{ posting: Posting; summarized: ISummarizedPosting | undefined }> {
     const repostOf = findRepostedPosting({ ...listedPosting, ...jobDescription }, postingList);
     const location = await locateCity(readCity(jobDescription.workplace), locale);
     const posting = await workspace.savePosting({
@@ -128,12 +142,12 @@ export function createDetectActions({
     });
     postingList.push(posting);
     if (isFirstLaunch) {
-      return { posting, notification: undefined };
+      return { posting, summarized: undefined };
     }
     if (repostOf !== undefined && hasBeenApplied(repostOf)) {
-      return { posting, notification: composeRepostAppliedNotification(posting, repostOf) };
+      return { posting, summarized: { posting, repost: { repostedReference: repostOf.reference, isApplied: true } } };
     }
-    return { posting, notification: isInZone ? await startInZone(posting, repostOf) : undefined };
+    return { posting, summarized: isInZone ? await startInZone(posting, repostOf) : undefined };
   }
 
   // A Posting another Watch of the Candidate stored out of its Zone, found in the Zone of this one: it
@@ -163,13 +177,13 @@ export function createDetectActions({
   // A Posting is known by its reference, never by its publication date, which the site changes
   // (ADR-0001). Each Watch has its own Zone: a Posting stored out of the Zone of one is read again
   // by each other Watch that has not read it yet.
-  // Each notification goes into notificationList as soon as its Posting is saved, so that a Detection
-  // cut off still sends it
+  // Each Posting to tell goes into summarizedList as soon as it is saved, so that a Detection cut off
+  // still tells it
   async function detectWatch(
     detection: RecordedDetection,
     watch: Watch,
     locateCity: IWatchRun['locate'],
-    notificationList: INotifiedPosting[],
+    summarizedList: ISummarizedPosting[],
   ): Promise<IFoundPostings> {
     const { candidateId, source } = watch;
     await workspace.updateDetectionWatch(detection, watch.id, { step: 'searching' });
@@ -208,12 +222,12 @@ export function createDetectActions({
       const outOfZonePosting = outOfZonePostingList.find((posting) => isSame(posting, listedPosting));
       const readResult = await sourceModule.readJobDescription(listedPosting.reference, watch, locale);
       if (outOfZonePosting === undefined) {
-        const { posting, notification } = await saveNewPosting(run, listedPosting, readResult);
+        const { posting, summarized } = await saveNewPosting(run, listedPosting, readResult);
         newPostingList.push(posting);
-        notificationList.push(...(notification === undefined ? [] : [{ posting, notification }]));
+        summarizedList.push(...(summarized === undefined ? [] : [summarized]));
       } else if (readResult.isInZone) {
-        const notification = await enterZone(run, outOfZonePosting);
-        notificationList.push(...(notification === undefined ? [] : [{ posting: outOfZonePosting, notification }]));
+        const summarized = await enterZone(run, outOfZonePosting);
+        summarizedList.push(...(summarized === undefined ? [] : [summarized]));
       }
       await workspace.updateDetectionWatch(detection, watch.id, {
         readCount: index + 1,
@@ -222,8 +236,9 @@ export function createDetectActions({
     }
     await workspace.setDetected(watch);
     return {
+      watch,
       detection: { watchId: watch.id, candidateId, isFirstLaunch: run.isFirstLaunch, newPostingList, nearMissList },
-      notificationList,
+      summarizedList,
     };
   }
 
@@ -269,6 +284,37 @@ export function createDetectActions({
     }
   }
 
+  // One Detection Summary per Candidate with Postings to tell, covering each of their Watches; the
+  // failure of one comes back for their Watches
+  async function sendSummaries(
+    { startedAt, origin }: RecordedDetection,
+    watchSummaryList: IWatchSummary[],
+  ): Promise<Map<string, CodedError>> {
+    const failureByCandidate = new Map<string, CodedError>();
+    const candidateIdList = [...new Set(watchSummaryList.map(({ watch }) => watch.candidateId))];
+    for (const candidateId of candidateIdList) {
+      const candidateWatchSummaryList = watchSummaryList.filter(({ watch }) => watch.candidateId === candidateId);
+      const postingList = candidateWatchSummaryList.flatMap(({ summarizedList }) => summarizedList);
+      if (postingList.length === 0) {
+        continue;
+      }
+      const watchList = candidateWatchSummaryList.map(({ watch, summarizedList, nearMissList }) => ({
+        label: labelOf(watch),
+        sourceName: sourceNameOf(watch),
+        postingCount: summarizedList.length,
+        nearMissList,
+      }));
+      const failure = await notifyCandidate(
+        candidateId,
+        composeDetectionSummary({ startedAt, origin, postingList, watchList }),
+      );
+      if (failure !== undefined) {
+        failureByCandidate.set(candidateId, failure);
+      }
+    }
+    return failureByCandidate;
+  }
+
   async function detectWatches(detection: RecordedDetection, watchList: Watch[]): Promise<Detection[]> {
     const locator = createTolerantLocator(locate);
     // The Postings saved before they had a city, or whose city API Géo did not know
@@ -279,28 +325,33 @@ export function createDetectActions({
     }
     const foundList: IFoundPostings[] = [];
     for (const watch of watchList) {
-      const notificationList: INotifiedPosting[] = [];
+      const summarizedList: ISummarizedPosting[] = [];
       try {
-        foundList.push(await detectWatch(detection, watch, locator.locate, notificationList));
+        foundList.push(await detectWatch(detection, watch, locator.locate, summarizedList));
       } catch (error) {
         // The Postings saved before the cut are known from now on: the next Detection would never
-        // notify them, so they are notified before the failure stops the run
-        const savedList = [...foundList.flatMap((found) => found.notificationList), ...notificationList];
-        await Promise.all(savedList.map(({ posting, notification }) => notify(posting, notification)));
+        // tell them, so they are told before the failure stops the run
+        await sendSummaries(detection, [
+          ...foundList.map((found) => watchSummaryOf(found)),
+          { watch, summarizedList, nearMissList: [] },
+        ]);
         throw error;
       }
     }
-    // Notified last, once every Posting is saved and its Research queued. A notification not sent
+    // Told last, once every Posting is saved and its Research queued. A Detection Summary not sent
     // undoes nothing: it comes back with what the Detection found, which jf detect prints first.
-    const detectionList: Detection[] = [];
-    for (const { detection: found, notificationList } of foundList) {
+    for (const { detection: found } of foundList) {
       await workspace.updateDetectionWatch(detection, found.watchId, { step: 'notifying' });
-      const failureList = await Promise.all(
-        notificationList.map(({ posting, notification }) => notify(posting, notification)),
-      );
-      const notificationFailureList = failureList
-        .filter((failure) => failure !== undefined)
-        .map(({ message }) => message);
+    }
+    const failureByCandidate = await sendSummaries(
+      detection,
+      foundList.map((found) => watchSummaryOf(found)),
+    );
+    const detectionList: Detection[] = [];
+    for (const { detection: found, summarizedList } of foundList) {
+      // Only a Watch whose Postings the Detection Summary told carries its failure
+      const failure = summarizedList.length === 0 ? undefined : failureByCandidate.get(found.candidateId);
+      const notificationFailureList = failure === undefined ? [] : [failure.message];
       const locationFailure = locator.failureFor(await findLocale(found.candidateId));
       const watchDetection = DETECTION_SCHEMA.parse({ ...found, notificationFailureList, locationFailure });
       detectionList.push(watchDetection);

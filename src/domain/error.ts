@@ -76,10 +76,12 @@ export const ERROR_CATALOGUE = {
   source_status: 'error:moduleFailure',
   // What a Source answers is no longer in the format its module reads
   source_format_changed: 'error:moduleFailure',
-  // A notification of the Detection was not sent
+  // A Detection Summary was not sent
   notifications_not_sent: 'error:notificationsNotSent',
-  // A notification, of the Detection or of a job, was not sent
+  // A notification of a job was not sent
   notification_not_sent: 'notification:notSent',
+  // The Detection Summary of a Candidate was not sent
+  summary_not_sent: 'notification:summaryNotSent',
 
   // Statuses
   // A Posting cannot move to this Status from its own

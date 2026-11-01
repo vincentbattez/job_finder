@@ -94,6 +94,15 @@ Run that queries the Source of each Watch, or only those of one Candidate when s
 _Avoid_: scan, crawl, alert
 _Formerly_: Détection
 
+**Near Miss**:
+Title a Watch's Source lists that comes close to its searched title without matching it; it is not kept, only shown so the Candidate can widen the Watch.
+_Avoid_: rejected title, discarded posting
+_Formerly_: Titre écarté de peu
+
+**Detection Summary**:
+The one notification a Candidate receives after a Detection that found Postings to notify: when it was started, which Watches it covered, what it found and its Near Misses.
+_Avoid_: digest, report, recap
+
 **Zone**:
 Territory of a Watch where a detected Posting automatically starts its Research; each Source expresses it its own way, and a Posting outside the Zone is kept but not processed.
 _Avoid_: perimeter, area

@@ -30,6 +30,7 @@ oklab
 oklch
 Revalidator
 Schibsted
+Segoe
 sloplint
 spinbutton
 STARTTLS

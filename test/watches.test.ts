@@ -154,7 +154,7 @@ describe('Watches', () => {
       expect(postingList.filter(({ reference }) => reference === VERSAILLES_REFERENCE)).toMatchObject([
         { isInZone: true },
       ]);
-      expect(notificationChannel.sentList.map(({ title }) => title)).toEqual(['Nouvelle Offre dans la Zone']);
+      expect(notificationChannel.sentList.map(({ title }) => title)).toEqual(['1 nouvelle Offre']);
       const jobList = await actions.runQueuedJobs();
       expect(jobList.map((job) => `${job.module} ${'posting' in job ? job.posting.reference : job.upload}`)).toEqual([
         `research ${VERSAILLES_REFERENCE}`,
