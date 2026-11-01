@@ -17,6 +17,9 @@ archunit
 autoincrement
 CLAUDECODE
 commitlint
+EAUTH
+EENVELOPE
+EMESSAGE
 gstatic
 ianvs
 isbot
@@ -29,6 +32,7 @@ Revalidator
 Schibsted
 sloplint
 spinbutton
+STARTTLS
 topbar
 unstub
 vitest

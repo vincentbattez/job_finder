@@ -13,6 +13,7 @@ import { parameter } from '#/parameter/index.ts';
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { startFakeHomeAssistant } from './fake-home-assistant.ts';
+import { startFakeSmtpServer } from './fake-smtp-server.ts';
 import { LEA_WATCH, LEA_WATCH_ID } from './lea.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
@@ -98,6 +99,14 @@ const PARAMETERS_BY_MODULE = new Map<string, () => Promise<Record<string, string
       return { url: homeAssistant.url, token: homeAssistant.token, service: 'notify.mobile_app_iphone_de_lea' };
     },
   ],
+  [
+    'smtp',
+    async () => {
+      const { host, port, user, password, close } = await startFakeSmtpServer();
+      onTestFinished(close);
+      return { host, port, user, password, to: 'lea.durand@example.org' };
+    },
+  ],
 ]);
 
 // A module of two secret Parameters, beside a plain one: the check covers each secret, not one token
@@ -172,7 +181,12 @@ async function saveChannel(module: INotificationChannel, parameters: Record<stri
     parameters: Object.fromEntries(Object.entries(parameters).filter(([name]) => !secretSet.has(name))),
   };
   const secretByName = Object.fromEntries(Object.entries(parameters).filter(([name]) => secretSet.has(name)));
-  return { actions, input, secretByName };
+  // A module without a Parameter to choose refuses any list of choices, before reading a Parameter
+  const hasChoices = parameterList.some(({ hasChoices: isListed }) => isListed);
+  const checkedActions = Object.fromEntries(
+    Object.entries(actions).filter(([name]) => hasChoices || name !== 'listParameterChoices'),
+  );
+  return { actions: checkedActions, input, secretByName };
 }
 
 describe('the write-only secret Parameters of a Notification Channel', () => {

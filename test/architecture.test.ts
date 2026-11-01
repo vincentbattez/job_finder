@@ -43,6 +43,7 @@ const RAW_DATA_ACCESS_LIST = [
     exampleList: ["import { execFileSync } from 'node:child_process';"],
   },
   { name: 'the environment', pattern: /\bprocess\.env\b/, exampleList: ['process.env.TOKEN;'] },
+  { name: 'SMTP', pattern: /['"]nodemailer['"]/, exampleList: ["import { createTransport } from 'nodemailer';"] },
 ];
 
 // Each folder of src/modules is a module. A diagram without any arrow turns every dependency
@@ -590,6 +591,8 @@ const BOUNDED_CALL_LIST = [
   { pattern: /^(?:spawn|spawnSync|exec|execSync|execFile|execFileSync|fork)$/, option: 'timeout' },
   // fetch, or the fetch a Source or API Géo is given (httpFetch)
   { pattern: /^(?:fetch|\w+Fetch)$/, option: 'signal' },
+  // An SMTP connection, whose idle socket nodemailer otherwise keeps for ten minutes
+  { pattern: /^createTransport$/, option: 'socketTimeout' },
 ];
 // The calls left unbounded on purpose, each with its reason
 const UNBOUNDED_CALL_LIST = [
@@ -801,6 +804,10 @@ describe('architecture', () => {
           'await fetch(url, { method: "POST" });',
         ].join('\n'),
         'src/workspace/acl/database.ts': "execFileSync('node', [], { stdio: 'pipe' });\n",
+        'src/modules/notification-smtp/acl/smtp.ts': [
+          "createTransport({ host: 'smtp.example.org' });",
+          "createTransport({ host: 'smtp.example.org', socketTimeout: 1000 });",
+        ].join('\n'),
         'src/postings/fetch.ts': 'await fetch(url);\n',
       }),
     );
@@ -811,6 +818,7 @@ describe('architecture', () => {
       'src/ai-session/acl/claude-code.ts:1 calls spawn',
       'src/geo/acl/api-geo.ts:1 calls httpFetch',
       'src/geo/acl/api-geo.ts:3 calls fetch',
+      'src/modules/notification-smtp/acl/smtp.ts:1 calls createTransport',
       'src/workspace/acl/database.ts:1 calls execFileSync',
     ]);
     expect(findUnboundedCalls(projectDirectory)[0]).toMatch(/“Visible failure”/);
