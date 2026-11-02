@@ -120,6 +120,14 @@ export const INTERVIEW_SCHEMA = z.object(INTERVIEW_SHAPE).brand<'Domain'>();
 
 export type Interview = z.infer<typeof INTERVIEW_SCHEMA>;
 
+// A section of the Revision of an Interview, by its title: the Candidate's note and whether they marked it
+// Mastered (GLOSSARY.md « Revision »)
+export const REVISION_SECTION_SCHEMA = z
+  .object({ title: z.string(), note: z.string(), isMastered: z.boolean() })
+  .brand<'Domain'>();
+
+export type RevisionSection = z.infer<typeof REVISION_SECTION_SCHEMA>;
+
 // Another Posting of the Candidate, named by its reference
 const LINKED_POSTING_SCHEMA = z.object({ reference: z.string() });
 

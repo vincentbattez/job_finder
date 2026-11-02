@@ -14,6 +14,7 @@ export default [
   route('postings/:reference/notes', 'routes/notes.ts'),
   route('postings/:reference/interviews', 'routes/interviews.ts'),
   route('postings/:reference/interviews/:number/ical', 'routes/ical.ts'),
+  route('postings/:reference/interviews/:number/revision', 'routes/revision.tsx'),
   route('postings/:reference/:artifact/document', 'routes/document.ts'),
   route('postings/:reference/:artifact/validate', 'routes/validate.ts'),
   route('postings/:reference/:artifact/generation', 'routes/generation.ts'),

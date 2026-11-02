@@ -101,17 +101,19 @@ test.describe('the header of the Posting page', () => {
     await expect(page.getByRole('button', { name: 'Indiquer le résultat' })).toBeVisible();
   });
 
-  test('leads an Invited Application to its next Interview', async ({ page, openPage }) => {
+  test('leads an Invited Application to the Revision of its next Interview, out of the Sidebar', async ({
+    page,
+    openPage,
+  }) => {
     const front = { page, openPage };
     await openJourney(front, 'invited', { path: 'status', form: { status: 'applied' } });
     await expect(findStepBadge(page)).toHaveText('Convoquée');
 
-    await page.getByRole('link', { name: 'Voir l’Entretien 1' }).click();
+    await page.getByRole('link', { name: 'Réviser l’Entretien 1' }).click();
 
-    await expect(page).toHaveURL(/\?tab=interviews&interview=1$/);
-    await expect(
-      page.getByRole('navigation', { name: /^Entretiens de la Candidature/ }).getByRole('link'),
-    ).toHaveAttribute('aria-current', 'true');
+    await expect(page).toHaveURL(/\/interviews\/1\/revision$/);
+    await expect(page.getByRole('heading', { name: 'Réviser l’Entretien 1' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Pages' })).toHaveCount(0);
   });
 
   test('archives at once with an undo in its toast, then unarchives', async ({ page, openPage }) => {

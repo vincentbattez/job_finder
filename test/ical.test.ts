@@ -93,7 +93,7 @@ describe('the iCal file of an Interview', () => {
     expect(alarmList.every((alarm) => alarm.includes('ACTION:DISPLAY\r\n'))).toBe(true);
   });
 
-  it('describes the Interviewers, then the links to the official ad and to the Posting page and its sections, on the origin passed', async () => {
+  it('describes the Interviewers, then the links to the Revision, the official ad and the Posting page and its sections, on the origin passed', async () => {
     await addInterview('2026-2350473');
 
     const { text } = await actions.readIcalFile({
@@ -104,14 +104,13 @@ describe('the iCal file of an Interview', () => {
 
     expect(valueOf(text, 'DESCRIPTION')?.split(String.raw`\n`)).toEqual([
       'Interlocuteurs : Mme Durand',
+      'Réviser l’Entretien 1 : https://job-finder.example.org/postings/2026-2350473/interviews/1/revision',
       'Annonce officielle : https://choisirleservicepublic.gouv.fr/offre-emploi/2026-2350473/?tracking=1&idOrigine=502',
       'Page Job Finder : https://job-finder.example.org/postings/2026-2350473',
       'Recherche : https://job-finder.example.org/postings/2026-2350473?tab=research',
       'Lettre de motivation : https://job-finder.example.org/postings/2026-2350473?tab=letter',
-      'Fiche d’entretien : https://job-finder.example.org/postings/2026-2350473?tab=interviews&interview=1&doc=interview_brief',
-      'Entretien 1 : https://job-finder.example.org/postings/2026-2350473?tab=interviews&interview=1',
     ]);
-    expect(valueOf(text, 'URL')).toBe('https://job-finder.example.org/postings/2026-2350473');
+    expect(valueOf(text, 'URL')).toBe('https://job-finder.example.org/postings/2026-2350473/interviews/1/revision');
   });
 
   it('leaves out of the description the Interviewers not given, and the official ad an imported Posting lacks', async () => {
@@ -124,9 +123,14 @@ describe('the iCal file of an Interview', () => {
 
     const { text } = await actions.readIcalFile({ reference: posting.reference, number: 1, origin: ORIGIN });
 
-    expect(valueOf(text, 'DESCRIPTION')?.split(String.raw`\n`)[0]).toBe(
+    expect(
+      valueOf(text, 'DESCRIPTION')
+        ?.split(String.raw`\n`)
+        .slice(0, 2),
+    ).toEqual([
+      `Réviser l’Entretien 1 : ${ORIGIN}/postings/${posting.reference}/interviews/1/revision`,
       `Page Job Finder : ${ORIGIN}/postings/${posting.reference}`,
-    );
+    ]);
   });
 
   it('keeps its UID across edits and raises its SEQUENCE at each one, so a calendar updates the event', async () => {

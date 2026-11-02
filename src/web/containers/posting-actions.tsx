@@ -1,12 +1,12 @@
 import {
   ArchiveIcon,
   ArchiveRestoreIcon,
-  CalendarClockIcon,
   CalendarPlusIcon,
   CheckIcon,
   ChevronDownIcon,
   ExternalLinkIcon,
   FlagIcon,
+  GraduationCapIcon,
   MoreHorizontalIcon,
   RepeatIcon,
   RotateCcwIcon,
@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useFetcher } from 'react-router';
 
 import type { Status, Step } from '#/web/components/badge.tsx';
+import { revisionPathOf } from '#/web/components/interviews.tsx';
 import { HeaderActionLabel } from '#/web/components/page-header.tsx';
 import {
   AlertDialog,
@@ -52,7 +53,7 @@ interface IPostingActions {
   statusChoiceList: Status[];
   url: string | null;
   repostOf: { reference: string } | null;
-  // The first Interview still to come, which an Invited Application leads to
+  // The first Interview still to come, whose Revision an Invited Application leads to
   nextInterviewNumber: number | null;
   // What the Interview Dialog reads, which its add-an-Interview action opens here
   posting: IInterviewPosting;
@@ -247,9 +248,9 @@ export function PostingActions({
       case 'invited': {
         return (
           <Button size="sm" asChild>
-            <Link to={{ search: `?tab=interviews&interview=${String(nextInterviewNumber)}` }} preventScrollReset>
-              <CalendarClockIcon />
-              <HeaderActionLabel>{t('page.seeInterview', { number: nextInterviewNumber })}</HeaderActionLabel>
+            <Link to={revisionPathOf(reference, nextInterviewNumber ?? 1)}>
+              <GraduationCapIcon />
+              <HeaderActionLabel>{t('page.revise', { number: nextInterviewNumber })}</HeaderActionLabel>
             </Link>
           </Button>
         );

@@ -13,6 +13,7 @@ import {
   redirect,
   Scripts,
   ScrollRestoration,
+  useMatches,
   useRouteLoaderData,
   type LoaderFunctionArgs,
 } from 'react-router';
@@ -48,6 +49,10 @@ export function loader({ request }: LoaderFunctionArgs) {
   });
 }
 
+function isFullScreenHandle(handle: unknown): boolean {
+  return typeof handle === 'object' && handle !== null && 'isFullScreen' in handle && handle.isFullScreen === true;
+}
+
 // Every page, the error page included, renders in the request's locale
 export function Layout({ children }: Readonly<{ children: ReactNode }>) {
   return (
@@ -66,6 +71,8 @@ function Page({ children }: Readonly<{ children: ReactNode }>) {
   // Tells when React runs the page: a click or a form sent before may go nowhere, so an e2e test waits
   // for it (e2e/candidate.ts)
   const isHydrated = useIsHydrated();
+  // A full-screen page, the Revision, renders out of the Sidebar (DESIGN.md « Layout »)
+  const isFullScreen = useMatches().some(({ handle }) => isFullScreenHandle(handle));
   return (
     // next-themes sets the theme's class on <html> before React hydrates it
     <html lang={locale} data-hydrated={isHydrated || undefined} suppressHydrationWarning>
@@ -78,14 +85,18 @@ function Page({ children }: Readonly<{ children: ReactNode }>) {
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <TooltipProvider delayDuration={300}>
-            <SidebarProvider>
-              <AppSidebar
-                candidateSwitcher={candidateData !== undefined && <CandidateSwitcher {...candidateData} />}
-                localeSwitcher={<LocaleSwitcher />}
-                newCount={candidateData?.newCount ?? 0}
-              />
-              <SidebarInset className="min-w-0">{children}</SidebarInset>
-            </SidebarProvider>
+            {isFullScreen ? (
+              children
+            ) : (
+              <SidebarProvider>
+                <AppSidebar
+                  candidateSwitcher={candidateData !== undefined && <CandidateSwitcher {...candidateData} />}
+                  localeSwitcher={<LocaleSwitcher />}
+                  newCount={candidateData?.newCount ?? 0}
+                />
+                <SidebarInset className="min-w-0">{children}</SidebarInset>
+              </SidebarProvider>
+            )}
             <Toaster position="bottom-right" closeButton />
           </TooltipProvider>
         </ThemeProvider>
