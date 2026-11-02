@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { daysUntil, groupByDeadline } from './list-model.ts';
+import { countByApplicationTab, daysUntil, groupApplications, groupByDeadline } from './list-model.ts';
 
 // 23:30 in Paris on 2 November 2026, already the 3rd in Paris an hour later: days count in Paris time
 const NOW = new Date('2026-11-02T22:30:00Z');
@@ -51,5 +51,69 @@ describe('groups by Deadline', () => {
 
   it('leaves out the groups no Posting falls in', () => {
     expect(groupByDeadline([posting('later', '2027-03-01')], NOW).map(({ key }) => key)).toEqual(['later']);
+  });
+});
+
+type ApplicationStep = 'applied' | 'invited' | 'interviewed' | 'hired' | 'rejected';
+
+// A day of November 2026, null without one
+function dateOf(day: string | undefined): Date | null {
+  return day === undefined ? null : new Date(`2026-11-${day}T00:00:00Z`);
+}
+
+// An Application as the list groups it
+function application(
+  reference: string,
+  step: ApplicationStep,
+  dates: { deadline?: string; appliedAt?: string; nextInterviewAt?: string; lastInterviewAt?: string } = {},
+) {
+  return {
+    reference,
+    step,
+    status: step === 'invited' || step === 'interviewed' ? 'applied' : step,
+    deadline: dateOf(dates.deadline),
+    appliedAt: dateOf(dates.appliedAt),
+    nextInterviewAt: dateOf(dates.nextInterviewAt),
+    lastInterviewAt: dateOf(dates.lastInterviewAt),
+  };
+}
+
+describe('groups the Applications', () => {
+  const itemList = [
+    application('applied-late', 'applied', { deadline: '25' }),
+    application('applied-none', 'applied'),
+    application('applied-soon', 'applied', { deadline: '12' }),
+    application('invited-late', 'invited', { nextInterviewAt: '20' }),
+    application('invited-soon', 'invited', { nextInterviewAt: '15', lastInterviewAt: '01' }),
+    application('interviewed-old', 'interviewed', { lastInterviewAt: '02' }),
+    application('interviewed-recent', 'interviewed', { lastInterviewAt: '09' }),
+    application('hired-old', 'hired', { appliedAt: '01' }),
+    application('hired-recent', 'hired', { appliedAt: '05' }),
+    application('rejected-recent', 'rejected', { appliedAt: '07' }),
+    application('rejected-old', 'rejected', { appliedAt: '03' }),
+  ];
+
+  function groupsOf(tab: 'in_progress' | 'hired' | 'rejected') {
+    return groupApplications(itemList, tab).map(({ key, itemList: groupItemList }) => [
+      key,
+      groupItemList.map(({ reference }) => reference),
+    ]);
+  }
+
+  it('shows In progress as Interviewed by last Interview, Invited by next Interview, then Applied by Deadline', () => {
+    expect(groupsOf('in_progress')).toEqual([
+      ['interviewed', ['interviewed-recent', 'interviewed-old']],
+      ['invited', ['invited-soon', 'invited-late']],
+      ['applied', ['applied-soon', 'applied-late', 'applied-none']],
+    ]);
+  });
+
+  it('sorts Hired and Rejected by the day Applied, the latest first', () => {
+    expect(groupsOf('hired')).toEqual([['hired', ['hired-recent', 'hired-old']]]);
+    expect(groupsOf('rejected')).toEqual([['rejected', ['rejected-recent', 'rejected-old']]]);
+  });
+
+  it('counts the Applications of each tab', () => {
+    expect(countByApplicationTab(itemList)).toEqual({ in_progress: 7, hired: 2, rejected: 2 });
   });
 });

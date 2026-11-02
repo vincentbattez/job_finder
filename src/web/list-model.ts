@@ -83,3 +83,59 @@ export function groupNew<T extends IDated & { isFound: boolean }>(
   );
   return foundList.length === 0 ? groupList : [{ key: 'found', itemList: foundList }, ...groupList];
 }
+
+// The Applications tabs: Hired and Rejected by their Status, everything else In progress (spec #125)
+export type ApplicationTab = 'in_progress' | 'hired' | 'rejected';
+
+export const APPLICATION_TAB_LIST: ApplicationTab[] = ['in_progress', 'hired', 'rejected'];
+
+export type ApplicationGroupKey = 'interviewed' | 'invited' | 'applied' | 'hired' | 'rejected';
+
+interface IApplicationDated {
+  step: string;
+  status: string;
+  deadline: Date | null;
+  appliedAt: Date | null;
+  nextInterviewAt: Date | null;
+  lastInterviewAt: Date | null;
+}
+
+type CompareApplications = (first: IApplicationDated, second: IApplicationDated) => number;
+
+// The latest Applied first
+const BY_APPLIED_AT: CompareApplications = (first, second) => byDate(first.appliedAt, second.appliedAt, -1);
+
+// The groups of each tab in order, a group being a Step, each with its own sort: In progress puts what
+// needs attention first
+const APPLICATION_GROUP_LIST_BY_TAB: Record<
+  ApplicationTab,
+  { key: ApplicationGroupKey; compare: CompareApplications }[]
+> = {
+  in_progress: [
+    { key: 'interviewed', compare: (first, second) => byDate(first.lastInterviewAt, second.lastInterviewAt, -1) },
+    { key: 'invited', compare: (first, second) => byDate(first.nextInterviewAt, second.nextInterviewAt, 1) },
+    { key: 'applied', compare: (first, second) => byDate(first.deadline, second.deadline, 1) },
+  ],
+  hired: [{ key: 'hired', compare: BY_APPLIED_AT }],
+  rejected: [{ key: 'rejected', compare: BY_APPLIED_AT }],
+};
+
+// The tab an Application sits in
+function applicationTabOf({ status }: Pick<IApplicationDated, 'status'>): ApplicationTab {
+  return status === 'hired' || status === 'rejected' ? status : 'in_progress';
+}
+
+// The Applications of a tab by groups; empty groups left out
+export function groupApplications<T extends IApplicationDated>(
+  itemList: T[],
+  tab: ApplicationTab,
+): { key: ApplicationGroupKey; itemList: T[] }[] {
+  return APPLICATION_GROUP_LIST_BY_TAB[tab]
+    .map(({ key, compare }) => ({ key, itemList: itemList.filter(({ step }) => step === key).toSorted(compare) }))
+    .filter(({ itemList: groupItemList }) => groupItemList.length > 0);
+}
+
+export function countByApplicationTab(itemList: Pick<IApplicationDated, 'status'>[]): Record<ApplicationTab, number> {
+  const countOf = (tab: ApplicationTab) => itemList.filter((item) => applicationTabOf(item) === tab).length;
+  return { in_progress: countOf('in_progress'), hired: countOf('hired'), rejected: countOf('rejected') };
+}

@@ -183,46 +183,18 @@ export const NEW_ITEM_SCHEMA = z.object({ posting: POSTING_SCHEMA, isFound: z.bo
 
 export type NewItem = z.infer<typeof NEW_ITEM_SCHEMA>;
 
-// An Application as its row shows it, on the home and on /applications
+// An Application as its list shows it, with what its groups sort by (spec #125 « Lists »)
 export const APPLICATION_SCHEMA = z
   .object({
     posting: POSTING_SCHEMA,
-    // What the outcome selector offers, beside the Status the Posting has
-    statusChoiceList: z.array(STATUS_SCHEMA),
-    // The next Interview, else the last one once none is upcoming; null without any
-    nextInterview: INTERVIEW_SCHEMA.nullable(),
-    hasUpcomingInterview: z.boolean(),
-    interviewCount: z.int(),
-    // The first lines of the Notes, as plain text
-    notesExcerpt: z.string(),
-    // The last time it moved: its Status changed, it was archived or an Interview took place
-    lastChangeAt: z.date(),
+    // The start of its next Interview, null when none is to come
+    nextInterviewAt: z.date().nullable(),
+    // The start of the last Interview that took place, null when none has
+    lastInterviewAt: z.date().nullable(),
   })
   .brand<'Domain'>();
 
 export type Application = z.infer<typeof APPLICATION_SCHEMA>;
-
-// The sections of /applications, in the order it shows them: an Archived one leaves its outcome's section
-export const APPLICATION_SECTION_NAME_SCHEMA = z.enum([
-  'hired',
-  'in_progress',
-  'rejected',
-  'archived',
-  'archived_without_application',
-]);
-
-export type ApplicationSectionName = z.infer<typeof APPLICATION_SECTION_NAME_SCHEMA>;
-
-// A section of /applications and its rows, the most recently changed first, the most recently archived
-// first in the Archived ones
-export const APPLICATION_SECTION_SCHEMA = z
-  .object({
-    section: APPLICATION_SECTION_NAME_SCHEMA,
-    applicationList: z.array(APPLICATION_SCHEMA),
-  })
-  .brand<'Domain'>();
-
-export type ApplicationSection = z.infer<typeof APPLICATION_SECTION_SCHEMA>;
 
 // What a Detection found for one Watch, why each notification it could not send failed, and why
 // its Postings stay off the map, API Géo being down. On the first launch, the Postings already

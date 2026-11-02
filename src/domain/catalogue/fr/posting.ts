@@ -30,7 +30,6 @@ export const POSTING_FR: typeof POSTING_EN = {
   salutationTerm: 'Formule d’appel',
 
   markApplied: 'Marquer comme Postulée',
-  outcomeLabel: 'Issue de la Candidature',
   outcomeLabelByStatus: {
     hired: 'Poste obtenu',
     rejected: 'Refusée',
@@ -344,17 +343,7 @@ export const POSTING_FR: typeof POSTING_EN = {
     delete: 'Supprimer l’Entretien {{number}}',
     deleteForGood: 'Supprimer définitivement l’Entretien {{number}}',
     ical: 'Ajouter à l’agenda (iCal)',
-    next: 'Prochain Entretien',
-    last: 'Dernier Entretien',
-    count_one: '{{count}} Entretien',
-    count_other: '{{count}} Entretiens',
   },
-
-  applicationRow: {
-    lastChangeAt: 'Dernier changement le',
-    notesExcerpt: 'Notes',
-  },
-
   ical: {
     summary: 'Entretien · {{title}} · {{employer}}',
     summaryWithoutEmployer: 'Entretien · {{title}}',

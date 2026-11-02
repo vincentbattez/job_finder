@@ -32,13 +32,13 @@ test('leads to every page of the journey from the Sidebar', async ({ page, asCan
 test('switches Candidate and stays on the same page', async ({ page, asCandidate, openPage }) => {
   await asCandidate('lea');
   await openPage('/applications');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Candidatures de Léa');
+  await expect(page.getByRole('complementary', { name: 'Candidatures' })).toBeVisible();
 
   await switchCandidate(page, 'Camille');
 
   await expect(page.getByText('Tu consultes les Offres de Camille.')).toBeVisible();
   await expect(page).toHaveURL('/applications');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Candidatures de Camille');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Candidatures');
   await expect(page.getByRole('button', { name: 'Changer de Candidat' })).toContainText('Camille');
 });
 
