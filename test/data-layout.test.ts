@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 
 import { openContext } from '#/actions/context.ts';
-import { createActions } from '#/actions/index.ts';
+import { createActions, type Actions } from '#/actions/index.ts';
 
 import { createFakeNotificationChannel, LEA_TARGET } from './fake-notification-channel.ts';
 import { writeOlderDatabase } from './older-database.ts';
@@ -22,6 +22,8 @@ const BEFORE_VERSION_INPUT_MIGRATION = '20261102182655_remove_visualization';
 const BEFORE_NEW_STATUS_MIGRATION = '20261102184315_version_input';
 // The last migration before the Zone went away (ADR-0018)
 const BEFORE_ZONE_REMOVAL_MIGRATION = '20261102194517_posting_status_new';
+// The last migration before a Version was a Draft or Validated (ADR-0019)
+const BEFORE_VERSION_VALIDATION_MIGRATION = '20261102184315_version_input';
 
 const FACTS = '# Faits\n\n## Mobilité\n\n- Lille et alentours\n';
 const CV = '# CV de Léa\n';
@@ -547,15 +549,20 @@ describe('the read Versions of an older database', () => {
     ]);
   });
 
-  // The migration version_validation adds the validation and the origin of every Version, each kept
+  // Every Version is kept, each Chosen one Validated; a Letter without its first draft was brought
   it('keeps every Version, each given its validation and its origin', async () => {
     const dataDirectory = writeReadVersionDataDirectory();
 
     await createActions({ dataDirectory });
 
-    expect(selectAll(dataDirectory, 'SELECT id, validation, origin FROM Version ORDER BY id')).toEqual(
-      [1, 2, 3, 4, 5, 6].map((id) => ({ id, validation: 'draft', origin: 'ai' })),
-    );
+    expect(selectAll(dataDirectory, 'SELECT id, validation, origin FROM Version ORDER BY id')).toEqual([
+      { id: 1, validation: 'validated', origin: 'ai' },
+      { id: 2, validation: 'validated', origin: 'candidate' },
+      { id: 3, validation: 'validated', origin: 'candidate' },
+      { id: 4, validation: 'validated', origin: 'ai' },
+      { id: 5, validation: 'validated', origin: 'ai' },
+      { id: 6, validation: 'validated', origin: 'ai' },
+    ]);
   });
 
   // A migrated record only knows the Versions it read: the other Inputs open checked by default
@@ -661,5 +668,140 @@ describe('the Zone of an older database', () => {
       { reference: '2026-1', status: 'new' },
       { reference: '2026-2', status: 'to_apply' },
     ]);
+  });
+});
+
+const AI_LETTER = '# Lettre telle que l’IA l’a écrite\n';
+const CORRECTED_LETTER = '# Lettre corrigée par Léa\n';
+const BROUGHT_LETTER = '# Lettre apportée par Léa\n';
+const PORTRAIT = '# Portrait du jury\n';
+const BRIEF = '# Fiche d’entretien\n';
+
+// Léa's Versions as the jf before the Draft left them: a Research regenerated after its Chosen Version
+// then failed once, another Posting's Research never chosen, a Letter she corrected beside one she
+// brought, and an Interview's Portrait, chosen, and Brief, not
+function writeChosenDataDirectory(): string {
+  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+  const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_VERSION_VALIDATION_MIGRATION));
+  database.exec(`INSERT INTO Candidate (id, name) VALUES ('lea', 'Léa');
+    INSERT INTO DefaultDeadlinePeriod (id, months) VALUES (1, 6);
+    INSERT INTO Posting (id, candidateId, source, reference, title, status, appliedAt, isInZone) VALUES
+      (1, 'lea', 'pep', '2026-1', 'Greffier', 'applied', '2026-10-20T09:00:00.000+00:00', 1),
+      (2, 'lea', 'pep', '2026-2', 'Greffier', 'to_apply', NULL, 1);
+    INSERT INTO Interview (id, postingId, number, startAt, place, interviewers)
+    VALUES (1, 1, 1, '2026-11-19T14:00:00.000+00:00', 'Lille', '');
+    INSERT INTO Version (id, postingId, interviewId, artifact, number, isChosen, state, instructions) VALUES
+      (1, 1, NULL, 'research', 1, 0, 'ready', 'Chercher.'),
+      (2, 1, NULL, 'research', 2, 1, 'ready', 'Chercher.'),
+      (3, 1, NULL, 'research', 3, 0, 'ready', 'Chercher.'),
+      (4, 1, NULL, 'research', 4, 0, 'failed', 'Chercher.'),
+      (5, 2, NULL, 'research', 1, 0, 'ready', 'Chercher.'),
+      (6, 1, NULL, 'letter', 1, 1, 'ready', 'Écrire.'),
+      (7, 1, NULL, 'letter', 2, 0, 'ready', 'Écrire.'),
+      (8, 1, 1, 'portrait', 1, 1, 'ready', 'Chercher.'),
+      (9, 1, 1, 'interview_brief', 1, 0, 'ready', 'Réviser.');`);
+  database.close();
+  const postingsDirectory = path.join(dataDirectory, 'candidates', 'lea', 'postings');
+  const firstDirectory = path.join(postingsDirectory, '2026-1-greffier');
+  const interviewDirectory = path.join(firstDirectory, 'interviews', '1');
+  writeFile(path.join(firstDirectory, 'job-description.md'), '# Greffier\n');
+  writeFile(path.join(postingsDirectory, '2026-2-greffier', 'job-description.md'), '# Greffier\n');
+  for (const number of ['v1', 'v2', 'v3']) {
+    writeFile(path.join(firstDirectory, 'research', number, 'research.md'), RESEARCH);
+  }
+  mkdirSync(path.join(firstDirectory, 'research', 'v4'), { recursive: true });
+  writeFile(path.join(postingsDirectory, '2026-2-greffier', 'research', 'v1', 'research.md'), RESEARCH);
+  writeFile(path.join(firstDirectory, 'letter', 'v1', 'letter.md'), CORRECTED_LETTER);
+  writeFile(path.join(firstDirectory, 'letter', 'v1', 'recipients.json'), RECIPIENTS);
+  writeFile(path.join(firstDirectory, 'letter', 'v1', 'draft.md'), AI_LETTER);
+  chmodSync(path.join(firstDirectory, 'letter', 'v1', 'draft.md'), 0o444);
+  writeFile(path.join(firstDirectory, 'letter', 'v2', 'letter.md'), BROUGHT_LETTER);
+  writeFile(path.join(interviewDirectory, 'portrait', 'v1', 'portrait.md'), PORTRAIT);
+  writeFile(path.join(interviewDirectory, 'interview_brief', 'v1', 'interview-brief.md'), BRIEF);
+  return dataDirectory;
+}
+
+// The text and the Original of each Version of a Posting, its Interviews' included, as the Posting page
+// reads them
+async function readVersionTexts(actions: Actions, reference: string): Promise<Record<string, unknown>> {
+  const { artifactList, interviewList } = await actions.readPosting({ reference });
+  return Object.fromEntries(
+    [...artifactList, ...interviewList.flatMap((interview) => interview.artifactList)].flatMap(
+      ({ artifact, versionList }) =>
+        versionList.map(({ version: { number }, text, original }) => [
+          `${artifact} v${String(number)}`,
+          { text, original },
+        ]),
+    ),
+  );
+}
+
+// The main checkout migrates Léa's real data/: her Chosen Versions and her corrections come through the
+// V1, and every AI Version keeps the AI's text as its Original (spec #125, ADR-0019)
+describe('the Versions of an older data folder', () => {
+  it('are Validated up to the Chosen one, Drafts after it or without one', async () => {
+    const dataDirectory = writeChosenDataDirectory();
+
+    await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'SELECT id, isChosen, validation FROM Version ORDER BY id')).toEqual([
+      { id: 1, isChosen: 0, validation: 'validated' },
+      { id: 2, isChosen: 1, validation: 'validated' },
+      { id: 3, isChosen: 0, validation: 'draft' },
+      { id: 4, isChosen: 0, validation: 'draft' },
+      { id: 5, isChosen: 0, validation: 'draft' },
+      { id: 6, isChosen: 1, validation: 'validated' },
+      { id: 7, isChosen: 0, validation: 'draft' },
+      { id: 8, isChosen: 1, validation: 'validated' },
+      { id: 9, isChosen: 0, validation: 'draft' },
+    ]);
+  });
+
+  it('keep the AI’s text as their Original: a Letter its first draft, a brought Letter none', async () => {
+    const dataDirectory = writeChosenDataDirectory();
+
+    const actions = await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'SELECT id, origin FROM Version ORDER BY id')).toEqual([
+      { id: 1, origin: 'ai' },
+      { id: 2, origin: 'ai' },
+      { id: 3, origin: 'ai' },
+      { id: 4, origin: 'ai' },
+      { id: 5, origin: 'ai' },
+      { id: 6, origin: 'ai' },
+      { id: 7, origin: 'candidate' },
+      { id: 8, origin: 'ai' },
+      { id: 9, origin: 'ai' },
+    ]);
+    expect(await readVersionTexts(actions, '2026-1')).toEqual({
+      'research v1': { text: RESEARCH, original: RESEARCH },
+      'research v2': { text: RESEARCH, original: RESEARCH },
+      'research v3': { text: RESEARCH, original: RESEARCH },
+      'research v4': { text: null, original: null },
+      'letter v1': { text: CORRECTED_LETTER, original: AI_LETTER },
+      'letter v2': { text: BROUGHT_LETTER, original: null },
+      'portrait v1': { text: PORTRAIT, original: PORTRAIT },
+      'interview_brief v1': { text: BRIEF, original: BRIEF },
+    });
+    expect(await readVersionTexts(actions, '2026-2')).toEqual({
+      'research v1': { text: RESEARCH, original: RESEARCH },
+    });
+    const portraitOriginalPath = path.join(
+      dataDirectory,
+      'candidates/lea/postings/2026-1-greffier/interviews/1/portrait/v1/original.md',
+    );
+    expect(statSync(portraitOriginalPath).mode & 0o777).toBe(0o444);
+  });
+
+  it('changes nothing when opened again', async () => {
+    const dataDirectory = writeChosenDataDirectory();
+    await createActions({ dataDirectory });
+    const entryList = snapshotOf(dataDirectory);
+    const versionList = selectAll(dataDirectory, 'SELECT * FROM Version ORDER BY id');
+
+    await createActions({ dataDirectory });
+
+    expect(snapshotOf(dataDirectory)).toEqual(entryList);
+    expect(selectAll(dataDirectory, 'SELECT * FROM Version ORDER BY id')).toEqual(versionList);
   });
 });
