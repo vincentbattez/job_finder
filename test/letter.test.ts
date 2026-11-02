@@ -271,39 +271,6 @@ describe('a Letter that fails', () => {
 });
 
 describe('a Letter refused', () => {
-  it.each([
-    { case: 'no Research', researchRunList: [] },
-    { case: 'only a Recherche « en échec »', researchRunList: [{}] },
-  ])('refuses to run without a Chosen Research ($case), without launching Claude', async ({ researchRunList }) => {
-    const aiSession = createFakeAiSession(...researchRunList);
-    const { actions } = await detectPostings(aiSession);
-    if (researchRunList.length > 0) {
-      await runModule(actions, 'research', REFERENCE);
-    }
-
-    await expect(actions.runModule({ module: 'letter', reference: REFERENCE })).rejects.toThrow(
-      /L'Offre 2026-2445600 n'a pas de Recherche retenue.*jf run research 2026-2445600/,
-    );
-    expect(aiSession.headlessSessionList).toHaveLength(researchRunList.length);
-    expect(await actions.listVersions({ reference: REFERENCE, artifact: 'letter' })).toEqual([]);
-  });
-
-  // An Applied Posting keeps the Letter that was sent (spec « Versions »)
-  it('refuses to produce a new Letter for an Applied Posting, without launching Claude', async () => {
-    const aiSession = createFakeAiSession(RESEARCH_RUN, letterRun(), letterRun());
-    const { actions } = await detectPostings(aiSession);
-    await runModule(actions, 'research', REFERENCE);
-    await runModule(actions, 'letter', REFERENCE);
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
-
-    await expect(actions.runModule({ module: 'letter', reference: REFERENCE })).rejects.toThrow(
-      /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/,
-    );
-    expect(aiSession.headlessSessionList).toHaveLength(2);
-    const versionList = await actions.listVersions({ reference: REFERENCE, artifact: 'letter' });
-    expect(versionList.map(({ number, isChosen }) => ({ number, isChosen }))).toEqual([{ number: 1, isChosen: true }]);
-  });
-
   it('fails a Letter queued before the Posting became Applied, without launching Claude', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, letterRun());
     const { actions } = await detectPostings(aiSession);

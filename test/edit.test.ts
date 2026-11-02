@@ -118,23 +118,6 @@ describe('an edit refused', () => {
     );
     expect(aiSession.interactiveSessionList).toEqual([]);
   });
-
-  it.each([
-    { case: 'never produced', runCount: 0 },
-    { case: 'whose only Version failed', runCount: 1 },
-  ])('refuses an Artifact $case, without opening a session', async ({ runCount }) => {
-    const aiSession = createFakeAiSession({});
-    const { actions } = await detectPostings(aiSession);
-    for (let run = 0; run < runCount; run += 1) {
-      await actions.runModule({ module: 'research', reference: REFERENCE });
-    }
-    await actions.runQueuedJobs();
-
-    await expect(actions.openArtifact({ reference: REFERENCE, artifact: 'research' })).rejects.toThrow(
-      "L'Offre 2026-2445600 n'a pas de Version retenue de research à modifier : « jf run research 2026-2445600 » en produit une.",
-    );
-    expect(aiSession.interactiveSessionList).toEqual([]);
-  });
 });
 
 describe('the Artifacts to edit', () => {

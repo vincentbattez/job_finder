@@ -106,14 +106,6 @@ describe('portrait', () => {
     ]);
   });
 
-  it('refuses to run without an Interview', async () => {
-    const { actions } = await applyWithInterview(createFakeAiSession());
-
-    await expect(actions.runModule({ module: 'portrait', reference: REFERENCE })).rejects.toMatchObject({
-      code: 'interview_required',
-    });
-  });
-
   it('fails the Version of a Portrait without a title', async () => {
     const withoutTitle = PORTRAIT.replace(/^# .*\n/, '');
     const { actions } = await applyWithInterview(createFakeAiSession(portraitRun(withoutTitle)));

@@ -10,7 +10,7 @@ const IMPORT_INPUT_SCHEMA = z.object({ fileName: z.string(), markdown: z.string(
 // The extraction job of an imported Posting (ADR-0003); a failure throws, which fails the job and
 // leaves the Posting as imported
 export async function runExtraction(
-  { workspace, importSource, findLocale, locate }: ActionContext,
+  { workspace, artifacts, importSource, findLocale, locate }: ActionContext,
   job: Job,
 ): Promise<{ job: Job }> {
   const { posting } = job;
@@ -30,7 +30,8 @@ export async function runExtraction(
     locale,
   );
   // Imported by the Candidate, it gets its Research whatever the Zone
-  await workspace.createJob(filledPosting, 'research', { isAutomatic: true });
+  const research = await artifacts.find({ posting: filledPosting, artifact: 'research' });
+  await research.queueRun({ isAutomatic: true });
   const log = [session.log, locator.failureFor(locale)].filter((line) => line !== null && line !== '').join('\n');
   return { job: await workspace.finishJobWithoutVersion(job, { log, sessionId: session.sessionId }) };
 }

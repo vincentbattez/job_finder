@@ -126,19 +126,6 @@ describe('visualization', () => {
     expect(version?.instructions).toBe(VISUALIZATION_DEFAULT_INSTRUCTIONS);
   });
 
-  it('refuses to run without a Chosen Interview Brief, before queuing anything', async () => {
-    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, { isSuccess: false }));
-    await runModule(actions, 'research');
-    await runModule(actions, 'brief');
-
-    const launch = actions.runModule({ module: 'visualization', reference: REFERENCE, interview: 1 });
-
-    await expect(launch).rejects.toThrow(
-      "L'Offre 2026-2445600 n'a pas de Fiche d’entretien retenue, sur laquelle s'appuie la Visualisation. La produire d'abord : jf run interview_brief 2026-2445600 1.",
-    );
-    expect(await actions.runQueuedJobs()).toEqual([]);
-  });
-
   it.each([
     {
       problem: 'is not an HTML page',
@@ -170,18 +157,6 @@ describe('visualization', () => {
 
 // The Visualization is regenerated from the Interview Brief, never corrected by hand (spec « Modules IA »)
 describe('correcting a Visualization', () => {
-  it('refuses jf edit on the Visualization, saying to correct the Interview Brief, without opening a session', async () => {
-    const aiSession = createFakeAiSession(RESEARCH_RUN, BRIEF_RUN, visualizationRun());
-    const { actions } = await produceVisualization(aiSession);
-
-    await expect(
-      actions.openArtifact({ reference: REFERENCE, artifact: 'visualization', interview: 1 }),
-    ).rejects.toThrow(
-      "La Visualisation ne se modifie pas à la main : elle reprend la Fiche d'entretien retenue. Corrigez celle-ci, puis relancez la Visualisation de l'Offre 2026-2445600.",
-    );
-    expect(aiSession.interactiveSessionList).toEqual([]);
-  });
-
   it('shows the Visualization on the Posting page without a jf edit command, nor any file to correct', async () => {
     const { actions } = await produceVisualization(createFakeAiSession(RESEARCH_RUN, BRIEF_RUN, visualizationRun()));
 

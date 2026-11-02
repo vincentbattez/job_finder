@@ -31,13 +31,19 @@ export function createDataDirectory(): string {
   return copyDatabase(inject('leaDatabasePath'));
 }
 
+// A copy of the data folder of that first Detection, for a test that opens it without the actions
+export function copyDetectedDataDirectory(): string {
+  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+  cpSync(inject('detectedDataDirectory'), dataDirectory, { recursive: true });
+  return dataDirectory;
+}
+
 // The Postings already online, imported by a first Detection on the responses recorded on 2026-10-29,
 // with the fakes of every external boundary; Léa's Notification Channel is the fake one. That
 // Detection ran once per run (test/global-setup.ts): the data folder is a copy of its result, Job
 // Descriptions on disk included, so its timestamps date from the start of the run.
 export async function detectPostings(aiSession = createFakeAiSession()) {
-  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
-  cpSync(inject('detectedDataDirectory'), dataDirectory, { recursive: true });
+  const dataDirectory = copyDetectedDataDirectory();
   const notificationChannel = createFakeNotificationChannel();
   const actions = await createActions({
     dataDirectory,

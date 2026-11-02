@@ -122,16 +122,6 @@ describe('research', () => {
 });
 
 describe('a launch refused', () => {
-  it('refuses an unknown Posting without launching Claude', async () => {
-    const aiSession = createFakeAiSession();
-    const { actions } = await detectPostings(aiSession);
-
-    await expect(actions.runModule({ module: 'research', reference: '2026-0000000' })).rejects.toThrow(
-      /Offre inconnue : 2026-0000000/,
-    );
-    expect(aiSession.headlessSessionList).toEqual([]);
-  });
-
   it('refuses a module that does not exist, without launching Claude', async () => {
     const aiSession = createFakeAiSession();
     const { actions } = await detectPostings(aiSession);
@@ -190,16 +180,6 @@ describe('a Research that fails', () => {
       { number: 2, state: 'failed', isChosen: false },
       { number: 3, state: 'ready', isChosen: true },
     ]);
-  });
-
-  // An Applied Posting keeps the Letter that was sent (spec « Versions »)
-  it('refuses to change the Chosen Letter of an Applied Posting', async () => {
-    const { actions } = await detectPostings(createFakeAiSession());
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
-
-    await expect(actions.chooseVersion({ reference: REFERENCE, artifact: 'letter', number: 1 })).rejects.toThrow(
-      /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/,
-    );
   });
 
   it('refuses to retain a failed Version', async () => {

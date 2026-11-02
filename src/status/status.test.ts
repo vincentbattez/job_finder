@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { assertLetterModifiable, assertStatusChange, findStep, isExpired, listStatusChoices } from './index.ts';
+import { assertStatusChange, findStep, hasBeenApplied, isExpired, listStatusChoices } from './index.ts';
 
 // A Deadline is a calendar day, stored at midnight UTC as the Source gives it; the day is over
 // at midnight in France
@@ -62,25 +62,17 @@ describe('Expired', () => {
   });
 });
 
-// The tickets that edit, regenerate or retain a Letter test this rule through their own actions
-describe('Chosen Letter of a Posting', () => {
-  it('is frozen once the Posting is Applied', () => {
-    expect(() => {
-      assertLetterModifiable({ reference: '2026-2445600', status: 'applied', appliedAt: new Date() }, 'fr');
-    }).toThrow(/L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/);
-  });
-
-  // Applied before the tool kept the date
-  it('is frozen for an Applied Posting without a date', () => {
-    expect(() => {
-      assertLetterModifiable({ reference: '2026-2445600', status: 'applied', appliedAt: null }, 'fr');
-    }).toThrow(/a été Postulée/);
-  });
-
-  it('can still change while the Posting was never Applied', () => {
-    expect(() => {
-      assertLetterModifiable({ reference: '2026-2445600', status: 'to_apply', appliedAt: null }, 'fr');
-    }).not.toThrow();
+// Its Chosen Letter, the one sent, is frozen from then on: the Artifact module refuses to change it
+// (test/artifact.test.ts)
+describe('Applied once', () => {
+  it.each([
+    { case: 'it is Applied', posting: { status: 'applied', appliedAt: new Date() }, isExpected: true },
+    // Applied before the tool kept the date
+    { case: 'it is Applied without a date', posting: { status: 'applied', appliedAt: null }, isExpected: true },
+    { case: 'it is To Apply, Applied once', posting: { status: 'to_apply', appliedAt: new Date() }, isExpected: true },
+    { case: 'it was never Applied', posting: { status: 'to_apply', appliedAt: null }, isExpected: false },
+  ] as const)('is $isExpected when $case', ({ posting, isExpected }) => {
+    expect(hasBeenApplied(posting)).toBe(isExpected);
   });
 });
 

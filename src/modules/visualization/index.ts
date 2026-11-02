@@ -24,4 +24,6 @@ export const VISUALIZATION_MODULE = {
   // Attached to the Interview of the Interview Brief it lays out
   isAttachedToInterview: true,
   requiredArtifactList: ['interview_brief'],
+  // Corrected through the Interview Brief it lays out, then regenerated
+  notEditableErrorCode: 'visualization_not_editable',
 } satisfies IAiModule;

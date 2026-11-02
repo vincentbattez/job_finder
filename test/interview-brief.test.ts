@@ -174,40 +174,6 @@ describe('interview brief', () => {
     ).toEqual([['portrait', 'interview_brief', 'visualization']]);
   });
 
-  it('refuses to run without a Chosen Research, before queuing anything', async () => {
-    const { actions } = await detectRecordedPostings(createFakeAiSession({ isSuccess: false }));
-    await runModule(actions, 'research');
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
-    await actions.addInterview({ reference: REFERENCE, ...HR_INTERVIEW });
-
-    const launch = actions.runModule({ module: 'brief', reference: REFERENCE, interview: 1 });
-
-    await expect(launch).rejects.toThrow(
-      "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Fiche d’entretien. La produire d'abord : jf run research 2026-2445600.",
-    );
-    expect(await actions.runQueuedJobs()).toEqual([]);
-  });
-
-  it.each([
-    { case: 'without an Interview', interview: undefined, code: 'interview_required' },
-    { case: 'on an Interview the Posting does not have', interview: 2, code: 'unknown_interview' },
-  ])('refuses to run $case', async ({ interview, code }) => {
-    const { actions } = await applyWithInterview(createFakeAiSession(RESEARCH_RUN));
-
-    await expect(actions.runModule({ module: 'brief', reference: REFERENCE, interview })).rejects.toMatchObject({
-      code,
-    });
-    expect(await actions.runQueuedJobs()).toEqual([]);
-  });
-
-  it('refuses an Interview for the Research, which belongs to the Posting', async () => {
-    const { actions } = await applyWithInterview(createFakeAiSession(RESEARCH_RUN));
-
-    await expect(actions.runModule({ module: 'research', reference: REFERENCE, interview: 1 })).rejects.toMatchObject({
-      code: 'interview_not_expected',
-    });
-  });
-
   // The interview comes once the Letter is sent: the Interview Brief prepares the questions on it
   it('reads the Job Description, the Chosen Research, the Profile and the Chosen Letter, the one sent', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, RESEARCH_RUN, LETTER_RUN, briefRun());

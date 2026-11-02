@@ -128,53 +128,6 @@ describe('saving a correction', () => {
     ]);
   });
 
-  // The Chosen Letter of an Applied Posting is the one sent (spec « Versions »)
-  it('refuses to correct the Letter of an Applied Posting', async () => {
-    const actions = await detectPostings(researchRun('Recherche'), LETTER_RUN);
-    await runModule(actions, 'research');
-    await runModule(actions, 'letter');
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
-
-    await expect(
-      actions.saveDocument({
-        reference: REFERENCE,
-        artifact: 'letter',
-        fileName: 'letter.md',
-        markdown: CORRECTED_LETTER,
-      }),
-    ).rejects.toThrow(/L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée/);
-
-    expect(await readDocuments(actions, 'letter')).toMatchObject([
-      { documentList: [{ fileName: 'draft.md' }, { fileName: 'letter.md', markdown: DRAFT }] },
-    ]);
-  });
-
-  it('writes only over a Markdown file of the Chosen Version', async () => {
-    const actions = await detectPostings(researchRun('Recherche'));
-    await runModule(actions, 'research');
-    const { jobDescription } = await actions.readPosting({ reference: REFERENCE });
-
-    await expect(
-      actions.saveDocument({
-        reference: REFERENCE,
-        artifact: 'research',
-        fileName: '../../job-description.md',
-        markdown: '# Remplacée\n',
-      }),
-    ).rejects.toThrow(/« \.\.\/\.\.\/job-description\.md » n'est pas un fichier de la Version retenue/);
-
-    const after = await actions.readPosting({ reference: REFERENCE });
-    expect(after.jobDescription).toBe(jobDescription);
-  });
-
-  it('refuses an Artifact without a Chosen Version', async () => {
-    const actions = await detectPostings();
-
-    await expect(
-      actions.saveDocument({ reference: REFERENCE, artifact: 'research', fileName: 'research.md', markdown: '' }),
-    ).rejects.toThrow(/L'Offre 2026-2445600 n'a pas de Version retenue de research à modifier/);
-  });
-
   // The front opens an editor only where saveDocument accepts the file
   it('tells the Posting page which files can be corrected: those of the Chosen Versions, until the Letter is sent', async () => {
     const actions = await detectPostings(researchRun('Research v1'), researchRun('Research v2'), LETTER_RUN);
@@ -221,22 +174,5 @@ describe('saving a correction', () => {
       { artifact: 'research', numberList: [1] },
       { artifact: 'letter', numberList: [] },
     ]);
-  });
-
-  // The Visualization is regenerated from the Interview Brief, never corrected (spec « Modules IA »)
-  it('refuses to correct a Visualization by hand', async () => {
-    const actions = await detectPostings();
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
-    await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: '', interviewers: '' });
-
-    await expect(
-      actions.saveDocument({
-        reference: REFERENCE,
-        artifact: 'visualization',
-        interview: 1,
-        fileName: 'visualization.md',
-        markdown: '',
-      }),
-    ).rejects.toThrow(/La Visualisation ne se modifie pas à la main/);
   });
 });

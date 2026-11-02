@@ -2,6 +2,7 @@ import { setTimeout } from 'node:timers/promises';
 
 import { z } from 'zod/v4';
 
+import type { JobFailure } from '#/artifact/index.ts';
 import { codedError, codedErrorOf } from '#/domain/coded-error.ts';
 import type { Job, QueuedJob } from '#/domain/index.ts';
 import {
@@ -12,7 +13,6 @@ import {
 
 import type { ActionContext } from './context.ts';
 import { runExtraction } from './import-job-description.ts';
-import { findInputs, findTarget, parseModule, type JobFailure } from './run-job.ts';
 import { findJobStall } from './stalled-job.ts';
 import { runConversion } from './uploads.ts';
 
@@ -39,7 +39,7 @@ function composeFinishedNotification(job: Job, failure: JobFailure | undefined):
 }
 
 export function createJobActions(context: ActionContext) {
-  const { workspace, runJob, findPosting, findLocale, notify } = context;
+  const { workspace, artifacts, findPosting, findLocale, notify } = context;
 
   // A notification not sent stays on the job, which the Posting page shows (CODING_STANDARDS
   // “Visible failure”)
@@ -57,20 +57,17 @@ export function createJobActions(context: ActionContext) {
     // Only queues the job: the worker runs it, so restarting the front never stops a session
     // (ADR-0003)
     async runModule(rawInput: unknown): Promise<Job> {
-      const { module, reference, interview: interviewNumber } = MODULE_INPUT_SCHEMA.parse(rawInput);
-      const posting = await findPosting(reference);
-      const locale = await findLocale(posting.candidateId);
+      const { module, reference, interview } = MODULE_INPUT_SCHEMA.parse(rawInput);
       // The extraction of an imported Posting runs again after a failure
       if (module === 'extraction') {
+        const posting = await findPosting(reference);
         if (posting.source !== 'import') {
-          throw codedError('not_imported', { reference }, { locale });
+          throw codedError('not_imported', { reference }, { locale: await findLocale(posting.candidateId) });
         }
         return workspace.createJob(posting, 'extraction');
       }
-      const artifact = parseModule(module, locale);
-      const target = await findTarget(workspace, posting, artifact, interviewNumber, locale);
-      await findInputs(workspace, target, artifact, locale);
-      return workspace.createJob(posting, artifact, { interview: target.interview });
+      const handle = await artifacts.find({ reference, module, interview });
+      return handle.queueRun();
     },
 
     async followJob(rawInput: unknown): Promise<Job> {
@@ -116,7 +113,7 @@ export function createJobActions(context: ActionContext) {
           const { job: finishedJob, failure } =
             module === 'extraction'
               ? { ...(await runExtraction(context, job)), failure: undefined }
-              : await runJob({ ...job, module }, await findLocale(job.posting.candidateId));
+              : await artifacts.run({ ...job, module });
           jobList.push(await notifyFinished(finishedJob, failure));
         } catch (error) {
           // An error fails this job only, the one running, and the worker goes on with the queue
