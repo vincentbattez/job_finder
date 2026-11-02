@@ -15,6 +15,7 @@ import { createNotesActions } from './notes.ts';
 import { createNotificationChannelActions } from './notification-channel.ts';
 import { createPostingActions } from './postings.ts';
 import { createProfileActions } from './profile.ts';
+import { createRevisionActions } from './revision.ts';
 import { createStatusActions } from './status.ts';
 import { createUploadActions } from './uploads.ts';
 import { createWatchActions } from './watches.ts';
@@ -41,6 +42,7 @@ export async function createActions(option: IActionsOption) {
     ...createStatusActions(context),
     ...createNotesActions(context),
     ...createApplicationActions(context),
+    ...createRevisionActions(context),
     ...createInterviewActions(context),
     ...createProfileActions(context),
     ...createUploadActions(context),

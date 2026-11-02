@@ -110,23 +110,38 @@ model Posting {
 // An Interview of an Application, one per round, numbered per Posting like a Version. Only a Posting
 // that has an Application gets one; the Status reads them to show Invited or Interviewed (ADR-0009).
 model Interview {
-  id              Int       @id @default(autoincrement())
-  posting         Posting   @relation(fields: [postingId], references: [id])
-  postingId       Int
-  number          Int
-  startAt         DateTime
-  durationMinutes Int       @default(60)
+  id                  Int               @id @default(autoincrement())
+  posting             Posting           @relation(fields: [postingId], references: [id])
+  postingId           Int
+  number              Int
+  startAt             DateTime
+  durationMinutes     Int               @default(60)
   // Free text, prefilled by the front with the place of work and the City of the Posting
-  place           String
+  place               String
   // Free text: name, role, anything the Candidate knows of them
-  interviewers    String
+  interviewers        String
   // Grows at each edit: the SEQUENCE of its iCal event, so a calendar updates the event
-  editCount       Int       @default(0)
+  editCount           Int               @default(0)
   // Its Artifacts, and the jobs that make them: deleted with it
-  versionList     Version[]
-  jobList         Job[]
+  versionList         Version[]
+  jobList             Job[]
+  // The Candidate's Revision of it, section by section: deleted with it
+  revisionSectionList RevisionSection[]
 
   @@unique([postingId, number])
+}
+
+// A section of the Revision of an Interview (GLOSSARY.md « Revision »), keyed by its title rather than by a
+// Version: the note and the Mastered mark follow a newer Chosen Interview Brief wherever the title remains
+model RevisionSection {
+  id          Int       @id @default(autoincrement())
+  interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  interviewId Int
+  title       String
+  note        String    @default("")
+  isMastered  Boolean   @default(false)
+
+  @@unique([interviewId, title])
 }
 
 // Invited and Interviewed are computed from the Interviews, never stored (ADR-0009). A detected
