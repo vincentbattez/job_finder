@@ -220,6 +220,7 @@ export function Interviews({
             <ArtifactView
               key={`${String(selected.number)}-${document}`}
               reference={posting.reference}
+              title={posting.title}
               interviewNumber={selected.number}
               {...artifact}
             />

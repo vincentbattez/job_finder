@@ -550,6 +550,52 @@ export const POSTING_DETAIL_SCHEMA = z
 
 export type PostingDetail = z.infer<typeof POSTING_DETAIL_SCHEMA>;
 
+// required: locked and checked; default: checked, can be unchecked; optional: unchecked, added on demand
+const INPUT_MODE_SCHEMA = z.enum(['required', 'default', 'optional']);
+// Why an Input cannot be unchecked, which the front words
+const INPUT_REASON_SCHEMA = z.enum(['job_description', 'required_artifact', 'profile_core']);
+// A Past Letter is one of the Profile's or the Chosen Letter of another Applied Posting: one set either way
+const INPUT_KIND_SCHEMA = z.enum(['job_description', 'artifact', 'notes', 'profile_document', 'past_letter']);
+
+export type InputMode = z.infer<typeof INPUT_MODE_SCHEMA>;
+export type InputReason = z.infer<typeof INPUT_REASON_SCHEMA>;
+export type InputKind = z.infer<typeof INPUT_KIND_SCHEMA>;
+
+// What the generation panel shows before a run (spec #125, « Inputs and the generation panel »): each
+// Input with its exact content, checked as the panel opens, the Version it reads named for the front; why
+// the run is refused, worded for the page; and the Prompt the session would receive for the checked Inputs
+// (ADR-0021), null while refused
+// An Input of the panel: the Artifact it reads, and that Artifact's Chosen Version named for the front
+const GENERATION_INPUT_SCHEMA = z.object({
+  key: z.string(),
+  kind: INPUT_KIND_SCHEMA,
+  mode: INPUT_MODE_SCHEMA,
+  reason: INPUT_REASON_SCHEMA.nullable(),
+  isAvailable: z.boolean(),
+  isChecked: z.boolean(),
+  content: z.string(),
+  wordCount: z.int(),
+  fileName: z.string().nullable(),
+  datedAt: z.date().nullable(),
+  artifact: ARTIFACT_SCHEMA.nullable(),
+  readVersion: PROMPT_READ_VERSION_SCHEMA.extend({ title: z.string() }).nullable(),
+});
+
+export const GENERATION_SCHEMA = z
+  .object({
+    artifact: ARTIFACT_SCHEMA,
+    refusal: z.string().nullable(),
+    // Research and Portrait search the web; the others read only their Inputs
+    isSearchingWeb: z.boolean(),
+    nextNumber: z.int(),
+    chosenNumber: z.int().nullable(),
+    inputList: z.array(GENERATION_INPUT_SCHEMA),
+    prompt: PROMPT_SCHEMA.nullable(),
+  })
+  .brand<'Domain'>();
+
+export type Generation = z.infer<typeof GENERATION_SCHEMA>;
+
 // A job of the Profile of a Candidate rather than of a Posting: the conversion of an Upload into Markdown
 export const PROFILE_JOB_SCHEMA = z
   .object({

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { generate } from './generation.ts';
 import { findInterviews, prepareInterview } from './interview.ts';
 import { findOverflowing } from './overflow.ts';
 
@@ -28,19 +29,21 @@ test('launches the Interview Brief of an Interview once the Posting has a Chosen
   // The first tab of the selected Interview
   const brief = findInterviews(page).getByRole('region', { name: 'Fiche d’entretien' });
   await expect(brief).toContainText(`L'Offre ${REFERENCE} n'a pas de Recherche validée`);
-  await expect(brief.getByRole('button', { name: 'Lancer la Fiche d’entretien' })).toBeDisabled();
   await page.getByRole('tab', { name: /^Recherche/ }).click();
-  await research.getByRole('button', { name: 'Lancer la Recherche' }).click();
-  await expect(research.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
+  await generate(page, research);
+  await expect(research.getByRole('combobox', { name: 'Version' })).toHaveText('Version 1 · Brouillon', {
+    timeout: READY_TIMEOUT_MS,
+  });
   // Only a Validated Research is read by the Interview Brief
   await research.getByRole('button', { name: 'Valider la Version 1' }).click();
   await expect(page.getByRole('tab', { name: 'Recherche (Validée)' })).toBeVisible();
   await page.getByRole('tab', { name: /^Entretiens/ }).click();
 
-  await brief.getByRole('button', { name: 'Lancer la Fiche d’entretien' }).click();
+  await generate(page, brief);
 
-  await expect(brief.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
-  await expect(brief.getByRole('combobox', { name: 'Version' })).toHaveText('Version 1 · Brouillon');
+  await expect(brief.getByRole('combobox', { name: 'Version' })).toHaveText('Version 1 · Brouillon', {
+    timeout: READY_TIMEOUT_MS,
+  });
   await expect(findInterviews(page).getByRole('tab', { name: 'Fiche d’entretien (Brouillon)' })).toBeVisible();
   await brief.getByRole('button', { name: 'Valider la Version 1' }).click();
   await expect(brief.getByText('Validée · retenue')).toBeVisible();

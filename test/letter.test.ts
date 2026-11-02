@@ -219,6 +219,53 @@ describe('letter', () => {
   });
 });
 
+describe('the generation panel of the Letter', () => {
+  const CHECKED_KEY_LIST = ['job_description', 'artifact:research', 'profile:cv.md', 'profile:annex-memoire.md'];
+
+  it('runs with the Inputs the Candidate checked, the very Prompt the panel copies', async () => {
+    const aiSession = createFakeAiSession(RESEARCH_RUN, letterRun());
+    const { actions, dataDirectory } = await detectPostings(aiSession);
+    writeProfile(dataDirectory);
+    await runModule(actions, 'research', REFERENCE);
+    const opened = await actions.readGeneration({ reference: REFERENCE, artifact: 'letter' });
+
+    const generation = await actions.readGeneration({
+      reference: REFERENCE,
+      artifact: 'letter',
+      inputKeyList: CHECKED_KEY_LIST,
+    });
+    await actions.runModule({ module: 'letter', reference: REFERENCE, inputKeyList: CHECKED_KEY_LIST });
+    await actions.runQueuedJobs();
+
+    // Opened, the panel checks the defaults: the past letter, not the Annex
+    expect(opened.inputList.map(({ key, isChecked }) => `${key} ${String(isChecked)}`)).toEqual([
+      'job_description true',
+      'artifact:research true',
+      'profile:cv.md true',
+      'profile:letter-tj-lille-2025.md true',
+      'profile:annex-memoire.md false',
+    ]);
+    expect(generation).toMatchObject({ refusal: null, nextNumber: 1, chosenNumber: null });
+    const session = aiSession.headlessSessionList.at(-1);
+    expect(generation.prompt?.prompt.replaceAll('letter/v<next>', 'letter/v1')).toBe(session && promptOf(session));
+    expect(session?.message).toContain('La justice des mineurs.');
+    expect(session?.message).not.toContain('tribunal judiciaire de Lille');
+  });
+
+  it('tells why the Letter cannot run yet, without a Prompt', async () => {
+    const { actions } = await detectPostings(createFakeAiSession());
+
+    const generation = await actions.readGeneration({ reference: REFERENCE, artifact: 'letter' });
+
+    expect(generation.refusal).toMatch(/Recherche/);
+    expect(generation.prompt).toBeNull();
+    expect(generation.inputList.find(({ key }) => key === 'artifact:research')).toMatchObject({
+      mode: 'required',
+      isAvailable: false,
+    });
+  });
+});
+
 describe('the prompt of the Letter', () => {
   it('forbids inventing a fact on the Candidate and marks each missing one « [à compléter : …] »', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, letterRun());
