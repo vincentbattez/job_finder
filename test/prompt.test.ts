@@ -94,9 +94,9 @@ describe('the Prompt beside an Artifact', () => {
     await runModule(actions, 'letter');
 
     const session = aiSession.headlessSessionList.at(-1);
-    expect(prompt?.fixedPart.replaceAll('letter/v<next>', 'letter/v1')).toBe(session?.fixedPrompt);
+    expect(prompt?.prompt.replaceAll('letter/v<next>', 'letter/v1')).toBe(session && promptOf(session));
+    expect(prompt?.prompt).toContain(`## Input: Letter sent for Posting ${SENT_REFERENCE}\n\n### As sent\n\n`);
     expect(prompt?.instructions).toBe('Une page au plus.');
-    expect(prompt?.instructions).toBe(session?.message);
   });
 
   it("holds the Candidate's own Instructions once they replaced the default ones of their Locale", async () => {

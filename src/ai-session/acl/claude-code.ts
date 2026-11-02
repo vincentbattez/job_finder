@@ -24,7 +24,6 @@ export interface IHeadlessSession {
   fixedPrompt: string;
   message: string;
   directory: string;
-  readDirectoryList: string[];
   outputDirectory: string;
   // That of the Candidate, for the log of a session that failed
   locale: Locale;
@@ -166,7 +165,7 @@ export function createClaudeCode(sessionTimeoutMs: number, killGraceMs = KILL_GR
     // The fixed part goes into the system prompt so that no Instructions can lift its rules (ADR-0003);
     // cspell:words dontAsk
     // dontAsk refuses any tool not listed. A session that cannot run is a failed one, never a throw.
-    async runHeadless({ fixedPrompt, message, directory, readDirectoryList, outputDirectory, locale }) {
+    async runHeadless({ fixedPrompt, message, directory, outputDirectory, locale }) {
       const argumentList = [
         '-p',
         '--output-format',
@@ -182,11 +181,10 @@ export function createClaudeCode(sessionTimeoutMs: number, killGraceMs = KILL_GR
         'Grep',
         'WebSearch',
         'WebFetch',
-        // A subagent reads a long Annex for the session and reports only what serves (ADR-0003)
+        // A subagent takes on part of the work and reports only what serves (ADR-0003)
         'Agent',
         // An absolute path takes a double slash in a permission rule
         `Edit(/${outputDirectory}/**)`,
-        ...readDirectoryList.flatMap((readDirectory) => ['--add-dir', readDirectory]),
         '--append-system-prompt',
         fixedPrompt,
       ];

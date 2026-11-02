@@ -43,7 +43,6 @@ export function createImportSource(aiSession: IAiSession) {
         fixedPrompt: composeExtractionPrompt(path.join(EXTRACTION_DIRECTORY_NAME, EXTRACTION_FILE_NAME)),
         message: EXTRACTION_REQUEST,
         directory: postingDirectory,
-        readDirectoryList: [],
         outputDirectory,
         locale,
       });

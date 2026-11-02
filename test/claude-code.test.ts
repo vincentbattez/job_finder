@@ -11,7 +11,6 @@ const FAKE_CLAUDE_DIRECTORY = path.join(import.meta.dirname, 'fixtures', 'claude
 const SESSION: Omit<IHeadlessSession, 'directory' | 'outputDirectory'> = {
   fixedPrompt: "Tu produis la Recherche d'une Offre.\nN'invente jamais un fait.",
   message: 'Va droit au but.\n',
-  readDirectoryList: [],
   locale: 'fr',
 };
 
@@ -77,7 +76,7 @@ describe('the headless launch of Claude Code', () => {
     expect(readRecord(recordDirectory, 'environment')).not.toMatch(/^(?:ANTHROPIC_API_KEY|CLAUDECODE)=/m);
   });
 
-  // A long Annex of the Profile is read by a subagent, which reports only what serves the Artifact
+  // A subagent takes on part of the work, and reports only what serves the Artifact
   it('lets the session delegate its reading to subagents', async () => {
     const recordDirectory = stubClaude({ subtype: 'success', is_error: false, session_id: 'session-4' });
 
@@ -88,21 +87,14 @@ describe('the headless launch of Claude Code', () => {
     expect(argumentList.slice(argumentList.indexOf('--allowedTools'))).toContain('Agent');
   });
 
-  // The Letter reads the Profile and the Letters already sent, outside the folder of its Posting
-  it('lets the session read the folders it is given besides its own', async () => {
+  // Its Inputs come inlined in its message: it reads no folder besides its own (ADR-0021)
+  it('gives the session no folder besides its own, and its fixed part as system prompt', async () => {
     const recordDirectory = stubClaude({ subtype: 'success', is_error: false, session_id: 'session-3' });
-    const readDirectoryList = ['/donnees/profile', '/donnees/postings/2026-2445609/letter/v1'];
 
-    await CLAUDE_CODE.runHeadless({
-      ...SESSION,
-      readDirectoryList,
-      directory: createDirectory(),
-      outputDirectory: '/v1',
-    });
+    await CLAUDE_CODE.runHeadless({ ...SESSION, directory: createDirectory(), outputDirectory: '/v1' });
 
     const argumentList = readRecord(recordDirectory, 'arguments').split('\0');
-    const addedDirectoryList = argumentList.filter((argument, index) => argumentList[index - 1] === '--add-dir');
-    expect(addedDirectoryList).toEqual(readDirectoryList);
+    expect(argumentList).not.toContain('--add-dir');
     expect(argumentList[argumentList.indexOf('--append-system-prompt') + 1]).toBe(SESSION.fixedPrompt);
   });
 

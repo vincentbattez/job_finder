@@ -15,7 +15,6 @@ export const PORTRAIT_MODULE = {
   fileName: PORTRAIT_FILE_NAME,
   outputFileList: [{ name: PORTRAIT_FILE_NAME, findFormatError }],
   composePrompt: composePortraitPrompt,
-  isInliningInputs: true,
   // Each Interview has its own Interviewers
   isAttachedToInterview: true,
   // The Research situates the Interviewers in their department, when the Candidate has one

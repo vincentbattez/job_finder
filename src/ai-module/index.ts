@@ -7,8 +7,8 @@ export function describeArtifactLanguage(artifactName: string): string {
   return `Write the ${artifactName} in the language of the Job Description, whatever the language of this prompt and of the Candidate's Instructions.`;
 }
 
-// The headings of the message that follows the Fixed Part, for a module whose Inputs are inlined (ADR-0021);
-// each Input's own starts with its prefix, which the headings inside its content do not
+// The headings of the message that follows the Fixed Part, its Inputs inlined (ADR-0021); each Input's own
+// starts with its prefix, which the headings inside its content do not
 export const INPUTS_HEADING = 'Inputs';
 export const INPUT_HEADING_PREFIX = 'Input: ';
 export const INSTRUCTIONS_HEADING = 'Instructions';
@@ -20,26 +20,22 @@ export function describeMessage(): string {
 
 // A Chosen Version the module reads: of its Posting, of its Interview or of a previous one (interviewNumber),
 // or of another Posting
-export interface IReadVersion {
+interface IReadVersion {
   reference: string;
   artifact: Artifact;
   // The number of the Interview the Version is attached to, null for a Version of the Posting
   interviewNumber: number | null;
-  directory: string;
-  filePath: string;
 }
 
-// The output folder is relative to the Posting's folder, where the session runs; what it reads is
-// named by absolute paths
+// The output folder is relative to the Posting's folder, where the session runs; what it reads comes
+// inlined in its message (ADR-0021)
 export interface IPromptInput {
   posting: Posting;
   // The Interview it prepares, for a module attached to one; null otherwise
   interview: Interview | null;
-  // The Notes of the Posting, for a module that reads them; null otherwise
-  notes: string | null;
   outputDirectory: string;
+  // The Chosen Versions among its checked Inputs
   readVersionList: IReadVersion[];
-  profileDirectory: string;
   // Wraps each value the composer substitutes, where it puts it, so that the preview highlights it; the
   // run's leaves it as is (spec #125)
   mark: (value: string) => string;
@@ -61,9 +57,6 @@ export interface IAiModule {
   // The files the session writes in the folder of the Version
   outputFileList: IOutputFile[];
   composePrompt(input: IPromptInput): string;
-  // Whether its Prompt carries its checked Inputs, rather than its Fixed Part naming files to read (ADR-0021);
-  // true for every module once the Letter and the Interview Brief are migrated
-  isInliningInputs?: boolean;
   // Runs once the files are valid, before the Version is ready
   completeVersion?(versionDirectory: string): void;
   // Whether its Versions are attached to an Interview, numbered and chosen per Interview, rather than
@@ -81,6 +74,11 @@ export interface IAiModule {
   // Whether the module reads the Profile of the Candidate, its Past Letters included: those of the Profile
   // and the Chosen Letters of the other Postings once Applied, what the Candidate sent
   isReadingProfile?: boolean;
+  // Whether it reads each Letter sent with its Original, the text the AI wrote: the Candidate's corrections
+  // show their style and what they reject
+  isReadingOriginals?: boolean;
+  // The file of a Version the AI wrote and the Candidate never modifies, its Original, beside fileName
+  originalFileName?: string;
   // Whether it reads the Chosen Artifacts of the Posting that a Repost publishes again
   isReadingRepostedPosting?: boolean;
   // Whether its Chosen Version is what the Candidate sends: frozen once the Posting is Applied

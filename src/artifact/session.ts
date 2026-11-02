@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import type { IAiModule, IReadVersion as IPromptReadVersion } from '#/ai-module/index.ts';
+import type { IAiModule } from '#/ai-module/index.ts';
 import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
 import { codedError, type CodedError } from '#/domain/coded-error.ts';
 import { type Artifact, type Candidate, type Job, type Locale, type Posting, type Version } from '#/domain/index.ts';
@@ -13,10 +13,9 @@ import { AI_MODULE_BY_ARTIFACT, findDefaultInstructions, isAttachedToInterview }
 // Why a job failed, which the notification of an automatic job tells: an Error Code and its message
 export type JobFailure = Pick<CodedError, 'code' | 'message'>;
 
-// What a module's session receives, shared by the run and the preview so the preview never drifts; the
-// Fixed Part waits for the folder of the Version, which the run creates after reading the inputs (ADR-0003).
-// A module whose Inputs are inlined receives them in its message (ADR-0021); the others still name the
-// files of the Versions they read, and read the Profile folder
+// What a module's session receives, shared by the run and the preview so the preview never drifts: its
+// checked Inputs inlined in its message (ADR-0021). The Fixed Part waits for the folder of the Version, which
+// the run creates after reading the inputs (ADR-0003).
 function composeSession(
   workspace: Workspace,
   { posting, interview }: ITarget,
@@ -25,46 +24,26 @@ function composeSession(
   checkedList: IInput[],
 ) {
   const aiModule = AI_MODULE_BY_ARTIFACT[module];
-  const isInliningInputs = aiModule.isInliningInputs === true;
   const inputList = checkedList.flatMap(({ readVersion }) => (readVersion === null ? [] : [readVersion]));
-  const directoryList = aiModule.isReadingProfile === true ? [workspace.profileDirectoryOf(posting.candidateId)] : [];
   const candidateInstructions = workspace.readInstructions(posting.candidateId, module);
   const instructions = candidateInstructions ?? findDefaultInstructions(module, candidate);
   const postingDirectory = workspace.postingDirectoryOf(posting);
-  const readVersionList = inputList.map((input): IPromptReadVersion => {
-    const directory = workspace.versionDirectoryOf(input.posting, input.version);
-    const { fileName } = AI_MODULE_BY_ARTIFACT[input.version.artifact];
-    return {
-      reference: input.posting.reference,
-      artifact: input.version.artifact,
-      interviewNumber: input.version.interview?.number ?? null,
-      directory,
-      filePath: path.join(directory, fileName),
-    };
-  });
   return {
     inputList,
     instructions,
     hasCandidateInstructions: candidateInstructions !== null,
     postingDirectory,
-    message: isInliningInputs ? composeMessage(posting, checkedList, instructions) : instructions,
-    // The session runs in the folder of the Posting: only the folders outside it are added
-    readDirectoryList: isInliningInputs
-      ? []
-      : [
-          ...directoryList,
-          ...readVersionList
-            .map(({ directory }) => directory)
-            .filter((directory) => path.relative(postingDirectory, directory).startsWith('..')),
-        ],
+    message: composeMessage(posting, checkedList, instructions),
     composeFixedPart: (outputDirectory: string, mark = leaveUnmarked): string =>
       aiModule.composePrompt({
         posting,
         interview,
-        notes: aiModule.isReadingNotes === true ? posting.notes : null,
         outputDirectory: path.relative(postingDirectory, outputDirectory),
-        readVersionList,
-        profileDirectory: workspace.profileDirectoryOf(posting.candidateId),
+        readVersionList: inputList.map(({ posting: readPosting, version }) => ({
+          reference: readPosting.reference,
+          artifact: version.artifact,
+          interviewNumber: version.interview?.number ?? null,
+        })),
         mark,
       }),
   };
@@ -137,8 +116,13 @@ export async function runSession(
   const { posting, interview, module } = job;
   const { locale } = candidate;
   const aiModule = AI_MODULE_BY_ARTIFACT[module];
-  const { instructions, hasCandidateInstructions, postingDirectory, message, readDirectoryList, composeFixedPart } =
-    composeSession(workspace, { posting, interview }, module, candidate, checkedList);
+  const { instructions, hasCandidateInstructions, postingDirectory, message, composeFixedPart } = composeSession(
+    workspace,
+    { posting, interview },
+    module,
+    candidate,
+    checkedList,
+  );
   // The Version records the Inputs its run read, each read Version linked
   const version = await workspace.startJob(job, {
     instructions,
@@ -150,7 +134,6 @@ export async function runSession(
     fixedPrompt: composeFixedPart(outputDirectory),
     message,
     directory: postingDirectory,
-    readDirectoryList,
     outputDirectory,
     locale,
   });

@@ -94,12 +94,25 @@ export async function findChosenVersion(workspace: Workspace, { posting, intervi
   return versionList.find(({ isChosen }) => isChosen);
 }
 
-function readVersionContent(workspace: Workspace, posting: Posting, version: Version): string {
-  const filePath = path.join(
-    workspace.versionDirectoryOf(posting, version),
-    AI_MODULE_BY_ARTIFACT[version.artifact].fileName,
-  );
-  return workspace.readTextFile(filePath) ?? '';
+function readVersionContent(
+  workspace: Workspace,
+  posting: Posting,
+  version: Version,
+  fileName = AI_MODULE_BY_ARTIFACT[version.artifact].fileName,
+): string {
+  return workspace.readTextFile(path.join(workspace.versionDirectoryOf(posting, version), fileName)) ?? '';
+}
+
+// A Letter as sent, then its Original as the AI wrote it, for a run that learns from the Candidate's
+// corrections; the Original costs its full length in the Prompt too (ADR-0021)
+function sentWithOriginalOf(workspace: Workspace, posting: Posting, version: Version): string {
+  const { originalFileName } = AI_MODULE_BY_ARTIFACT[version.artifact];
+  const sent = readVersionContent(workspace, posting, version);
+  if (originalFileName === undefined) {
+    return sent;
+  }
+  const original = readVersionContent(workspace, posting, version, originalFileName);
+  return `### As sent\n\n${sent.trim()}\n\n### Its Original, as the AI wrote it\n\n${original.trim()}`;
 }
 
 // The Chosen Version of an Artifact as an Input; one not chosen yet is an Input only when required
@@ -124,12 +137,14 @@ async function artifactInputOf(
   });
 }
 
-// The Chosen Version of another Posting's Artifact, such as the one a Repost publishes again
+// The Chosen Version of another Posting's Artifact, such as the one a Repost publishes again, or a Letter
+// sent, with its Original for a run that reads them
 async function otherPostingInputOf(
   workspace: Workspace,
   posting: Posting,
   artifact: Artifact,
   kind: InputKind,
+  isWithOriginal = false,
 ): Promise<IInput | null> {
   const version = await findChosenVersion(workspace, { posting, interview: null }, artifact);
   return version === undefined
@@ -138,7 +153,9 @@ async function otherPostingInputOf(
         key: `posting:${posting.reference}/${artifact}`,
         kind,
         mode: 'default',
-        content: readVersionContent(workspace, posting, version),
+        content: isWithOriginal
+          ? sentWithOriginalOf(workspace, posting, version)
+          : readVersionContent(workspace, posting, version),
         readVersion: { posting, version },
         datedAt: kind === 'past_letter' ? posting.appliedAt : null,
       });
@@ -170,8 +187,12 @@ async function listRepostedInputs(workspace: Workspace, { repostOf, candidateId 
 }
 
 // The Profile's documents: its core required, the Past Letters, of the Profile and sent from the tool,
-// one set whose most recent are checked, and the Annexes to add
-async function listProfileInputs(workspace: Workspace, posting: Posting): Promise<IInput[]> {
+// one set whose most recent are checked, and the Annexes to add. The Posting's own Letter is never one.
+async function listProfileInputs(
+  workspace: Workspace,
+  posting: Posting,
+  isReadingOriginals: boolean,
+): Promise<IInput[]> {
   const documentList = workspace.readProfileDocuments(posting.candidateId).map(({ fileName, markdown, savedAt }) => {
     const isCore = PROFILE_CORE_LIST.has(fileName);
     const isLetter = PROFILE_LETTER_PATTERN.test(fileName);
@@ -189,7 +210,7 @@ async function listProfileInputs(workspace: Workspace, posting: Posting): Promis
   const sentList = await Promise.all(
     postingList
       .filter((other) => other.id !== posting.id && hasBeenApplied(other))
-      .map((other) => otherPostingInputOf(workspace, other, 'letter', 'past_letter')),
+      .map((other) => otherPostingInputOf(workspace, other, 'letter', 'past_letter', isReadingOriginals)),
   );
   const pastLetterList = [
     ...documentList.filter(({ kind }) => kind === 'past_letter'),
@@ -241,7 +262,9 @@ export async function resolveInputs(workspace: Workspace, target: ITarget, artif
       ? inputOf({ key: 'notes', kind: 'notes', mode: 'default', content: posting.notes })
       : null,
     ...(aiModule.isReadingRepostedPosting === true ? await listRepostedInputs(workspace, posting) : []),
-    ...(aiModule.isReadingProfile === true ? await listProfileInputs(workspace, posting) : []),
+    ...(aiModule.isReadingProfile === true
+      ? await listProfileInputs(workspace, posting, aiModule.isReadingOriginals === true)
+      : []),
   ];
   return inputList.filter((input) => input !== null);
 }

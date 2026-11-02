@@ -38,7 +38,6 @@ export function createUploadConversion(aiSession: IAiSession) {
         message: CONVERSION_REQUEST,
         directory: profileDirectory,
         // Inside the Profile, where the session runs: nothing to add
-        readDirectoryList: [],
         outputDirectory,
         locale: candidate.locale,
       });
