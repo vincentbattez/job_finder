@@ -17,6 +17,7 @@ export const CLI_EN = {
 
   // A Posting on one line. The Source gives the Deadline as a day, at midnight UTC.
   deadline: '{{deadline, datetime(timeZone: UTC)}}',
+  startDate: 'Start Date {{startDate, datetime(timeZone: UTC)}}',
   inZone: 'Zone',
   outOfZone: 'out of Zone',
   repostOf: 'Repost of {{reference}}',
@@ -63,7 +64,7 @@ export const CLI_EN = {
 
   // jf run
   runDescription:
-    'Queues a new Version of an Artifact, which the worker produces with Claude Code; --wait waits for the end: jf run research|letter|portrait|brief|visualization <posting> [<interview>] [--wait]',
+    'Queues a new Version of an Artifact, which the worker produces with Claude Code; --wait waits for the end: jf run research|letter|portrait|brief <posting> [<interview>] [--wait]',
   runUsage:
     'Usage: jf run <module> <posting> [<interview>] [--wait], for example jf run research 2026-2445600, or jf run brief 2026-2445600 1 for the Interview Brief of Interview 1.',
   queued: '{{module}} of Posting {{reference}} queued (job {{jobId}}).\n',

@@ -127,7 +127,7 @@ describe('a launch refused', () => {
     const { actions } = await detectPostings(aiSession);
 
     await expect(actions.runModule({ module: 'inconnu', reference: REFERENCE })).rejects.toThrow(
-      'Module inconnu : inconnu. Modules : research, letter, portrait, brief, visualization.',
+      'Module inconnu : inconnu. Modules : research, letter, portrait, brief.',
     );
     expect(aiSession.headlessSessionList).toEqual([]);
   });

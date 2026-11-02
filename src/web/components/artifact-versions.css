@@ -23,10 +23,6 @@
     --tint: var(--p-wed);
   }
 
-  .artifact-versions[data-artifact='visualization'] {
-    --tint: var(--p-fri);
-  }
-
   /* The title floats so that the Prompt's button sits beside it (artifact-prompt.css) */
   .artifact-versions__head {
     display: flow-root;
@@ -87,16 +83,6 @@
   .artifact-versions__version > :not(summary),
   .artifact-versions__instructions > :not(summary) {
     margin: 0 var(--space-md) var(--space-md);
-  }
-
-  /* The Visualization, a page of its own, read in a tall frame on the paper of the Posting page */
-  .artifact-versions__visualization iframe {
-    display: block;
-    width: 100%;
-    height: min(80vh, 48rem);
-    border: var(--rule-hair) solid var(--color-rule);
-    border-radius: var(--radius-input);
-    background: var(--glint);
   }
 
   /* The Instructions each Version was produced with, folded under it */

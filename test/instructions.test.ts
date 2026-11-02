@@ -12,7 +12,6 @@ const INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.interview_b
 const LETTER_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.letter;
 const PORTRAIT_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.portrait;
 const RESEARCH_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.research;
-const VISUALIZATION_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.visualization;
 
 // The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -47,7 +46,6 @@ describe('instructions', () => {
         defaultInstructions: INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS,
         candidateInstructions: null,
       },
-      { module: 'visualization', defaultInstructions: VISUALIZATION_DEFAULT_INSTRUCTIONS, candidateInstructions: null },
     ]);
   });
 
@@ -70,7 +68,6 @@ describe('instructions', () => {
         defaultInstructions: INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS,
         candidateInstructions: null,
       },
-      { module: 'visualization', defaultInstructions: VISUALIZATION_DEFAULT_INSTRUCTIONS, candidateInstructions: null },
     ]);
   });
 
@@ -95,7 +92,7 @@ describe('instructions', () => {
       },
     ]);
     await expect(actions.readInstructions({ candidateId: 'lea', module: 'lettr' })).rejects.toThrow(
-      'Module inconnu : lettr. Modules : research, letter, portrait, brief, visualization.',
+      'Module inconnu : lettr. Modules : research, letter, portrait, brief.',
     );
   });
 
@@ -139,9 +136,8 @@ describe('instructions', () => {
 
     await expect(
       actions.saveInstructions({ candidateId: 'lea', module: 'inconnu', instructions: 'Courte.\n' }),
-    ).rejects.toThrow('Module inconnu : inconnu. Modules : research, letter, portrait, brief, visualization.');
+    ).rejects.toThrow('Module inconnu : inconnu. Modules : research, letter, portrait, brief.');
     expect(await actions.listInstructions({ candidateId: 'lea' })).toMatchObject([
-      { candidateInstructions: null },
       { candidateInstructions: null },
       { candidateInstructions: null },
       { candidateInstructions: null },

@@ -23,7 +23,7 @@ Le greffier assiste les magistrats du siège et du parquet.
 
 ## Candidature
 
-Date limite de candidature : 30/11/2026.
+Date limite de candidature : 30/11/2026. Poste à pourvoir au 1er janvier 2027.
 
 Adresser CV et lettre de motivation à greffe.tj-lille@justice.fr
 
@@ -37,6 +37,7 @@ const EXTRACTION = {
   workplace: '13 avenue du Peuple Belge, 59000 Lille',
   city: 'Lille',
   deadline: '2026-11-30',
+  startDate: '2027-01-01',
   applicationEmail: 'greffe.tj-lille@justice.fr',
   contact1: 'Marie Martin, directrice de greffe, 03 20 00 00 00',
   contact2: null,
@@ -132,6 +133,7 @@ describe('import of a Job Description in Markdown', () => {
       employer: 'Ministère de la Justice – Tribunal judiciaire de Lille',
       workplace: '13 avenue du Peuple Belge, 59000 Lille',
       deadline: new Date('2026-11-30T00:00:00Z'),
+      startDate: new Date('2027-01-01T00:00:00Z'),
       applicationEmail: 'greffe.tj-lille@justice.fr',
       contact1: 'Marie Martin, directrice de greffe, 03 20 00 00 00',
       contact2: null,
@@ -333,6 +335,7 @@ describe('import of a Job Description in Markdown', () => {
       city: null,
       latitude: null,
       deadline: null,
+      startDate: null,
       applicationEmail: null,
       contact1: null,
       contact2: null,

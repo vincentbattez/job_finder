@@ -35,7 +35,6 @@ const RUN_BY_MODULE = {
     },
   },
   interview_brief: { fileByName: { 'interview-brief.md': '# Fiche d’entretien\n' } },
-  visualization: { fileByName: { 'visualization.html': '<!DOCTYPE html>\n<title>Fiche</title>\n' } },
 };
 
 // What an action needs beyond the shared input of the check, such as an Upload, named in .pdf
@@ -57,8 +56,6 @@ const INPUT_BY_ACTION: Record<string, object> = {
   // The Posting is Applied by changeStatus first, which runs before: an Interview needs an Application
   addInterview: { start: '2026-11-19T14:00', place: 'Béthune', interviewers: 'Mme Durand' },
   readIcalFile: { origin: 'https://10.8.0.1:5180' },
-  // The Visualization belongs to the Interview added above
-  readVisualization: { interview: 1 },
 };
 
 type ActionMap = Record<string, (rawInput: unknown) => Promise<unknown>>;
@@ -154,8 +151,8 @@ async function saveChannel(module: INotificationChannel, parameters: Record<stri
   await actions.saveNotificationChannel({ candidateId: 'lea', channel: id, parameters });
   await actions.detect();
   for (const artifactModule of Object.keys(RUN_BY_MODULE)) {
-    // The Interview Brief and the Visualization prepare an Interview, which only an Application has
-    const interview = artifactModule === 'interview_brief' || artifactModule === 'visualization' ? 1 : undefined;
+    // The Interview Brief prepares an Interview, which only an Application has
+    const interview = artifactModule === 'interview_brief' ? 1 : undefined;
     if (artifactModule === 'interview_brief') {
       await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
       await actions.addInterview({ reference: REFERENCE, ...INPUT_BY_ACTION.addInterview });

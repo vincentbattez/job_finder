@@ -21,7 +21,6 @@ export const COMMON_EN = {
     letter: 'Letter',
     portrait: 'Portrait',
     interview_brief: 'Interview Brief',
-    visualization: 'Visualization',
   } satisfies Record<Artifact, string>,
   // The Candidates live in France: a date is that of Paris, whatever the locale
   date: '{{date, datetime(dateStyle: medium; timeZone: Europe/Paris)}}',

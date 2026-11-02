@@ -103,6 +103,7 @@ export function defineSlowSource({ searchMs, readMs }: ISlowSourceDelays): Sourc
       return {
         jobDescription: JOB_DESCRIPTION_SCHEMA.parse({
           deadline: null,
+          startDate: null,
           employer: null,
           workplace: null,
           applicationEmail: null,
@@ -113,5 +114,7 @@ export function defineSlowSource({ searchMs, readMs }: ISlowSourceDelays): Sourc
         isInZone: false,
       };
     },
+
+    readStartDate: () => null,
   });
 }

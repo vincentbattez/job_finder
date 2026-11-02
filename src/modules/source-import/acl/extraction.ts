@@ -34,6 +34,7 @@ function extractionSchemaOf(markdown: string, locale: Locale) {
     workplace: excerpt,
     city: excerpt,
     deadline: z.iso.date().nullable(),
+    startDate: z.iso.date().nullable(),
     applicationEmail: excerpt,
     contact1: excerpt,
     contact2: excerpt,
@@ -61,7 +62,7 @@ export function readExtraction(directory: string, markdown: string, locale: Loca
   if (extraction === undefined) {
     throw codedError('invalid_extraction', { fileName: EXTRACTION_FILE_NAME, problem: error }, { locale });
   }
-  const { title, deadline, city, ...jobDescriptionField } = extraction;
+  const { title, deadline, startDate, city, ...jobDescriptionField } = extraction;
   return EXTRACTION_SCHEMA.parse({
     title,
     city,
@@ -69,6 +70,7 @@ export function readExtraction(directory: string, markdown: string, locale: Loca
       ...jobDescriptionField,
       // The day, at midnight UTC, as the Sources give it
       deadline: deadline === null ? null : new Date(deadline),
+      startDate: startDate === null ? null : new Date(startDate),
       markdown,
     }),
   });

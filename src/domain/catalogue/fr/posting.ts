@@ -64,7 +64,6 @@ export const POSTING_FR: typeof POSTING_EN = {
   chosenBadge: 'Retenue',
   versionInstructions: 'Consignes de cette Version',
   noFile: 'Aucun fichier dans cette Version.',
-  visualizationFrameTitle: 'Visualisation v{{versionNumber}}',
   chooseVersion: 'Retenir cette Version',
 
   prompt: {

@@ -61,6 +61,8 @@ export type ListedPosting = z.infer<typeof LISTED_POSTING_SCHEMA>;
 export const JOB_DESCRIPTION_SCHEMA = z
   .object({
     deadline: z.date().nullable(),
+    // The day its Position is to be filled, null when the Job Description says nothing
+    startDate: z.date().nullable(),
     employer: z.string().nullable(),
     workplace: z.string().nullable(),
     applicationEmail: z.string().nullable(),
@@ -131,6 +133,8 @@ export const POSTING_SCHEMA = z
     url: z.string().nullable(),
     publishedAt: z.date().nullable(),
     deadline: z.date().nullable(),
+    // The day its Position is to be filled, null when the Job Description says nothing
+    startDate: z.date().nullable(),
     employer: z.string().nullable(),
     workplace: z.string().nullable(),
     applicationEmail: z.string().nullable(),
@@ -275,7 +279,7 @@ export const DETECTION_OVERVIEW_SCHEMA = z
 
 export type DetectionOverview = z.infer<typeof DETECTION_OVERVIEW_SCHEMA>;
 
-export const ARTIFACT_SCHEMA = z.enum(['research', 'letter', 'portrait', 'interview_brief', 'visualization']);
+export const ARTIFACT_SCHEMA = z.enum(['research', 'letter', 'portrait', 'interview_brief']);
 
 export type Artifact = z.infer<typeof ARTIFACT_SCHEMA>;
 
@@ -471,8 +475,7 @@ const ARTIFACT_VERSIONS_SCHEMA = z.object({
   // The module that produces it: why it cannot run now, null when it can; else the Prompt a run started
   // now would receive, with the Chosen Versions it reads, null while it is refused
   module: z.object({ refusal: z.string().nullable(), prompt: PROMPT_SCHEMA.nullable() }),
-  // Whether jf edit opens it now: it has a Chosen Version, and is neither a Visualization nor the
-  // Letter of an Applied Posting
+  // Whether jf edit opens it now: it has a Chosen Version, and is not the Letter of an Applied Posting
   isEditable: z.boolean(),
   versionList: z.array(VERSION_DOCUMENTS_SCHEMA),
 });
@@ -563,11 +566,6 @@ export const EXTRACTION_SCHEMA = z
   .brand<'Domain'>();
 
 export type Extraction = z.infer<typeof EXTRACTION_SCHEMA>;
-
-// The HTML page of a Visualization Version, which the front shows in a sandboxed frame
-export const VISUALIZATION_SCHEMA = z.object({ html: z.string() }).brand<'Domain'>();
-
-export type Visualization = z.infer<typeof VISUALIZATION_SCHEMA>;
 
 // The iCal file of an Interview, which the front serves for download and jf ical writes
 export const ICAL_FILE_SCHEMA = z.object({ fileName: z.string(), text: z.string() }).brand<'Domain'>();

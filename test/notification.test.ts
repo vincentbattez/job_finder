@@ -248,6 +248,7 @@ describe('the notification of a Research queued automatically that failed', () =
       workplace: null,
       city: null,
       deadline: null,
+      startDate: null,
       applicationEmail: null,
       contact1: null,
       contact2: null,

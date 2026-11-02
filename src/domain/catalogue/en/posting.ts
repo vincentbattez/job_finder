@@ -76,7 +76,6 @@ export const POSTING_EN = {
   chosenBadge: 'Chosen',
   versionInstructions: 'Instructions of this Version',
   noFile: 'No file in this Version.',
-  visualizationFrameTitle: 'Visualization v{{versionNumber}}',
   chooseVersion: 'Choose this Version',
 
   // The Prompt a run started now would receive, beside the title of its Artifact

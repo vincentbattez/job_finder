@@ -27,9 +27,6 @@ const LETTER_RUN = {
 };
 const PORTRAIT_RUN = { fileByName: { 'portrait.md': '# Portrait\n\nMme Durand, RH de la cour d’appel.\n' } };
 const BRIEF_RUN = { fileByName: { 'interview-brief.md': "# Fiche d'entretien\n\n## À réviser\n" } };
-const VISUALIZATION_RUN = {
-  fileByName: { 'visualization.html': '<!DOCTYPE html>\n<html lang="fr"><body><h1>Fiche</h1></body></html>\n' },
-};
 
 const INTERVIEW = {
   start: '2026-11-19T14:00',
@@ -79,23 +76,15 @@ async function openArtifacts(...plannedRunList: PlannedRunList) {
   };
 }
 
-// The Interview, its Portrait, its Interview Brief and its Visualization, on a Posting with a Chosen
+// The Interview, its Portrait and its Interview Brief, on a Posting with a Chosen
 // Research and a Chosen Letter
 async function openPreparedInterview(...extraRunList: PlannedRunList) {
-  const opened = await openArtifacts(
-    RESEARCH_RUN,
-    LETTER_RUN,
-    PORTRAIT_RUN,
-    BRIEF_RUN,
-    VISUALIZATION_RUN,
-    ...extraRunList,
-  );
+  const opened = await openArtifacts(RESEARCH_RUN, LETTER_RUN, PORTRAIT_RUN, BRIEF_RUN, ...extraRunList);
   await opened.produce({ reference: REFERENCE, artifact: 'research' }, { reference: REFERENCE, artifact: 'letter' });
   await opened.addInterview();
   await opened.produce(
     { reference: REFERENCE, artifact: 'portrait', interview: 1 },
     { reference: REFERENCE, artifact: 'interview_brief', interview: 1 },
-    { reference: REFERENCE, artifact: 'visualization', interview: 1 },
   );
   return opened;
 }
@@ -117,7 +106,7 @@ describe('finding an Artifact', () => {
     },
     {
       case: 'an Interview the Posting does not have',
-      name: { reference: REFERENCE, artifact: 'visualization', interview: 2 },
+      name: { reference: REFERENCE, artifact: 'interview_brief', interview: 2 },
       code: 'unknown_interview',
     },
   ])('refuses $case', async ({ name, code }) => {
@@ -157,7 +146,6 @@ describe('finding an Artifact', () => {
       'letter',
       'portrait 1',
       'interview_brief 1',
-      'visualization 1',
     ]);
   });
 });
@@ -181,11 +169,6 @@ describe('running an Artifact', () => {
       case: 'the Interview Brief without a Chosen Research',
       name: { reference: REFERENCE, artifact: 'interview_brief', interview: 1 },
       command: `jf run research ${REFERENCE}`,
-    },
-    {
-      case: 'the Visualization without a Chosen Interview Brief of its Interview',
-      name: { reference: REFERENCE, artifact: 'visualization', interview: 1 },
-      command: `jf run interview_brief ${REFERENCE} 1`,
     },
   ])('refuses $case, naming the command that produces it, and queues nothing', async ({ name, command }) => {
     const { artifacts, addInterview } = await openArtifacts();
@@ -279,11 +262,6 @@ describe('editing an Artifact', () => {
   });
 
   it.each([
-    {
-      case: 'the Visualization, which its module declares not editable',
-      name: { reference: REFERENCE, artifact: 'visualization', interview: 1 },
-      code: 'visualization_not_editable',
-    },
     {
       case: 'the Letter, sent once the Posting is Applied',
       name: { reference: REFERENCE, artifact: 'letter' },

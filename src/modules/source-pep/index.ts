@@ -5,7 +5,7 @@ import { parameter } from '#/parameter/index.ts';
 import { defineSource } from '#/source/index.ts';
 import { wordListOf } from '#/text/index.ts';
 
-import { readFeed, readJobDescription } from './acl/talent-soft.ts';
+import { readFeed, readJobDescription, readStartDate } from './acl/talent-soft.ts';
 import { COPY_NAMESPACE } from './copy.ts';
 import { createTitleMatcher } from './title.ts';
 
@@ -54,4 +54,7 @@ export const PEP = defineSource({
       courtOfAppealList.some((name) => normalizeCourtOfAppeal(name) === normalizeCourtOfAppeal(courtOfAppeal));
     return { jobDescription, isInZone };
   },
+
+  // The day the detail page gives under the heading of the vacancy
+  readStartDate,
 });

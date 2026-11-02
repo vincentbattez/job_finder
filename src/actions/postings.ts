@@ -1,31 +1,19 @@
-import path from 'node:path';
-
-import { z } from 'zod/v4';
-
 import { codedError } from '#/domain/coded-error.ts';
 import {
   POSTING_DETAIL_SCHEMA,
-  VISUALIZATION_SCHEMA,
   type ArtifactState,
   type Candidate,
   type Posting,
   type PostingDetail,
   type Recipients,
   type Version,
-  type Visualization,
 } from '#/domain/index.ts';
 import { STATE_BY_JOB_STATE } from '#/domain/state.ts';
 import { LETTER_MODULE } from '#/modules/letter/index.ts';
-import { VISUALIZATION_MODULE } from '#/modules/visualization/index.ts';
 import { hasBeenApplied, listStatusChoices } from '#/status/index.ts';
 
 import { ARTIFACT_INPUT_SCHEMA, REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
 import { findWorkerFailure } from './stalled-job.ts';
-
-const VISUALIZATION_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({
-  interview: z.coerce.number().int(),
-  number: z.coerce.number().int(),
-});
 
 // The latest Postings of the home: enough to see at a glance what just arrived
 const LATEST_POSTING_COUNT = 6;
@@ -109,19 +97,6 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
     async readArtifactState(rawInput: unknown): Promise<ArtifactState> {
       const handle = await artifacts.find(ARTIFACT_INPUT_SCHEMA.parse(rawInput));
       return handle.readState();
-    },
-
-    async readVisualization(rawInput: unknown): Promise<Visualization> {
-      const { reference, interview, number } = VISUALIZATION_INPUT_SCHEMA.parse(rawInput);
-      const posting = await findPosting(reference);
-      const handle = await artifacts.find({ posting, artifact: 'visualization', interview });
-      const versionDirectory = handle.directoryOf(handle.versionOf(number));
-      const html = workspace.readTextFile(path.join(versionDirectory, VISUALIZATION_MODULE.fileName));
-      if (html === null) {
-        const locale = await findLocale(posting.candidateId);
-        throw codedError('visualization_without_page', { reference, number }, { locale });
-      }
-      return VISUALIZATION_SCHEMA.parse({ html });
     },
 
     async readRecipients(rawInput: unknown): Promise<Recipients> {

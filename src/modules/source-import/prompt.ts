@@ -16,14 +16,16 @@ A single JSON file, \`${extractionPath}\`, of this shape:
   "workplace": "the place of work",
   "city": "the city of the place of work",
   "deadline": "YYYY-MM-DD",
+  "startDate": "YYYY-MM-DD",
   "applicationEmail": "the address to send the application to",
   "contact1": "the first contact",
   "contact2": "the second contact"
 }
 \`\`\`
 
-- Each value, except \`deadline\`, is copied from the Job Description as it is written there, in the language of the Job Description, never translated: a continuous excerpt of the file, without rephrasing, correcting or completing it. For \`city\`, the name of the city alone, as it is written, for example "Lille" in "59000 Lille".
+- Each value, except \`deadline\` and \`startDate\`, is copied from the Job Description as it is written there, in the language of the Job Description, never translated: a continuous excerpt of the file, without rephrasing, correcting or completing it. For \`city\`, the name of the city alone, as it is written, for example "Lille" in "59000 Lille".
 - \`deadline\` is the last day to apply that the Job Description gives, in the format YYYY-MM-DD.
+- \`startDate\` is the day the position is to be filled that the Job Description gives, in the format YYYY-MM-DD.
 - \`applicationEmail\` copies the passage that gives the application address. \`contact1\` and \`contact2\` copy the people to contact, with their details, in the order of the Job Description.
 - A field the Job Description does not give is \`null\`.
 

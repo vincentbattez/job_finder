@@ -24,7 +24,7 @@ function InterviewForm({
 type InterviewsViewProperties = ComponentProps<typeof InterviewsView>;
 
 // The Interviews of a Posting, added, edited and deleted through their action route (ADR-0003), each
-// with its Interview Brief and its Visualization, run, rerun and chosen under it
+// with its Interview Brief, run, rerun and chosen under it
 export function Interviews({
   reference,
   interviewList,

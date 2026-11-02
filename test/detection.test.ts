@@ -163,6 +163,7 @@ describe('detection on the responses recorded on 2026-10-29', () => {
       url: 'https://choisirleservicepublic.gouv.fr/offre-emploi/2026-2445600/?tracking=1&idOrigine=502',
       publishedAt: new Date('2026-10-20T09:28:40Z'),
       deadline: new Date('2026-11-20'),
+      startDate: new Date('2026-12-30'),
       employer: "Cour d'Appel de Douai",
       workplace: 'Tribunal Judiciaire de Béthune',
       applicationEmail: 'p.tj-bethune@justice.fr',
@@ -553,4 +554,24 @@ it('reads pages holding invalid UTF-8 and private-use characters', async () => {
   expect(postingList.find(({ reference }) => reference === '2026-2445600')?.workplace).toBe(
     'Tribunal Judiciaire de B\u{FFFD}ethune',
   );
+});
+
+// The Start Date is the day under the heading of the vacancy, which an offer may leave out
+it('leaves a Posting without a Start Date when its page gives none', async () => {
+  const page = new TextDecoder()
+    .decode(readRecordedFile('posting-2026-2445600.html'))
+    // cspell:disable-next-line
+    .replace(/<h3>\s*Date de vacance de l'emploi\s*<\/h3><p id="fldorigin_beginningdate">[^<]*<\/p>/, '');
+  const recordedFetch = createRecordedFetch({
+    'https://place-ep-recrute.talent-soft.com/offre-de-emploi/emploi_2445600.aspx': { body: page },
+  });
+  const actions = await createActions({ dataDirectory: createDataDirectory(), fetch: recordedFetch.fetch });
+
+  await actions.detect();
+
+  const postingList = await actions.listPostings({ candidateId: 'lea' });
+  expect(postingList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
+    deadline: new Date('2026-11-20'),
+    startDate: null,
+  });
 });

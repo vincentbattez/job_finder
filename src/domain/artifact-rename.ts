@@ -6,5 +6,4 @@ export const ARTIFACT_RENAME_LIST: { from: string; to: Artifact }[] = [
   { from: 'recherche', to: 'research' },
   { from: 'lettre', to: 'letter' },
   { from: 'fiche_entretien', to: 'interview_brief' },
-  { from: 'visualisation', to: 'visualization' },
 ];

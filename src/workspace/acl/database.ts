@@ -698,6 +698,20 @@ export function openDatabase(databasePath: string) {
         .parse(await prisma.posting.findMany({ where: { latitude: null }, include: POSTING_INCLUDE }));
     },
 
+    // The Postings of these Sources that have no Start Date yet, which their Job Description may give
+    async listPostingsWithoutStartDate(sourceIdList: string[]): Promise<Posting[]> {
+      return z.array(POSTING_READ_SCHEMA).parse(
+        await prisma.posting.findMany({
+          where: { startDate: null, source: { in: sourceIdList } },
+          include: POSTING_INCLUDE,
+        }),
+      );
+    },
+
+    async setStartDate({ id }: Posting, startDate: Date): Promise<void> {
+      await prisma.posting.update({ where: { id }, data: { startDate } });
+    },
+
     async setLocation({ id }: Posting, location: Location): Promise<void> {
       await prisma.posting.update({ where: { id }, data: location });
     },
@@ -707,9 +721,11 @@ export function openDatabase(databasePath: string) {
       { id }: Posting,
       { title, jobDescription, location }: { title: string; jobDescription: JobDescription; location: Location },
     ) {
-      const { deadline, employer, workplace, applicationEmail, contact1, contact2 } = jobDescription;
-      const data = { title, deadline, employer, workplace, applicationEmail, contact1, contact2, ...location };
-      return POSTING_READ_SCHEMA.parse(await prisma.posting.update({ where: { id }, data, include: POSTING_INCLUDE }));
+      const { deadline, startDate, employer, workplace, applicationEmail, contact1, contact2 } = jobDescription;
+      const data = { title, deadline, startDate, employer, workplace, applicationEmail, contact1, contact2 };
+      return POSTING_READ_SCHEMA.parse(
+        await prisma.posting.update({ where: { id }, data: { ...data, ...location }, include: POSTING_INCLUDE }),
+      );
     },
 
     async setStatus(posting: Posting, status: Status): Promise<void> {
@@ -776,8 +792,19 @@ export function openDatabase(databasePath: string) {
       location,
     }: INewPosting): Promise<Posting> {
       const { reference, title, url, publishedAt } = listedPosting;
-      const { deadline, employer, workplace, applicationEmail, contact1, contact2 } = jobDescription;
-      const data = { candidateId, source, reference, title, url, publishedAt, deadline, employer, workplace };
+      const { deadline, startDate, employer, workplace, applicationEmail, contact1, contact2 } = jobDescription;
+      const data = {
+        candidateId,
+        source,
+        reference,
+        title,
+        url,
+        publishedAt,
+        deadline,
+        startDate,
+        employer,
+        workplace,
+      };
       return POSTING_READ_SCHEMA.parse(
         await prisma.posting.create({
           data: {

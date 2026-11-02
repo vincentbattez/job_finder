@@ -13,6 +13,8 @@ import { createRecordedFetch } from './recorded-http.ts';
 
 // The last migration before the Candidate side spoke English
 const BEFORE_CANDIDATE_MIGRATION = '20261030122214_delai_par_defaut';
+// The last migration before the Visualization went away (ADR-0020)
+const BEFORE_VISUALIZATION_REMOVAL_MIGRATION = '20261031110442_posting_unpublished_at';
 
 const FACTS = '# Faits\n\n## Mobilité\n\n- Lille et alentours\n';
 const CV = '# CV de Léa\n';
@@ -399,5 +401,89 @@ describe('the French data folder', () => {
     mkdirSync(factsPath);
 
     await expect(createActions({ dataDirectory })).rejects.toMatchObject({ code: 'data_layout_unexpected' });
+  });
+});
+
+// Léa's data folder as the jf of the Visualization left it: an Applied Posting whose first Interview has
+// a Chosen Interview Brief, read by two Visualization Versions, one Chosen and one queued, with their
+// folders and her own Visualization Instructions
+function writeVisualizationDataDirectory(): string {
+  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+  const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_VISUALIZATION_REMOVAL_MIGRATION));
+  database.exec(`INSERT INTO Candidate (id, name) VALUES ('lea', 'Léa');
+    INSERT INTO DefaultDeadlinePeriod (id, months) VALUES (1, 6);
+    INSERT INTO Posting (id, candidateId, source, reference, title, status, appliedAt, isInZone)
+    VALUES (1, 'lea', 'pep', '2026-1', 'Greffier', 'applied', '2026-10-20T09:00:00.000+00:00', 1);
+    INSERT INTO Interview (id, postingId, number, startAt, place, interviewers)
+    VALUES (1, 1, 1, '2026-11-19T14:00:00.000+00:00', 'Lille', '');
+    INSERT INTO Job (id, module, postingId, interviewId, state) VALUES (1, 'interview_brief', 1, 1, 'done');
+    INSERT INTO Version (id, postingId, interviewId, artifact, number, isChosen, state, instructions, jobId)
+    VALUES (1, 1, 1, 'interview_brief', 1, 1, 'ready', 'Réviser.', 1);
+    INSERT INTO Job (id, module, postingId, interviewId, state) VALUES (2, 'visualization', 1, 1, 'done');
+    INSERT INTO Version (id, postingId, interviewId, artifact, number, isChosen, state, instructions, jobId)
+    VALUES (2, 1, 1, 'visualization', 1, 1, 'ready', 'Dessiner.', 2);
+    INSERT INTO Job (id, module, postingId, interviewId, state) VALUES (3, 'visualization', 1, 1, 'queued');
+    INSERT INTO Version (id, postingId, interviewId, artifact, number, state, instructions, jobId)
+    VALUES (3, 1, 1, 'visualization', 2, 'running', 'Dessiner.', 3);
+    INSERT INTO _Input (A, B) VALUES (1, 2), (1, 3);`);
+  database.close();
+  const leaDirectory = path.join(dataDirectory, 'candidates', 'lea');
+  const interviewDirectory = path.join(leaDirectory, 'postings', '2026-1-greffier', 'interviews', '1');
+  writeFile(path.join(leaDirectory, 'postings', '2026-1-greffier', 'job-description.md'), '# Greffier\n');
+  writeFile(path.join(interviewDirectory, 'interview_brief', 'v1', 'interview-brief.md'), BRIEF_INSTRUCTIONS);
+  writeFile(path.join(interviewDirectory, 'visualization', 'v1', 'visualization.html'), '<!DOCTYPE html></html>\n');
+  mkdirSync(path.join(interviewDirectory, 'visualization', 'v2'), { recursive: true });
+  writeFile(path.join(leaDirectory, 'instructions', 'visualization.md'), 'Une page courte.');
+  writeFile(path.join(leaDirectory, 'instructions', 'interview_brief.md'), BRIEF_INSTRUCTIONS);
+  return dataDirectory;
+}
+
+function selectAll(dataDirectory: string, sql: string): unknown[] {
+  const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { readOnly: true });
+  try {
+    return database.prepare(sql).all();
+  } finally {
+    database.close();
+  }
+}
+
+// The main checkout migrates Léa's real data/, which holds Visualizations: they go, the Interview Brief
+// they read stays (ADR-0020)
+describe('the Visualization of an older data folder', () => {
+  it('goes with its Versions, its jobs, its folders and its Instructions', async () => {
+    const dataDirectory = writeVisualizationDataDirectory();
+
+    const actions = await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'SELECT id, artifact FROM Version')).toEqual([
+      { id: 1, artifact: 'interview_brief' },
+    ]);
+    expect(selectAll(dataDirectory, 'SELECT id, module FROM Job')).toEqual([{ id: 1, module: 'interview_brief' }]);
+    expect(selectAll(dataDirectory, 'SELECT A, B FROM _Input')).toEqual([]);
+    const interviewDirectory = path.join(
+      dataDirectory,
+      'candidates',
+      'lea',
+      'postings',
+      '2026-1-greffier',
+      'interviews',
+      '1',
+    );
+    expect(listSorted(interviewDirectory)).toEqual(['interview_brief']);
+    expect(listSorted(path.join(dataDirectory, 'candidates', 'lea', 'instructions'))).toEqual(['interview_brief.md']);
+    expect(await actions.listVersions({ reference: '2026-1', artifact: 'interview_brief', interview: 1 })).toEqual([
+      expect.objectContaining({ number: 1, isChosen: true }),
+    ]);
+    expect(await actions.runQueuedJobs()).toEqual([]);
+  });
+
+  it('changes nothing when opened again', async () => {
+    const dataDirectory = writeVisualizationDataDirectory();
+    await createActions({ dataDirectory });
+    const entryList = snapshotOf(dataDirectory);
+
+    await createActions({ dataDirectory });
+
+    expect(snapshotOf(dataDirectory)).toEqual(entryList);
   });
 });

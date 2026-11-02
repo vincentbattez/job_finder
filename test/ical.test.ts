@@ -3,7 +3,6 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type { Actions } from '#/actions/index.ts';
 
 import { detectPostings } from './data-directory.ts';
-import { createFakeAiSession } from './fake-ai-session.ts';
 
 // The address the Candidate opened Job Finder through, here over the VPN
 const ORIGIN = 'https://10.8.0.1:5180';
@@ -108,6 +107,7 @@ describe('the iCal file of an Interview', () => {
       'Recherche : https://job-finder.example.org/postings/2026-2350473#research',
       'Lettre : https://job-finder.example.org/postings/2026-2350473#letter',
       'Fiche d’entretien : https://job-finder.example.org/postings/2026-2350473#interview-1-interview_brief',
+      'Entretien 1 : https://job-finder.example.org/postings/2026-2350473#interview-1',
     ]);
     expect(valueOf(text, 'URL')).toBe('https://job-finder.example.org/postings/2026-2350473');
   });
@@ -157,50 +157,5 @@ describe('the iCal file of an Interview', () => {
     await expect(actions.readIcalFile({ reference: '2026-2199164', number: 3, origin: ORIGIN })).rejects.toMatchObject({
       code: 'unknown_interview',
     });
-  });
-});
-
-// Story 29: the page she reviews from her phone right before the Interview
-describe('the Visualization link of the iCal file', () => {
-  const REFERENCE = '2026-2445600';
-  const RESEARCH_RUN = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
-  const BRIEF_RUN = { fileByName: { 'interview-brief.md': '# Fiche d’entretien\n' } };
-  const VISUALIZATION_RUN = {
-    fileByName: { 'visualization.html': '<!DOCTYPE html><html lang="fr"><body><h1>PAS</h1></body></html>\n' },
-  };
-
-  async function runModule(actions: Actions, module: string, interview?: number) {
-    await actions.runModule({ module, reference: REFERENCE, interview });
-    await actions.runQueuedJobs();
-  }
-
-  it('leads to the Chosen Version of the Visualization of that Interview, once there is one', async () => {
-    const aiSession = createFakeAiSession(RESEARCH_RUN, BRIEF_RUN, BRIEF_RUN, VISUALIZATION_RUN, VISUALIZATION_RUN);
-    const { actions } = await detectPostings(aiSession);
-    await runModule(actions, 'research');
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
-    for (const start of ['2026-11-19T14:00', '2026-12-03T10:00']) {
-      await actions.addInterview({ reference: REFERENCE, start, place: PLACE, interviewers: '' });
-    }
-    const before = await actions.readIcalFile({ reference: REFERENCE, number: 2, origin: ORIGIN });
-    await runModule(actions, 'brief', 1);
-    await runModule(actions, 'brief', 2);
-    await runModule(actions, 'visualization', 2);
-    await runModule(actions, 'visualization', 2);
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'visualization', interview: 2, number: 1 });
-
-    const second = await actions.readIcalFile({ reference: REFERENCE, number: 2, origin: ORIGIN });
-    const first = await actions.readIcalFile({ reference: REFERENCE, number: 1, origin: ORIGIN });
-
-    expect(valueOf(before.text, 'DESCRIPTION')).not.toContain('Visualisation');
-    expect(
-      valueOf(second.text, 'DESCRIPTION')
-        ?.split(String.raw`\n`)
-        .slice(-2),
-    ).toEqual([
-      `Fiche d’entretien : ${ORIGIN}/postings/${REFERENCE}#interview-2-interview_brief`,
-      `Visualisation : ${ORIGIN}/postings/${REFERENCE}/interviews/2/visualization/1`,
-    ]);
-    expect(valueOf(first.text, 'DESCRIPTION')).not.toContain('Visualisation');
   });
 });

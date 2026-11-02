@@ -128,8 +128,6 @@ export const ERROR_CATALOGUE = {
   empty_output: 'error:emptyOutput',
   // A file the module wrote does not have its format
   malformed_output: 'error:malformedOutput',
-  // The Visualization is asked to be edited, while it follows the Interview Brief
-  visualization_not_editable: 'error:visualizationNotEditable',
   // An Artifact to edit has no Chosen Version
   no_chosen_version_to_edit: 'error:noChosenVersionToEdit',
   // The Draft is asked to be edited, while it keeps what the AI wrote
@@ -142,8 +140,6 @@ export const ERROR_CATALOGUE = {
   version_running: 'error:versionRunning',
   // A file asked for is not one of the Chosen Version
   not_a_version_file: 'error:notAVersionFile',
-  // A Visualization Version has no page
-  visualization_without_page: 'error:visualizationWithoutPage',
   // A Posting has no Chosen Letter to send
   no_chosen_letter: 'error:noChosenLetter',
 

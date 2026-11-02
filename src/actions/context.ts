@@ -1,17 +1,26 @@
+import path from 'node:path';
+
 import { z } from 'zod/v4';
 
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
 import { createArtifacts } from '#/artifact/index.ts';
 import { localeOf } from '#/domain/catalogue/i18n.ts';
 import { codedError, type CodedError } from '#/domain/coded-error.ts';
-import { LOCATION_SCHEMA, type Candidate, type Locale, type Location, type Posting } from '#/domain/index.ts';
+import {
+  JOB_DESCRIPTION_FILE_NAME,
+  LOCATION_SCHEMA,
+  type Candidate,
+  type Locale,
+  type Location,
+  type Posting,
+} from '#/domain/index.ts';
 import { createApiGeo } from '#/geo/acl/api-geo.ts';
 import { createUploadConversion } from '#/modules/conversion/index.ts';
 import { createImportSource } from '#/modules/source-import/index.ts';
 import type { INotificationChannel, NotificationComposer } from '#/notification/index.ts';
 import type { ISource, SourceFactory } from '#/source/index.ts';
 import { messageOf } from '#/text/index.ts';
-import { openWorkspace } from '#/workspace/index.ts';
+import { openWorkspace, type Workspace } from '#/workspace/index.ts';
 
 import { NOTIFICATION_CHANNEL_LIST, SOURCE_LIST } from './modules.ts';
 import { findWorkerFailure } from './stalled-job.ts';
@@ -40,6 +49,23 @@ export interface IActionsOption {
   sourceFactoryList?: readonly SourceFactory[];
 }
 
+// The data migration of the Start Date (spec #125): a Posting saved before it existed gets the one its
+// stored Job Description gives, read by its Source. Safe on every launch: only the Postings still
+// without one are read, and one whose Job Description says nothing, or is missing, stays without.
+async function fillStartDates(workspace: Workspace, sourceList: ISource[]): Promise<void> {
+  const postingList = await workspace.listPostingsWithoutStartDate(sourceList.map(({ description: { id } }) => id));
+  for (const posting of postingList) {
+    const source = sourceList.find(({ description: { id } }) => id === posting.source);
+    const jobDescription = workspace.readTextFile(
+      path.join(workspace.postingDirectoryOf(posting), JOB_DESCRIPTION_FILE_NAME),
+    );
+    const startDate = jobDescription === null ? null : (source?.readStartDate(jobDescription) ?? null);
+    if (startDate !== null) {
+      await workspace.setStartDate(posting, startDate);
+    }
+  }
+}
+
 // What the actions of every feature share: the data folder, the external boundaries, which the
 // tests replace with fakes, and the lookups of a Candidate and a Posting
 export async function openContext({
@@ -52,6 +78,7 @@ export async function openContext({
   const workspace = await openWorkspace(dataDirectory);
   const apiGeo = createApiGeo(fetch);
   const sourceList = sourceFactoryList.map((createSource) => createSource(fetch));
+  await fillStartDates(workspace, sourceList);
 
   async function findCandidate(rawInput: unknown): Promise<Candidate> {
     const { candidateId } = CANDIDATE_INPUT_SCHEMA.parse(rawInput);
