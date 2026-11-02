@@ -170,14 +170,14 @@ test('takes a Candidate with the en locale through a Posting and its Status in E
   await expect(extraction.getByRole('button', { name: 'Run the extraction again' })).toBeVisible();
   await page.getByRole('tab', { name: /^Research/ }).click();
   const research = page.getByRole('region', { name: 'Research', exact: true });
-  await expect(research.getByRole('button', { name: 'Run the Research again' })).toBeVisible();
+  await expect(research.getByRole('button', { name: 'Regenerate' })).toBeVisible();
   await expect(research.getByRole('combobox', { name: 'Version' })).toHaveText('Version 1 · Draft');
   await expect(research.getByText('Version 1 is a Draft: read it, then validate it')).toBeVisible();
   await expect(research.getByRole('button', { name: 'Validate Version 1' })).toBeVisible();
   await expect(research.getByText('Default Instructions · Instructions of this Version')).toBeVisible();
   await page.getByRole('tab', { name: /^Letter/ }).click();
   const letter = page.getByRole('region', { name: 'Letter', exact: true });
-  await expect(letter.getByRole('button', { name: 'Run the Letter' })).toBeVisible();
+  await expect(letter.getByRole('button', { name: 'Generate' })).toBeVisible();
   await expect(letter.getByText('No Letter yet')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mark Applied' })).toBeVisible();
 

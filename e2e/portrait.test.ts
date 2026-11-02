@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { generate } from './generation.ts';
 import { findInterviews, prepareInterview } from './interview.ts';
 
 // A Posting that test/seed-front.ts leaves without any Artifact and that no other test touches: the test
@@ -22,11 +23,12 @@ test('launches the Portrait of an Interview without a Research, then corrects it
   await expect(page).toHaveURL(/&doc=portrait$/);
   const portrait = interviews.getByRole('region', { name: 'Portrait' });
 
-  await portrait.getByRole('button', { name: 'Lancer le Portrait' }).click();
+  await generate(page, portrait);
 
-  await expect(portrait.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
   // A Draft until the Candidate validates it (ADR-0019)
-  await expect(portrait.getByRole('combobox', { name: 'Version' })).toHaveText('Version 1 · Brouillon');
+  await expect(portrait.getByRole('combobox', { name: 'Version' })).toHaveText('Version 1 · Brouillon', {
+    timeout: READY_TIMEOUT_MS,
+  });
   await portrait.getByRole('button', { name: 'Valider la Version 1' }).click();
   await expect(portrait.getByText('Validée · retenue')).toBeVisible();
   await expect(interviews.getByRole('tab', { name: 'Portrait (Validée)' })).toBeVisible();

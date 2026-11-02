@@ -273,14 +273,27 @@ export function createArtifacts({
     });
     const editRefusal = editRefusalOf(chosenVersion);
 
-    // The Prompt a run started now would receive, or why it is refused: exactly one is set
-    async function readRun() {
+    // The Prompt a run started now would receive with these checked Inputs, else the type's default ones, or
+    // why it is refused: exactly one is set
+    async function readRun(inputKeyList: readonly string[] | null = null) {
       const refusal = await findRunRefusal();
       if (refusal !== null) {
         return { refusal, prompt: null };
       }
-      const { checkedList } = checkInputs(target, await readResolvedInputs(), null);
+      const { checkedList, refusal: inputRefusal } = checkInputs(target, await readResolvedInputs(), inputKeyList);
+      refuse(inputRefusal, locale);
       return { refusal, prompt: previewPrompt(workspace, target, artifact, candidate, checkedList) };
+    }
+
+    // The Inputs of a run started now, each checked as the panel opens: a regeneration as the latest
+    // Version read them
+    async function readInputs() {
+      const previousVersion = versionList.at(-1);
+      const inputList = await readResolvedInputs();
+      return inputList.map((input) => ({
+        ...input,
+        isChecked: isInitiallyChecked(input, previousVersion),
+      }));
     }
 
     // The state follows the last job, unless a Version came after it: a job refused before creating its
@@ -328,15 +341,35 @@ export function createArtifacts({
       readRun,
       readState,
 
-      // The Inputs of a run started now, each checked as the panel opens: a regeneration as the latest
-      // Version read them
-      async readInputs() {
-        const previousVersion = versionList.at(-1);
-        const inputList = await readResolvedInputs();
-        return inputList.map((input) => ({
-          ...input,
-          isChecked: isInitiallyChecked(input, previousVersion),
-        }));
+      readInputs,
+
+      // The generation panel (spec #125): every Input, checked as it opens, and the Prompt of the checked
+      // ones, those it opens with when none are given; the refusal worded for the page, as describe does
+      async describeGeneration(inputKeyList: readonly string[] | null) {
+        const inputList = await readInputs();
+        const checkedKeyList = inputKeyList ?? inputList.filter(({ isChecked }) => isChecked).map(({ key }) => key);
+        const run = await readRun(checkedKeyList);
+        return {
+          artifact,
+          refusal: run.refusal === null ? null : wordForFront(run.refusal),
+          isSearchingWeb: aiModule.isSearchingWeb === true,
+          nextNumber: (versionList.at(-1)?.number ?? 0) + 1,
+          chosenNumber: chosenVersion?.number ?? null,
+          inputList: inputList.map(({ readVersion, ...input }) => ({
+            ...input,
+            readVersion:
+              readVersion === null
+                ? null
+                : {
+                    reference: readVersion.posting.reference,
+                    title: readVersion.posting.title,
+                    artifact: readVersion.version.artifact,
+                    interviewNumber: readVersion.version.interview?.number ?? null,
+                    number: readVersion.version.number,
+                  },
+          })),
+          prompt: run.prompt,
+        };
       },
 
       // The folder of one of its Versions, where its module's own reads look

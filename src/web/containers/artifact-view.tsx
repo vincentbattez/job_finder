@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
-import { ArtifactPrompt } from '#/web/components/artifact-prompt.tsx';
 import { ArtifactView as ArtifactViewView, type ArtifactMode } from '#/web/components/artifact-view.tsx';
 import type { IArtifactVersions, IVersionDetail } from '#/web/components/artifact.ts';
 import type { IRecipients } from '#/web/components/recipients.tsx';
@@ -11,8 +10,8 @@ import { Button } from '#/web/components/ui/button.tsx';
 import { Textarea } from '#/web/components/ui/textarea.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
+import { useGeneration } from './generation.tsx';
 import { InterviewField } from './interview-field.tsx';
-import { ModuleLaunch } from './module-launch.tsx';
 import { useFeedback } from './use-feedback.ts';
 
 interface IArtifactName {
@@ -114,13 +113,20 @@ function VersionEditor({
 // new Version, generated or brought, shows itself; its Container posts the validation and the correction
 export function ArtifactView({
   reference,
+  title,
   interviewNumber = null,
   recipients = null,
   ...artifactVersions
 }: Readonly<
-  IArtifactVersions & { reference: string; interviewNumber?: number | null; recipients?: IRecipients | null }
+  IArtifactVersions & {
+    reference: string;
+    title: string;
+    interviewNumber?: number | null;
+    recipients?: IRecipients | null;
+  }
 >) {
-  const { artifact, versionList, fileName, module } = artifactVersions;
+  const { artifact, versionList, fileName } = artifactVersions;
+  const generation = useGeneration({ reference, title, interviewNumber, artifactVersions });
   const latestNumber = versionList.at(-1)?.version.number ?? null;
   // A choice holds only while the latest Version is the one it was made beside
   const [choice, setChoice] = useState<{ number: number; mode: ArtifactMode; latestNumber: number | null }>({
@@ -132,45 +138,33 @@ export function ArtifactView({
   const name = { reference, interviewNumber, artifact };
   const renderValidateButton = useValidation(name);
   return (
-    <ArtifactViewView
-      {...artifactVersions}
-      recipients={recipients}
-      selectedNumber={current.number}
-      mode={current.mode}
-      onSelect={(number) => {
-        setChoice({ number, mode: 'read', latestNumber });
-      }}
-      onModeChange={(mode) => {
-        setChoice({ number: current.number, mode, latestNumber });
-      }}
-      launch={
-        <div className="space-y-2">
-          <ModuleLaunch
-            reference={reference}
-            interviewNumber={interviewNumber}
-            artifact={artifact}
-            state={artifactVersions.state}
-            failure={artifactVersions.failure}
-            notificationFailure={artifactVersions.notificationFailure}
-            module={module}
-            workerFailure={artifactVersions.workerFailure}
+    <>
+      {generation.panel}
+      <ArtifactViewView
+        {...artifactVersions}
+        recipients={recipients}
+        selectedNumber={current.number}
+        mode={current.mode}
+        onSelect={(number) => {
+          setChoice({ number, mode: 'read', latestNumber });
+        }}
+        onModeChange={(mode) => {
+          setChoice({ number: current.number, mode, latestNumber });
+        }}
+        launch={generation.launch}
+        failure={generation.failure}
+        validateButton={renderValidateButton}
+        editor={(detail) => (
+          <VersionEditor
+            {...name}
+            fileName={fileName}
+            detail={detail}
+            onDone={() => {
+              setChoice({ number: detail.version.number, mode: 'read', latestNumber });
+            }}
           />
-          {module.prompt !== null && (
-            <ArtifactPrompt prompt={module.prompt} isUnderInterview={interviewNumber !== null} />
-          )}
-        </div>
-      }
-      validateButton={renderValidateButton}
-      editor={(detail) => (
-        <VersionEditor
-          {...name}
-          fileName={fileName}
-          detail={detail}
-          onDone={() => {
-            setChoice({ number: detail.version.number, mode: 'read', latestNumber });
-          }}
-        />
-      )}
-    />
+        )}
+      />
+    </>
   );
 }

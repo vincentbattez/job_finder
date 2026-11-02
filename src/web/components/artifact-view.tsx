@@ -212,7 +212,11 @@ function DraftBanner({
 }
 
 // Before any Version: what the Artifact is for, and its launch
-function EmptyArtifact({ artifact, launch }: Readonly<{ artifact: Artifact; launch: ReactNode }>) {
+function EmptyArtifact({
+  artifact,
+  launch,
+  failure,
+}: Readonly<{ artifact: Artifact; launch: ReactNode; failure: ReactNode }>) {
   const { t } = useTranslation('posting');
   return (
     <div className="flex flex-col items-center rounded-2xl border border-dashed px-6 py-12 text-center">
@@ -225,7 +229,10 @@ function EmptyArtifact({ artifact, launch }: Readonly<{ artifact: Artifact; laun
       <p className="mt-1.5 max-w-md text-sm text-balance text-muted-foreground">
         {t(`artifactView.emptyPitchByArtifact.${artifact}`)}
       </p>
-      <div className="mt-5 w-full max-w-xl text-left">{launch}</div>
+      <div className="mt-5 flex w-full max-w-xl flex-col items-center gap-3 [&>div]:justify-center">
+        {launch}
+        <div className="w-full text-left">{failure}</div>
+      </div>
     </div>
   );
 }
@@ -257,8 +264,10 @@ function VersionBody({
 }
 
 interface IArtifactViewSlots {
-  // The launch of its module, its refusal and its Prompt
+  // Generate or Regenerate, which opens the generation panel, with its refusal beside it
   launch: ReactNode;
+  // Why its last run failed or does not move
+  failure: ReactNode;
   // Validating a Draft, or choosing an older Validated Version again
   validateButton: (number: number, kind: 'validate' | 'chooseAgain') => ReactNode;
   editor: (detail: IVersionDetail) => ReactNode;
@@ -278,6 +287,7 @@ export function ArtifactView({
   onSelect,
   onModeChange,
   launch,
+  failure,
   validateButton,
   editor,
   recipients = null,
@@ -305,7 +315,7 @@ export function ArtifactView({
       {detail === undefined ? (
         <>
           {isRunning && <RunningCard state={state} />}
-          <EmptyArtifact artifact={artifact} launch={launch} />
+          <EmptyArtifact artifact={artifact} launch={launch} failure={failure} />
         </>
       ) : (
         <>
@@ -313,7 +323,8 @@ export function ArtifactView({
             <div className="flex flex-wrap items-center gap-2">
               <VersionSelect versionList={versionList} version={detail.version} onSelect={onSelect} />
               <VersionStateBadge version={detail.version} />
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                {launch}
                 <FocusModeButton />
                 <ModeSwitch
                   mode={mode}
@@ -330,7 +341,7 @@ export function ArtifactView({
             </p>
             {detail.version.origin === 'ai' && <VersionInstructions version={detail.version} />}
           </div>
-          {launch}
+          {failure}
           {isFrozen && (
             <p className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
               <LockIcon aria-hidden className="size-4 shrink-0" />

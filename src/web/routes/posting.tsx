@@ -97,11 +97,18 @@ export default function Posting() {
         );
       }
       case 'research': {
-        return research === undefined ? null : <ArtifactView reference={posting.reference} {...research} />;
+        return research === undefined ? null : (
+          <ArtifactView reference={posting.reference} title={posting.title} {...research} />
+        );
       }
       case 'letter': {
         return letter === undefined ? null : (
-          <ArtifactView reference={posting.reference} recipients={detail.recipients} {...letter} />
+          <ArtifactView
+            reference={posting.reference}
+            title={posting.title}
+            recipients={detail.recipients}
+            {...letter}
+          />
         );
       }
       case 'interviews': {
