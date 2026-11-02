@@ -184,6 +184,23 @@ test.describe('The filters of a list', () => {
     await expect(findPanel(page, 'À traiter').getByRole('listitem')).toHaveCount(4);
   });
 
+  // Léa's Archived Application (test/seed-front.ts), which no test changes
+  test('shows the Archived Applications, keeping the tab', async ({ page, asCandidate, openPage }) => {
+    await open({ page, asCandidate, openPage }, 'lea', '/applications');
+    const panel = findPanel(page, 'Candidatures');
+    const archivedRow = panel.getByRole('listitem').filter({ hasText: 'Postulée · archivée' });
+    await expect(panel.getByRole('listitem')).not.toHaveCount(0);
+    await expect(archivedRow).toHaveCount(0);
+
+    await findFilters(page)
+      .getByRole('button', { name: /^Archivées/ })
+      .click();
+
+    await expect(page).toHaveURL(/\/applications\?archived=on$/);
+    await expect(archivedRow).toHaveCount(1);
+    await expect(panel.getByRole('listitem').filter({ hasNotText: '· archivée' })).toHaveCount(0);
+  });
+
   test('finds a dismissed New Posting under Archived, which comes back New once unarchived', async ({
     page,
     asCandidate,

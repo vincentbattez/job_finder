@@ -11,7 +11,7 @@ import {
   type ApplicationTab,
 } from '#/web/list-model.ts';
 
-import { MapList, type ISheetSelection } from './map-list.tsx';
+import { MapList, type IMapListFiltering, type ISheetSelection } from './map-list.tsx';
 import { StepBadge } from './step-badge.tsx';
 
 // One color per Step, the same on the markers, the group headers, the legend and the Step badges
@@ -61,10 +61,17 @@ export function ApplicationsList({
   tab,
   onTabChange,
   now,
+  filtering,
   selectedReference,
   onSelect,
 }: Readonly<
-  { itemList: Application[]; tab: ApplicationTab; onTabChange: (tab: string) => void; now: Date } & ISheetSelection
+  {
+    itemList: Application[];
+    tab: ApplicationTab;
+    onTabChange: (tab: string) => void;
+    now: Date;
+    filtering?: IMapListFiltering | undefined;
+  } & ISheetSelection
 >) {
   const { t } = useTranslation('lists');
   const rowList = itemList.map(({ posting, nextInterviewAt, lastInterviewAt }) => ({
@@ -91,6 +98,7 @@ export function ApplicationsList({
       }))}
       controls={<ApplicationTabs tab={tab} countByTab={countByApplicationTab(rowList)} onTabChange={onTabChange} />}
       empty={t(`applications.empty.${tab}`)}
+      filtering={filtering}
       selectedReference={selectedReference}
       onSelect={onSelect}
       renderFacts={(row) => (

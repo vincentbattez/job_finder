@@ -1,11 +1,11 @@
 import { APPLICATION_SCHEMA, type Application, type Posting } from '#/domain/index.ts';
 import { hasTakenPlace } from '#/status/index.ts';
 
-import type { ActionContext } from './context.ts';
+import { LIST_INPUT_SCHEMA, type ActionContext } from './context.ts';
 
-// An Application the Candidate still follows: Applied, Hired or Rejected, not Archived (ADR-0007)
-function isFollowedApplication({ status, archivedAt }: Posting): boolean {
-  return status !== 'new' && status !== 'to_apply' && archivedAt === null;
+// An Application: Applied, Hired or Rejected, whether Archived or not (ADR-0007)
+function isApplication({ status }: Posting): boolean {
+  return status !== 'new' && status !== 'to_apply';
 }
 
 export function createApplicationActions({ workspace, findCandidate }: ActionContext) {
@@ -21,13 +21,17 @@ export function createApplicationActions({ workspace, findCandidate }: ActionCon
   }
 
   return {
-    // What the Applications list shows: the followed Applications, which it splits into tabs and groups
+    // What the Applications list shows: the followed Applications, or under the Archived filter the
+    // Archived ones, which it splits into tabs and groups
     async listApplications(rawInput: unknown): Promise<Application[]> {
       const candidate = await findCandidate(rawInput);
+      const { isArchived } = LIST_INPUT_SCHEMA.parse(rawInput);
       const now = new Date();
       const postingList = await workspace.listPostings(candidate.id);
       return Promise.all(
-        postingList.filter((posting) => isFollowedApplication(posting)).map((posting) => readApplication(posting, now)),
+        postingList
+          .filter((posting) => isApplication(posting) && (posting.archivedAt !== null) === isArchived)
+          .map((posting) => readApplication(posting, now)),
       );
     },
   };
