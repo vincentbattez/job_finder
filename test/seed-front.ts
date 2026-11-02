@@ -246,9 +246,8 @@ await actions.addInterview({
   place: 'Tribunal judiciaire',
   interviewers: 'Mme Durand',
 });
-// One Posting per section of /applications for e2e/applications.test.ts, out of the Hauts-de-France and of
-// Melun, which e2e/map.test.ts counts: Hired, two Rejected whose outcome it changes from their row (with JS and
-// without), an Archived Application and a Posting archived without one
+// Léa's closed Postings: Hired, two Rejected, an Archived Application, whose page e2e/applications.test.ts
+// opens, and a Posting archived without one
 for (const [reference, status] of [
   ['2026-2289933', 'hired'],
   ['2026-2315264', 'rejected'],
@@ -295,6 +294,18 @@ for (const city of ['lille', 'lyon', 'bordeaux', 'rennes', 'nice', 'strasbourg']
     candidateId: 'mila',
     fileName: `greffier-${city}.md`,
     markdown: `# Greffier – ${city}\n`,
+  });
+}
+await actions.runQueuedJobs();
+
+// Rosa's Applications are e2e/applications.test.ts's own: eight imported Postings, which the test
+// marks Applied, Hired or Rejected and gives Interviews and dates counted from the day it runs
+await actions.createCandidate({ id: 'rosa', name: 'Rosa' });
+for (const city of ['lille', 'lyon', 'bordeaux', 'rennes', 'nice', 'strasbourg', 'dijon', 'brest']) {
+  await actions.importJobDescription({
+    candidateId: 'rosa',
+    fileName: `clerk-${city}.md`,
+    markdown: `# Court clerk – ${city}\n`,
   });
 }
 await actions.runQueuedJobs();
