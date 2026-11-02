@@ -11,7 +11,6 @@ import {
   type Posting,
 } from '#/domain/index.ts';
 import { DEFAULT_DURATION_MINUTES } from '#/domain/interview-duration.ts';
-import { interviewIdOf, interviewSectionIdOf } from '#/domain/interview-section.ts';
 import { dateOfParisDateTime } from '#/domain/paris-time.ts';
 import { formatCalendar } from '#/ical/index.ts';
 import { findInterviewEnd, hasBeenApplied } from '#/status/index.ts';
@@ -60,18 +59,17 @@ function describeLinks(
 ): string {
   const t = tFor(locale, 'posting');
   const labelOf = (artifact: Artifact) => t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' });
+  // The tab, the Interview and the document of the Posting page, deep-linked (spec #125, « Navigation »)
+  const interviewUrl = `${pageUrl}?tab=interviews&interview=${String(interview.number)}`;
   const linkList = [
     ...(posting.url === null ? [] : [{ label: t('ical.officialAd'), url: posting.url }]),
     { label: t('ical.postingPage'), url: pageUrl },
-    ...REVIEWED_ARTIFACT_LIST.map((artifact) => ({ label: labelOf(artifact), url: `${pageUrl}#${artifact}` })),
+    ...REVIEWED_ARTIFACT_LIST.map((artifact) => ({ label: labelOf(artifact), url: `${pageUrl}?tab=${artifact}` })),
     {
       label: labelOf('interview_brief'),
-      url: `${pageUrl}#${interviewSectionIdOf(interview.number, 'interview_brief')}`,
+      url: `${interviewUrl}&doc=interview_brief`,
     },
-    {
-      label: t('interviews.title', { number: interview.number }),
-      url: `${pageUrl}#${interviewIdOf(interview.number)}`,
-    },
+    { label: t('interviews.title', { number: interview.number }), url: interviewUrl },
   ];
   return linkList.map((link) => t('ical.link', link)).join('\n');
 }

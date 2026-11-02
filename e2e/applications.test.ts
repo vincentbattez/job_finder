@@ -63,7 +63,7 @@ test.describe('/applications', () => {
     await asCandidate('lea');
     await openPage(`/postings/${ARCHIVED_REFERENCE}`);
 
-    await expect(page.locator('.posting-detail__title .badge')).toHaveText(['Postulée', 'Archivée']);
+    await expect(page.locator('main > header [data-step]')).toHaveText('Postulée · archivée');
   });
 
   test('puts a Rejected Application back In progress from its row, staying on the page', async ({

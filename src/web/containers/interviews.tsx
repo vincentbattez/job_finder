@@ -1,8 +1,8 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { useFetcher } from 'react-router';
 
+import type { IArtifactVersions } from '#/web/components/artifact.ts';
 import { Interviews as InterviewsView } from '#/web/components/interviews.tsx';
-import type { IArtifactVersions } from '#/web/components/posting-detail.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
 import { ArtifactVersions } from './artifact-versions.tsx';

@@ -206,11 +206,11 @@ await actions.runQueuedJobs();
 await actions.deleteInstructions({ candidateId: 'lea', module: 'research' });
 
 await actions.changeStatus({ reference: '2026-2285305', status: 'applied' });
-// The Applications whose outcome e2e/edition.test.ts changes, one with JS and one without
+// Two more Applications In progress, without Interview, which no e2e test changes
 await actions.changeStatus({ reference: '2026-2448056', status: 'applied' });
 await actions.changeStatus({ reference: '2026-2448209', status: 'applied' });
-// The Applications whose Interviews e2e/interviews.test.ts adds, edits and deletes, one with JS and one
-// without
+// The Application whose Interviews e2e/interviews.test.ts adds, edits and deletes, and one more In
+// progress that no e2e test changes
 await actions.changeStatus({ reference: '2026-2448213', status: 'applied' });
 await actions.changeStatus({ reference: '2026-2448215', status: 'applied' });
 await actions.archive({ reference: '2026-2290529' });
@@ -271,3 +271,26 @@ RUN_BY_VERSION[`${oliverPosting.reference.slice(0, BETHUNE_REFERENCE.length)} re
 );
 await actions.runModule({ module: 'research', reference: oliverPosting.reference });
 await actions.runQueuedJobs();
+
+// Paul, without Watch, has one imported Posting per journey of e2e/posting-page.test.ts, which finds
+// each by the reference its Markdown gives (e2e/paul.ts): one Interviewed, its Interview past, one
+// Invited, its Interview to come
+await actions.createCandidate({ id: 'paul', name: 'Paul' });
+const paulReferenceByJourney = new Map<string, string>();
+for (const journey of ['applied', 'interviewed', 'invited', 'archive', 'notes']) {
+  const { posting } = await actions.importJobDescription({
+    candidateId: 'paul',
+    fileName: `court-clerk-${journey}.md`,
+    markdown: `# Court clerk – ${journey}\n\nApply by 30 November 2026.\n`,
+  });
+  paulReferenceByJourney.set(journey, posting.reference);
+}
+await actions.runQueuedJobs();
+for (const { journey, start } of [
+  { journey: 'interviewed', start: '2026-01-10T10:00' },
+  { journey: 'invited', start: '2030-02-01T10:00' },
+]) {
+  const reference = paulReferenceByJourney.get(journey);
+  await actions.changeStatus({ reference, status: 'applied' });
+  await actions.addInterview({ reference, start, place: 'Tribunal judiciaire', interviewers: 'M. Martin' });
+}

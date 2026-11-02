@@ -16,7 +16,7 @@ interface IOutcomeSelector {
 // The one action Container that changes the Status, for the Posting page and the Application rows
 // (ADR-0008). Its route relays to the action, which refuses what the Posting cannot move to; a
 // plain form, so it also posts without JS.
-export function OutcomeSelector({ reference, status, statusChoiceList, returnTo }: Readonly<IOutcomeSelector>) {
+function OutcomeSelector({ reference, status, statusChoiceList, returnTo }: Readonly<IOutcomeSelector>) {
   const fetcher = useFetcher<IRefusal>();
   return (
     <fetcher.Form method="post" action={`/postings/${reference}/status`} preventScrollReset>

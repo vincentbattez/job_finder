@@ -20,20 +20,14 @@ export const POSTING_EN = {
   referenceTerm: 'Reference',
   publishedAtTerm: 'Published',
   deadlineTerm: 'Deadline',
-  repostOfTerm: 'Repost of',
-  repostedAsTerm: 'Reposted as',
-  artifactsHeading: 'Artifacts',
   contactsHeading: 'Contacts',
   contactLabelByField: {
     applicationEmail: 'Application email',
     contact1: 'Contact 1',
     contact2: 'Contact 2',
   } satisfies Record<ContactField, string>,
-  missingContact: 'Not specified',
   recipientsHeading: 'Recommended recipients',
-  noRecipients: 'The Letter recommends them, once written.',
   jobDescriptionHeading: 'Job Description',
-  readJobDescription: 'Read the Job Description',
 
   // What the Chosen Letter recommends
   recipientTerm: 'Recipient',
@@ -60,6 +54,45 @@ export const POSTING_EN = {
   markNotSent: 'Not sent yet',
   confirmToApply: 'Confirm: To Apply',
   toApplyFreesLetter: 'The Posting goes back to To Apply and its Chosen Letter can change again.',
+
+  // The Posting page (spec #125): its header, its primary action by Step and its ⋯ menu, its tabs
+  page: {
+    deadline: 'Deadline {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    tabLabelByTab: {
+      posting: 'Posting',
+      research: 'Research',
+      letter: 'Letter',
+      interviews: 'Interviews',
+      notes: 'Notes',
+    },
+    tabState: ' ({{stateLabel}})',
+    markApplied: 'Mark Applied',
+    addInterview: 'Add an Interview',
+    seeInterview: 'See Interview {{number}}',
+    recordOutcome: 'Record the outcome',
+    backToApply: 'Put back To Apply (not sent)',
+    openOnSource: 'Open on its Source',
+    repostOf: 'Earlier Posting: {{reference}}',
+    repostedAs: 'Reposted as {{reference}}',
+    moreActions: 'More actions',
+    statusChanged: 'Posting moved to “{{statusLabel}}”',
+    archived: 'Posting archived',
+    unarchived: 'Posting unarchived',
+    undo: 'Undo',
+    factsHeading: 'Key facts',
+    startDateTerm: 'Start date',
+    appliedAtTerm: 'Applied on',
+    noContact: 'No contact in the Posting.',
+    repostHeading: 'Repost',
+    publicationCount_one: 'Published {{count}} time',
+    publicationCount_other: 'Published {{count}} times',
+    publicationCountSince_one:
+      'Published {{count}} time since {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    publicationCountSince_other:
+      'Published {{count}} times since {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    earlierApplication: 'You applied on {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}} · {{stepLabel}}',
+    earlierApplicationUndated: 'You applied · {{stepLabel}}',
+  },
 
   // The launch of a module or of the extraction
   // The context is the Artifact: French names some of them in the masculine, such as the Portrait
@@ -107,6 +140,8 @@ export const POSTING_EN = {
     placeholder:
       '# Call to the department\n\nWhat you learn about this Posting: a call, the feedback from an interview…',
     save: 'Save the Notes',
+    intro: 'Your notes on this Posting: a call, an impression, what not to forget.',
+    saved: 'Notes saved',
   },
 
   // The Interviews of an Application, one per round, by date
