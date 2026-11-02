@@ -23,10 +23,6 @@
     --tint: var(--p-wed);
   }
 
-  .module-instructions[data-artifact='visualization'] {
-    --tint: var(--p-fri);
-  }
-
   .module-instructions form {
     display: grid;
     gap: var(--space-sm);

@@ -42,7 +42,7 @@ describe('the Posting page', () => {
 
     const { artifactList } = await actions.readPosting({ reference: REFERENCE });
 
-    // The Interview Brief and the Visualization are attached to an Interview, which a To Apply Posting lacks
+    // The Interview Brief is attached to an Interview, which a To Apply Posting lacks
     expect(artifactList.map(({ artifact }) => artifact)).toEqual(['research', 'letter']);
     expect(artifactList[0]?.versionList).toMatchObject([
       {

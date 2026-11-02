@@ -20,8 +20,8 @@ if (!dataDirectory.startsWith(tmpdir())) {
   throw new Error(`JF_DATA_DIRECTORY doit être un dossier temporaire, pas « ${dataDirectory} ».`);
 }
 
-// What the fake Claude writes for each module, whatever the Posting: a Research, a Portrait, an
-// Interview Brief and its Visualization in their format, and a Letter whose recipients come from no
+// What the fake Claude writes for each module, whatever the Posting: a Research, a Portrait and an
+// Interview Brief in their format, and a Letter whose recipients come from no
 // field of the Posting, so they hold for any of them
 const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
   // The fields of the Grenoble Job Description of test/fixtures/import/, the one e2e/import.test.ts drops
@@ -62,15 +62,6 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
   },
   // The CV that e2e/profile.test.ts drops, test/fixtures/profile/cv.pdf
   conversion: { 'cv.md': '# CV converti\n\n## Formation\n\n- Master 2 droit public\n' },
-  visualization: {
-    'visualization.html': [
-      '<!DOCTYPE html>',
-      '<html lang="fr"><head><meta charset="utf-8"><title>Fiche d’entretien factice</title></head><body>',
-      '<h1>Fiche d’entretien factice</h1>',
-      '<table><tr><th>MPS</th><td>Missions, Partenaires, Service</td></tr></table>',
-      '</body></html>\n',
-    ].join('\n'),
-  },
 };
 
 // Long enough for the front to show the Artifact in progress before it is ready

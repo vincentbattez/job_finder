@@ -158,12 +158,8 @@ export function createArtifacts({
     const chosenVersion = versionList.find(({ isChosen }) => isChosen);
     const freeze = freezeOf(posting, artifact);
 
-    // Only the Chosen Version is corrected by hand, in place: never that of a module regenerated rather
-    // than corrected, nor a Letter frozen once sent
+    // Only the Chosen Version is corrected by hand, in place: never a Letter frozen once sent
     function editRefusalOf(version: Version | undefined): IRefusal | null {
-      if (aiModule.notEditableErrorCode !== undefined) {
-        return { code: aiModule.notEditableErrorCode, values: { reference } };
-      }
       if (freeze !== null) {
         return freeze;
       }
@@ -215,7 +211,7 @@ export function createArtifacts({
     let runRefusal: Promise<IRefusal | null> | undefined;
     const findRunRefusal = () => (runRefusal ??= findRunRefusalOf(target, artifact, locale));
 
-    // For the reads its AI module owns, such as the page of a Visualization
+    // One of its Versions by number, refused when it has none
     function versionOf(number: number): Version {
       const version = versionList.find((entry) => entry.number === number);
       if (version === undefined) {
@@ -298,8 +294,6 @@ export function createArtifacts({
       directoryOf(version: Version): string {
         return workspace.versionDirectoryOf(posting, version);
       },
-
-      versionOf,
 
       // Its entry on the Posting page, the refusal worded for the page: the front keeps its own words for
       // a missing Artifact, beside the button, without the command of the CLI

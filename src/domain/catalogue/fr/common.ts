@@ -18,7 +18,6 @@ export const COMMON_FR: typeof COMMON_EN = {
     letter: 'Lettre',
     portrait: 'Portrait',
     interview_brief: 'Fiche d’entretien',
-    visualization: 'Visualisation',
   },
   date: '{{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
   dateTime: '{{date, datetime(dateStyle: medium; timeStyle: short; timeZone: Europe/Paris)}}',

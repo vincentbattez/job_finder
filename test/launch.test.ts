@@ -39,13 +39,10 @@ const RUN_BY_ARTIFACT: Record<Artifact, { fileByName: Record<string, string> }> 
       ].join('\n\n'),
     },
   },
-  visualization: {
-    fileByName: { 'visualization.html': '<!DOCTYPE html><html lang="fr"><body><h1>PAS</h1></body></html>\n' },
-  },
 };
 
 // The Artifacts attached to an Interview, which run once the Posting is Applied and has one
-const INTERVIEW_ARTIFACT_LIST: readonly Artifact[] = ['portrait', 'interview_brief', 'visualization'];
+const INTERVIEW_ARTIFACT_LIST: readonly Artifact[] = ['portrait', 'interview_brief'];
 
 // Launches a module where its Artifact is attached: on the Posting, or on its first Interview
 async function runModule(actions: Actions, module: Artifact) {
@@ -217,7 +214,7 @@ describe('the modules the Posting page offers', () => {
     // An Interview Brief prepares an Interview, which only an Application has
     expect(Object.keys(toApply)).toEqual(['research', 'letter']);
     // In the words of the front, beside the button of the missing Artifact: no command to type
-    expect(Object.keys(before)).toEqual(['research', 'letter', 'portrait', 'interview_brief', 'visualization']);
+    expect(Object.keys(before)).toEqual(['research', 'letter', 'portrait', 'interview_brief']);
     expect(before).toMatchObject({
       research: { refusal: null },
       letter: { refusal: /a été Postulée : sa Lettre retenue est figée/ },
@@ -226,10 +223,6 @@ describe('the modules the Posting page offers', () => {
       interview_brief: {
         refusal:
           "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Fiche d’entretien : lancez d'abord la Recherche.",
-      },
-      visualization: {
-        refusal:
-          "L'Offre 2026-2445600 n'a pas de Fiche d’entretien retenue, sur laquelle s'appuie la Visualisation : lancez d'abord la Fiche d’entretien.",
       },
     });
     expect(await readModuleByArtifact(actions)).toMatchObject({

@@ -23,34 +23,11 @@ interface IArtifactVersionsSlots {
   renderDocument: (document: VersionDocument) => ReactNode;
 }
 
-// A Visualization shows in a frame that runs none of its scripts: the page comes from an AI session
 function VersionFiles({
-  reference,
-  interviewNumber,
-  artifact,
-  version,
   documentList,
   renderDocument,
-}: Readonly<
-  Omit<VersionDocuments, 'isChoosable'> &
-    Pick<IArtifactVersionsSlots, 'renderDocument'> & {
-      reference: string;
-      interviewNumber: number | null;
-      artifact: IArtifactVersions['artifact'];
-    }
->) {
+}: Readonly<Pick<VersionDocuments, 'documentList'> & Pick<IArtifactVersionsSlots, 'renderDocument'>>) {
   const { t } = useTranslation('posting');
-  if (artifact === 'visualization' && interviewNumber !== null && version.state === 'ready') {
-    return (
-      <div className="artifact-versions__visualization">
-        <iframe
-          src={`/postings/${reference}/interviews/${String(interviewNumber)}/visualization/${String(version.number)}`}
-          sandbox=""
-          title={t('visualizationFrameTitle', { versionNumber: version.number })}
-        />
-      </div>
-    );
-  }
   if (documentList.length === 0) {
     return <p className="artifact-versions__missing">{t('noFile')}</p>;
   }
@@ -124,14 +101,7 @@ export function ArtifactVersions({
                   <summary>{t('versionInstructions')}</summary>
                   <Markdown markdown={version.instructions} />
                 </details>
-                <VersionFiles
-                  reference={reference}
-                  interviewNumber={interviewNumber}
-                  artifact={artifact}
-                  version={version}
-                  documentList={documentList}
-                  renderDocument={renderDocument}
-                />
+                <VersionFiles documentList={documentList} renderDocument={renderDocument} />
               </details>
             </li>
           ))}

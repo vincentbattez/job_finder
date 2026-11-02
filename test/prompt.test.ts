@@ -28,18 +28,6 @@ const LETTER_RUN = {
     }),
   },
 };
-const INTERVIEW_BRIEF_RUN = {
-  fileByName: {
-    'interview-brief.md': [
-      "# Fiche d'entretien : tribunal pour enfants de Béthune",
-      "## À réviser\n\n- L'assistance éducative.",
-      '## Moyens mnémotechniques\n\n- « PAS » : Protéger, Accompagner, Sanctionner.',
-      '## Présentez-vous\n\nTitulaire d’un [à compléter : diplôme], je souhaite rejoindre le tribunal pour enfants.',
-      '## Questions probables\n\n- Pourquoi le tribunal pour enfants de Béthune ?\n',
-    ].join('\n\n'),
-  },
-};
-
 // The Prompt the Posting page shows beside an Artifact of the Posting, or of its first Interview
 async function readPrompt(actions: Actions, artifact: Artifact) {
   const { artifactList, interviewList } = await actions.readPosting({ reference: REFERENCE });
@@ -47,12 +35,12 @@ async function readPrompt(actions: Actions, artifact: Artifact) {
     ?.module.prompt;
 }
 
-async function runModule(actions: Actions, module: Artifact, reference = REFERENCE, interview?: number) {
-  await actions.runModule({ module, reference, interview });
+async function runModule(actions: Actions, module: Artifact, reference = REFERENCE) {
+  await actions.runModule({ module, reference });
   await actions.runQueuedJobs();
 }
 
-// The Posting Applied, with a first Interview, which the Interview Brief and the Visualization prepare
+// The Posting Applied, with a first Interview, which the Interview Brief prepares
 async function addInterview(actions: Actions) {
   await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
   await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: 'Béthune', interviewers: '' });
@@ -133,24 +121,18 @@ describe('the Prompt beside an Artifact', () => {
     });
   });
 
-  it('lists the Chosen Letter for the Interview Brief, and the Interview Brief for the Visualization', async () => {
-    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, LETTER_RUN, INTERVIEW_BRIEF_RUN));
+  it('lists the Chosen Letter for the Interview Brief', async () => {
+    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, LETTER_RUN));
     await runModule(actions, 'research');
     await runModule(actions, 'letter');
     await addInterview(actions);
-    const briefPrompt = await readPrompt(actions, 'interview_brief');
 
-    await runModule(actions, 'interview_brief', REFERENCE, 1);
+    const briefPrompt = await readPrompt(actions, 'interview_brief');
 
     expect(briefPrompt?.readVersionList).toEqual([
       { reference: REFERENCE, artifact: 'research', interviewNumber: null, number: 1 },
       { reference: REFERENCE, artifact: 'letter', interviewNumber: null, number: 1 },
     ]);
-    const visualizationPrompt = await readPrompt(actions, 'visualization');
-    expect(visualizationPrompt?.readVersionList).toEqual([
-      { reference: REFERENCE, artifact: 'interview_brief', interviewNumber: 1, number: 1 },
-    ]);
-    expect(visualizationPrompt?.fixedPart).toContain('interviews/1/visualization/v<next>');
   });
 
   it('is absent while the module is refused: a required Artifact missing, or the Letter frozen once Applied', async () => {

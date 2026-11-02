@@ -3,3 +3,8 @@
 export function interviewSectionIdOf(interviewNumber: number, artifact: string): string {
   return `interview-${String(interviewNumber)}-${artifact}`;
 }
+
+// The anchor of an Interview on the Posting page, which its iCal file links to
+export function interviewIdOf(interviewNumber: number): string {
+  return `interview-${String(interviewNumber)}`;
+}

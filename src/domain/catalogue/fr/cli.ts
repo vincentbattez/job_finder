@@ -60,7 +60,7 @@ export const CLI_FR: typeof CLI_EN = {
   extracted: '{{postingLine}}\nSa Recherche est en file : « jf versions {{reference}} research » la suit.\n',
 
   runDescription:
-    "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run research|letter|portrait|brief|visualization <offre> [<entretien>] [--wait]",
+    "Met en file une nouvelle Version d'un Artefact, que le worker produit avec Claude Code ; --wait attend la fin : jf run research|letter|portrait|brief <offre> [<entretien>] [--wait]",
   runUsage:
     "Usage : jf run <module> <offre> [<entretien>] [--wait], par exemple jf run research 2026-2445600, ou jf run brief 2026-2445600 1 pour la Fiche d'entretien de l'Entretien 1.",
   queued: "{{module}} de l'Offre {{reference}} en file (job {{jobId}}).\n",

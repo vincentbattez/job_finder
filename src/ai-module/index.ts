@@ -69,8 +69,6 @@ export interface IAiModule {
   isReadingSentVersions?: boolean;
   // Whether its Chosen Version is what the Candidate sends: frozen once the Posting is Applied
   isFrozenOnceApplied?: boolean;
-  // The code that refuses any correction by hand, for an Artifact regenerated rather than corrected
-  notEditableErrorCode?: ErrorCode;
   // The files of a Version kept as the AI wrote them, each with the code that refuses to modify it; jf
   // edit keeps them out of reach of its session too
   readOnlyFileList?: readonly { name: string; errorCode: ErrorCode }[];

@@ -115,16 +115,6 @@ const SAMPLE_POSTING_DETAIL: IPostingDetail = {
       isEditable: false,
       versionList: [sampleVersion(1, 'failed')],
     },
-    {
-      artifact: 'visualization',
-      state: 'absent',
-      failure: null,
-      notificationFailure: null,
-      workerFailure: null,
-      module: { refusal: 'Il faut d’abord une Fiche d’entretien retenue.', prompt: null },
-      isEditable: false,
-      versionList: [],
-    },
   ],
   recipients: {
     to: { email: 'recrutement@example.org', source: 'applicationEmail' },

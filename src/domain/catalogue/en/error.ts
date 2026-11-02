@@ -93,8 +93,6 @@ export const ERROR_EN = {
   notImported: 'Posting {{reference}} was not imported: its fields come from its Source, without extraction.',
   unknownJob: 'Unknown job: {{jobId}}. Its number is the one “jf run” or “jf import” printed.',
   interruptedJob: 'Interrupted: the worker stopped during this job. Running the module again creates a new Version.',
-  visualizationNotEditable:
-    'The Visualization is not edited by hand: it follows the Chosen Interview Brief. Correct that one, then run the Visualization of Posting {{reference}} again.',
   noChosenVersionToEdit:
     'Posting {{reference}} has no Chosen Version of {{artifact}} to edit: “{{command}}” produces one.',
   draftNotEditable:
@@ -106,8 +104,6 @@ export const ERROR_EN = {
   versionRunning:
     'Version {{artifact}} v{{number}} of Posting {{reference}} is in progress: only a ready Version can be chosen.',
   notAVersionFile: '“{{fileName}}” is not a file of the Chosen Version of {{artifact}} of Posting {{reference}}.',
-  visualizationWithoutPage:
-    'Visualization v{{number}} of Posting {{reference}} has no page: run the Visualization again.',
   noChosenLetter: 'Posting {{reference}} has no Chosen Letter. Produce it: jf run letter {{reference}}.',
 
   // The Profile and its Uploads
@@ -150,8 +146,6 @@ export const ERROR_EN = {
   extractionInvented: 'is not found as is in the Job Description: the session invented it',
   noLevelOneHeading: 'it does not start with a level 1 heading (“#”)',
   noSourcesSection: 'it has no “## Sources” section with at least one link',
-  notACompletePage: 'it is not a complete HTML page, from “<!DOCTYPE html>” to “</html>”',
-  hasScript: 'it holds a script, which the front does not run',
   recipientsFormat: 'it does not follow the requested format ({{detail}})',
   inventedAddress: 'the address {{email}} is not in the field {{field}} of the Posting',
 

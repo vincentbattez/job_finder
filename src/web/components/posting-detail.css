@@ -166,10 +166,6 @@
     --tint: var(--p-wed);
   }
 
-  .posting-detail__compartment[data-artifact='visualization'] {
-    --tint: var(--p-fri);
-  }
-
   .posting-detail__compartment a {
     white-space: nowrap;
   }

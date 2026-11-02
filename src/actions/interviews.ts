@@ -9,10 +9,9 @@ import {
   type Interview,
   type Locale,
   type Posting,
-  type Version,
 } from '#/domain/index.ts';
 import { DEFAULT_DURATION_MINUTES } from '#/domain/interview-duration.ts';
-import { interviewSectionIdOf } from '#/domain/interview-section.ts';
+import { interviewIdOf, interviewSectionIdOf } from '#/domain/interview-section.ts';
 import { dateOfParisDateTime } from '#/domain/paris-time.ts';
 import { formatCalendar } from '#/ical/index.ts';
 import { findInterviewEnd, hasBeenApplied } from '#/status/index.ts';
@@ -52,16 +51,15 @@ const ICAL_INPUT_SCHEMA = INTERVIEW_INPUT_SCHEMA.extend({ origin: z.url().transf
 const REVIEWED_ARTIFACT_LIST = ['research', 'letter'] as const;
 
 // What the Candidate reviews from their phone before the Interview: the official ad, if the Posting has
-// one, then the Posting page and its sections, and the page of the Chosen Visualization of the Interview
-// once there is one, all on the origin they opened Job Finder through
+// one, then the Posting page and its sections, and the Interview on it, all on the origin they opened
+// Job Finder through
 function describeLinks(
-  { posting, interview, visualization }: { posting: Posting; interview: Interview; visualization: Version | undefined },
+  { posting, interview }: { posting: Posting; interview: Interview },
   pageUrl: string,
   locale: Locale,
 ): string {
   const t = tFor(locale, 'posting');
   const labelOf = (artifact: Artifact) => t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' });
-  const interviewUrl = `${pageUrl}/interviews/${String(interview.number)}`;
   const linkList = [
     ...(posting.url === null ? [] : [{ label: t('ical.officialAd'), url: posting.url }]),
     { label: t('ical.postingPage'), url: pageUrl },
@@ -70,9 +68,10 @@ function describeLinks(
       label: labelOf('interview_brief'),
       url: `${pageUrl}#${interviewSectionIdOf(interview.number, 'interview_brief')}`,
     },
-    ...(visualization === undefined
-      ? []
-      : [{ label: labelOf('visualization'), url: `${interviewUrl}/visualization/${String(visualization.number)}` }]),
+    {
+      label: t('interviews.title', { number: interview.number }),
+      url: `${pageUrl}#${interviewIdOf(interview.number)}`,
+    },
   ];
   return linkList.map((link) => t('ical.link', link)).join('\n');
 }
@@ -86,7 +85,7 @@ function summarize(posting: Posting, locale: Locale): string {
     : t('ical.summary', { title: posting.title, employer });
 }
 
-export function createInterviewActions({ workspace, artifacts, findPosting, findLocale }: ActionContext) {
+export function createInterviewActions({ workspace, findPosting, findLocale }: ActionContext) {
   async function findInterview(rawInput: unknown): Promise<{ posting: Posting; interview: Interview }> {
     const { reference, number } = INTERVIEW_INPUT_SCHEMA.parse(rawInput);
     const posting = await findPosting(reference);
@@ -134,7 +133,6 @@ export function createInterviewActions({ workspace, artifacts, findPosting, find
       const { origin } = ICAL_INPUT_SCHEMA.parse(rawInput);
       const { posting, interview } = await findInterview(rawInput);
       const locale = await findLocale(posting.candidateId);
-      const visualization = await artifacts.find({ posting, artifact: 'visualization', interview: interview.number });
       const pageUrl = `${origin}/postings/${encodeURIComponent(posting.reference)}`;
       const text = formatCalendar({
         uid: `interview-${String(interview.id)}@job-finder`,
@@ -143,7 +141,7 @@ export function createInterviewActions({ workspace, artifacts, findPosting, find
         endAt: findInterviewEnd(interview),
         summary: summarize(posting, locale),
         location: interview.place,
-        description: describeLinks({ posting, interview, visualization: visualization.chosenVersion }, pageUrl, locale),
+        description: describeLinks({ posting, interview }, pageUrl, locale),
         url: pageUrl,
         stampedAt: new Date(),
       });
