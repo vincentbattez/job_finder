@@ -2,8 +2,9 @@
 // 1. what Claude reads (two columns, Offre | Profil, Annexes as chips), 2. how it writes (the
 // Instructions, the Fixed Part folded), 3. a recap in one plain-French paragraph and [Lancer]. Bet: the
 // Candidate decides one thing at a time and ends on a sentence that says exactly what will happen.
-import { CheckIcon, EyeIcon, PlusIcon, SparklesIcon } from 'lucide-react';
+import { CheckIcon, ClipboardCopyIcon, EyeIcon, PlusIcon, SparklesIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
 
 import { Button } from '#/web/prototype/components/ui/button.tsx';
 import {
@@ -359,11 +360,7 @@ function InputCard({
 function RecapStep({ panel }: { panel: GenerationPanelState }) {
   const { explanation, instructions } = panel;
   const readLabels = summarizeInputs(panel.checkedInputs);
-  const instructionsLabel = instructions.isDirty
-    ? 'tes Consignes modifiées (elles seront enregistrées pour la suite)'
-    : instructions.isCandidate
-      ? 'tes Consignes'
-      : 'les Consignes par défaut';
+  const instructionsLabel = instructions.isCandidate ? 'tes Consignes' : 'les Consignes par défaut';
   return (
     <div className="space-y-5">
       <p className="text-[15px] leading-7">
@@ -372,6 +369,7 @@ function RecapStep({ panel }: { panel: GenerationPanelState }) {
         suit {instructionsLabel} et la Partie fixe, et écrit{' '}
         <strong className="font-medium">{explanation.writes}</strong>.
       </p>
+      <ReadBreakdown panel={panel} />
       <dl className="grid gap-3 rounded-lg bg-muted/50 p-4 text-sm sm:grid-cols-3">
         <RecapItem term="Après">{explanation.keeps}</RecapItem>
         <RecapItem term="Durée">{explanation.duration} environ ; tu peux fermer, la génération continue.</RecapItem>
@@ -381,7 +379,77 @@ function RecapStep({ panel }: { panel: GenerationPanelState }) {
             : 'Non : seulement les documents ci-dessus.'}
         </RecapItem>
       </dl>
+      <CopyPrompt panel={panel} />
       <Blockers panel={panel} />
+    </div>
+  );
+}
+
+const PERCENT_FORMAT = new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 0 });
+
+// Each checked Input with its weight in what Claude reads, largest first, then the total
+function ReadBreakdown({ panel }: { panel: GenerationPanelState }) {
+  const total = panel.checkedWords;
+  const sortedList = panel.checkedInputs.toSorted((first, second) => second.wordCount - first.wordCount);
+  return (
+    <section className="space-y-2">
+      <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        Ce que Claude lit, par poids
+      </h3>
+      <ul className="divide-y rounded-lg border">
+        {sortedList.map((input) => {
+          const share = total === 0 ? 0 : input.wordCount / total;
+          const Icon = KIND_ICON[input.kind];
+          return (
+            <li key={input.key} className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1.5 px-3 py-2">
+              <span className="flex min-w-0 items-center gap-2 text-sm">
+                <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+                <span className="truncate">{input.label}</span>
+              </span>
+              <span className="text-right text-xs whitespace-nowrap text-muted-foreground tabular-nums">
+                {formatWords(input.wordCount)} ·{' '}
+                <span className="inline-block w-10 font-medium whitespace-nowrap text-foreground">
+                  {PERCENT_FORMAT.format(share)}
+                </span>
+              </span>
+              <div className="col-span-2 h-1 overflow-hidden rounded-full bg-muted" aria-hidden>
+                <div className="h-full rounded-full bg-primary/70" style={{ width: `${String(share * 100)}%` }} />
+              </div>
+            </li>
+          );
+        })}
+        <li className="flex items-center justify-between gap-4 bg-muted/40 px-3 py-2 text-sm font-medium">
+          <span>Total · {formatDocuments(panel.checkedInputs.length)}</span>
+          <span className="text-xs whitespace-nowrap tabular-nums">
+            {formatWords(total)} · <span className="inline-block w-10 whitespace-nowrap">100 %</span>
+          </span>
+        </li>
+      </ul>
+    </section>
+  );
+}
+
+// « Copier le Prompt »: the whole Markdown the AI receives, without the highlight
+function CopyPrompt({ panel }: { panel: GenerationPanelState }) {
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(panel.promptMarkdown);
+      toast.success('Prompt copié', {
+        description: `Partie fixe, ${formatDocuments(panel.checkedInputs.length)} et Consignes, en Markdown.`,
+      });
+    } catch {
+      toast.error('Copie impossible', { description: 'Le navigateur a refusé l’accès au presse-papiers.' });
+    }
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed px-3 py-2.5">
+      <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+        Tout ce que Claude recevra, mot pour mot : la Partie fixe, les documents cochés puis les Consignes.
+      </p>
+      <Button variant="outline" size="sm" onClick={() => void copy()}>
+        <ClipboardCopyIcon data-icon="inline-start" />
+        Copier le Prompt
+      </Button>
     </div>
   );
 }

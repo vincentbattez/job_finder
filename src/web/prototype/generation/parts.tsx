@@ -171,17 +171,18 @@ export function InstructionsEditor({
         onChange={(event) => instructions.edit(event.target.value)}
         rows={rows}
         className="field-sizing-fixed resize-y font-sans text-[13px] leading-relaxed md:text-[13px]"
-        aria-label={`Consignes de la ${label}`}
+        aria-label={`Consignes ${panel.explanation.ofLabel}`}
       />
       {instructions.isDirty ? (
         <div className="space-y-2 rounded-md border border-amber-300/60 bg-amber-50 p-3 text-xs dark:border-amber-500/30 dark:bg-amber-500/10">
           <p>
-            Enregistrées, elles deviennent <strong>tes Consignes</strong> pour chaque {label} à venir, sur toutes tes
-            Offres. Lancer sans enregistrer les enregistre aussi.
+            Enregistrées, elles deviennent <strong>tes Consignes</strong> : elles s’appliqueront à chaque génération{' '}
+            {panel.explanation.ofLabel} qui suivra, sur toutes tes Offres, pas seulement à celle-ci. Enregistre ou
+            annule avant de lancer.
           </p>
           <div className="flex gap-2">
             <Button size="xs" disabled={instructions.isSaving} onClick={() => void instructions.save()}>
-              Enregistrer comme mes Consignes
+              Enregistrer
             </Button>
             <Button size="xs" variant="ghost" onClick={instructions.discard}>
               Annuler mes modifications
@@ -192,7 +193,7 @@ export function InstructionsEditor({
         <p className="text-xs text-muted-foreground">
           {instructions.isCandidate
             ? `Elles s’appliquent à chaque ${label}. `
-            : `Modifie-les ici : elles deviendront les tiennes pour chaque ${label}. `}
+            : `Modifie-les ici puis enregistre : elles deviendront les tiennes pour chaque ${label}. `}
           {instructions.isCandidate ? (
             <button
               type="button"
@@ -470,8 +471,16 @@ export function AddInputDialog({
             <ScopeOption
               isSelected={scope === 'posting'}
               onSelect={() => setScope('posting')}
-              title="Pour cette Offre"
-              description="Un document de l’Offre, lu par ses prochaines générations."
+              title={
+                panel.artifact.interviewNumber === null
+                  ? 'Pour cette Offre'
+                  : `Pour l’Entretien ${String(panel.artifact.interviewNumber)}`
+              }
+              description={
+                panel.artifact.interviewNumber === null
+                  ? 'Un document de l’Offre, lu par ses prochaines générations.'
+                  : 'Un document de cet Entretien, lu par ses prochains Portrait et Fiche d’entretien.'
+              }
             />
             <ScopeOption
               isSelected={scope === 'profile'}

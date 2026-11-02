@@ -14,7 +14,15 @@ import {
   type IPosting,
   type IVersion,
 } from '../model.ts';
-import { useActions, useInputs, useInstructions, usePostingDetail, useRuns, type IRunView } from '../store.ts';
+import {
+  useActions,
+  useInputs,
+  useInstructions,
+  usePostingDetail,
+  usePostings,
+  useRuns,
+  type IRunView,
+} from '../store.ts';
 
 export type InputGroup = 'posting' | 'profile' | 'annex';
 
@@ -129,7 +137,7 @@ export function itemsOf(inputList: IPanelInput[]): InputItem[] {
       kind: 'bundle',
       key: 'sent_letter',
       title: 'Lettres de motivation déjà envoyées',
-      hint: 'Les Lettres de motivation retenues de tes autres Candidatures, avec leur premier jet : Claude compare les deux pour reprendre ton style.',
+      hint: 'Les Lettres de motivation retenues de tes autres Candidatures, avec leur premier jet : Claude compare les deux pour reprendre ton style. Les 5 plus récentes sont cochées ; ajoute les autres si utile.',
       inputs: sentList,
     });
   }
@@ -183,21 +191,26 @@ export function formatWords(count: number): string {
   return `${NUMBER_FORMAT.format(count)} mot${count > 1 ? 's' : ''}`;
 }
 
-// Checked by default: required and default ones; on a regeneration, as the previous Version read them.
-// The snapshot only records the Artifacts a Version read: then only those follow the previous Version.
-function initialCheckOf(input: IInputSpec, previous: IVersion | undefined): boolean {
+// How many Letters already sent a run reads by default, the most recent; the others can be added
+export const RECENT_SENT_LETTER_COUNT = 5;
+
+// Checked by default: required and default ones, but only the most recent Letters already sent; on a
+// regeneration, as the previous Version read them. The snapshot only records the Artifacts a Version
+// read: then only those follow the previous Version.
+function initialCheckOf(input: IInputSpec, previous: IVersion | undefined, recentSentKeys: Set<string>): boolean {
   if (input.mode === 'required') {
     return true;
   }
+  const isDefault = input.kind === 'sent_letter' ? recentSentKeys.has(input.key) : input.mode === 'default';
   if (previous === undefined || previous.inputs.length === 0) {
-    return input.mode === 'default';
+    return isDefault;
   }
   const previousKeys = new Set(previous.inputs.map(({ key }) => key));
   const isFullRecord = previous.inputs.some(({ key }) => !key.startsWith('artifact:'));
   if (isFullRecord || input.kind === 'artifact') {
     return previousKeys.has(input.key);
   }
-  return input.mode === 'default';
+  return isDefault;
 }
 
 export interface IGenerationPanelInit {
@@ -216,6 +229,7 @@ export function useGenerationPanel({ artifact: artifactProp, posting, interview 
   const instructions = useInstructions(type);
   const actions = useActions();
   const runs = useRuns(reference);
+  const postings = usePostings();
 
   // The Version the panel was opened on: the run's own Draft must not prefill it again
   const [previous] = useState(() => latestVersionOf(artifact));
@@ -226,28 +240,47 @@ export function useGenerationPanel({ artifact: artifactProp, posting, interview 
   const [isLaunching, setIsLaunching] = useState(false);
   const [isSavingInstructions, setIsSavingInstructions] = useState(false);
 
+  // The Letters already sent, most recently applied first: the key of a sent Letter is sent:<reference>
+  const recentSentKeys = useMemo(() => {
+    const appliedAtByReference = new Map(postings.map(({ reference: other, appliedAt }) => [other, appliedAt ?? '']));
+    const appliedAtOf = (key: string) => appliedAtByReference.get(key.replace(/^sent:/u, '')) ?? '';
+    return new Set(
+      specList
+        .filter(({ kind }) => kind === 'sent_letter')
+        .map(({ key }) => key)
+        .toSorted((first, second) => appliedAtOf(second).localeCompare(appliedAtOf(first)))
+        .slice(0, RECENT_SENT_LETTER_COUNT),
+    );
+  }, [specList, postings]);
+
   const inputs = useMemo(
     (): IPanelInput[] =>
       specList.map((spec) => ({
         ...spec,
         group: groupOf(spec),
-        isChecked: spec.mode === 'required' || (checkOverride[spec.key] ?? initialCheckOf(spec, previous)),
+        isChecked:
+          spec.mode === 'required' || (checkOverride[spec.key] ?? initialCheckOf(spec, previous, recentSentKeys)),
         wordCount: countWords(spec.content),
       })),
-    [specList, checkOverride, previous],
+    [specList, checkOverride, previous, recentSentKeys],
   );
   const checkedInputs = inputs.filter(({ isChecked }) => isChecked);
   const checkedWords = checkedInputs.reduce((total, { wordCount }) => total + wordCount, 0);
 
+  const instructionsText = instructionsDraft ?? instructions.text;
+  const isInstructionsDirty = instructionsDraft !== null && instructionsDraft !== instructions.text;
+
   const blockers = [
     ...(artifact.refusal === null ? [] : [artifact.refusal]),
+    // Saving the Instructions is its own act: they then apply to every later generation
+    ...(isInstructionsDirty
+      ? ['Tes modifications des Consignes ne sont pas enregistrées : enregistre-les ou annule-les avant de lancer.']
+      : []),
     ...inputs
       .filter(({ mode, isAvailable }) => mode === 'required' && !isAvailable)
       .map(({ label }) => `${label} n’a pas encore de Version validée : valide-la d’abord.`),
   ];
 
-  const instructionsText = instructionsDraft ?? instructions.text;
-  const isInstructionsDirty = instructionsDraft !== null && instructionsDraft !== instructions.text;
   const run: IRunView | undefined = runs.find(({ id }) => id === runId);
   const explanation = explanationOf(type, artifact, interview, isRegeneration);
 
@@ -281,7 +314,8 @@ export function useGenerationPanel({ artifact: artifactProp, posting, interview 
   async function addInput({ title, text, scope }: { title: string; text: string; scope: 'posting' | 'profile' }) {
     const key = await actions.addCustomArtifact({
       reference,
-      interviewNumber: null,
+      // From a Portrait or an Interview Brief panel, it belongs to that Interview
+      interviewNumber: scope === 'posting' ? artifact.interviewNumber : null,
       title,
       text,
       scope,
@@ -292,23 +326,30 @@ export function useGenerationPanel({ artifact: artifactProp, posting, interview 
 
   async function launch() {
     setIsLaunching(true);
-    const text = instructionsText;
-    if (isInstructionsDirty) {
-      await actions.saveInstructions(type, text);
-      setInstructionsDraft(null);
-    }
     const id = await actions.startGeneration({
       reference,
       artifactKey: artifact.key,
       inputs: checkedInputs,
-      instructions: text,
+      instructions: instructions.text,
     });
     setRunId(id === '' ? null : id);
     setIsLaunching(false);
   }
 
+  // Everything the AI receives, in Markdown: the Fixed Part, the checked Inputs, then the Instructions
+  const promptMarkdown = [
+    artifact.fixedPart ?? '',
+    '---',
+    '# Inputs',
+    ...checkedInputs.map(({ label, content }) => `## ${label}\n\n${content.trim()}`),
+    '---',
+    '# Consignes',
+    instructionsText.trim(),
+  ].join('\n\n');
+
   return {
     artifact,
+    promptMarkdown,
     posting,
     interview,
     type,
