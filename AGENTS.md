@@ -10,6 +10,10 @@ Everything is in English (code, docs, commits, issues), with the vocabulary of `
 
 When I ask for a code change outside `/implement-spec`, keep that workflow's discipline, scaled to the change: load the `domain-modeling` and `tdd` skills to start; when finished, run `code-review` with my request as the spec, fix what it raises, then `commit`.
 
+### UI work
+
+UI work loads the `impeccable` skill and follows `PRODUCT.md` (who the front serves) and `DESIGN.md` (the V1 visual system).
+
 ## Agent skills
 
 ### Issue tracker
