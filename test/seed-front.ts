@@ -440,6 +440,22 @@ await actions.importJobDescription({
 });
 await actions.runQueuedJobs();
 
+// Ruth, without Watch, revises an Interview in e2e/revision.test.ts on her one imported Posting, whose
+// Research is validated so that its Interview Brief may run; the test gives it its Interview and Briefs
+await actions.createCandidate({ id: 'ruth', name: 'Ruth' });
+const { posting: ruthPosting } = await actions.importJobDescription({
+  candidateId: 'ruth',
+  fileName: 'greffier-colmar.md',
+  markdown: '# Greffier – Colmar\n\nAccueillir le public du tribunal judiciaire de Colmar.\n',
+});
+await actions.runQueuedJobs();
+RUN_BY_VERSION[`${ruthPosting.reference.slice(0, BETHUNE_REFERENCE.length)} research v1`] = researchRun(
+  'Recherche : le tribunal judiciaire de Colmar',
+);
+await actions.runModule({ module: 'research', reference: ruthPosting.reference });
+await actions.runQueuedJobs();
+await actions.validateVersion({ reference: ruthPosting.reference, artifact: 'research', number: 1 });
+
 // Cleo, without Watch, adds documents in e2e/documents.test.ts: to one imported Posting from its Documents
 // section, to the other from the generation panel of its Research
 await actions.createCandidate({ id: 'cleo', name: 'Cleo' });

@@ -58,6 +58,9 @@ const INPUT_BY_ACTION: Record<string, object> = {
   // The Posting is Applied by changeStatus first, which runs before: an Interview needs an Application
   addInterview: { start: '2026-11-19T14:00', place: 'Béthune', interviewers: 'Mme Durand' },
   readIcalFile: { origin: 'https://10.8.0.1:5180' },
+  // Before deleteInterview: on the Interview the check's setup adds
+  writeRevisionNote: { title: 'Questions probables', note: 'Parler du stage.' },
+  markMastered: { title: 'Questions probables', isMastered: true },
   addCustomArtifact: { title: 'Appel', text: 'Rappeler lundi.' },
   addAnnex: { title: 'Relevé de notes', markdown: 'Licence.' },
   // The Posting of the check was kept before it was Applied: another one, still New

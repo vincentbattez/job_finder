@@ -96,3 +96,4 @@ Théo
 Yanis
 fontsource
 shadcn
+stringbool
