@@ -46,7 +46,7 @@ import {
   type Watch,
 } from '#/domain/index.ts';
 import { findAppliedAt, findStep, isExpired } from '#/status/index.ts';
-import { PrismaClient } from '#/workspace/generated/client.ts';
+import { Prisma, PrismaClient } from '#/workspace/generated/client.ts';
 
 import type { Config } from './config.ts';
 
@@ -60,13 +60,19 @@ const VERSION_INCLUDE = {
   interview: VERSION_INTERVIEW_SELECT,
   inputList: {
     select: {
-      artifact: true,
-      number: true,
-      posting: { select: { reference: true } },
-      interview: VERSION_INTERVIEW_SELECT,
+      key: true,
+      readVersion: {
+        select: {
+          artifact: true,
+          number: true,
+          posting: { select: { reference: true } },
+          interview: VERSION_INTERVIEW_SELECT,
+        },
+      },
     },
+    orderBy: { id: 'asc' },
   },
-};
+} as const;
 const LINKED_POSTING_SELECT = { select: { reference: true } };
 const POSTING_INCLUDE = {
   repostOf: LINKED_POSTING_SELECT,
@@ -430,11 +436,21 @@ export function openDatabase(databasePath: string) {
     async createJob(
       posting: Posting,
       module: Module,
-      { isAutomatic = false, interview = null }: { isAutomatic?: boolean; interview?: Interview | null } = {},
+      {
+        isAutomatic = false,
+        interview = null,
+        inputKeyList = null,
+      }: { isAutomatic?: boolean; interview?: Interview | null; inputKeyList?: string[] | null } = {},
     ): Promise<Job> {
       return JOB_READ_SCHEMA.parse(
         await prisma.job.create({
-          data: { module, postingId: posting.id, interviewId: interview?.id ?? null, isAutomatic },
+          data: {
+            module,
+            postingId: posting.id,
+            interviewId: interview?.id ?? null,
+            isAutomatic,
+            inputKeyList: inputKeyList ?? Prisma.DbNull,
+          },
           include: JOB_INCLUDE,
         }),
       );
@@ -452,7 +468,7 @@ export function openDatabase(databasePath: string) {
     },
 
     // The job runs and its Version is created, numbered after the last Version of its Artifact on its
-    // Interview, or on its Posting without one, with the Versions it reads
+    // Interview, or on its Posting without one, with the Inputs it reads
     async startJob(
       { id, module, posting, interview }: Job & { module: Artifact },
       {
@@ -462,7 +478,8 @@ export function openDatabase(databasePath: string) {
       }: {
         instructions: string;
         hasCandidateInstructions: boolean;
-        inputList: { posting: Posting; version: Version }[];
+        // Each Input it reads, with the Version read for an Artifact Input
+        inputList: { key: string; version: Version | null }[];
       },
     ): Promise<Version> {
       const interviewId = interview?.id ?? null;
@@ -484,7 +501,9 @@ export function openDatabase(databasePath: string) {
             instructions,
             hasCandidateInstructions,
             jobId: id,
-            inputList: { connect: inputList.map(({ version: input }) => ({ id: input.id })) },
+            inputList: {
+              create: inputList.map(({ key, version: input }) => ({ key, readVersionId: input?.id ?? null })),
+            },
           },
           include: VERSION_INCLUDE,
         }),

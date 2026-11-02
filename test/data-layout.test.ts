@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { describe, expect, it } from 'vitest';
 
+import { openContext } from '#/actions/context.ts';
 import { createActions } from '#/actions/index.ts';
 
 import { createFakeNotificationChannel, LEA_TARGET } from './fake-notification-channel.ts';
@@ -15,6 +16,8 @@ import { createRecordedFetch } from './recorded-http.ts';
 const BEFORE_CANDIDATE_MIGRATION = '20261030122214_delai_par_defaut';
 // The last migration before the Visualization went away (ADR-0020)
 const BEFORE_VISUALIZATION_REMOVAL_MIGRATION = '20261031110442_posting_unpublished_at';
+// The last migration before each Version recorded its Inputs (ADR-0021)
+const BEFORE_VERSION_INPUT_MIGRATION = '20261102182655_remove_visualization';
 
 const FACTS = '# Faits\n\n## Mobilité\n\n- Lille et alentours\n';
 const CV = '# CV de Léa\n';
@@ -282,7 +285,12 @@ describe('the French data folder', () => {
     ]);
     expect(await actions.listVersions({ reference: '2026-1', artifact: 'letter' })).toEqual([
       expect.objectContaining({
-        inputList: [{ artifact: 'research', number: 2, posting: { reference: '2026-1' }, interview: null }],
+        inputList: [
+          {
+            key: 'artifact:research',
+            readVersion: { artifact: 'research', number: 2, posting: { reference: '2026-1' }, interview: null },
+          },
+        ],
       }),
     ]);
     const { artifactList, recipients } = await actions.readPosting({ reference: '2026-1' });
@@ -459,7 +467,7 @@ describe('the Visualization of an older data folder', () => {
       { id: 1, artifact: 'interview_brief' },
     ]);
     expect(selectAll(dataDirectory, 'SELECT id, module FROM Job')).toEqual([{ id: 1, module: 'interview_brief' }]);
-    expect(selectAll(dataDirectory, 'SELECT A, B FROM _Input')).toEqual([]);
+    expect(selectAll(dataDirectory, 'SELECT versionId FROM VersionInput')).toEqual([]);
     const interviewDirectory = path.join(
       dataDirectory,
       'candidates',
@@ -485,5 +493,68 @@ describe('the Visualization of an older data folder', () => {
     await createActions({ dataDirectory });
 
     expect(snapshotOf(dataDirectory)).toEqual(entryList);
+  });
+});
+
+// Léa's Versions as the jf before the Inputs left them, linked to the Versions they read: of their own
+// Posting, on an Interview, the Letter sent for another Posting and the Research a Repost publishes again
+function writeReadVersionDataDirectory(): string {
+  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+  const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_VERSION_INPUT_MIGRATION));
+  database.exec(`INSERT INTO Candidate (id, name) VALUES ('lea', 'Léa');
+    INSERT INTO DefaultDeadlinePeriod (id, months) VALUES (1, 6);
+    INSERT INTO Posting (id, candidateId, source, reference, title, status, appliedAt, isInZone)
+    VALUES (1, 'lea', 'pep', '2026-1', 'Greffier', 'applied', '2026-10-20T09:00:00.000+00:00', 1),
+      (2, 'lea', 'pep', '2026-2', 'Greffier', 'applied', '2026-10-10T09:00:00.000+00:00', 1);
+    INSERT INTO Posting (id, candidateId, source, reference, title, repostOfId, isInZone)
+    VALUES (3, 'lea', 'pep', '2026-3', 'Greffier', 1, 1);
+    INSERT INTO Interview (id, postingId, number, startAt, place, interviewers)
+    VALUES (1, 1, 1, '2026-11-19T14:00:00.000+00:00', 'Lille', '');
+    INSERT INTO Version (id, postingId, interviewId, artifact, number, isChosen, state, instructions) VALUES
+      (1, 1, NULL, 'research', 1, 1, 'ready', 'Chercher.'),
+      (2, 1, NULL, 'letter', 1, 1, 'ready', 'Écrire.'),
+      (3, 2, NULL, 'letter', 1, 1, 'ready', 'Écrire.'),
+      (4, 1, 1, 'interview_brief', 1, 1, 'ready', 'Réviser.'),
+      (5, 1, 1, 'portrait', 1, 1, 'ready', 'Chercher.'),
+      (6, 3, NULL, 'research', 1, 1, 'ready', 'Chercher.');
+    INSERT INTO _Input (A, B) VALUES (2, 1), (2, 3), (4, 1), (4, 5), (6, 1);`);
+  database.close();
+  return dataDirectory;
+}
+
+// The main checkout migrates Léa's real data/, whose Versions read others: each link becomes a
+// recorded Input, and nothing else is known of them (spec #125)
+describe('the read Versions of an older database', () => {
+  it('become recorded Inputs, keyed as the Artifact module resolves them', async () => {
+    const dataDirectory = writeReadVersionDataDirectory();
+
+    await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'SELECT versionId, key, readVersionId FROM VersionInput ORDER BY id')).toEqual([
+      { versionId: 2, key: 'artifact:research', readVersionId: 1 },
+      { versionId: 2, key: 'posting:2026-2/letter', readVersionId: 3 },
+      { versionId: 4, key: 'artifact:research', readVersionId: 1 },
+      { versionId: 4, key: 'artifact:portrait@1', readVersionId: 5 },
+      { versionId: 6, key: 'posting:2026-1/research', readVersionId: 1 },
+    ]);
+  });
+
+  // A migrated record only knows the Versions it read: the other Inputs open checked by default
+  it('prefills a regeneration: each Artifact as the Version read it, the other Inputs by default', async () => {
+    const dataDirectory = writeReadVersionDataDirectory();
+    writeFile(path.join(dataDirectory, 'candidates', 'lea', 'profile', 'letter-tj-lille-2025.md'), PAST_LETTER);
+    const { artifacts } = await openContext({ dataDirectory });
+    const brief = await artifacts.find({ reference: '2026-1', artifact: 'interview_brief', interview: 1 });
+
+    const inputList = await brief.readInputs();
+
+    expect(Object.fromEntries(inputList.map(({ key, isChecked }) => [key, isChecked]))).toEqual({
+      job_description: true,
+      'artifact:research': true,
+      'artifact:letter': false,
+      'artifact:portrait@1': true,
+      'profile:letter-tj-lille-2025.md': true,
+      'posting:2026-2/letter': false,
+    });
   });
 });
