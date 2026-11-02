@@ -35,6 +35,9 @@
 //                                         → the key of the new Input ('artifact:custom:…' or 'profile:…')
 //   startGeneration({ reference, artifactKey, inputs, instructions? }) → run id; a Draft appears at the end
 //   startDetection()                      one line per Watch, then 2 synthetic New Reposts on top
+//   seed(reference, patch, artifacts?)    silent and synchronous (no toast, no latency): a screen's
+//                                         demonstrable startup state, e.g. lists/seed.ts keeps a few
+//                                         New Postings; a Posting already patched is left as it is
 //
 // Artifact keys: 'research', 'letter', 'portrait@<interview>', 'interview_brief@<interview>',
 // 'custom:<id>' (see model.ts).
@@ -581,6 +584,13 @@ export interface IPrototypeActions {
   addCustomArtifact: (input: IAddCustomArtifactInput) => Promise<string>;
   startGeneration: (input: IStartGenerationInput) => Promise<string>;
   startDetection: () => Promise<void>;
+  seed: (reference: string, patch: Partial<IPosting>, artifacts?: ISeedArtifact[]) => void;
+}
+
+// A simulated Version 1 a seeded Posting starts with, a Draft or Validated
+export interface ISeedArtifact {
+  artifactKey: 'research' | 'letter';
+  isValidated: boolean;
 }
 
 const PrototypeContext = createContext<IPrototypeContext | null>(null);
@@ -827,6 +837,24 @@ export function PrototypeStoreProvider({ data, children }: { data: IPrototypeDat
         return `artifact:${key}`;
       },
       startGeneration,
+      seed(reference, postingPatch, artifacts = []) {
+        const posting = postingOf(reference);
+        if (posting === undefined || latest.current.overlay.patchByReference[reference] !== undefined) {
+          return;
+        }
+        patch(reference, postingPatch);
+        const now = new Date();
+        for (const { artifactKey, isValidated } of artifacts) {
+          const number = (posting[artifactKey].latestNumber ?? 0) + 1;
+          const text = simulatedText(undefined, artifactKey, posting, now);
+          const version: NewVersion = { text, origin: 'ai' };
+          const createdAt = now.toISOString();
+          dispatch({ type: 'op', candidateId, reference, op: { kind: 'addVersion', artifactKey, version, createdAt } });
+          if (isValidated) {
+            dispatch({ type: 'op', candidateId, reference, op: { kind: 'validate', artifactKey, number } });
+          }
+        }
+      },
       async startDetection() {
         await wait();
         const { data: currentData, overlay: currentOverlay } = latest.current;

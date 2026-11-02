@@ -1,21 +1,30 @@
-// PROTOTYPE · PLACEHOLDER owned by the lists agent: New, To Apply and Applications, one module for the
+// PROTOTYPE (branch prototype/v1-ux, never merged). New, To Apply and Applications: one module for the
 // three routes (prototype/new, prototype/to-apply, prototype/applications), as DECISIONS.md « Lists »
-// describes them: list + sticky map, filters, the side Sheet; variants on ?variant=. Replace it all.
-import { Link, useLocation } from 'react-router';
+// describes them: list + sticky map synced both ways, common filters, the side Sheet a row opens; New
+// carries Detection and Import in its header. Three variants of the list + map layout on ?variant=
+// (lists/variant-*.tsx); the Sheet, the Detection, the filters and the mobile layout are shared.
+// To Apply is seeded at load with a few kept Postings, in the client store only (lists/seed.ts).
+import { useLocation } from 'react-router';
 
-import { Badge } from '#/web/prototype/components/ui/badge.tsx';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#/web/prototype/components/ui/table.tsx';
+import { useIsMobile } from '#/web/prototype/hooks/use-mobile.ts';
 
-import { formatDate, LIST_LABEL, listOf, STEP_LABEL, type ListName } from './model.ts';
+import { DetectionCard, NewHeaderActions } from './lists/detection.tsx';
+import { ListProvider, useListController } from './lists/list-context.tsx';
+import { MobileLayout } from './lists/mobile.tsx';
+import { PostingSheet } from './lists/posting-sheet.tsx';
+import { useSeedToApply } from './lists/seed.ts';
+import { VariantA } from './lists/variant-a.tsx';
+import { VariantB } from './lists/variant-b.tsx';
+import { VariantC } from './lists/variant-c.tsx';
+import { LIST_LABEL, type ListName } from './model.ts';
 import { PageHeader } from './page-header.tsx';
 import { PrototypeSwitcher, usePrototypeVariant } from './prototype-switcher.tsx';
-import { usePostings } from './store.ts';
 
 // The variants to compare (DECISIONS.md: list + map layout), on ?variant=
 const VARIANT_LIST = [
-  { key: 'A', name: 'à définir' },
-  { key: 'B', name: 'à définir' },
-  { key: 'C', name: 'à définir' },
+  { key: 'A', name: 'Tableau + carte' },
+  { key: 'B', name: 'Carte d’abord' },
+  { key: 'C', name: 'Par échéance' },
 ];
 
 const LIST_BY_PATH: Record<string, ListName> = {
@@ -24,46 +33,41 @@ const LIST_BY_PATH: Record<string, ListName> = {
   '/prototype/applications': 'applications',
 };
 
+const DESCRIPTION_BY_LIST: Record<ListName, (count: number) => string> = {
+  new: (count) => (count === 0 ? 'Rien à trier' : `${String(count)} à trier : garde ou écarte`),
+  to_apply: (count) => `${String(count)} à préparer, la date limite la plus proche en premier`,
+  applications: (count) => `${String(count)} candidature${count > 1 ? 's' : ''} dans cet onglet`,
+};
+
+function ListPage() {
+  const { list, listPostings } = useListController();
+  const variant = usePrototypeVariant('variant', VARIANT_LIST);
+  const isMobile = useIsMobile();
+  return (
+    <div className="flex h-svh flex-col">
+      <PageHeader
+        title={LIST_LABEL[list]}
+        description={DESCRIPTION_BY_LIST[list](listPostings.length)}
+        actions={list === 'new' ? <NewHeaderActions /> : undefined}
+      />
+      {list === 'new' ? <DetectionCard className="mb-3" /> : null}
+      {isMobile ? <MobileLayout /> : null}
+      {!isMobile && variant === 'A' ? <VariantA /> : null}
+      {!isMobile && variant === 'B' ? <VariantB /> : null}
+      {!isMobile && variant === 'C' ? <VariantC /> : null}
+      <PostingSheet />
+    </div>
+  );
+}
+
 export default function Lists() {
   const { pathname } = useLocation();
   const list = LIST_BY_PATH[pathname] ?? 'new';
-  const postings = usePostings().filter((posting) => listOf(posting) === list && posting.archivedAt === null);
-  const variant = usePrototypeVariant('variant', VARIANT_LIST);
+  useSeedToApply();
   return (
-    <>
-      <PageHeader
-        title={LIST_LABEL[list]}
-        description={`${String(postings.length)} Offres · placeholder · variante ${variant}`}
-      />
+    <ListProvider key={list} list={list}>
+      <ListPage />
       <PrototypeSwitcher variants={VARIANT_LIST} label="Liste" />
-      <div className="p-4">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Titre</TableHead>
-              <TableHead>Ville</TableHead>
-              <TableHead>Date limite</TableHead>
-              <TableHead>Étape</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {postings.map((posting) => (
-              <TableRow key={posting.reference}>
-                <TableCell className="max-w-xl truncate">
-                  <Link to={`/prototype/postings/${posting.reference}`} className="hover:underline">
-                    {posting.title}
-                  </Link>
-                </TableCell>
-                <TableCell>{posting.city ?? '—'}</TableCell>
-                <TableCell>{formatDate(posting.deadline)}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{STEP_LABEL[posting.step]}</Badge>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </>
+    </ListProvider>
   );
 }
