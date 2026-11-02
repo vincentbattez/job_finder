@@ -148,13 +148,17 @@ describe('letter', () => {
     expect(session?.fixedPrompt).toContain('`uploads/`');
     expect(session?.fixedPrompt).toContain(`\`${sentDirectory}\``);
     expect(session?.fixedPrompt).not.toContain(UNSENT_REFERENCE);
-    expect(version?.inputList).toHaveLength(2);
-    expect(version?.inputList).toEqual(
-      expect.arrayContaining([
-        { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
-        { artifact: 'letter', number: 1, posting: { reference: SENT_REFERENCE }, interview: null },
-      ]),
-    );
+    expect(version?.inputList).toEqual([
+      { key: 'job_description', readVersion: null },
+      {
+        key: 'artifact:research',
+        readVersion: { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
+      },
+      {
+        key: `posting:${SENT_REFERENCE}/letter`,
+        readVersion: { artifact: 'letter', number: 1, posting: { reference: SENT_REFERENCE }, interview: null },
+      },
+    ]);
   });
 });
 

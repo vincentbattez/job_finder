@@ -61,12 +61,11 @@ export interface IAiModule {
   previousInterviewArtifactList?: readonly Artifact[];
   // Whether it reads the Notes of the Posting
   isReadingNotes?: boolean;
-  // Whether the module reads the Profile of the Candidate
+  // Whether the module reads the Profile of the Candidate, its Past Letters included: those of the Profile
+  // and the Chosen Letters of the other Postings once Applied, what the Candidate sent
   isReadingProfile?: boolean;
   // Whether it reads the Chosen Artifacts of the Posting that a Repost publishes again
   isReadingRepostedPosting?: boolean;
-  // Whether it reads its own Chosen Artifact of each Posting once Applied: what the Candidate sent
-  isReadingSentVersions?: boolean;
   // Whether its Chosen Version is what the Candidate sends: frozen once the Posting is Applied
   isFrozenOnceApplied?: boolean;
   // The files of a Version kept as the AI wrote them, each with the code that refuses to modify it; jf

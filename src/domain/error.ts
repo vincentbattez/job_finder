@@ -110,6 +110,10 @@ export const ERROR_CATALOGUE = {
   unknown_artifact: 'error:unknownArtifact',
   // An Artifact the module relies on has no Chosen Version
   missing_artifact: 'error:missingArtifactForCli',
+  // A run is asked to read an Input it does not have
+  unknown_input: 'error:unknownInput',
+  // A run is asked without an Input its Artifact requires
+  required_input_unchecked: 'error:requiredInputUnchecked',
   // The extraction is asked for a Posting its Source gave the fields of
   not_imported: 'error:notImported',
   // No job has this number

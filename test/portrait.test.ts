@@ -8,6 +8,7 @@ import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructi
 
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { readVersionsOf } from './read-versions.ts';
 
 // The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -133,7 +134,7 @@ describe('the prompt of the Portrait', () => {
     expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'research/v1/research.md')}\``);
     // Nothing about the Candidate is needed to portray the Interviewers
     expect(session?.readDirectoryList).toEqual([]);
-    expect(version?.inputList).toEqual([
+    expect(readVersionsOf(version)).toEqual([
       { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
     ]);
   });
@@ -146,7 +147,7 @@ describe('the prompt of the Portrait', () => {
 
     expect(state).toBe('done');
     expect(aiSession.headlessSessionList.at(-1)?.fixedPrompt).toContain('no Research');
-    expect(version?.inputList).toEqual([]);
+    expect(readVersionsOf(version)).toEqual([]);
   });
 
   it('keeps to professional and public information, sourced, flagging any doubt on an identity', async () => {
@@ -196,7 +197,7 @@ describe('the Interview Brief and the Portrait', () => {
       `The Chosen Portrait of the Interviewers: \`${path.join(postingDirectory, 'interviews/1/portrait/v1/portrait.md')}\``,
     );
     expect(fixedPrompt).not.toContain('portrait/v2');
-    expect(version?.inputList).toEqual([
+    expect(readVersionsOf(version)).toEqual([
       { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
       { artifact: 'portrait', number: 1, posting: { reference: REFERENCE }, interview: { number: 1 } },
     ]);
@@ -213,7 +214,7 @@ describe('the Interview Brief and the Portrait', () => {
     const fixedPrompt = aiSession.headlessSessionList.at(-1)?.fixedPrompt;
     expect(fixedPrompt).toContain('No Portrait of the Interviewers');
     expect(fixedPrompt).not.toContain('portrait.md');
-    expect(version?.inputList).toEqual([
+    expect(readVersionsOf(version)).toEqual([
       { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
     ]);
   });

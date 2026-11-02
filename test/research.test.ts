@@ -103,7 +103,10 @@ describe('research', () => {
     });
     expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain('Never invent a fact.');
     expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain('`research/v1/research.md`');
-    expect(version).toMatchObject({ instructions: RESEARCH_DEFAULT_INSTRUCTIONS, inputList: [] });
+    expect(version).toMatchObject({
+      instructions: RESEARCH_DEFAULT_INSTRUCTIONS,
+      inputList: [{ key: 'job_description', readVersion: null }],
+    });
   });
 
   it("replaces the default Instructions with the Candidate's own, keeping the fixed part", async () => {

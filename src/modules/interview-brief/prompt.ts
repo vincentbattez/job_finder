@@ -5,9 +5,12 @@ import { describeProfile } from '#/profile/prompt.ts';
 
 export const INTERVIEW_BRIEF_FILE_NAME = 'interview-brief.md';
 
-// The Chosen Letter when there is one: the recruiters question the Candidate on what it says
-function describeLetter(readVersionList: IPromptInput['readVersionList']): string {
-  const letter = readVersionList.find(({ artifact }) => artifact === 'letter');
+// The Chosen Letter when there is one: the recruiters question the Candidate on what it says; the
+// Letters of other Postings it reads are Past Letters
+function describeLetter({ posting, readVersionList }: IPromptInput): string {
+  const letter = readVersionList.find(
+    ({ artifact, reference }) => artifact === 'letter' && reference === posting.reference,
+  );
   return letter === undefined
     ? 'The Candidate has no Letter for this Posting: prepare the interview without it.'
     : `The Chosen Letter, the one the Candidate sent or is about to send: \`${letter.filePath}\`. The recruiters will have read it: prepare the questions they will ask about what it says.`;
@@ -58,14 +61,8 @@ function describePreviousBriefs(readVersionList: IPromptInput['readVersionList']
 }
 
 // The fixed part: its objective, inputs and output, and the rules no Instructions can lift (ADR-0003)
-export function composeInterviewBriefPrompt({
-  posting,
-  interview,
-  notes,
-  outputDirectory,
-  readVersionList,
-  profileDirectory,
-}: IPromptInput): string {
+export function composeInterviewBriefPrompt(input: IPromptInput): string {
+  const { posting, interview, notes, outputDirectory, readVersionList, profileDirectory } = input;
   const outputPath = `${outputDirectory}/${INTERVIEW_BRIEF_FILE_NAME}`;
   const researchList = readVersionList.filter(({ artifact }) => artifact === 'research');
   return `You write a Candidate's Interview Brief for one Interview of a job Posting: what they must revise, what to tell the Interviewers and how to practice before this round. ${describeArtifactLanguage('Interview Brief')}
@@ -85,7 +82,7 @@ Read before writing:
 - The Job Description, as it was published: \`${JOB_DESCRIPTION_FILE_NAME}\`.
 ${researchList.map(({ filePath }) => `- The Chosen Research, which establishes what the recruiters expect and in what context: \`${filePath}\`.`).join('\n')}
 - ${describeProfile(profileDirectory)}
-- ${describeLetter(readVersionList)}
+- ${describeLetter(input)}
 - ${describePortrait(readVersionList)}
 ${describePreviousBriefs(readVersionList)}
 

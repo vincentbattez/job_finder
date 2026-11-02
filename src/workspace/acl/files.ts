@@ -4,8 +4,10 @@ import path from 'node:path';
 import { z } from 'zod/v4';
 
 import {
+  DATED_MARKDOWN_FILE_SCHEMA,
   MARKDOWN_FILE_SCHEMA,
   UPLOAD_SCHEMA,
+  type DatedMarkdownFile,
   type MarkdownFile,
   type Upload,
   type UploadFileName,
@@ -24,6 +26,16 @@ export function readMarkdownFiles(directory: string): MarkdownFile[] {
       .filter((fileName) => fileName.endsWith('.md'))
       .toSorted((first, second) => first.localeCompare(second))
       .map((fileName) => ({ fileName, markdown: readFileSync(path.join(directory, fileName), 'utf8') })),
+  );
+}
+
+// The same files, each dated by its last write
+export function readDatedMarkdownFiles(directory: string): DatedMarkdownFile[] {
+  return z.array(DATED_MARKDOWN_FILE_SCHEMA).parse(
+    readMarkdownFiles(directory).map((file) => ({
+      ...file,
+      savedAt: statSync(path.join(directory, file.fileName)).mtime,
+    })),
   );
 }
 

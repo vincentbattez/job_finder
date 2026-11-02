@@ -1,10 +1,15 @@
+import { utimesSync } from 'node:fs';
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import { openContext } from '#/actions/context.ts';
 import { createInterviewActions } from '#/actions/interviews.ts';
+import { createNotesActions } from '#/actions/notes.ts';
 import { findWorkerFailure } from '#/actions/stalled-job.ts';
 import { createStatusActions } from '#/actions/status.ts';
 import { createArtifacts } from '#/artifact/index.ts';
+import { PROFILE_FILE_NAME_SCHEMA } from '#/domain/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
 import { copyDetectedDataDirectory } from './data-directory.ts';
@@ -67,7 +72,7 @@ async function openArtifacts(...plannedRunList: PlannedRunList) {
     aiSession,
     runNextJob,
     produce,
-    apply: () => statusActions.changeStatus({ reference: REFERENCE, status: 'applied' }),
+    apply: (reference = REFERENCE) => statusActions.changeStatus({ reference, status: 'applied' }),
     // An Interview needs an Application
     addInterview: async () => {
       await statusActions.changeStatus({ reference: REFERENCE, status: 'applied' });
@@ -422,5 +427,235 @@ describe('choosing a Version', () => {
 
     await expect(handle.choose(1)).rejects.toMatchObject({ code: 'letter_frozen' });
     await expect(handle.choose(9)).rejects.toMatchObject({ code: 'letter_frozen' });
+  });
+});
+
+const CV = '# CV\n\nLéa Martin, juriste.\n';
+const FACTS = '# Faits\n\n## Mobilité\n\n- Lille\n';
+const ANNEX = '# Mémoire\n\nLa justice des mineurs.\n';
+const DAY_MS = 86_400_000;
+// A Letter for another Posting, whose fields hold no address to recommend
+const OTHER_LETTER_RUN = {
+  fileByName: {
+    'draft.md': 'Madame, Monsieur,\n\nJe souhaite rejoindre votre juridiction.\n',
+    'recipients.json': JSON.stringify({
+      to: null,
+      ccList: [],
+      salutation: { text: 'Madame, Monsieur,', source: null },
+      justification: 'Aucune adresse publiée.',
+    }),
+  },
+};
+
+// Léa's Profile, each Past Letter of it dated by the day it was added: the nth one n days ago
+function writeProfile(workspace: Workspace, pastLetterCount = 0): void {
+  const now = Date.now();
+  const write = (fileName: string, markdown: string, daysAgo = 0) => {
+    workspace.saveProfileFile('lea', PROFILE_FILE_NAME_SCHEMA.parse(fileName), markdown);
+    const savedAt = new Date(now - daysAgo * DAY_MS);
+    utimesSync(path.join(workspace.profileDirectoryOf('lea'), fileName), savedAt, savedAt);
+  };
+  write('cv.md', CV);
+  write('facts.md', FACTS);
+  write('annex-thesis.md', ANNEX);
+  for (let number = 1; number <= pastLetterCount; number += 1) {
+    write(`letter-${String(number)}.md`, `Lettre ${String(number)}\n`, number);
+  }
+}
+
+// Another Posting of Léa, detected with the Béthune one
+async function findOtherReference(workspace: Workspace): Promise<string> {
+  const postingList = await workspace.listPostings('lea');
+  return postingList.find(({ reference }) => reference !== REFERENCE)?.reference ?? expect.unreachable('two Postings');
+}
+
+const LETTER_CORE_KEY_LIST = ['job_description', 'artifact:research', 'profile:cv.md', 'profile:facts.md'];
+
+describe('the Inputs of a run', () => {
+  it('resolves each Input of the Letter with its mode, reason, content and word count, checked by default', async () => {
+    const opened = await openArtifacts(RESEARCH_RUN);
+    writeProfile(opened.context.workspace);
+    await opened.produce({ reference: REFERENCE, artifact: 'research' });
+    const letter = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+
+    const inputList = await letter.readInputs();
+
+    expect(
+      inputList.map(({ key, kind, mode, reason, isAvailable, wordCount, isChecked }) => ({
+        key,
+        kind,
+        mode,
+        reason,
+        isAvailable,
+        wordCount,
+        isChecked,
+      })),
+    ).toEqual([
+      expect.objectContaining({ key: 'job_description', mode: 'required', reason: 'job_description', isChecked: true }),
+      {
+        key: 'artifact:research',
+        kind: 'artifact',
+        mode: 'required',
+        reason: 'required_artifact',
+        isAvailable: true,
+        wordCount: 6,
+        isChecked: true,
+      },
+      {
+        key: 'profile:cv.md',
+        kind: 'profile_document',
+        mode: 'required',
+        reason: 'profile_core',
+        isAvailable: true,
+        wordCount: 5,
+        isChecked: true,
+      },
+      expect.objectContaining({ key: 'profile:facts.md', mode: 'required', reason: 'profile_core' }),
+      {
+        key: 'profile:annex-thesis.md',
+        kind: 'profile_document',
+        mode: 'optional',
+        reason: null,
+        isAvailable: true,
+        wordCount: 6,
+        isChecked: false,
+      },
+    ]);
+    expect(inputList.find(({ key }) => key === 'profile:cv.md')?.content).toBe(CV);
+    expect(inputList[0]?.content).toMatch(/\S/);
+  });
+
+  it('tells a required Artifact without a Chosen Version unavailable, with no content', async () => {
+    const { artifacts } = await openArtifacts();
+    const letter = await artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+
+    const inputList = await letter.readInputs();
+
+    expect(inputList.find(({ key }) => key === 'artifact:research')).toMatchObject({
+      mode: 'required',
+      isAvailable: false,
+      content: '',
+      wordCount: 0,
+    });
+  });
+
+  it('reads for an Interview Brief the optional Artifacts it has, the previous Briefs and the Notes', async () => {
+    const { context, artifacts } = await openPreparedInterview();
+    await createNotesActions(context).saveNotes({ reference: REFERENCE, notes: 'Parler du stage.' });
+    await createInterviewActions(context).addInterview({
+      reference: REFERENCE,
+      ...INTERVIEW,
+      start: '2026-11-26T14:00',
+    });
+    const brief = await artifacts.find({ reference: REFERENCE, artifact: 'interview_brief', interview: 2 });
+
+    const inputList = await brief.readInputs();
+
+    expect(inputList.map(({ key, mode }) => `${key} ${mode}`)).toEqual([
+      'job_description required',
+      'artifact:research required',
+      'artifact:letter default',
+      'artifact:interview_brief@1 default',
+      'notes default',
+    ]);
+  });
+
+  it('makes the Past Letters one set, the Profile’s and the sent ones, and checks the five most recent', async () => {
+    const opened = await openArtifacts(RESEARCH_RUN, OTHER_LETTER_RUN);
+    writeProfile(opened.context.workspace, 5);
+    const otherReference = await findOtherReference(opened.context.workspace);
+    await opened.produce(
+      { reference: otherReference, artifact: 'research' },
+      { reference: otherReference, artifact: 'letter' },
+    );
+    await opened.apply(otherReference);
+    const letter = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+
+    const inputList = await letter.readInputs();
+
+    expect(
+      inputList
+        .filter(({ kind }) => kind === 'past_letter')
+        .map(({ key, mode, isChecked }) => ({ key, mode, isChecked })),
+    ).toEqual([
+      { key: 'profile:letter-1.md', mode: 'default', isChecked: true },
+      { key: 'profile:letter-2.md', mode: 'default', isChecked: true },
+      { key: 'profile:letter-3.md', mode: 'default', isChecked: true },
+      { key: 'profile:letter-4.md', mode: 'default', isChecked: true },
+      { key: 'profile:letter-5.md', mode: 'optional', isChecked: false },
+      { key: `posting:${otherReference}/letter`, mode: 'default', isChecked: true },
+    ]);
+  });
+
+  it.each([
+    { case: 'an unknown Input', keyList: [...LETTER_CORE_KEY_LIST, 'notes'], code: 'unknown_input' },
+    {
+      case: 'a required Input left unchecked',
+      keyList: LETTER_CORE_KEY_LIST.filter((key) => key !== 'profile:cv.md'),
+      code: 'required_input_unchecked',
+    },
+  ])('refuses $case before queueing', async ({ keyList, code }) => {
+    const opened = await openArtifacts(RESEARCH_RUN);
+    writeProfile(opened.context.workspace);
+    await opened.produce({ reference: REFERENCE, artifact: 'research' });
+    const letter = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+
+    await expect(letter.queueRun({ inputKeyList: keyList })).rejects.toMatchObject({ code });
+    expect(await opened.context.workspace.claimNextJob()).toBeNull();
+  });
+
+  it('queues with the default Inputs when none are checked, as jf run does', async () => {
+    const opened = await openArtifacts(RESEARCH_RUN);
+    writeProfile(opened.context.workspace);
+    await opened.produce({ reference: REFERENCE, artifact: 'research' });
+    const letter = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+
+    const job = await letter.queueRun();
+
+    expect(job.inputKeyList).toEqual(LETTER_CORE_KEY_LIST);
+  });
+
+  it('records on the Version the Inputs its run read, and prefills a regeneration with them', async () => {
+    const opened = await openArtifacts(RESEARCH_RUN, LETTER_RUN);
+    writeProfile(opened.context.workspace, 1);
+    await opened.produce({ reference: REFERENCE, artifact: 'research' });
+    const checkedList = [...LETTER_CORE_KEY_LIST, 'profile:annex-thesis.md'];
+    const letter = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+    await letter.queueRun({ inputKeyList: checkedList });
+    await opened.runNextJob();
+
+    const regeneration = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+
+    expect(regeneration.chosenVersion?.inputList).toEqual(
+      checkedList.map((key) => ({
+        key,
+        readVersion:
+          key === 'artifact:research'
+            ? { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null }
+            : null,
+      })),
+    );
+    const inputList = await regeneration.readInputs();
+    expect(Object.fromEntries(inputList.map(({ key, isChecked }) => [key, isChecked]))).toEqual({
+      job_description: true,
+      'artifact:research': true,
+      'profile:cv.md': true,
+      'profile:facts.md': true,
+      'profile:letter-1.md': false,
+      'profile:annex-thesis.md': true,
+    });
+  });
+
+  it('refuses at its run an Input checked at queueing and gone since, before writing anything', async () => {
+    const opened = await openArtifacts(RESEARCH_RUN, LETTER_RUN);
+    const { workspace } = opened.context;
+    writeProfile(workspace);
+    await opened.produce({ reference: REFERENCE, artifact: 'research' });
+    const letter = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+    await letter.queueRun({ inputKeyList: [...LETTER_CORE_KEY_LIST, 'profile:annex-thesis.md'] });
+    workspace.deleteProfileFile('lea', PROFILE_FILE_NAME_SCHEMA.parse('annex-thesis.md'));
+
+    await expect(opened.runNextJob()).rejects.toMatchObject({ code: 'unknown_input' });
+    expect(opened.aiSession.headlessSessionList).toHaveLength(1);
   });
 });
