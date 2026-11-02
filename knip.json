@@ -9,5 +9,14 @@
   ],
   "project": ["src/**/*.{ts,tsx}", "test/**/*.ts", "e2e/**/*.ts", "prisma/**/*.{ts,prisma}"],
   "lefthook": true,
-  "ignoreDependencies": ["@prisma/client", "cspell"]
+  "ignoreDependencies": [
+    "@prisma/client",
+    "cspell",
+    "tailwindcss",
+    "tw-animate-css",
+    "shadcn",
+    "@fontsource-variable/inter",
+    "@tailwindcss/typography"
+  ],
+  "ignore": ["src/web/prototype/**"]
 }

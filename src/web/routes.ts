@@ -1,4 +1,4 @@
-import { index, route, type RouteConfig } from '@react-router/dev/routes';
+import { index, layout, route, type RouteConfig } from '@react-router/dev/routes';
 
 import { REDIRECT_LIST } from './redirects.ts';
 
@@ -26,5 +26,20 @@ export default [
   route('detect', 'routes/detect.ts'),
   route('import', 'routes/import.ts'),
   route('design', 'routes/design.tsx'),
+  // PROTOTYPE (branch prototype/v1-ux, never merged): the V1 front on the snapshot in data/, read-only
+  route('prototype', 'prototype/layout.tsx', [
+    index('prototype/index.tsx'),
+    layout('prototype/shell.tsx', [
+      route('new', 'prototype/lists.tsx', { id: 'prototype/new' }),
+      route('to-apply', 'prototype/lists.tsx', { id: 'prototype/to-apply' }),
+      route('applications', 'prototype/lists.tsx', { id: 'prototype/applications' }),
+      route('postings/:reference', 'prototype/posting.tsx'),
+      route('profile', 'prototype/placeholder.tsx', { id: 'prototype/profile' }),
+      route('watches', 'prototype/placeholder.tsx', { id: 'prototype/watches' }),
+      route('settings', 'prototype/placeholder.tsx', { id: 'prototype/settings' }),
+    ]),
+    // Full screen, out of the Sidebar
+    route('postings/:reference/interviews/:number/revision', 'prototype/revision.tsx'),
+  ]),
   ...REDIRECT_LIST.map(({ from }) => route(from, 'routes/redirect.ts', { id: `redirect/${from}` })),
 ] satisfies RouteConfig;

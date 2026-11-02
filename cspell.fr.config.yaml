@@ -17,6 +17,7 @@ ignorePaths:
   - cspell.fr.config.yaml
   - test/fixtures/**
   - prisma/migrations/**
+  - src/web/prototype/**
 # Nothing is checked outside the French copy below
 includeRegExpList:
   - '/(?!)/'

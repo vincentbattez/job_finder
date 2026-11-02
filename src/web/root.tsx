@@ -1,6 +1,7 @@
-// First of all: app.css declares the order of the cascade layers, which the first @layer to appear
-// sets, and the components imported below bring their own CSS
-import './app.css';
+// PROTOTYPE (branch prototype/v1-ux): Tailwind and the shadcn theme, global as in the V1 (ADR-0017).
+// app.css, linked first in <head> rather than imported, still declares the order of the cascade
+// layers for the old pages, and the /prototype pages leave it out.
+import './prototype/tailwind.css';
 
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,11 +15,13 @@ import {
   redirect,
   Scripts,
   ScrollRestoration,
+  useLocation,
   useRouteLoaderData,
   type LinksFunction,
   type LoaderFunctionArgs,
 } from 'react-router';
 
+import appStylesheet from './app.css?url';
 import { readCandidate } from './candidate.server.ts';
 import { useIsHydrated } from './components/use-is-hydrated.ts';
 import { CandidateMenu } from './containers/candidate-menu.tsx';
@@ -63,11 +66,32 @@ function Page({ children }: Readonly<{ children: ReactNode }>) {
   // Tells when React runs the page: a click or a form sent before may go nowhere, so an e2e test waits
   // for it (e2e/candidate.ts)
   const isHydrated = useIsHydrated();
+  // The prototype has its own shell and theme: no top bar, no BEM stylesheet; next-themes sets the
+  // .dark class on <html> before React hydrates it
+  const isPrototype = useLocation().pathname.startsWith('/prototype');
+  if (isPrototype) {
+    return (
+      <html lang="fr" data-hydrated={isHydrated || undefined} suppressHydrationWarning>
+        <head>
+          <meta charSet="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <Meta />
+          <Links />
+        </head>
+        <body>
+          {children}
+          <ScrollRestoration />
+          <Scripts />
+        </body>
+      </html>
+    );
+  }
   return (
     <html lang={locale} data-hydrated={isHydrated || undefined}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="stylesheet" href={appStylesheet} />
         <Meta />
         <Links />
       </head>

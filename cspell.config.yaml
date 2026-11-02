@@ -27,6 +27,8 @@ ignorePaths:
   - test/fixtures/**
   # The migration history is kept as is
   - prisma/migrations/**
+  # PROTOTYPE (branch prototype/v1-ux, never merged): its UI copy is French, hard-coded (no i18n)
+  - src/web/prototype/**
 overrides:
   - filename: src/domain/catalogue/fr/**
     language: en,fr

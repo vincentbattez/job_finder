@@ -10,6 +10,8 @@ export default {
     'build/**',
     'playwright-report/**',
     'test-results/**',
+    // PROTOTYPE (branch prototype/v1-ux, never merged): the Tailwind + shadcn theme, outside the BEM rules
+    'src/web/prototype/**',
   ],
   rules: {
     // The Hallmark stamp is a run of comments at the head of app.css, which sloplint reads as is

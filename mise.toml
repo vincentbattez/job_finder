@@ -53,6 +53,13 @@ description = "Serve the front of dev-data/, the fake Postings of development, o
 env = { JF_DATA_DIRECTORY = "dev-data" }
 run = "node node_modules/@react-router/dev/bin.cjs dev --port 5181 --strictPort"
 
+[tasks.prototype]
+# PROTOTYPE (branch prototype/v1-ux, never merged): the V1 front of src/web/prototype/ on /prototype
+depends = ["db:generate"]
+description = "PROTOTYPE: serve this worktree's front on port 5182, open to the LAN, on its own data/ snapshot, with no Notification Channel nor Source so it never notifies anyone"
+env = { JF_PROTOTYPE = "1" }
+run = "node node_modules/@react-router/dev/bin.cjs dev --host --port 5182 --strictPort"
+
 [tasks.worker]
 # Regenerate first: a client older than the schema crashes at the first query
 depends = ["db:generate"]

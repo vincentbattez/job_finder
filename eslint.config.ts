@@ -18,6 +18,8 @@ export default defineConfig(
       'build/',
       // Each git worktree that Claude Code creates there lints itself
       '.claude/worktrees/',
+      // PROTOTYPE (branch prototype/v1-ux, never merged): throwaway code, held only to the typecheck
+      'src/web/prototype/',
     ],
   },
   js.configs.recommended,
