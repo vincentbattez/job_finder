@@ -256,7 +256,7 @@ Everything an AI session producing an Artifact receives: its Fixed Part, the Inp
 _Avoid_: instructions, template
 
 **Fixed Part**:
-The part of a Prompt that comes with the type of Artifact and that no Instructions can lift: its objective, the files it reads and writes, its rules.
+The part of a Prompt that comes with the type of Artifact and that no Instructions can lift: its objective, the files it writes, its rules.
 _Avoid_: system prompt, base prompt
 
 **Research**:
