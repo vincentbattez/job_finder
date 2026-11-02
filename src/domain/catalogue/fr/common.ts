@@ -17,7 +17,7 @@ export const COMMON_FR: typeof COMMON_EN = {
   expired: 'Expirée',
   artifactLabelByArtifact: {
     research: 'Recherche',
-    letter: 'Lettre',
+    letter: 'Lettre de motivation',
     portrait: 'Portrait',
     interview_brief: 'Fiche d’entretien',
   },

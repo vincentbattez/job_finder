@@ -7,6 +7,7 @@ import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
+import { runAndValidate } from './run-module.ts';
 
 // The Boulogne parquet Position, published as 2026-2231960 then again as 2026-2338409 (responses
 // recorded on 2026-10-29)
@@ -20,7 +21,7 @@ const RESEARCH_RUN = {
 };
 const LETTER_RUN = {
   fileByName: {
-    'draft.md': 'Madame la Procureure,\n',
+    'letter.md': 'Madame la Procureure,\n',
     'recipients.json': JSON.stringify({
       to: { email: 'chcab.pr.tj-boulogne-sur-mer@justice.fr', source: 'applicationEmail' },
       ccList: [],
@@ -157,10 +158,9 @@ describe('the Repost of a Posting not Applied', () => {
   it('launches its Research once kept, which reads the Chosen Artifacts of the Posting it publishes again', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, LETTER_RUN, RESEARCH_RUN);
     const { actions } = await detectBeforeRepost(aiSession);
-    await actions.runModule({ module: 'research', reference: REFERENCE });
-    await actions.runQueuedJobs();
-    await actions.runModule({ module: 'letter', reference: REFERENCE });
-    await actions.runQueuedJobs();
+    await runAndValidate(actions, { module: 'research', reference: REFERENCE });
+    await runAndValidate(actions, { module: 'letter', reference: REFERENCE });
+
     await actions.detect();
 
     await actions.keep({ reference: REPOST_REFERENCE });
@@ -197,10 +197,8 @@ describe('the Repost of a Posting not Applied', () => {
   // The Prompt the Posting page shows beside the Research of the Repost
   it('shows, beside its Research, the Chosen Artifacts of the Posting it publishes again', async () => {
     const { actions } = await detectBeforeRepost(createFakeAiSession(RESEARCH_RUN, LETTER_RUN));
-    await actions.runModule({ module: 'research', reference: REFERENCE });
-    await actions.runQueuedJobs();
-    await actions.runModule({ module: 'letter', reference: REFERENCE });
-    await actions.runQueuedJobs();
+    await runAndValidate(actions, { module: 'research', reference: REFERENCE });
+    await runAndValidate(actions, { module: 'letter', reference: REFERENCE });
 
     await actions.detect();
 

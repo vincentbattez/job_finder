@@ -15,6 +15,7 @@ function findFormatError(markdown: string, locale: Locale): string | undefined {
 export const INTERVIEW_BRIEF_MODULE = {
   alias: 'brief',
   fileName: INTERVIEW_BRIEF_FILE_NAME,
+  format: 'mdx',
   outputFileList: [{ name: INTERVIEW_BRIEF_FILE_NAME, findFormatError }],
   composePrompt: composeInterviewBriefPrompt,
   // A first round and a job-specific interview are not prepared the same way

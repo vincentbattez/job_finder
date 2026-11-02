@@ -11,6 +11,7 @@ import { applyTo } from './apply.ts';
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { markedValuesOf } from './marked-values.ts';
+import { runAndValidate } from './run-module.ts';
 
 // Léa's, in French
 const LETTER_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.letter;
@@ -41,7 +42,7 @@ const RECIPIENTS = {
 };
 
 function letterRun(recipients: object = RECIPIENTS) {
-  return { fileByName: { 'draft.md': DRAFT, 'recipients.json': JSON.stringify(recipients, undefined, 2) } };
+  return { fileByName: { 'letter.md': DRAFT, 'recipients.json': JSON.stringify(recipients, undefined, 2) } };
 }
 
 // Avesnes-sur-Helpe publishes its mail de candidature as free text, an address within a sentence
@@ -90,15 +91,12 @@ async function detectPostings(aiSession: ReturnType<typeof createFakeAiSession>)
   };
 }
 
-// Launching a module queues its job, which the worker runs (ADR-0003)
 async function runModule(actions: Actions, module: string, reference: string) {
-  const { id } = await actions.runModule({ module, reference });
-  await actions.runQueuedJobs();
-  return actions.followJob({ jobId: id });
+  return runAndValidate(actions, { module, reference });
 }
 
 describe('letter', () => {
-  it('produces a Version holding the Draft, the Letter as its copy, and the recommended recipients', async () => {
+  it('produces a Version holding the Letter, its Original and the recommended recipients', async () => {
     const { actions, postingDirectory } = await detectPostings(createFakeAiSession(RESEARCH_RUN, letterRun()));
     await runModule(actions, 'research', REFERENCE);
 
@@ -107,11 +105,11 @@ describe('letter', () => {
     expect(job).toMatchObject({ module: 'letter', state: 'done' });
     expect(job.version).toMatchObject({ artifact: 'letter', number: 1, state: 'ready', isChosen: true });
     expect(readFileSync(path.join(postingDirectory, 'letter/v1/letter.md'), 'utf8')).toBe(DRAFT);
-    expect(readFileSync(path.join(postingDirectory, 'letter/v1/draft.md'), 'utf8')).toBe(DRAFT);
+    expect(readFileSync(path.join(postingDirectory, 'letter/v1/original.md'), 'utf8')).toBe(DRAFT);
     expect(await actions.readRecipients({ reference: REFERENCE })).toEqual(RECIPIENTS);
   });
 
-  it('creates a new pair at each launch, and makes each Draft read-only', async () => {
+  it('creates a new pair at each launch, and makes each Original read-only', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, letterRun(), letterRun());
     const { actions, postingDirectory } = await detectPostings(aiSession);
     await runModule(actions, 'research', REFERENCE);
@@ -125,8 +123,8 @@ describe('letter', () => {
       { number: 2, isChosen: true },
     ]);
     for (const version of ['v1', 'v2']) {
-      const draftPath = path.join(postingDirectory, 'letter', version, 'draft.md');
-      expect(statSync(draftPath).mode & 0o222).toBe(0);
+      const originalPath = path.join(postingDirectory, 'letter', version, 'original.md');
+      expect(statSync(originalPath).mode & 0o222).toBe(0);
       expect(statSync(path.join(postingDirectory, 'letter', version, 'letter.md')).mode & 0o200).toBe(0o200);
     }
   });
@@ -148,6 +146,7 @@ describe('letter', () => {
     await actions.saveDocument({
       reference: SENT_REFERENCE,
       artifact: 'letter',
+      number: 1,
       fileName: 'letter.md',
       markdown: SENT,
     });
@@ -156,7 +155,7 @@ describe('letter', () => {
     await runModule(actions, 'letter', UNSENT_REFERENCE);
     await runModule(actions, 'research', REFERENCE);
     await runModule(actions, 'research', REFERENCE);
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: 1 });
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: 1 });
 
     const { version } = await runModule(actions, 'letter', REFERENCE);
 
@@ -214,7 +213,7 @@ describe('letter', () => {
       `"${AVESNES_APPLICATION_EMAIL}"`,
       '"Secrétariat du Procureur : sec.pr.tj-avesnes-sur-helpe@justice.fr"',
       'not given',
-      'letter/v<next>/draft.md',
+      'letter/v<next>/letter.md',
       'letter/v<next>/recipients.json',
     ]);
   });
@@ -308,9 +307,9 @@ describe('the recommended recipients', () => {
 
 describe('a Letter that fails', () => {
   it.each([
-    { file: 'draft.md', plannedRun: { fileByName: { 'recipients.json': JSON.stringify(RECIPIENTS) } } },
-    { file: 'recipients.json', plannedRun: { fileByName: { 'draft.md': DRAFT } } },
-  ])('puts the Version « en échec », without a Letter, when $file is absent', async ({ file, plannedRun }) => {
+    { file: 'letter.md', plannedRun: { fileByName: { 'recipients.json': JSON.stringify(RECIPIENTS) } } },
+    { file: 'recipients.json', plannedRun: { fileByName: { 'letter.md': DRAFT } } },
+  ])('puts the Version « en échec », without an Original, when $file is absent', async ({ file, plannedRun }) => {
     const { actions, postingDirectory } = await detectPostings(createFakeAiSession(RESEARCH_RUN, plannedRun));
     await runModule(actions, 'research', REFERENCE);
 
@@ -318,12 +317,12 @@ describe('a Letter that fails', () => {
 
     expect(log).toContain(`Le fichier attendu ${path.join('letter/v1', file)} est absent.`);
     expect(version).toMatchObject({ state: 'failed', isChosen: false });
-    expect(existsSync(path.join(postingDirectory, 'letter/v1/letter.md'))).toBe(false);
+    expect(existsSync(path.join(postingDirectory, 'letter/v1/original.md'))).toBe(false);
   });
 
   it('fails the Version when its recipients are not JSON', async () => {
     const plannedRun = {
-      fileByName: { 'draft.md': DRAFT, 'recipients.json': 'à : p.tj-bethune@justice.fr' },
+      fileByName: { 'letter.md': DRAFT, 'recipients.json': 'à : p.tj-bethune@justice.fr' },
     };
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, plannedRun));
     await runModule(actions, 'research', REFERENCE);

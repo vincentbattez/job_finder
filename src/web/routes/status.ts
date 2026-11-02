@@ -12,7 +12,12 @@ const LOCAL_PATH_PATTERN = /^\/(?![/\\])/;
 export function action({ params, request }: ActionFunctionArgs) {
   return relayAction(request, async () => {
     const formData = await request.formData();
-    await ACTIONS.changeStatus({ reference: params.reference, status: formData.get('status') });
+    // Marking Applied may validate the Letter's Draft first, so the Letter sent is recorded
+    await ACTIONS.changeStatus({
+      reference: params.reference,
+      status: formData.get('status'),
+      letterNumber: formData.get('letterNumber') ?? undefined,
+    });
     const returnTo = formData.get('returnTo');
     return typeof returnTo === 'string' && LOCAL_PATH_PATTERN.test(returnTo) ? redirect(returnTo) : null;
   });

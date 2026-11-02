@@ -81,6 +81,8 @@ interface IListMapProperties {
   focusNonce: number;
   // The width the floating list covers on the left, in pixels: the view keeps its points beside it
   coveredLeft: number;
+  // The width the open Sheet covers on the right, in pixels
+  coveredRight: number;
   // The extent the view fits, a Region's, rather than the points'
   fitCornerList: [[number, number], [number, number]] | undefined;
   // Changes with the list's filters: the view fits again, even after the Candidate moved it
@@ -101,6 +103,7 @@ export function ListMap({
   coveredLeft,
   fitCornerList,
   fitKey,
+  coveredRight,
   onHover,
   onSelect,
   className,
@@ -113,8 +116,8 @@ export function ListMap({
   // Once the Candidate moved the view, a resize no longer fits it again
   const userMovedReference = useRef(false);
   // The handlers of the markers read the latest props without rebuilding the markers
-  const latest = useRef({ pointList, coveredLeft, fitCornerList, onHover, onSelect });
-  latest.current = { pointList, coveredLeft, fitCornerList, onHover, onSelect };
+  const latest = useRef({ pointList, coveredLeft, coveredRight, fitCornerList, onHover, onSelect });
+  latest.current = { pointList, coveredLeft, coveredRight, fitCornerList, onHover, onSelect };
 
   // The view fits the Region filtered, else the points, mainland France first, the overseas ones when alone
   const fitView = useRef(() => {});
@@ -138,7 +141,7 @@ export function ListMap({
       maxZoom: FIT_MAX_ZOOM,
       animate: false,
       paddingTopLeft: [latest.current.coveredLeft + FIT_PADDING, FIT_PADDING_TOP],
-      paddingBottomRight: [FIT_PADDING, FIT_PADDING],
+      paddingBottomRight: [latest.current.coveredRight + FIT_PADDING, FIT_PADDING],
     });
   };
 
@@ -268,7 +271,8 @@ export function ListMap({
     }
   }, [hoveredReference, activeReference, pointKey, isReady]);
 
-  // A Posting chosen from the list: its marker centered in what the list leaves visible
+  // A Posting chosen from the list or the map: its marker centered in what the list and the Sheet leave
+  // visible
   useEffect(() => {
     const current = mapReference.current;
     const marker = activeReference === null ? undefined : markerByReference.current.get(activeReference);
@@ -277,11 +281,10 @@ export function ListMap({
     }
     const { map } = current;
     const zoom = Math.min(Math.max(map.getZoom(), FOCUS_ZOOM_MIN), FOCUS_ZOOM_MAX);
-    // The center moves left by half the covered width, so the marker lands in the middle of the rest
-    const center = map.unproject(
-      map.project(marker.getLatLng(), zoom).subtract([latest.current.coveredLeft / 2, 0]),
-      zoom,
-    );
+    // The center moves by half the difference of the covered widths, so the marker lands in the middle
+    // of the rest
+    const { coveredLeft: left, coveredRight: right } = latest.current;
+    const center = map.unproject(map.project(marker.getLatLng(), zoom).subtract([(left - right) / 2, 0]), zoom);
     if (isReducedMotionPreferred()) {
       map.setView(center, zoom, { animate: false });
     } else {

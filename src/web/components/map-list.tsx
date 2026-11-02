@@ -36,7 +36,13 @@ export interface IMapListFiltering {
   empty: ReactNode;
 }
 
-interface IMapListProperties<T extends IMapListItem> {
+// The Posting whose Sheet is open, which the URL names, and how a row or a marker opens another
+export interface ISheetSelection {
+  selectedReference: string | null;
+  onSelect: (reference: string) => void;
+}
+
+interface IMapListProperties<T extends IMapListItem> extends ISheetSelection {
   // The list's name, which also names its panel
   label: string;
   groupList: IMapListGroup<T>[];
@@ -52,6 +58,8 @@ interface IMapListProperties<T extends IMapListItem> {
 // The panel's width and its inset from the map's edges (DESIGN.md « Layout »)
 const PANEL_WIDTH = 400;
 const PANEL_INSET = 12;
+// The Sheet's width, 30rem, which it covers on the right while it is open (DESIGN.md « Layout »)
+const SHEET_WIDTH = 480;
 
 // The row of a Posting brought into view, wherever the list scrolled
 function revealRow(reference: string) {
@@ -63,7 +71,8 @@ function revealRow(reference: string) {
 // The map-first list every list is built on (spec #125 « Lists », DESIGN.md « Map-first list »): the map
 // fills the page, the list floats over it in a panel that folds away, by groups, each row leading with
 // its City. Rows and markers stay in step: hovering one raises the other, and a row shown on the map
-// centers its marker.
+// centers its marker. A row or a marker opens its Posting's Sheet, the map centering it in what the list
+// and the Sheet leave visible.
 export function MapList<T extends IMapListItem>({
   label,
   groupList,
@@ -72,11 +81,25 @@ export function MapList<T extends IMapListItem>({
   renderActions,
   empty,
   filtering,
+  selectedReference,
+  onSelect,
 }: Readonly<IMapListProperties<T>>) {
   const { t } = useTranslation('lists');
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [hoveredReference, setHoveredReference] = useState<string | null>(null);
-  const [active, setActive] = useState<{ reference: string | null; nonce: number }>({ reference: null, nonce: 0 });
+  // The active Posting, at once on a click, and again when the URL names another, as Back does; each
+  // change of the nonce centers the map on it, a link opening a Sheet included
+  const [active, setActive] = useState({ reference: selectedReference, nonce: selectedReference === null ? 0 : 1 });
+  const [shownReference, setShownReference] = useState(selectedReference);
+  if (selectedReference !== shownReference) {
+    setShownReference(selectedReference);
+    if (selectedReference !== active.reference) {
+      setActive(({ nonce }) => ({
+        reference: selectedReference,
+        nonce: selectedReference === null ? nonce : nonce + 1,
+      }));
+    }
+  }
   const count = groupList.reduce((total, { itemList }) => total + itemList.length, 0);
   const pointList = groupList.flatMap(({ key, toneClass, itemList }) =>
     itemList.map(({ reference, title, city, latitude, longitude }) => ({
@@ -96,8 +119,13 @@ export function MapList<T extends IMapListItem>({
     }
   }
 
+  function select(reference: string) {
+    setActive(({ nonce }) => ({ reference, nonce: nonce + 1 }));
+    onSelect(reference);
+  }
+
   function selectFromMap(reference: string) {
-    setActive(({ nonce }) => ({ reference, nonce }));
+    select(reference);
     revealRow(reference);
   }
 
@@ -112,6 +140,7 @@ export function MapList<T extends IMapListItem>({
         coveredLeft={isPanelOpen ? PANEL_WIDTH + PANEL_INSET : 0}
         fitCornerList={filtering?.fitCornerList}
         fitKey={filtering?.fitKey ?? ''}
+        coveredRight={active.reference === null ? 0 : SHEET_WIDTH}
         onHover={hoverFromMap}
         onSelect={selectFromMap}
       />
@@ -202,15 +231,15 @@ export function MapList<T extends IMapListItem>({
                         {renderActions !== undefined && (
                           <div className="relative z-[1] flex shrink-0 items-center gap-1">{renderActions(item)}</div>
                         )}
-                        {/* The whole row shows its marker; the title above it opens the Posting */}
+                        {/* The whole row opens its Sheet; the title above it opens the Posting's page */}
                         <button
                           type="button"
                           onClick={() => {
-                            setActive(({ nonce }) => ({ reference: item.reference, nonce: nonce + 1 }));
+                            select(item.reference);
                           }}
                           className="absolute inset-0 cursor-pointer rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
                         >
-                          <span className="sr-only">{t('showOnMap')}</span>
+                          <span className="sr-only">{t('openSheet')}</span>
                         </button>
                       </li>
                     ))}

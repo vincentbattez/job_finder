@@ -45,7 +45,7 @@ export const LISTS_EN = {
   },
   count: '{{label}} · {{count}}',
   fold: 'Fold the list',
-  showOnMap: 'Show on the map',
+  openSheet: 'Preview this Posting',
   mapLabel: 'Map of the Postings',
   legendLabel: 'Legend',
   unlocated_one: '{{count}} Posting without a known place',

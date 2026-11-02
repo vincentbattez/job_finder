@@ -23,7 +23,7 @@ describe('an error', () => {
   it.each([
     { command: 'jf versions', call: 'listVersions' },
     { command: 'jf edit', call: 'openArtifact' },
-    { command: 'jf choose', call: 'chooseVersion' },
+    { command: 'jf validate', call: 'validateVersion' },
   ] as const)('names the Artifacts when $command gets a mistyped one', async ({ call }) => {
     const { actions } = await detectPostings();
 
@@ -46,7 +46,7 @@ describe('an error', () => {
     await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runQueuedJobs();
 
-    await expect(actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: 9 })).rejects.toThrow(
+    await expect(actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: 9 })).rejects.toThrow(
       `Version inconnue : research v9 de l'Offre ${REFERENCE}. « jf versions ${REFERENCE} research » liste ses Versions.`,
     );
   });
@@ -130,7 +130,7 @@ describe('an absurd input', () => {
     const { actions } = await detectPostings();
 
     await expect(
-      actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: 'vx' }),
+      actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: 'vx' }),
     ).rejects.toMatchObject({
       code: 'invalid_input',
       message:
@@ -167,7 +167,7 @@ describe('an error for an English-speaking Candidate', () => {
     const { actions, reference } = await createEmma();
 
     await expect(actions.runModule({ module: 'letter', reference })).rejects.toThrow(
-      `Posting ${reference} has no Chosen Research, which the Letter relies on. Produce it first: jf run research ${reference}.`,
+      `Posting ${reference} has no Validated Research, which the Letter relies on. Produce it first, “jf run research ${reference}”, then validate one of its Versions.`,
     );
   });
 

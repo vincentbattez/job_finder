@@ -40,7 +40,7 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
   },
   research: { 'research.md': '# Recherche factice\n\n## Sources\n\n- https://www.justice.fr/\n' },
   letter: {
-    'draft.md':
+    'letter.md':
       'Madame, Monsieur,\n\nTitulaire d’un [à compléter : diplôme], je souhaite rejoindre votre juridiction.\n',
     'recipients.json': JSON.stringify({
       to: null,

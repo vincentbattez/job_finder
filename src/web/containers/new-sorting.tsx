@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
-import type { IMapListFiltering } from '#/web/components/map-list.tsx';
+import type { IMapListFiltering, ISheetSelection } from '#/web/components/map-list.tsx';
 import { NewList, SortButtons, type NewItem, type SortDecision } from '#/web/components/new-list.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
@@ -69,7 +69,9 @@ export function NewSorting({
   now,
   isArchived,
   filtering,
-}: Readonly<{ itemList: NewItem[]; now: Date; isArchived: boolean; filtering: IMapListFiltering }>) {
+  selectedReference,
+  onSelect,
+}: Readonly<{ itemList: NewItem[]; now: Date; isArchived: boolean; filtering: IMapListFiltering } & ISheetSelection>) {
   const { t } = useTranslation('lists');
   const [sortList, setSortList] = useState<ISort[]>([]);
   const undoFetcher = useFetcher<IRefusal | null>();
@@ -100,6 +102,8 @@ export function NewSorting({
               )
         }
         filtering={filtering}
+        selectedReference={selectedReference}
+        onSelect={onSelect}
       />
       {sortList.map((sort) => (
         <SortRequest

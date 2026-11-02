@@ -18,6 +18,7 @@ function findFormatError(markdown: string, locale: Locale): string | undefined {
 // (ADR-0003)
 export const RESEARCH_MODULE = {
   fileName: RESEARCH_FILE_NAME,
+  format: 'mdx',
   outputFileList: [{ name: RESEARCH_FILE_NAME, findFormatError }],
   composePrompt: composeResearchPrompt,
   // Its sources are on the web

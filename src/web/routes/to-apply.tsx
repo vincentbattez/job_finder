@@ -7,7 +7,9 @@ import { readCandidate } from '#/web/candidate.server.ts';
 import { PageHeader } from '#/web/components/page-header.tsx';
 import { ToApplyList } from '#/web/components/to-apply-list.tsx';
 import { useListFilters } from '#/web/containers/list-filters.tsx';
+import { PostingSheet, useSheetSelection } from '#/web/containers/posting-sheet.tsx';
 import { isPlaceChangeOnly, readListFilters } from '#/web/list-model.ts';
+import { readSheetPosting } from '#/web/posting-sheet.server.ts';
 import { relayLoader } from '#/web/relay-action.server.ts';
 
 // The To Apply Postings the Candidate follows, or under the Archived filter the Archived ones
@@ -26,6 +28,8 @@ export function loader({ request }: LoaderFunctionArgs) {
       locale,
       itemList,
       archivedCount: archivedList.length,
+      // The Posting of the Sheet the URL opens
+      sheetPosting: await readSheetPosting(request, candidate?.id ?? null),
       // The day the groups are counted from, the same for the server's render and the browser's
       now: new Date(),
     };
@@ -47,9 +51,10 @@ export function meta({ loaderData }: MetaArgs<typeof loader>) {
 }
 
 export default function ToApply() {
-  const { candidate, itemList, archivedCount, now } = useLoaderData<typeof loader>();
+  const { candidate, itemList, archivedCount, now, sheetPosting } = useLoaderData<typeof loader>();
   const { t } = useTranslation('lists');
   const filtered = useListFilters(itemList, archivedCount);
+  const { selectedReference, onSelect, onClose } = useSheetSelection();
   return (
     <main className="flex h-svh min-h-0 flex-col">
       <PageHeader title={t('toApply.heading')} />
@@ -59,8 +64,15 @@ export default function ToApply() {
           <p className="text-body text-muted-foreground">{t('noCandidateHint', { ns: 'postingList' })}</p>
         </div>
       ) : (
-        <ToApplyList itemList={filtered.itemList} now={now} filtering={filtered.filtering} />
+        <ToApplyList
+          itemList={filtered.itemList}
+          now={now}
+          filtering={filtered.filtering}
+          selectedReference={selectedReference}
+          onSelect={onSelect}
+        />
       )}
+      <PostingSheet detail={sheetPosting} onClose={onClose} />
     </main>
   );
 }

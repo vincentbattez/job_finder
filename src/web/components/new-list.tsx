@@ -7,7 +7,7 @@ import { Button } from '#/web/components/ui/button.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from '#/web/components/ui/tooltip.tsx';
 import { groupNew, type NewGroupKey } from '#/web/list-model.ts';
 
-import { MapList, type IMapListFiltering } from './map-list.tsx';
+import { MapList, type IMapListFiltering, type ISheetSelection } from './map-list.tsx';
 
 export type NewItem = Awaited<ReturnType<Actions['listNew']>>[number];
 type Row = NewItem['posting'] & { isFound: boolean };
@@ -78,12 +78,16 @@ export function NewList({
   now,
   renderActions,
   filtering,
-}: Readonly<{
-  itemList: NewItem[];
-  now: Date;
-  renderActions?: ((row: Row) => ReactNode) | undefined;
-  filtering?: IMapListFiltering | undefined;
-}>) {
+  selectedReference,
+  onSelect,
+}: Readonly<
+  {
+    itemList: NewItem[];
+    now: Date;
+    renderActions?: ((row: Row) => ReactNode) | undefined;
+    filtering?: IMapListFiltering | undefined;
+  } & ISheetSelection
+>) {
   const { t } = useTranslation('lists');
   const shortDate = useShortDate();
   const rowList: Row[] = itemList.map(({ posting, isFound }) => ({ ...posting, isFound }));
@@ -132,6 +136,8 @@ export function NewList({
       )}
       renderActions={renderActions}
       filtering={filtering}
+      selectedReference={selectedReference}
+      onSelect={onSelect}
     />
   );
 }

@@ -80,6 +80,39 @@ function DateFact({ term, date }: Readonly<{ term: string; date: Date | null }>)
   );
 }
 
+// The contacts the Job Description gives, the application mail as a link when it is one
+export function ContactList({
+  applicationEmail,
+  contact1,
+  contact2,
+}: Readonly<Pick<IPostingFacts['posting'], 'applicationEmail' | 'contact1' | 'contact2'>>) {
+  const { t } = useTranslation('posting');
+  const contactList = [contact1, contact2].filter((contact) => contact !== null);
+  if (applicationEmail === null && contactList.length === 0) {
+    return <p className="text-sm text-muted-foreground">{t('page.noContact')}</p>;
+  }
+  return (
+    <ul className="space-y-1.5 text-sm">
+      {applicationEmail !== null && (
+        <li className="truncate">
+          {EMAIL_PATTERN.test(applicationEmail) ? (
+            <a href={`mailto:${applicationEmail}`} className={LINK_CLASS_NAME}>
+              {applicationEmail}
+            </a>
+          ) : (
+            applicationEmail
+          )}
+        </li>
+      )}
+      {contactList.map((contact) => (
+        <li key={contact} className="text-muted-foreground">
+          {contact}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 // The Repost of a Position: how often it was published, the Application to an earlier Posting of it,
 // and the Postings it publishes again or that publish it again
 function RepostSection({ posting, repost }: Readonly<Pick<IPostingFacts, 'posting' | 'repost'>>) {
@@ -140,7 +173,6 @@ export function PostingFacts({
   children,
 }: Readonly<IPostingFacts & { children?: ReactNode }>) {
   const { t } = useTranslation('posting');
-  const contactList = [posting.contact1, posting.contact2].filter((contact) => contact !== null);
   const jobDescriptionId = useId();
   return (
     <div className="@container">
@@ -183,28 +215,7 @@ export function PostingFacts({
             </dl>
           </AsideSection>
           <AsideSection title={t('contactsHeading')} icon={<MailIcon />}>
-            {posting.applicationEmail === null && contactList.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t('page.noContact')}</p>
-            ) : (
-              <ul className="space-y-1.5 text-sm">
-                {posting.applicationEmail !== null && (
-                  <li className="truncate">
-                    {EMAIL_PATTERN.test(posting.applicationEmail) ? (
-                      <a href={`mailto:${posting.applicationEmail}`} className={LINK_CLASS_NAME}>
-                        {posting.applicationEmail}
-                      </a>
-                    ) : (
-                      posting.applicationEmail
-                    )}
-                  </li>
-                )}
-                {contactList.map((contact) => (
-                  <li key={contact} className="text-muted-foreground">
-                    {contact}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <ContactList {...posting} />
           </AsideSection>
           <RepostSection posting={posting} repost={repost} />
         </aside>

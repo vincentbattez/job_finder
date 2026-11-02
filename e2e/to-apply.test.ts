@@ -28,7 +28,8 @@ function dayFromToday(days: number): string {
   return new Date(today + days * DAY_MS).toISOString().replace('Z', '+00:00');
 }
 
-// Mila's Postings as this file needs them, To Apply and followed, whatever a previous run left
+// Mila's Postings as this file needs them, To Apply and followed, whatever a previous run left. Their
+// title, which names their folder, stays the seed's: their employer tells them apart
 function resetMila() {
   const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
   const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
@@ -36,13 +37,12 @@ function resetMila() {
     .array(z.object({ reference: z.string() }))
     .parse(database.prepare('SELECT "reference" FROM "Posting" WHERE "candidateId" = ? ORDER BY "id"').all('mila'));
   const update = database.prepare(
-    `UPDATE "Posting" SET "title" = ?, "employer" = ?, "city" = ?, "region" = NULL, "latitude" = ?,
+    `UPDATE "Posting" SET "employer" = ?, "city" = ?, "region" = NULL, "latitude" = ?,
       "longitude" = ?, "deadline" = ?, "startDate" = ?, "unpublishedAt" = ?, "status" = 'to_apply',
       "archivedAt" = NULL WHERE "reference" = ?`,
   );
   for (const [index, { city, latitude, longitude, days, isUnpublished }] of POSTING_LIST.entries()) {
     update.run(
-      `Greffier placé – Tribunal judiciaire de ${city}`,
       `Cour d’appel de ${city}`,
       city,
       latitude,
@@ -77,7 +77,7 @@ function findMarker(page: Page, city: string): Locator {
 }
 
 function findRow(page: Page, city: string): Locator {
-  return page.getByRole('listitem').filter({ hasText: `Greffier placé – Tribunal judiciaire de ${city}` });
+  return page.getByRole('listitem').filter({ hasText: `Cour d’appel de ${city}` });
 }
 
 test.describe('To Apply on the map', () => {
@@ -143,23 +143,31 @@ test.describe('To Apply on the map', () => {
     await expect(findRow(page, 'Lyon')).not.toHaveAttribute('data-highlighted', '');
   });
 
-  test('centers the map on the marker of a clicked item, beside the list', async ({ page, asCandidate, openPage }) => {
+  test('centers the map on the marker of a clicked item, between the list and the Sheet', async ({
+    page,
+    asCandidate,
+    openPage,
+  }) => {
     await openToApplyOfMila({ page, asCandidate, openPage });
     const panelBox = await page.getByRole('complementary', { name: 'À traiter' }).boundingBox();
     const mapBox = await findMap(page).boundingBox();
     if (panelBox === null || mapBox === null) {
       throw new Error('The list and the map show');
     }
-    // The part of the map the list leaves visible
-    const visibleCenterX = (panelBox.x + panelBox.width + mapBox.x + mapBox.width) / 2;
-    const visibleCenterY = mapBox.y + mapBox.height / 2;
 
     // On its City line: the title in the middle of the row opens the Posting instead
     await findRow(page, 'Rennes')
-      .getByRole('button', { name: 'Voir sur la carte' })
+      .getByRole('button', { name: 'Aperçu de cette Offre' })
       .click({ position: { x: 8, y: 8 } });
     // Away from the row, whose hover would outshine the marker it made active
     await page.mouse.move(0, 0);
+    const sheet = page.getByRole('dialog');
+    await expect(sheet).toBeVisible();
+    // The Sheet is 30rem wide at the right edge, once it slid in
+    const sheetLeft = mapBox.x + mapBox.width - 480;
+    // The part of the map the list and the Sheet leave visible
+    const visibleCenterX = (panelBox.x + panelBox.width + sheetLeft) / 2;
+    const visibleCenterY = mapBox.y + mapBox.height / 2;
 
     await expect
       .poll(async () => {

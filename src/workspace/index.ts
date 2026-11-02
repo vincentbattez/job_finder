@@ -3,6 +3,7 @@ import path from 'node:path';
 import { codedError } from '#/domain/coded-error.ts';
 import {
   JOB_DESCRIPTION_FILE_NAME,
+  ORIGINAL_FILE_NAME,
   type Artifact,
   type Interview,
   type JobDescription,
@@ -18,6 +19,7 @@ import { messageOf, wordListOf } from '#/text/index.ts';
 import { findObsoleteConfig, readObsoleteConfig } from './acl/config.ts';
 import { openDatabase, type INewCandidate, type INewPosting } from './acl/database.ts';
 import {
+  copyAsReadOnly,
   createDirectory,
   deleteDirectory,
   deleteFile,
@@ -161,9 +163,15 @@ export async function openWorkspace(dataDirectory: string) {
       return readMarkdownFiles(outputDirectory);
     },
 
-    // The Markdown files of a Version, such as the Draft and the Letter of a Letter Version
-    readVersionDocuments(posting: Posting, version: Version) {
-      return readMarkdownFiles(versionDirectoryOf(posting, version));
+    // A file of a Version, null when it has none
+    readVersionFile(posting: Posting, version: Version, fileName: string): string | null {
+      return readTextFile(path.join(versionDirectoryOf(posting, version), fileName));
+    },
+
+    // The AI's text, kept as it wrote it beside the text the Candidate corrects (ADR-0019)
+    keepOriginal(posting: Posting, version: Version, fileName: string): void {
+      const directory = versionDirectoryOf(posting, version);
+      copyAsReadOnly(path.join(directory, fileName), path.join(directory, ORIGINAL_FILE_NAME));
     },
 
     // A correction by the Candidate changes the Version in place, without creating another one
