@@ -147,7 +147,6 @@ describe('interview brief', () => {
         chosenList: [
           { artifact: 'portrait', chosen: [] },
           { artifact: 'interview_brief', chosen: [1] },
-          { artifact: 'visualization', chosen: [] },
         ],
       },
       {
@@ -155,7 +154,6 @@ describe('interview brief', () => {
         chosenList: [
           { artifact: 'portrait', chosen: [] },
           { artifact: 'interview_brief', chosen: [1] },
-          { artifact: 'visualization', chosen: [] },
         ],
       },
     ]);
@@ -171,7 +169,7 @@ describe('interview brief', () => {
       interviewList.map(({ artifactList: interviewArtifactList }) =>
         interviewArtifactList.map(({ artifact }) => artifact),
       ),
-    ).toEqual([['portrait', 'interview_brief', 'visualization']]);
+    ).toEqual([['portrait', 'interview_brief']]);
   });
 
   // The interview comes once the Letter is sent: the Interview Brief prepares the questions on it

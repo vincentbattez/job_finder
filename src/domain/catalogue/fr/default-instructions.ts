@@ -39,10 +39,4 @@ Une réponse d'environ deux minutes, à la première personne, qui relie le parc
 
 Une dizaine de questions, des plus attendues (motivation, connaissance du poste, mises en situation) aux plus pointues, avec celles que sa Lettre appelle. Pour chacune, ce que les recruteurs cherchent à savoir et des éléments de réponse appuyés sur un fait de son Profil. Termine par deux ou trois questions que le Candidat peut poser aux recruteurs.
 `,
-  visualization: `Le Candidat révise avec cette page la veille de l'entretien, souvent sur son téléphone : elle doit se lire d'un coup d'œil et se parcourir sans effort.
-
-Suis le plan de la Fiche d'entretien, une section par partie, avec un sommaire en tête. Mets en tableau ce qui se compare ou s'énumère : les missions, les chiffres, les acteurs et leur rôle. Dessine un diagramme quand il éclaire une organisation ou un enchaînement : l'organigramme du service, le parcours d'une procédure. Donne à chaque moyen mnémotechnique un bloc qui ressort, avec ce qu'il rappelle. Présente les questions probables comme des cartes, la question en évidence et ses éléments de réponse dessous.
-
-Une mise en page sobre : une seule colonne étroite sur téléphone, des titres nets, des couleurs pour distinguer les parties et non pour décorer. La page doit aussi s'imprimer proprement.
-`,
 };

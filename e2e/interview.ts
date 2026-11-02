@@ -5,7 +5,7 @@ export function findInterviews(page: Page): Locator {
 }
 
 // Each test starts from an Application without any Interview, whatever a previous run left: deleting an
-// Interview deletes its Interview Brief and its Visualization too
+// Interview deletes its Interview Brief too
 export async function deleteEveryInterview(page: Page): Promise<void> {
   const interviews = findInterviews(page);
   const interviewList = interviews.getByRole('article');

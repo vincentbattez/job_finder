@@ -19,7 +19,7 @@ test('launches the Portrait of an Interview without a Research, then corrects it
   const interview = await prepareInterview(page, REFERENCE);
   // Under its Interview, before its Interview Brief
   const portrait = interview.getByRole('region', { name: 'Portrait' });
-  await expect(interview.getByRole('region')).toHaveText([/^Portrait/, /^Fiche d’entretien/, /^Visualisation/]);
+  await expect(interview.getByRole('region')).toHaveText([/^Portrait/, /^Fiche d’entretien/]);
 
   await portrait.getByRole('button', { name: 'Lancer le Portrait' }).click();
 

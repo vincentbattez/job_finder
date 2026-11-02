@@ -72,11 +72,7 @@ describe('portrait', () => {
     expect(readFileSync(path.join(postingDirectory, 'interviews/1/portrait/v1/portrait.md'), 'utf8')).toBe(PORTRAIT);
     const { artifactList, interviewList } = await actions.readPosting({ reference: REFERENCE });
     expect(artifactList.map(({ artifact }) => artifact)).toEqual(['research', 'letter']);
-    expect(interviewList[0]?.artifactList.map(({ artifact }) => artifact)).toEqual([
-      'portrait',
-      'interview_brief',
-      'visualization',
-    ]);
+    expect(interviewList[0]?.artifactList.map(({ artifact }) => artifact)).toEqual(['portrait', 'interview_brief']);
   });
 
   it('is edited, rerun and chosen like the other Artifacts', async () => {

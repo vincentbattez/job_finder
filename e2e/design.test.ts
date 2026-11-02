@@ -57,7 +57,6 @@ test.describe('design system page', () => {
       /^Recherche.*(Absent|En attente|En cours|Prêt|En échec)$/,
       /^Lettre.*(Absent|En attente|En cours|Prêt|En échec)$/,
       /^Fiche d’entretien.*(Absent|En attente|En cours|Prêt|En échec)$/,
-      /^Visualisation.*(Absent|En attente|En cours|Prêt|En échec)$/,
     ]);
   });
 

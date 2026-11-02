@@ -123,7 +123,7 @@ model Interview {
   interviewers    String
   // Grows at each edit: the SEQUENCE of its iCal event, so a calendar updates the event
   editCount       Int       @default(0)
-  // Its Interview Brief and Visualization, and the jobs that make them: deleted with it
+  // Its Artifacts, and the jobs that make them: deleted with it
   versionList     Version[]
   jobList         Job[]
 
@@ -172,7 +172,6 @@ enum Artifact {
   letter
   portrait
   interview_brief
-  visualization
 }
 
 enum VersionState {

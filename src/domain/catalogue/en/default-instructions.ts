@@ -43,10 +43,4 @@ An answer of about two minutes, in the first person, linking the Candidate's bac
 
 About ten questions, from the most expected (motivation, knowledge of the position, role-play scenarios) to the most specialized, including those their Letter invites. For each, what the recruiters want to find out and points for an answer backed by a fact from their Profile. End with two or three questions the Candidate can ask the recruiters.
 `,
-  visualization: `The Candidate revises with this page the day before the interview, often on their phone: it must read at a glance and be browsed without effort.
-
-Follow the plan of the Interview Brief, one section per part, with a table of contents at the top. Put in a table what compares or lists: the duties, the figures, the actors and their role. Draw a diagram when it sheds light on an organization or a sequence: the department's organization chart, the course of a procedure. Give each memory aid a block that stands out, with what it recalls. Present the likely questions as cards, the question prominent and its points for an answer below.
-
-A sober layout: a single narrow column on a phone, clear headings, colors to tell the parts apart and not to decorate. The page must also print cleanly.
-`,
 } satisfies Record<Artifact, string>;

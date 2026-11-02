@@ -41,16 +41,21 @@ const LAYOUT_STEP_LIST: ILayoutStep[] = [
     from: 'candidates/*/postings/*/interview_brief/*/fiche-entretien.md',
     to: 'candidates/*/postings/*/interview_brief/*/interview-brief.md',
   },
-  {
-    from: 'candidates/*/postings/*/visualization/*/visualisation.html',
-    to: 'candidates/*/postings/*/visualization/*/visualization.html',
-  },
+  // The Visualization, no longer an Artifact (ADR-0020), under its English name for its deletion below
+  { from: 'candidates/*/instructions/visualisation.md', to: 'candidates/*/instructions/visualization.md' },
+  { from: 'candidates/*/postings/*/visualisation', to: 'candidates/*/postings/*/visualization' },
 ];
 
-// The Interview Brief and the Visualization of a Posting, which the migration version_interview deleted
-// from the database: they belong to an Interview now, in its own folder. The step can go once every
+// The Interview Brief of a Posting, which the migration version_interview deleted from the database: it
+// belongs to an Interview now, in its own folder. Then the Visualization, which the migration
+// remove_visualization deleted (ADR-0020): its folders and its Instructions. The step can go once every
 // data/ is migrated.
-const OBSOLETE_ENTRY_LIST = ['candidates/*/postings/*/interview_brief', 'candidates/*/postings/*/visualization'];
+const OBSOLETE_ENTRY_LIST = [
+  'candidates/*/postings/*/interview_brief',
+  'candidates/*/postings/*/visualization',
+  'candidates/*/postings/*/interviews/*/visualization',
+  'candidates/*/instructions/visualization.md',
+];
 
 // The names of a folder a segment of a step matches, each with what its `*` stands for
 function matchSegment(directory: string, segment: string): { name: string; wildcard: string }[] {
@@ -81,7 +86,8 @@ function expandStep(dataDirectory: string, { from, to }: ILayoutStep): ILayoutSt
   return pairList;
 }
 
-// Each obsolete entry of the data folder, with all it holds; one already gone is the same outcome
+// Each obsolete entry of the data folder, a file or a folder with all it holds; one already gone is the
+// same outcome
 function deleteObsoleteEntries(dataDirectory: string): void {
   const entryList = OBSOLETE_ENTRY_LIST.flatMap((entry) => expandStep(dataDirectory, { from: entry, to: entry }));
   for (const { from } of entryList) {

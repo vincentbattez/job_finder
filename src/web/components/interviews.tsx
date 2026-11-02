@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { Actions } from '#/actions/index.ts';
 import { DEFAULT_DURATION_MINUTES } from '#/actions/interview-duration.ts';
+import { interviewIdOf } from '#/actions/interview-section.ts';
 import { parisDateTimeOf } from '#/actions/paris-time.ts';
 
 import { ButtonRow } from './button-row.tsx';
@@ -19,7 +20,7 @@ type Interview = Omit<Awaited<ReturnType<Actions['readPosting']>>['interviewList
 // with the refusal of the action, if any
 type FormRenderer = (formKey: string, renderFieldList: (error: string | null | undefined) => ReactNode) => ReactNode;
 
-// The Artifacts of an Interview, its Interview Brief and its Visualization, which its Container lays out
+// The Artifacts of an Interview, such as its Interview Brief, which its Container lays out
 type ArtifactsRenderer = (interviewNumber: number) => ReactNode;
 
 // Where an Interview most often takes place: the place of work, then its City when it does not name it
@@ -110,7 +111,7 @@ function InterviewItem({
   const { number, startAt, durationMinutes, place, interviewers, editCount } = interview;
   return (
     <li>
-      <article className="interviews__item" aria-labelledby={headingId}>
+      <article className="interviews__item" id={interviewIdOf(number)} aria-labelledby={headingId}>
         <h3 id={headingId}>{t('interviews.title', { number })}</h3>
         <dl className="interviews__facts">
           <dt>{t('interviews.start')}</dt>

@@ -23,14 +23,13 @@ test.describe('Instructions of a Candidate', () => {
       'Lettre',
       'Portrait',
       'Fiche d’entretien',
-      'Visualisation',
     ]);
     const letter = page.getByRole('region', { name: 'Lettre' });
     await expect(letter.getByText('Consignes par défaut', { exact: true })).toBeVisible();
     await expect(letter.getByRole('textbox')).toHaveValue(/^Écris une lettre de motivation d'une page/);
     // The fixed part of every prompt holds this rule: no field of the page carries it
     const textboxList = await page.getByRole('textbox').all();
-    expect(textboxList).toHaveLength(5);
+    expect(textboxList).toHaveLength(4);
     for (const textbox of textboxList) {
       await expect(textbox).not.toHaveValue(/N'invente jamais un fait/);
     }

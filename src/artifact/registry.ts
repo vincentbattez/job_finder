@@ -6,7 +6,6 @@ import { INTERVIEW_BRIEF_MODULE } from '#/modules/interview-brief/index.ts';
 import { LETTER_MODULE } from '#/modules/letter/index.ts';
 import { PORTRAIT_MODULE } from '#/modules/portrait/index.ts';
 import { RESEARCH_MODULE } from '#/modules/research/index.ts';
-import { VISUALIZATION_MODULE } from '#/modules/visualization/index.ts';
 
 // The AI module of each Artifact: what makes one Artifact differ from another is declared there
 // (ADR-0003); adding an Artifact is its module folder and a line here (ADR-0016)
@@ -15,7 +14,6 @@ export const AI_MODULE_BY_ARTIFACT: Record<Artifact, IAiModule> = {
   letter: LETTER_MODULE,
   portrait: PORTRAIT_MODULE,
   interview_brief: INTERVIEW_BRIEF_MODULE,
-  visualization: VISUALIZATION_MODULE,
 };
 
 // Whether its Versions are attached to an Interview rather than to the Posting, as its module declares

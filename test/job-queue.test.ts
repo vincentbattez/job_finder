@@ -213,7 +213,6 @@ describe('the job queue', () => {
       { artifact: 'letter', state: 'absent', errorCode: null },
       { artifact: 'portrait', state: 'absent', errorCode: null },
       { artifact: 'interview_brief', state: 'in_progress', errorCode: 'job_overdue' },
-      { artifact: 'visualization', state: 'absent', errorCode: null },
     ]);
     expect(
       await actions.readArtifactState({ reference: REFERENCE, artifact: 'interview_brief', interview: 1 }),

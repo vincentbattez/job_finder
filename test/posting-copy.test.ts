@@ -28,8 +28,4 @@ describe('the counted copy of the Posting area', () => {
     expect(t('unlocatedPostings', { count: 1 })).toBe('1 Offre sans coordonnées n’est pas sur la carte.');
     expect(t('unlocatedPostings', { count: 2 })).toBe('2 Offres sans coordonnées ne sont pas sur la carte.');
   });
-
-  it('names a Version by its number', () => {
-    expect(t('visualizationFrameTitle', { versionNumber: 2 })).toBe('Visualisation v2');
-  });
 });

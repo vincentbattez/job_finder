@@ -78,8 +78,6 @@ export const ERROR_FR: typeof ERROR_EN = {
     'Le job {{jobId}} tourne depuis plus de {{minutes}} minutes, au-delà de sa durée maximale : le worker est bloqué. Le redémarrer : « lpm service worker restart -p job_finder », ce qui fait échouer le job ; puis relancer le module.',
   interruptedJob:
     "Interrompu : le worker s'est arrêté pendant ce job. Relancer le module en crée une nouvelle Version.",
-  visualizationNotEditable:
-    "La Visualisation ne se modifie pas à la main : elle reprend la Fiche d'entretien retenue. Corrigez celle-ci, puis relancez la Visualisation de l'Offre {{reference}}.",
   noChosenVersionToEdit:
     "L'Offre {{reference}} n'a pas de Version retenue de {{artifact}} à modifier : « {{command}} » en produit une.",
   draftNotEditable:
@@ -92,8 +90,6 @@ export const ERROR_FR: typeof ERROR_EN = {
     "La Version {{artifact}} v{{number}} de l'Offre {{reference}} est en cours : seule une Version prête peut être retenue.",
   notAVersionFile:
     "« {{fileName}} » n'est pas un fichier de la Version retenue de {{artifact}} de l'Offre {{reference}}.",
-  visualizationWithoutPage:
-    "La Visualisation v{{number}} de l'Offre {{reference}} n'a pas de page : relancez la Visualisation.",
   noChosenLetter: "L'Offre {{reference}} n'a pas de Lettre retenue. La produire : jf run letter {{reference}}.",
 
   invalidProfileFileName:
@@ -135,8 +131,6 @@ export const ERROR_FR: typeof ERROR_EN = {
   extractionInvented: "ne figure pas tel quel dans la Fiche de poste : la session l'a inventé",
   noLevelOneHeading: 'il ne commence pas par un titre de niveau 1 (« # »)',
   noSourcesSection: "il n'a pas de section « ## Sources » avec au moins un lien",
-  notACompletePage: "ce n'est pas une page HTML complète, de « <!DOCTYPE html> » à « </html> »",
-  hasScript: "il contient un script, que le front n'exécute pas",
   recipientsFormat: 'il ne suit pas le format demandé ({{detail}})',
   inventedAddress: "l'adresse {{email}} ne figure pas dans le champ {{field}} de l'Offre",
 
