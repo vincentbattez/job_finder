@@ -92,14 +92,15 @@ export const LOCATION_SCHEMA = z.object(LOCATION_SHAPE).brand<'Domain'>();
 
 export type Location = z.infer<typeof LOCATION_SCHEMA>;
 
-// The stored Status: Invited and Interviewed are computed from the Interviews, never stored (ADR-0009)
-export const STATUS_SCHEMA = z.enum(['to_apply', 'applied', 'hired', 'rejected']);
+// The stored Status: Invited and Interviewed are computed from the Interviews, never stored (ADR-0009).
+// A detected Posting starts New until the Candidate sorts it (ADR-0018)
+export const STATUS_SCHEMA = z.enum(['new', 'to_apply', 'applied', 'hired', 'rejected']);
 
 export type Status = z.infer<typeof STATUS_SCHEMA>;
 
 // The Status as read: the stored one, Applied showing as Invited or Interviewed from its Interviews
 // (ADR-0009)
-const STEP_SCHEMA = z.enum(['to_apply', 'applied', 'invited', 'interviewed', 'hired', 'rejected']);
+const STEP_SCHEMA = z.enum(['new', 'to_apply', 'applied', 'invited', 'interviewed', 'hired', 'rejected']);
 
 export type Step = z.infer<typeof STEP_SCHEMA>;
 
@@ -178,6 +179,11 @@ export const LIST_ITEM_SCHEMA = z
   .brand<'Domain'>();
 
 export type ListItem = z.infer<typeof LIST_ITEM_SCHEMA>;
+
+// A New Posting as its list shows it, and whether the last Detection found it (ADR-0018)
+export const NEW_ITEM_SCHEMA = z.object({ posting: POSTING_SCHEMA, isFound: z.boolean() }).brand<'Domain'>();
+
+export type NewItem = z.infer<typeof NEW_ITEM_SCHEMA>;
 
 // An Application as its row shows it, on the home and on /applications
 export const APPLICATION_SCHEMA = z

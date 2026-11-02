@@ -7,6 +7,7 @@ import { type Actions } from '#/actions/index.ts';
 import { promptOf } from '#/artifact/prompt.ts';
 import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructions.ts';
 
+import { applyTo } from './apply.ts';
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { markedValuesOf } from './marked-values.ts';
@@ -40,6 +41,9 @@ Juge des enfants à Béthune depuis 2021 ([cour d'appel de Douai](https://www.co
 Un homonyme, avocat à Lille : à écarter.
 `;
 
+// The Research keeping the Posting queued, failed: the Posting has none
+const NO_RESEARCH_RUN = { isSuccess: false };
+
 function portraitRun(markdown = PORTRAIT) {
   return { fileByName: { 'portrait.md': markdown } };
 }
@@ -50,10 +54,17 @@ async function runModule(actions: Actions, module: string, interview?: number) {
   return runAndValidate(actions, { module, reference: REFERENCE, interview });
 }
 
-// Léa's Postings, her Béthune Posting Applied, with its Interview with the judge
+// Léa's Postings, her Béthune Posting kept then Applied, with its Interview with the judge. The Research
+// keeping it queued runs first: each session plans it, RESEARCH_RUN or NO_RESEARCH_RUN.
 async function applyWithInterview(aiSession: ReturnType<typeof createFakeAiSession>) {
   const { actions, dataDirectory } = await detectRecordedPostings(aiSession);
-  await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+  await applyTo(actions, REFERENCE);
+  await actions.runQueuedJobs();
+  // The Research that keeping the Posting queued, validated when it is ready, as the Candidate would
+  const [research] = await actions.listVersions({ reference: REFERENCE, artifact: 'research' });
+  if (research?.state === 'ready') {
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: research.number });
+  }
   await actions.addInterview({ reference: REFERENCE, ...JUDGE_INTERVIEW });
   return {
     actions,
@@ -64,7 +75,7 @@ async function applyWithInterview(aiSession: ReturnType<typeof createFakeAiSessi
 
 describe('portrait', () => {
   it('produces a Version attached to the Interview, in its folder, before its Interview Brief', async () => {
-    const { actions, postingDirectory } = await applyWithInterview(createFakeAiSession(portraitRun()));
+    const { actions, postingDirectory } = await applyWithInterview(createFakeAiSession(NO_RESEARCH_RUN, portraitRun()));
 
     const job = await runModule(actions, 'portrait', 1);
 
@@ -78,7 +89,7 @@ describe('portrait', () => {
 
   it('is edited, rerun and chosen like the other Artifacts', async () => {
     const corrected = PORTRAIT.replace('Un homonyme, avocat à Lille : à écarter.\n', '');
-    const { actions } = await applyWithInterview(createFakeAiSession(portraitRun(), portraitRun()));
+    const { actions } = await applyWithInterview(createFakeAiSession(NO_RESEARCH_RUN, portraitRun(), portraitRun()));
     await runModule(actions, 'portrait', 1);
     await runModule(actions, 'portrait', 1);
 
@@ -104,7 +115,7 @@ describe('portrait', () => {
 
   it('fails the Version of a Portrait without a title', async () => {
     const withoutTitle = PORTRAIT.replace(/^# .*\n/, '');
-    const { actions } = await applyWithInterview(createFakeAiSession(portraitRun(withoutTitle)));
+    const { actions } = await applyWithInterview(createFakeAiSession(NO_RESEARCH_RUN, portraitRun(withoutTitle)));
 
     const { state, log } = await runModule(actions, 'portrait', 1);
 
@@ -119,7 +130,6 @@ describe('the prompt of the Portrait', () => {
   it('holds the Interview and the Posting, and gives the Chosen Research inlined when there is one', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, portraitRun());
     const { actions } = await applyWithInterview(aiSession);
-    await runModule(actions, 'research');
 
     const { version } = await runModule(actions, 'portrait', 1);
 
@@ -142,7 +152,7 @@ describe('the prompt of the Portrait', () => {
   });
 
   it('runs without a Research, and tells the session there is none', async () => {
-    const aiSession = createFakeAiSession(portraitRun());
+    const aiSession = createFakeAiSession(NO_RESEARCH_RUN, portraitRun());
     const { actions } = await applyWithInterview(aiSession);
 
     const { state, version } = await runModule(actions, 'portrait', 1);
@@ -153,7 +163,7 @@ describe('the prompt of the Portrait', () => {
   });
 
   it('keeps to professional and public information, sourced, flagging any doubt on an identity', async () => {
-    const aiSession = createFakeAiSession(portraitRun());
+    const aiSession = createFakeAiSession(NO_RESEARCH_RUN, portraitRun());
     const { actions } = await applyWithInterview(aiSession);
 
     const { version } = await runModule(actions, 'portrait', 1);
@@ -166,7 +176,7 @@ describe('the prompt of the Portrait', () => {
 
   it("replaces the default Instructions with the Candidate's own, keeping the fixed part", async () => {
     const instructions = 'Seulement leurs publications.\n';
-    const aiSession = createFakeAiSession(portraitRun());
+    const aiSession = createFakeAiSession(NO_RESEARCH_RUN, portraitRun());
     const { actions, dataDirectory } = await applyWithInterview(aiSession);
     mkdirSync(path.join(dataDirectory, 'candidates/lea/instructions'));
     writeFileSync(path.join(dataDirectory, 'candidates/lea/instructions/portrait.md'), instructions);
@@ -181,7 +191,6 @@ describe('the prompt of the Portrait', () => {
   it('is the one its preview composes, with the Interview and the Posting marked where they are substituted', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, portraitRun());
     const { actions } = await applyWithInterview(aiSession);
-    await runModule(actions, 'research');
     const { interviewList } = await actions.readPosting({ reference: REFERENCE });
     const prompt = interviewList[0]?.artifactList.find(({ artifact }) => artifact === 'portrait')?.module.prompt;
 
@@ -209,7 +218,6 @@ describe('the Interview Brief and the Portrait', () => {
   it('reads the Chosen Portrait of its Interview', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, portraitRun(), portraitRun('# Autre portrait\n'), BRIEF_RUN);
     const { actions } = await applyWithInterview(aiSession);
-    await runModule(actions, 'research');
     await runModule(actions, 'portrait', 1);
     await runModule(actions, 'portrait', 1);
     await actions.validateVersion({ reference: REFERENCE, artifact: 'portrait', interview: 1, number: 1 });
@@ -229,7 +237,6 @@ describe('the Interview Brief and the Portrait', () => {
   it('runs without a Portrait, and tells the session there is none', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, BRIEF_RUN);
     const { actions } = await applyWithInterview(aiSession);
-    await runModule(actions, 'research');
 
     const { state, version } = await runModule(actions, 'brief', 1);
 
@@ -246,7 +253,6 @@ describe('the Interview Brief and the Portrait', () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, portraitRun(), BRIEF_RUN);
     const { actions } = await applyWithInterview(aiSession);
     await actions.addInterview({ reference: REFERENCE, ...JUDGE_INTERVIEW, start: '2026-12-10T10:00' });
-    await runModule(actions, 'research');
     await runModule(actions, 'portrait', 1);
 
     await runModule(actions, 'brief', 2);

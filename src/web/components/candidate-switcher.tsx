@@ -90,7 +90,7 @@ export function CandidateSwitcher({
             ))}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild className="gap-2">
-              <Link to="/candidates">
+              <Link to="/settings#candidates">
                 <UsersIcon />
                 {t('candidate.manage')}
               </Link>

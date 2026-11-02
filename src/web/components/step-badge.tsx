@@ -7,6 +7,7 @@ import type { Step } from './badge.tsx';
 
 // Each Step in its state hue (DESIGN.md « State hues »), always beside its label
 const TONE_BY_STEP: Record<Step, string> = {
+  new: 'bg-primary/10 text-primary',
   to_apply: 'bg-secondary text-secondary-foreground',
   applied: 'bg-step-applied/10 text-step-applied-foreground',
   invited: 'bg-step-invited/10 text-step-invited-foreground',

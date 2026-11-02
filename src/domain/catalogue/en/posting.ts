@@ -42,7 +42,7 @@ export const POSTING_EN = {
   outcomeLabelByStatus: {
     hired: 'Hired',
     rejected: 'Rejected',
-  } satisfies Record<Exclude<Status, 'to_apply' | 'applied'>, string>,
+  } satisfies Record<Exclude<Status, 'new' | 'to_apply' | 'applied'>, string>,
   backInProgress: 'Put back in progress',
   // The Archived mark, beside the outcome selector (ADR-0007)
   archive: 'Archive',
@@ -78,6 +78,10 @@ export const POSTING_EN = {
     moreActions: 'More actions',
     statusChanged: 'Posting moved to “{{statusLabel}}”',
     archived: 'Posting archived',
+    keep: 'Keep',
+    dismiss: 'Dismiss',
+    kept: 'Posting kept: its Research starts',
+    dismissed: 'Posting dismissed',
     unarchived: 'Posting unarchived',
     undo: 'Undo',
     factsHeading: 'Key facts',

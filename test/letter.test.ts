@@ -7,6 +7,7 @@ import { type Actions } from '#/actions/index.ts';
 import { promptOf } from '#/artifact/prompt.ts';
 import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructions.ts';
 
+import { applyTo } from './apply.ts';
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { markedValuesOf } from './marked-values.ts';
@@ -149,7 +150,7 @@ describe('letter', () => {
       fileName: 'letter.md',
       markdown: SENT,
     });
-    await actions.changeStatus({ reference: SENT_REFERENCE, status: 'applied' });
+    await applyTo(actions, SENT_REFERENCE);
     await runModule(actions, 'research', UNSENT_REFERENCE);
     await runModule(actions, 'letter', UNSENT_REFERENCE);
     await runModule(actions, 'research', REFERENCE);
@@ -338,7 +339,7 @@ describe('a Letter refused', () => {
     const { actions } = await detectPostings(aiSession);
     await runModule(actions, 'research', REFERENCE);
     const { id } = await actions.runModule({ module: 'letter', reference: REFERENCE });
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
 
     await actions.runQueuedJobs();
 

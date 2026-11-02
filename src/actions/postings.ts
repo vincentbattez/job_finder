@@ -1,10 +1,12 @@
 import { codedError } from '#/domain/coded-error.ts';
 import {
   LIST_ITEM_SCHEMA,
+  NEW_ITEM_SCHEMA,
   POSTING_DETAIL_SCHEMA,
   type ArtifactState,
   type Candidate,
   type ListItem,
+  type NewItem,
   type Posting,
   type PostingDetail,
   type Recipients,
@@ -15,10 +17,8 @@ import { LETTER_MODULE } from '#/modules/letter/index.ts';
 import { hasBeenApplied, listStatusChoices } from '#/status/index.ts';
 
 import { ARTIFACT_INPUT_SCHEMA, REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
+import { foundReferencesOf } from './detect.ts';
 import { findWorkerFailure } from './stalled-job.ts';
-
-// The latest Postings of the home: enough to see at a glance what just arrived
-const LATEST_POSTING_COUNT = 6;
 
 export function createPostingActions({ workspace, artifacts, findCandidate, findPosting, findLocale }: ActionContext) {
   // The Letter module reads the recipients of its Chosen Version; the Posting page, those of a Draft
@@ -64,6 +64,18 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
       return workspace.listPostings(candidate.id);
     },
 
+    // What the Candidate sorts: the New Postings they have not dismissed, those the last Detection found
+    // flagged, which the list shows first (ADR-0018). Its count is the Sidebar's badge.
+    async listNew(rawInput: unknown): Promise<NewItem[]> {
+      const candidate = await findCandidate(rawInput);
+      const postingList = await workspace.listPostings(candidate.id);
+      const { last } = await workspace.findDetections(candidate.id);
+      const foundReferenceSet = new Set(foundReferencesOf(last));
+      return postingList
+        .filter(({ status, archivedAt }) => status === 'new' && archivedAt === null)
+        .map((posting) => NEW_ITEM_SCHEMA.parse({ posting, isFound: foundReferenceSet.has(posting.reference) }));
+    },
+
     // What the Candidate prepares: the To Apply Postings they still follow, the list groups them
     async listToApply(rawInput: unknown): Promise<ListItem[]> {
       const candidate = await findCandidate(rawInput);
@@ -79,12 +91,6 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
             return LIST_ITEM_SCHEMA.parse({ posting, research: research.validation, letter: letter.validation });
           }),
       );
-    },
-
-    // What the home shows of what just arrived, as tiles and on the map
-    async listLatestPostings(rawInput: unknown): Promise<Posting[]> {
-      const candidate = await findCandidate(rawInput);
-      return workspace.listLatestPostings(candidate.id, LATEST_POSTING_COUNT);
     },
 
     async readPosting(rawInput: unknown): Promise<PostingDetail> {

@@ -130,8 +130,10 @@ model Interview {
   @@unique([postingId, number])
 }
 
-// Invited and Interviewed are computed from the Interviews, never stored (ADR-0009)
+// Invited and Interviewed are computed from the Interviews, never stored (ADR-0009). A detected
+// Posting starts New, an imported one To Apply (ADR-0018).
 enum PostingStatus {
+  new
   to_apply
   applied
   hired

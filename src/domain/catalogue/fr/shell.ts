@@ -2,6 +2,8 @@ import type { SHELL_EN } from '#/domain/catalogue/en/shell.ts';
 
 export const SHELL_FR: typeof SHELL_EN = {
   navigationLabel: 'Pages',
+  newCount_one: '{{count}} Offre à trier',
+  newCount_other: '{{count}} Offres à trier',
   link: {
     new: 'Nouvelles',
     toApply: 'À traiter',

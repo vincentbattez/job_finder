@@ -5,11 +5,12 @@ import { ARTIFACT_RENAME_LIST } from '#/actions/index.ts';
 // The routes of the French front and their English ones, as route patterns: a link Léa saved keeps
 // working (#65). A `:param` of the French route goes into the English one; an Artifact in a path has
 // a route of its own, which ranks before the English route's `:artifact`. The Visualization lost its
-// redirect: it went away (ADR-0020).
+// redirect: it went away (ADR-0020). The Candidates page became a section of the Settings (#155).
 export const REDIRECT_LIST = [
   { from: 'candidat', to: 'candidate' },
   { from: 'profil', to: 'profile' },
-  { from: 'candidats', to: 'candidates' },
+  { from: 'candidats', to: 'settings' },
+  { from: 'candidates', to: 'settings' },
   { from: 'consignes', to: 'instructions' },
   { from: 'offres/:reference', to: 'postings/:reference' },
   { from: 'offres/:reference/statut', to: 'postings/:reference/status' },

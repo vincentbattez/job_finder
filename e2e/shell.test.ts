@@ -50,7 +50,8 @@ test('switches Candidate from a Posting page to New', async ({ page, asCandidate
   await switchCandidate(page, 'Camille');
 
   await expect(page).toHaveURL('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Camille');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Nouvelles');
+  await expect(page.getByRole('button', { name: 'Changer de Candidat' })).toContainText('Camille');
 });
 
 test('collapses the Sidebar into an icon rail with tooltips', async ({ page, asCandidate, openPage }) => {
@@ -58,7 +59,7 @@ test('collapses the Sidebar into an icon rail with tooltips', async ({ page, asC
   await openPage('/');
   const sidebar = page.locator('[data-slot="sidebar"]');
 
-  await page.getByRole('button', { name: 'Replier ou déplier le menu' }).click();
+  await page.getByRole('main').getByRole('button', { name: 'Replier ou déplier le menu' }).click();
 
   await expect(sidebar).toHaveAttribute('data-state', 'collapsed');
   await findPages(page).getByRole('link', { name: 'Candidatures' }).hover();
@@ -81,17 +82,20 @@ test('switches to the dark theme, for good, and back', async ({ page, openPage }
   await expect(html).not.toHaveClass(/dark/);
 });
 
-async function expectFrench(page: Page, heading: string) {
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
+// `/` opens New, whose header says what it holds
+async function expectFrench(page: Page, text: string) {
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Nouvelles');
+  await expect(page.getByRole('main')).toContainText(text);
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
-  await expect(page).toHaveTitle('Accueil · Job Finder');
+  await expect(page).toHaveTitle('Nouvelles · Job Finder');
   await expect(findPages(page).getByRole('link').first()).toHaveText('Nouvelles');
 }
 
-async function expectEnglish(page: Page, heading: string) {
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
+async function expectEnglish(page: Page, text: string) {
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('New');
+  await expect(page.getByRole('main')).toContainText(text);
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await expect(page).toHaveTitle('Home · Job Finder');
+  await expect(page).toHaveTitle('New · Job Finder');
   await expect(findPages(page).getByRole('link')).toHaveText([
     'New',
     'To Apply',
@@ -111,22 +115,22 @@ test('switches the whole site of a Candidate to English, for good, and back to F
 }) => {
   await asCandidate('nina');
   await openPage('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Nina/);
+  await expect(page.getByRole('button', { name: /^(Changer de Candidat|Switch Candidate)$/ })).toContainText('Nina');
   await page.getByRole('button', { name: /^(Français|French)$/ }).click();
-  await expectFrench(page, 'Bonjour Nina');
+  await expectFrench(page, 'Rien à trier');
   await expect(page.getByRole('button', { name: 'Français' })).toHaveAttribute('aria-pressed', 'true');
 
   await page.getByRole('form', { name: 'Langue' }).getByRole('button', { name: 'Anglais' }).click();
-  await expectEnglish(page, 'Hello Nina');
+  await expectEnglish(page, 'Nothing to sort');
   await expect(page.getByText('The interface is in English.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
 
   // Saved on Nina: the server renders the next visit in English at once
   await page.reload();
-  await expectEnglish(page, 'Hello Nina');
+  await expectEnglish(page, 'Nothing to sort');
 
   await page.getByRole('form', { name: 'Language' }).getByRole('button', { name: 'French' }).click();
-  await expectFrench(page, 'Bonjour Nina');
+  await expectFrench(page, 'Rien à trier');
 });
 
 // With no Candidate chosen, the locale is kept in a cookie of this browser only

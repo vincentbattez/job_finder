@@ -58,6 +58,8 @@ export const ERROR_EN = {
   notificationsNotSent: '{{failures}}',
 
   // Statuses
+  notNew: 'Posting {{reference}} is no longer New: it was already sorted.',
+  newNotSorted: 'Posting {{reference}} is New: keep it or dismiss it first.',
   statusChange: 'Posting {{reference}} is {{statusLabel}}: it can only move to {{nextLabels}}.',
   toApplyAfterOutcome:
     'Posting {{reference}} has an outcome: mark it Sent again first, only an Applied Posting without an Interview goes back to To Apply.',

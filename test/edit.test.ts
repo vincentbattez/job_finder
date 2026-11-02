@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { applyTo } from './apply.ts';
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { runAndValidate } from './run-module.ts';
@@ -107,7 +108,7 @@ describe('an edit refused', () => {
   it('refuses to edit the Letter of an Applied Posting, saying why, without opening a session', async () => {
     const aiSession = createFakeAiSession();
     const { actions } = await detectPostings(aiSession);
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
 
     await expect(actions.openArtifact({ reference: REFERENCE, artifact: 'letter' })).rejects.toThrow(
       /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée telle qu'envoyée/,

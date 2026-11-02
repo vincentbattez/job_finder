@@ -87,9 +87,13 @@ async function openArtifacts(...plannedRunList: PlannedRunList) {
     runNextJob,
     draft,
     produce,
-    apply: (reference = REFERENCE) => statusActions.changeStatus({ reference, status: 'applied' }),
+    apply: async (reference = REFERENCE) => {
+      await statusActions.keep({ reference });
+      await statusActions.changeStatus({ reference, status: 'applied' });
+    },
     // An Interview needs an Application
     addInterview: async () => {
+      await statusActions.keep({ reference: REFERENCE });
       await statusActions.changeStatus({ reference: REFERENCE, status: 'applied' });
       await interviewActions.addInterview({ reference: REFERENCE, ...INTERVIEW });
     },
@@ -172,8 +176,10 @@ describe('finding an Artifact', () => {
 
 describe('running an Artifact', () => {
   it('makes the Version of a run a Draft by the AI, numbered on its Interview, which nothing chooses yet', async () => {
-    const { artifacts, draft, addInterview } = await openArtifacts(PORTRAIT_RUN);
+    const { artifacts, draft, addInterview, runNextJob } = await openArtifacts(RESEARCH_RUN, PORTRAIT_RUN);
     await addInterview();
+    // The Research that keeping the Posting queued
+    await runNextJob();
     const name = { reference: REFERENCE, artifact: 'portrait', interview: 1 };
 
     await draft(name);

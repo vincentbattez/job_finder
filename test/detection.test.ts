@@ -8,7 +8,6 @@ import { createActions, type Actions } from '#/actions/index.ts';
 import type { Detection, Posting } from '#/domain/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
-import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { LEA_WATCH_ID } from './lea.ts';
 import {
@@ -169,7 +168,8 @@ describe('detection on the responses recorded on 2026-10-29', () => {
       applicationEmail: 'p.tj-bethune@justice.fr',
       contact1: 'Madame Odile SIMART, présidente du Tribunal Judiciaire de Béthune',
       contact2: 'secrétariat en copie : sec.p.tj-bethune@justice.fr',
-      status: 'to_apply',
+      // Not sorted yet (ADR-0018)
+      status: 'new',
       isInZone: true,
       isExpired: false,
     });
@@ -315,7 +315,7 @@ describe('a Posting its Source no longer publishes', () => {
     expect(unpublishedReferenceListOf(postingList)).toEqual([UNPUBLISHED_REFERENCE]);
     expect(postingList.find(({ reference }) => reference === UNPUBLISHED_REFERENCE)).toMatchObject({
       unpublishedAt: new Date('2026-10-29T12:00:00Z'),
-      status: 'to_apply',
+      status: 'new',
       archivedAt: null,
     });
     const republishedActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
@@ -440,22 +440,22 @@ describe('a city API Géo does not know', () => {
 // The two Béthune Postings, both in the Zone, published after a first Detection
 const BETHUNE_REFERENCE_LIST = ['2026-2445600', '2026-2445609'];
 
-const RESEARCH = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
+// A Béthune Posting in the Zone and an overseas one outside it
+const NEW_REFERENCE_LIST = ['2026-2445600', '2026-2430337'];
 
 describe('a detection while API Géo is down', () => {
   it.each([
     { failure: 'unreachable' as const, report: /\[api_geo_unreachable\] API Géo est injoignable/ },
     { failure: 500, report: /\[api_geo_status\] API Géo a répondu HTTP 500/ },
   ])(
-    'saves its Postings without coordinates, queues their Research, notifies, and reports the outage when API Géo is $failure',
+    'saves its Postings New without coordinates, notifies, and reports the outage when API Géo is $failure',
     async ({ failure, report }) => {
       const dataDirectory = createDataDirectory();
       const notificationChannel = createFakeNotificationChannel();
       const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout(BETHUNE_REFERENCE_LIST) } });
       const earlierActions = await createActions({ dataDirectory, fetch: earlierFetch.fetch });
       await earlierActions.detect();
-      const aiSession = createFakeAiSession(RESEARCH, RESEARCH);
-      const option = { dataDirectory, aiSession, notificationChannelList: notificationChannel.notificationChannelList };
+      const option = { dataDirectory, notificationChannelList: notificationChannel.notificationChannelList };
       const actions = await createActions({ ...option, fetch: fetchWithApiGeoDown(failure) });
       await notificationChannel.saveFor(actions);
 
@@ -477,10 +477,6 @@ describe('a detection while API Géo is down', () => {
       const { last } = await actions.followDetection({ candidateId: 'lea' });
       expect(last).toMatchObject({ error: null, watchList: [{ step: 'done' }] });
       expect(last?.watchList[0]?.locationFailure).toMatch(report);
-      const jobList = await actions.runQueuedJobs();
-      expect(jobList.map((job) => ('posting' in job ? `${job.module} ${job.posting.reference}` : job.module))).toEqual(
-        BETHUNE_REFERENCE_LIST.map((reference) => `research ${reference}`),
-      );
 
       const nextActions = await createActions({ ...option, fetch: createRecordedFetch().fetch });
       const nextDetectionList = await nextActions.detect();
@@ -509,6 +505,28 @@ describe('a detection while API Géo is down', () => {
     expect(detectionList[0]?.locationFailure).toMatch(
       /\[api_geo_format_changed\] API Géo a répondu dans un format inattendu/,
     );
+  });
+});
+
+// The Candidate sorts what the Detection found (ADR-0018): keeping a Posting starts its Research
+describe('a Detection after the first launch', () => {
+  it('saves its Postings New and queues no Research, in the Zone or not', async () => {
+    const dataDirectory = createDataDirectory();
+    const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout(NEW_REFERENCE_LIST) } });
+    const earlierActions = await createActions({ dataDirectory, fetch: earlierFetch.fetch });
+    await earlierActions.detect();
+    const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
+
+    await actions.detect();
+
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(
+      NEW_REFERENCE_LIST.map((reference) => postingList.find((posting) => posting.reference === reference)),
+    ).toMatchObject([
+      { status: 'new', isInZone: true },
+      { status: 'new', isInZone: false },
+    ]);
+    expect(await actions.runQueuedJobs()).toEqual([]);
   });
 });
 

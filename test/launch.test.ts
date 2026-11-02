@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { type Actions } from '#/actions/index.ts';
 import { ARTIFACT_SCHEMA, type Artifact } from '#/domain/index.ts';
 
+import { applyTo } from './apply.ts';
 import { detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { runAndValidate } from './run-module.ts';
@@ -59,7 +60,7 @@ async function readArtifactList(actions: Actions) {
 
 // The Posting Applied, with a first Interview: its Letter is frozen from then on
 async function addInterview(actions: Actions) {
-  await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+  await applyTo(actions, REFERENCE);
   await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: 'Béthune', interviewers: '' });
 }
 
@@ -122,7 +123,7 @@ describe('the failure of a module', () => {
     await runModule(actions, 'research');
     await runModule(actions, 'letter');
     await actions.runModule({ module: 'letter', reference: REFERENCE });
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
 
     await actions.runQueuedJobs();
 
@@ -202,7 +203,8 @@ async function readModuleByArtifact(actions: Actions) {
 
 describe('the modules the Posting page offers', () => {
   it('offers a module for each Artifact a module produces, held back while an input it needs is missing', async () => {
-    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
+    // Keeping the Posting queues its Research, before the one the test runs
+    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, RESEARCH_RUN));
     const toApply = await readModuleByArtifact(actions);
     await addInterview(actions);
     const before = await readModuleByArtifact(actions);

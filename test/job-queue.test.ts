@@ -4,16 +4,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
 
-import { createDataDirectory, detectPostings } from './data-directory.ts';
+import { applyTo } from './apply.ts';
+import { detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
-import { createFakeNotificationChannel } from './fake-notification-channel.ts';
-import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
 // The two Béthune Postings, both in the Zone, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 const OTHER_REFERENCE = '2026-2445609';
-// An attaché de justice Posting outside the Zone
-const OUT_OF_ZONE_REFERENCE = '2026-2215099';
 
 const RESEARCH = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
 
@@ -190,7 +187,7 @@ describe('the job queue', () => {
     await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runQueuedJobs();
     await actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: 1 });
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
     await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: '', interviewers: '' });
     await actions.runModule({ module: 'interview_brief', reference: REFERENCE, interview: 1 });
     await actions.runModule({ module: 'research', reference: REFERENCE });
@@ -263,36 +260,15 @@ describe('the job queue', () => {
   });
 });
 
-describe('the Research of a new Posting in the Zone', () => {
-  it('is queued by the Detection, and only for the new Postings in the Zone', async () => {
-    const dataDirectory = createDataDirectory();
-    const aiSession = createFakeAiSession(RESEARCH, RESEARCH);
-    const feed = feedWithout([REFERENCE, OTHER_REFERENCE, OUT_OF_ZONE_REFERENCE]);
-    const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feed } }).fetch;
-    const notificationChannel = createFakeNotificationChannel();
-    const earlierActions = await createActions({
-      dataDirectory,
-      aiSession,
-      fetch: earlierFetch,
-      notificationChannelList: notificationChannel.notificationChannelList,
-    });
-    await notificationChannel.saveFor(earlierActions);
-    await earlierActions.detect();
-    const actions = await createActions({
-      dataDirectory,
-      aiSession,
-      fetch: createRecordedFetch().fetch,
-      notificationChannelList: notificationChannel.notificationChannelList,
-    });
+// No Detection starts a Research: the Candidate keeps the Postings worth one (ADR-0018)
+describe('the Research of a detected Posting', () => {
+  it('is queued once the Candidate keeps the Posting, and run by the worker', async () => {
+    const { actions } = await detectPostings(createFakeAiSession(RESEARCH));
 
-    await actions.detect();
+    await actions.keep({ reference: REFERENCE });
 
     const jobList = await actions.runQueuedJobs();
-    const queuedList = jobList.map((job) => `${job.module} ${'posting' in job ? job.posting.reference : job.upload}`);
-    expect(queuedList.toSorted((left, right) => left.localeCompare(right))).toEqual([
-      `research ${REFERENCE}`,
-      `research ${OTHER_REFERENCE}`,
-    ]);
+    expect(jobList).toMatchObject([{ module: 'research', posting: { reference: REFERENCE }, state: 'done' }]);
   });
 
   it('is not queued on the first launch, which imports the Postings already online', async () => {

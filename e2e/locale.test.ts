@@ -24,7 +24,7 @@ test('shows the Posting list in English to a Candidate with the en locale', asyn
 // Her home, once asCandidate chose her
 async function openHomeOfEmma({ page, openPage }: IFront) {
   await openPage('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Emma');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('New');
 }
 
 test('shows the Sidebar and the Profile in English to a Candidate with the en locale', async ({
@@ -47,13 +47,7 @@ test('shows the Sidebar and the Profile in English to a Candidate with the en lo
   await page.getByRole('link', { name: 'Profile', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Profile');
   await expect(page).toHaveTitle('Profile · Job Finder');
-  await expect(page.getByRole('heading', { level: 2 })).toHaveText([
-    'Facts',
-    'Uploads',
-    'New file',
-    'Watches',
-    'Notifications',
-  ]);
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Facts', 'Uploads', 'New file', 'Watches']);
   await expect(page.getByText('No Upload yet.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save the Facts' })).toBeVisible();
   await expect(
@@ -63,13 +57,9 @@ test('shows the Sidebar and the Profile in English to a Candidate with the en lo
   await expect(newWatch.getByRole('textbox', { name: 'Searched title' })).toBeVisible();
   await expect(newWatch.getByRole('textbox', { name: 'Courts of appeal of the Zone, one per line' })).toBeVisible();
   await expect(newWatch.getByRole('button', { name: 'Create the Watch' })).toBeVisible();
-  const notifications = page.getByRole('region', { name: 'Notifications' });
-  await expect(notifications.getByRole('combobox', { name: 'Notification Channel' })).toHaveValue('home-assistant');
-  await expect(notifications.getByRole('textbox', { name: 'Home Assistant address' })).toBeVisible();
-  await expect(notifications.getByRole('button', { name: 'Send a test notification' })).toBeVisible();
 });
 
-test('shows the Instructions and the Candidates in English to a Candidate with the en locale', async ({
+test('shows the Instructions and the Settings in English to a Candidate with the en locale', async ({
   page,
   asCandidate,
   openPage,
@@ -85,13 +75,17 @@ test('shows the Instructions and the Candidates in English to a Candidate with t
   await expect(letter.getByRole('button', { name: 'Save my Instructions' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Candidates');
-  await expect(page).toHaveTitle('Candidates · Job Finder');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Settings');
+  await expect(page).toHaveTitle('Settings · Job Finder');
   await expect(page.getByRole('heading', { level: 2 })).toHaveText([
-    'Rename a Candidate',
-    'New Candidate',
+    'Notifications',
+    'Candidates',
     'Default Deadline Period',
   ]);
+  const notifications = page.getByRole('region', { name: 'Notifications', exact: true });
+  await expect(notifications.getByRole('combobox', { name: 'Notification Channel' })).toHaveValue('home-assistant');
+  await expect(notifications.getByRole('textbox', { name: 'Home Assistant address' })).toBeVisible();
+  await expect(notifications.getByRole('button', { name: 'Send a test notification' })).toBeVisible();
 });
 
 test('shows the tools of the Posting list in English to a Candidate with the en locale', async ({

@@ -19,8 +19,8 @@ export function useFeedback(
   undo?: () => { label: string; onClick: () => void },
 ): void {
   const sentReference = useRef<{ data: unknown } | null>(null);
-  // What the fetcher held while idle, before a mutation: on a slow render, the first state seen busy may
-  // already carry the mutation's answer, which must not pass for what it held before
+  // What the fetcher held before its mutation: under load React may skip the submitting render and
+  // first show the fetcher loading, its answer already in, so the answer cannot be read off then
   const idleDataReference = useRef<unknown>(fetcher.data);
   const successMessageReference = useRef(successMessage);
   successMessageReference.current = successMessage;

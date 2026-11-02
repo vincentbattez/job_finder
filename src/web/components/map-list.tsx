@@ -33,6 +33,8 @@ interface IMapListProperties<T extends IMapListItem> {
   legendList: { label: string; toneClass: string }[];
   // The third line of a row: the facts of its list
   renderFacts: (item: T) => ReactNode;
+  // What a row offers on its right, such as New's Dismiss and Keep, over the row's own button
+  renderActions?: (item: T) => ReactNode;
   empty: ReactNode;
 }
 
@@ -56,6 +58,7 @@ export function MapList<T extends IMapListItem>({
   groupList,
   legendList,
   renderFacts,
+  renderActions,
   empty,
 }: Readonly<IMapListProperties<T>>) {
   const { t } = useTranslation('lists');
@@ -158,25 +161,30 @@ export function MapList<T extends IMapListItem>({
                         onMouseLeave={() => {
                           setHoveredReference(null);
                         }}
-                        className="relative scroll-my-10 px-4 py-3 transition-colors duration-150 data-active:bg-primary/[0.07] data-active:shadow-[inset_3px_0_0_var(--primary)] data-highlighted:bg-muted/70"
+                        className="relative flex scroll-my-10 items-center gap-3 px-4 py-3 transition-colors duration-150 data-active:bg-primary/[0.07] data-active:shadow-[inset_3px_0_0_var(--primary)] data-highlighted:bg-muted/70"
                       >
-                        <p className="flex min-w-0 items-center gap-1.5 text-body">
-                          <MapPinIcon aria-hidden className="size-3.5 shrink-0 text-primary" />
-                          <span className="shrink-0 font-semibold">{item.city ?? t('unknownCity')}</span>
-                          {item.employer !== null && (
-                            <span className="truncate text-label text-muted-foreground">· {item.employer}</span>
-                          )}
-                        </p>
-                        <Link
-                          to={`/postings/${item.reference}`}
-                          title={item.title}
-                          className="relative z-[1] mt-1 block truncate text-body text-foreground/85 underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
-                        >
-                          {item.title}
-                        </Link>
-                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-label">
-                          {renderFacts(item)}
+                        <div className="min-w-0 flex-1">
+                          <p className="flex min-w-0 items-center gap-1.5 text-body">
+                            <MapPinIcon aria-hidden className="size-3.5 shrink-0 text-primary" />
+                            <span className="shrink-0 font-semibold">{item.city ?? t('unknownCity')}</span>
+                            {item.employer !== null && (
+                              <span className="truncate text-label text-muted-foreground">· {item.employer}</span>
+                            )}
+                          </p>
+                          <Link
+                            to={`/postings/${item.reference}`}
+                            title={item.title}
+                            className="relative z-[1] mt-1 block truncate text-body text-foreground/85 underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
+                          >
+                            {item.title}
+                          </Link>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-label">
+                            {renderFacts(item)}
+                          </div>
                         </div>
+                        {renderActions !== undefined && (
+                          <div className="relative z-[1] flex shrink-0 items-center gap-1">{renderActions(item)}</div>
+                        )}
                         {/* The whole row shows its marker; the title above it opens the Posting */}
                         <button
                           type="button"

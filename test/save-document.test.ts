@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
 
+import { applyTo } from './apply.ts';
 import { detectPostings as detectRecordedPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { runAndValidate } from './run-module.ts';
@@ -125,7 +126,7 @@ describe('saving a correction', () => {
     await actions.runQueuedJobs();
     const beforeAppliedList = await readOffers(actions);
 
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
 
     expect(beforeAppliedList).toEqual([
       { artifact: 'research', correctable: [1, 2], validatable: [1] },
@@ -144,6 +145,7 @@ describe('saving a correction', () => {
     await actions.runModule({ module: 'letter', reference: REFERENCE });
     await actions.runQueuedJobs();
 
+    await actions.keep({ reference: REFERENCE });
     await actions.changeStatus({ reference: REFERENCE, status: 'applied', letterNumber: '1' });
 
     const { posting } = await actions.readPosting({ reference: REFERENCE });
