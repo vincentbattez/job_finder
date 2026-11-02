@@ -136,7 +136,7 @@ test('shows To Apply over the map in English to a Candidate with the en locale',
 
 // Oliver reads the interface in English too, and owns the one Posting this test changes
 // (test/seed-front.ts): imported, its fields unread, with a Research. Archived then unarchived
-// back to To Apply, it ends as it started; Applied, which freezes its Letter, is only asked, then cancelled.
+// back to To Apply, it ends as it started.
 test('takes a Candidate with the en locale through a Posting and its Status in English', async ({
   page,
   asCandidate,
@@ -148,40 +148,34 @@ test('takes a Candidate with the en locale through a Posting and its Status in E
   await page.getByRole('checkbox', { name: 'Show the Archived' }).check();
   await page.getByRole('button', { name: 'Filter' }).click();
   await page.getByRole('link', { name: 'registry-officer-douai.md' }).click();
-  const statusBadge = page.locator('.posting-detail__title .badge');
+  const stepBadge = page.locator('main > header [data-step]');
   const unarchive = page.getByRole('button', { name: 'Unarchive' });
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('registry-officer-douai.md');
   // Left Archived by a run stopped halfway
   if (await unarchive.isVisible()) {
     await unarchive.click();
   }
-  await expect(statusBadge).toHaveText('To Apply');
+  await expect(stepBadge).toHaveText('To Apply');
 
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('registry-officer-douai.md');
   await expect(page).toHaveTitle('registry-officer-douai.md · Job Finder');
-  await expect(page.getByRole('term')).toHaveText([
-    'Reference',
-    'Published',
-    'Deadline',
-    'Application email',
-    'Contact 1',
-    'Contact 2',
+  await expect(page.getByRole('tab')).toHaveText([
+    'Posting',
+    'Research (Ready)',
+    'Letter (Absent)',
+    'Interviews',
+    'Notes',
   ]);
+  await expect(page.getByRole('region', { name: 'Key facts' }).getByRole('term')).toHaveText([
+    'Deadline',
+    'Start date',
+    'Published',
+    'Reference',
+  ]);
+  await expect(page.getByRole('region', { name: 'Contacts' })).toContainText('No contact in the Posting.');
   const extraction = page.getByRole('form', { name: 'Fields read by Claude' });
   await expect(extraction.getByRole('status')).toHaveText('Failed');
   await expect(extraction.getByRole('button', { name: 'Run the extraction again' })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Artifacts' }).getByRole('listitem')).toHaveText([
-    'ResearchReady',
-    'LetterAbsent',
-  ]);
-  await expect(page.getByRole('region', { name: 'Contacts' }).getByRole('definition')).toHaveText([
-    'Not specified',
-    'Not specified',
-    'Not specified',
-  ]);
-  await expect(page.getByRole('region', { name: 'Recommended recipients' })).toContainText(
-    'The Letter recommends them, once written.',
-  );
-  await expect(page.getByText('Read the Job Description')).toBeVisible();
+  await page.getByRole('tab', { name: /^Research/ }).click();
   const research = page.getByRole('region', { name: 'Research', exact: true });
   await expect(research.getByRole('button', { name: 'Run the Research again' })).toBeVisible();
   await expect(research.getByText('Default Instructions')).toBeVisible();
@@ -191,16 +185,17 @@ test('takes a Candidate with the en locale through a Posting and its Status in E
   await expect(research.getByText('Preview')).toBeVisible();
   await expect(research.getByRole('button', { name: 'Save' })).toBeVisible();
   await expect(research.getByRole('button', { name: 'Copy the Markdown' })).toBeVisible();
+  await page.getByRole('tab', { name: /^Letter/ }).click();
   const letter = page.getByRole('region', { name: 'Letter', exact: true });
   await expect(letter.getByRole('button', { name: 'Run the Letter' })).toBeVisible();
   await expect(letter.getByText('No Version yet.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mark Applied' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Mark as Applied' }).click();
-  await expect(page.getByText('Once Applied, the Chosen Letter no longer changes: it is the one sent.')).toBeVisible();
-  await page.getByRole('button', { name: 'Cancel' }).click();
-  await page.getByRole('button', { name: 'Archive' }).click();
-  await expect(statusBadge).toHaveText(['To Apply', 'Archived']);
-  await expect(page.getByRole('button', { name: 'Mark as Applied' })).toBeVisible();
+  await page.getByRole('button', { name: 'More actions' }).click();
+  await page.getByRole('menuitem', { name: 'Archive' }).click();
+
+  await expect(stepBadge).toHaveText('To Apply · archived');
+  await expect(page.getByText('Posting archived')).toBeVisible();
   await unarchive.click();
-  await expect(statusBadge).toHaveText(['To Apply']);
+  await expect(stepBadge).toHaveText('To Apply');
 });

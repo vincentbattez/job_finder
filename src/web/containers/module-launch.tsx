@@ -2,8 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
 import { isPending } from '#/actions/state.ts';
+import type { IArtifactVersions } from '#/web/components/artifact.ts';
 import { StateBadge } from '#/web/components/badge.tsx';
-import type { IArtifactVersions } from '#/web/components/posting-detail.tsx';
 import { useIsHydrated } from '#/web/components/use-is-hydrated.ts';
 import { WorkerTask } from '#/web/components/worker-task.tsx';
 import type { IRefusal } from '#/web/failure.ts';

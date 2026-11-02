@@ -24,7 +24,7 @@ test('shows the message and the code of a loader that fails', async ({ page }) =
 
 // A refusal goes back to the button that was clicked: the page stays, with the code's message
 test('refuses an unknown Version next to its button, without an error page', async ({ page }) => {
-  await page.goto(`/postings/${BETHUNE_REFERENCE}`);
+  await page.goto(`/postings/${BETHUNE_REFERENCE}?tab=research`);
   const research = page.getByRole('region', { name: 'Recherche' });
   const version = research.locator('li > details').filter({ has: page.locator('summary', { hasText: /^v2/ }) });
   await version.locator('summary', { hasText: /^v2/ }).click();
@@ -45,7 +45,7 @@ test('refuses an unknown Version next to its button, without an error page', asy
 });
 
 test('keeps the text typed when saving a document fails', async ({ page }) => {
-  await page.goto(`/postings/${BETHUNE_REFERENCE}`);
+  await page.goto(`/postings/${BETHUNE_REFERENCE}?tab=research`);
   const research = page.getByRole('region', { name: 'Recherche' });
   await unfoldChosenVersion(research);
   const document = research.getByRole('figure', { name: 'research.md' });

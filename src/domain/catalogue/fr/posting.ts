@@ -14,20 +14,14 @@ export const POSTING_FR: typeof POSTING_EN = {
   referenceTerm: 'Référence',
   publishedAtTerm: 'Publiée le',
   deadlineTerm: 'Date limite',
-  repostOfTerm: 'Republication de',
-  repostedAsTerm: 'Republiée en',
-  artifactsHeading: 'Artefacts',
   contactsHeading: 'Contacts',
   contactLabelByField: {
     applicationEmail: 'Mail de candidature',
     contact1: 'Contact 1',
     contact2: 'Contact 2',
   },
-  missingContact: 'Non précisé',
   recipientsHeading: 'Destinataires recommandés',
-  noRecipients: 'La Lettre les recommande, une fois produite.',
   jobDescriptionHeading: 'Fiche de poste',
-  readJobDescription: 'Lire la Fiche de poste',
 
   recipientTerm: 'Destinataire',
   noRecipientAddress: 'Aucune adresse dans l’Offre',
@@ -50,6 +44,44 @@ export const POSTING_FR: typeof POSTING_EN = {
   markNotSent: 'Pas encore envoyée',
   confirmToApply: 'Confirmer : À traiter',
   toApplyFreesLetter: 'L’Offre revient À traiter et sa Lettre retenue redevient modifiable.',
+
+  page: {
+    deadline: 'Date limite {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    tabLabelByTab: {
+      posting: 'Offre',
+      research: 'Recherche',
+      letter: 'Lettre de motivation',
+      interviews: 'Entretiens',
+      notes: 'Notes',
+    },
+    tabState: ' ({{stateLabel}})',
+    markApplied: 'Marquer Postulée',
+    addInterview: 'Ajouter un Entretien',
+    seeInterview: 'Voir l’Entretien {{number}}',
+    recordOutcome: 'Indiquer le résultat',
+    backToApply: 'Remettre À traiter (pas envoyée)',
+    openOnSource: 'Ouvrir sur sa Source',
+    repostOf: 'Offre précédente : {{reference}}',
+    repostedAs: 'Republiée en {{reference}}',
+    moreActions: 'Plus d’actions',
+    statusChanged: 'Offre passée à « {{statusLabel}} »',
+    archived: 'Offre archivée',
+    unarchived: 'Offre désarchivée',
+    undo: 'Annuler',
+    factsHeading: 'Repères',
+    startDateTerm: 'Prise de poste',
+    appliedAtTerm: 'Postulée le',
+    noContact: 'Aucun contact dans l’Offre.',
+    repostHeading: 'Republication',
+    publicationCount_one: 'Publiée {{count}} fois',
+    publicationCount_other: 'Publiée {{count}} fois',
+    publicationCountSince_one:
+      'Publiée {{count}} fois depuis le {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    publicationCountSince_other:
+      'Publiée {{count}} fois depuis le {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    earlierApplication: 'Tu as postulé le {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}} · {{stepLabel}}',
+    earlierApplicationUndated: 'Tu as postulé · {{stepLabel}}',
+  },
 
   // Every Artifact is feminine in French: la Recherche, la Lettre, la Fiche d’entretien, la Visualisation
   launchArtifact: 'Lancer la {{artifactLabel}}',
@@ -90,8 +122,10 @@ export const POSTING_FR: typeof POSTING_EN = {
     heading: 'Notes',
     label: 'Notes en Markdown',
     placeholder:
-      '# Appel du service\n\nCe que vous apprenez sur cette Offre, en Markdown : un appel, le retour d’un entretien…',
+      '# Appel du service\n\nCe que tu apprends sur cette Offre, en Markdown : un appel, le retour d’un entretien…',
     save: 'Enregistrer les Notes',
+    intro: 'Tes notes sur cette Offre : un appel, une impression, ce qu’il ne faut pas oublier.',
+    saved: 'Notes enregistrées',
   },
 
   interviews: {

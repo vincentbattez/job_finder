@@ -255,3 +255,44 @@ describe('the Repost of a Posting not Applied', () => {
     ]);
   });
 });
+
+// What the Posting page tells of the Position: how often it was published, and the Application the
+// Candidate made to an earlier Posting of it
+describe('the Repost on its Posting page', () => {
+  it('counts the publications of its Position since the first one', async () => {
+    const { actions } = await detectBeforeRepost();
+    await actions.detect();
+    const earlierPosting = await findPosting(actions, REFERENCE);
+
+    const { repost } = await actions.readPosting({ reference: REPOST_REFERENCE });
+
+    expect(repost).toEqual({
+      publicationNumber: 2,
+      firstPublishedAt: earlierPosting?.publishedAt,
+      earlierApplication: null,
+    });
+    expect(earlierPosting?.publishedAt).toBeInstanceOf(Date);
+    const earlierDetail = await actions.readPosting({ reference: REFERENCE });
+    expect(earlierDetail.repost).toMatchObject({
+      publicationNumber: 1,
+      earlierApplication: null,
+    });
+  });
+
+  it('tells the Application to an earlier Posting of its Position, and its outcome', async () => {
+    const { actions } = await detectBeforeRepost();
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await actions.changeStatus({ reference: REFERENCE, status: 'rejected' });
+    await actions.detect();
+    const earlierPosting = await findPosting(actions, REFERENCE);
+
+    const { repost } = await actions.readPosting({ reference: REPOST_REFERENCE });
+
+    expect(repost.earlierApplication).toEqual({
+      reference: REFERENCE,
+      appliedAt: earlierPosting?.appliedAt,
+      step: 'rejected',
+    });
+    expect(earlierPosting?.appliedAt).toBeInstanceOf(Date);
+  });
+});

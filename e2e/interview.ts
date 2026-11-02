@@ -21,13 +21,12 @@ export async function deleteEveryInterview(page: Page): Promise<void> {
 // The Posting page open, the Posting Applied if it was not yet, with a single Interview, freshly added:
 // what an Interview Brief prepares. Gives the article of that Interview.
 export async function prepareInterview(page: Page, reference: string): Promise<Locator> {
-  await page.goto(`/postings/${reference}`);
-  // A form typed in before React runs the page would be reset: the Research button waits for it
-  await expect(page.getByRole('button', { name: /ancer la Recherche$/ })).toBeEnabled();
-  const markApplied = page.getByRole('button', { name: 'Marquer comme Postulée' });
+  await page.goto(`/postings/${reference}?tab=interviews`);
+  // A form typed in before React runs the page would be reset: wait for it
+  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true', { timeout: 15_000 });
+  const markApplied = page.getByRole('button', { name: 'Marquer Postulée' });
   if ((await markApplied.count()) > 0) {
     await markApplied.click();
-    await page.getByRole('button', { name: 'Confirmer : Postulée' }).click();
     await expect(markApplied).toHaveCount(0);
   }
   await deleteEveryInterview(page);

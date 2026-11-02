@@ -18,7 +18,7 @@ const RECEIVED_NOTIFICATION_LIST_SCHEMA = z.array(
 
 test.describe('launching the modules of a Posting', () => {
   test('launches the Letter, then shows it turn ready without a reload', async ({ page }) => {
-    await page.goto(`/postings/${LETTER_REFERENCE}`);
+    await page.goto(`/postings/${LETTER_REFERENCE}?tab=letter`);
     const letter = page.getByRole('region', { name: 'Lettre' });
     await expect(letter.getByRole('status')).toHaveText('Absent');
 
@@ -29,26 +29,28 @@ test.describe('launching the modules of a Posting', () => {
     await expect(letter.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
     await expect(letter.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Retenue/]);
     await expect(letter.locator('figcaption')).toHaveText(['draft.md', 'letter.md']);
-    await expect(page.locator('.posting-detail__compartment[data-artifact="letter"]')).toContainText('Prêt');
+    await expect(page.getByRole('tab', { name: 'Lettre de motivation (Prêt)' })).toBeVisible();
   });
 
   test('relaunches a failed Research, which lets the Letter run and notifies it ready', async ({ page, request }) => {
-    await page.goto(`/postings/${FAILED_RESEARCH_REFERENCE}`);
+    await page.goto(`/postings/${FAILED_RESEARCH_REFERENCE}?tab=letter`);
     const research = page.getByRole('region', { name: 'Recherche' });
     const letter = page.getByRole('region', { name: 'Lettre' });
+    await expect(letter).toContainText(`L'Offre ${FAILED_RESEARCH_REFERENCE} n'a pas de Recherche retenue`);
+    await expect(letter.getByRole('button', { name: 'Lancer la Lettre' })).toBeDisabled();
+    await page.getByRole('tab', { name: /^Recherche/ }).click();
     await expect(research.getByRole('status')).toHaveText('En échec');
     // The reason the fake worker's session gave, after the message of its code
     await expect(research.getByRole('alert')).toHaveText(
       'La session Claude Code a échoué : son journal dit pourquoi. Relancer le module.\nClaude Code a atteint la limite de son abonnement.',
     );
-    await expect(letter).toContainText(`L'Offre ${FAILED_RESEARCH_REFERENCE} n'a pas de Recherche retenue`);
-    await expect(letter.getByRole('button', { name: 'Lancer la Lettre' })).toBeDisabled();
 
     await research.getByRole('button', { name: 'Relancer la Recherche' }).click();
 
     await expect(research.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
     await expect(research.getByRole('alert')).toHaveCount(0);
     await expect(research.locator('li > details > summary')).toHaveText([/^v1\s*En échec/, /^v2\s*Prêt\s*Retenue/]);
+    await page.getByRole('tab', { name: /^Lettre de motivation/ }).click();
     await expect(letter.getByRole('button', { name: 'Lancer la Lettre' })).toBeEnabled();
     await expect(letter).not.toContainText("n'a pas de Recherche retenue");
     // The worker notifies Léa's phone through the fake Home Assistant once the Research is saved
@@ -68,7 +70,7 @@ test.describe('launching the modules of a Posting', () => {
 
   // Read only: Léa was not warned her Research is ready, which the seed's refused token caused
   test('shows by a ready Research why its notification was not sent', async ({ page }) => {
-    await page.goto(`/postings/${NOTIFICATION_FAILED_REFERENCE}`);
+    await page.goto(`/postings/${NOTIFICATION_FAILED_REFERENCE}?tab=research`);
     const research = page.getByRole('region', { name: 'Recherche' });
 
     await expect(research.getByRole('status')).toHaveText('Prêt');
@@ -81,7 +83,7 @@ test.describe('launching the modules of a Posting', () => {
   test('unfolds beside the Letter the Prompt its launch would run, which links to the Research it reads', async ({
     page,
   }) => {
-    await page.goto(`/postings/${NOTIFICATION_FAILED_REFERENCE}`);
+    await page.goto(`/postings/${NOTIFICATION_FAILED_REFERENCE}?tab=letter`);
     const letter = page.getByRole('region', { name: 'Lettre' });
     const prompt = letter.locator('details', { has: page.locator('summary', { hasText: /^Prompt$/ }) });
 
@@ -90,7 +92,7 @@ test.describe('launching the modules of a Posting', () => {
     await expect(prompt.getByRole('heading')).toHaveText(['Partie fixe', 'Consignes', 'Artefacts que lit ce Prompt']);
     await expect(prompt.locator('pre').first()).toContainText('`letter/v<next>/draft.md`');
     await prompt.getByRole('link', { name: `${NOTIFICATION_FAILED_REFERENCE} · Recherche v1` }).click();
-    await expect(page).toHaveURL(new RegExp(`/postings/${NOTIFICATION_FAILED_REFERENCE}#research$`));
-    await expect(page.getByRole('region', { name: 'Recherche' })).toBeInViewport();
+    await expect(page).toHaveURL(new RegExp(`/postings/${NOTIFICATION_FAILED_REFERENCE}\\?tab=research$`));
+    await expect(page.getByRole('region', { name: 'Recherche' })).toBeVisible();
   });
 });

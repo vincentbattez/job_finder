@@ -1,11 +1,11 @@
-import { redirect, type ActionFunctionArgs } from 'react-router';
+import type { ActionFunctionArgs } from 'react-router';
 
 import { codedError } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { relayAction } from '#/web/relay-action.server.ts';
 
-// The Interviews section of the Posting page posts here, then the page shows the Interviews as saved;
-// a refusal goes back to the form, which keeps what was typed
+// The Interviews tab of the Posting page posts here through a fetcher, which revalidates the page in
+// its tab; a refusal goes back to the form, which keeps what was typed
 export function action({ params, request }: ActionFunctionArgs) {
   return relayAction(request, async () => {
     const formData = await request.formData();
@@ -33,6 +33,6 @@ export function action({ params, request }: ActionFunctionArgs) {
         throw codedError('unknown_intent');
       }
     }
-    return redirect(`/postings/${String(params.reference)}`);
+    return null;
   });
 }

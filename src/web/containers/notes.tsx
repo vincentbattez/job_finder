@@ -1,17 +1,21 @@
+import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
 import { Notes as NotesView } from '#/web/components/notes.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
-// The Notes of a Posting, saved through their action route, which brings the Candidate back to the
-// Posting page (ADR-0003). Through a fetcher, a refusal comes back to the form, which keeps what was
-// typed; without JS, the form posts on its own.
+import { useFeedback } from './use-feedback.ts';
+
+// The Notes of a Posting, saved through their action route (ADR-0003), then shown again by the loaders
+// the fetcher revalidates; a refusal ends in its toast, and the form keeps what was typed
 export function Notes({ reference, notes }: Readonly<{ reference: string; notes: string }>) {
-  const fetcher = useFetcher<IRefusal>();
+  const { t } = useTranslation('posting');
+  const fetcher = useFetcher<IRefusal | null>();
+  useFeedback(fetcher, () => t('notes.saved'));
   return (
     <NotesView
       notes={notes}
-      error={fetcher.data?.error}
+      isPending={fetcher.state !== 'idle'}
       renderForm={(fieldList) => (
         <fetcher.Form method="post" action={`/postings/${reference}/notes`} preventScrollReset>
           {fieldList}

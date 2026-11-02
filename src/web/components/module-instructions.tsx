@@ -1,11 +1,11 @@
 import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { IArtifactVersions } from './artifact.ts';
 import { Badge } from './badge.tsx';
 import { ButtonRow } from './button-row.tsx';
 import { MarkdownEditor } from './markdown-editor.tsx';
 import { Markdown } from './markdown.tsx';
-import type { IArtifactVersions } from './posting-detail.tsx';
 
 import './module-instructions.css';
 

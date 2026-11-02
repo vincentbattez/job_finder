@@ -1,5 +1,5 @@
 import { ArtifactVersions as ArtifactVersionsView } from '#/web/components/artifact-versions.tsx';
-import type { IArtifactVersions } from '#/web/components/posting-detail.tsx';
+import type { IArtifactVersions } from '#/web/components/artifact.ts';
 
 import { ArtifactDocument, ChooseButton } from './edition.tsx';
 import { ModuleLaunch } from './module-launch.tsx';
