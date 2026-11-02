@@ -16,16 +16,6 @@ export interface IModuleInstructions {
   candidateInstructions: string | null;
 }
 
-// Which Instructions a Version was produced with, so two Versions can be compared
-export function InstructionsOrigin({ hasCandidateInstructions }: Readonly<{ hasCandidateInstructions: boolean }>) {
-  const { t } = useTranslation('settings');
-  return (
-    <span className="module-instructions__origin">
-      {hasCandidateInstructions ? t('instructions.candidateOrigin') : t('instructions.defaultOrigin')}
-    </span>
-  );
-}
-
 // The route remounts it when the Instructions change hands, so the editor shows those in effect; the
 // fixed part of the prompt stays in the code, out of reach (ADR-0003). Its Container hands in the
 // form that saves them.

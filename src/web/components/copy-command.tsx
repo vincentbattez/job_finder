@@ -46,9 +46,3 @@ export function CopyCommand({ command }: Readonly<{ command: string }>) {
     </div>
   );
 }
-
-// A document as Markdown, as it goes into a mail
-export function CopyMarkdown({ markdown }: Readonly<{ markdown: string }>) {
-  const { t } = useTranslation('posting');
-  return <CopyButton text={markdown} label={t('copyMarkdown')} copiedLabel={t('copiedMarkdown')} />;
-}
