@@ -5,6 +5,7 @@ import { REDIRECT_LIST } from './redirects.ts';
 export default [
   index('routes/home.tsx'),
   route('applications', 'routes/applications.tsx'),
+  route('to-apply', 'routes/to-apply.tsx'),
   route('postings', 'routes/postings.tsx'),
   route('postings/:reference', 'routes/posting.tsx'),
   route('postings/:reference/status', 'routes/status.ts'),

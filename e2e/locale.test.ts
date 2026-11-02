@@ -115,9 +115,23 @@ test('shows the tools of the Posting list in English to a Candidate with the en 
   await expect(filters.getByRole('combobox', { name: 'Region' })).toBeVisible();
   await expect(filters.getByRole('checkbox', { name: 'Show the Archived' })).toBeVisible();
   await expect(filters.getByRole('button', { name: 'Filter' })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Map of the Postings' })).toContainText(
-    '1 Posting without coordinates is not on the map.',
-  );
+});
+
+test('shows To Apply over the map in English to a Candidate with the en locale', async ({
+  page,
+  asCandidate,
+  openPage,
+}) => {
+  await asCandidate('emma');
+  await openPage('/to-apply');
+
+  await expect(page).toHaveTitle('To Apply · Job Finder');
+  const panel = page.getByRole('complementary', { name: 'To Apply' });
+  // Imported without a Deadline, and without a place the map could show
+  await expect(panel.getByRole('heading', { level: 2 })).toHaveText([/^No Deadline/]);
+  await expect(panel.getByRole('listitem')).toHaveText([/^Unknown place/]);
+  await expect(panel.getByLabel('Research: none yet')).toBeVisible();
+  await expect(page.getByText('1 Posting without a known place')).toBeVisible();
 });
 
 // Oliver reads the interface in English too, and owns the one Posting this test changes
