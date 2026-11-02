@@ -19,15 +19,19 @@ export function useFeedback(
   undo?: () => { label: string; onClick: () => void },
 ): void {
   const sentReference = useRef<{ data: unknown } | null>(null);
+  // What the fetcher held while idle, before a mutation: on a slow render, the first state seen busy may
+  // already carry the mutation's answer, which must not pass for what it held before
+  const idleDataReference = useRef<unknown>(fetcher.data);
   const successMessageReference = useRef(successMessage);
   successMessageReference.current = successMessage;
   const undoReference = useRef(undo);
   undoReference.current = undo;
   useEffect(() => {
     if (fetcher.state !== 'idle') {
-      sentReference.current ??= { data: fetcher.data };
+      sentReference.current ??= { data: idleDataReference.current };
       return;
     }
+    idleDataReference.current = fetcher.data;
     const sent = sentReference.current;
     if (sent === null) {
       return;
