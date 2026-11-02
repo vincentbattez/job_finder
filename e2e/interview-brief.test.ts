@@ -1,8 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-import { prepareInterview } from './interview.ts';
+import { findInterviews, prepareInterview } from './interview.ts';
 import { findOverflowing } from './overflow.ts';
-import { unfoldLatestVersion } from './version.ts';
 
 // A Posting that test/seed-front.ts leaves without any Artifact and that no other test touches: the
 // test marks it Applied, gives it an Interview and produces its Research first. The e2e worker runs
@@ -16,30 +15,18 @@ const READY_TIMEOUT_MS = 15_000;
 // The Interview Brief the fake Claude writes, its « [à compléter : …] » filled in by the Candidate
 const CORRECTED_BRIEF = `# Fiche d’entretien factice
 
-## À réviser
-
-- Les missions du poste.
-
-## Moyens mnémotechniques
-
-- « MPS » : Missions, Partenaires, Service.
-
 ## Présentez-vous
 
 Titulaire d’un master 2 de droit privé, je souhaite rejoindre votre juridiction.
-
-## Questions probables
-
-- Pourquoi ce poste ?
 `;
 
 test('launches the Interview Brief of an Interview once the Posting has a Chosen Research, then corrects it', async ({
   page,
 }) => {
-  const interview = await prepareInterview(page, REFERENCE);
+  await prepareInterview(page, REFERENCE);
   const research = page.getByRole('region', { name: 'Recherche' });
-  // Under its Interview, beside the Interview's facts
-  const brief = interview.getByRole('region', { name: 'Fiche d’entretien' });
+  // The first tab of the selected Interview
+  const brief = findInterviews(page).getByRole('region', { name: 'Fiche d’entretien' });
   await expect(brief).toContainText(`L'Offre ${REFERENCE} n'a pas de Recherche validée`);
   await expect(brief.getByRole('button', { name: 'Lancer la Fiche d’entretien' })).toBeDisabled();
   await page.getByRole('tab', { name: /^Recherche/ }).click();
@@ -53,23 +40,21 @@ test('launches the Interview Brief of an Interview once the Posting has a Chosen
   await brief.getByRole('button', { name: 'Lancer la Fiche d’entretien' }).click();
 
   await expect(brief.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
-  await expect(brief.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Brouillon/]);
-  await unfoldLatestVersion(brief);
+  await expect(brief.getByRole('combobox', { name: 'Version' })).toHaveText('Version 1 · Brouillon');
+  await expect(findInterviews(page).getByRole('tab', { name: 'Fiche d’entretien (Brouillon)' })).toBeVisible();
   await brief.getByRole('button', { name: 'Valider la Version 1' }).click();
-  await expect(brief.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Validée · retenue/]);
-  await expect(brief.getByText(`jf edit ${REFERENCE} interview_brief 1`)).toBeVisible();
-  const document = brief.getByRole('figure', { name: 'interview-brief.md' });
-  const editor = document.getByRole('textbox', { name: 'Markdown' });
-  await expect(document.locator('mark')).toHaveText(['[à compléter : diplôme]']);
-  await editor.fill(CORRECTED_BRIEF);
-  await expect(document.getByText('Modifications non enregistrées')).toBeVisible();
-  await document.getByRole('button', { name: 'Enregistrer' }).click();
-  await expect(document.getByText('Modifications non enregistrées')).toBeHidden();
+  await expect(brief.getByText('Validée · retenue')).toBeVisible();
+  await expect(findInterviews(page).getByRole('tab', { name: 'Fiche d’entretien (Validée)' })).toBeVisible();
+  await brief.getByRole('button', { name: 'Modifier' }).click();
+  const textbox = brief.getByRole('textbox', { name: 'Texte de la Version 1' });
+  await expect(textbox).toBeEnabled();
+  await textbox.fill(CORRECTED_BRIEF);
+  await brief.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page.getByText('Version 1 enregistrée')).toBeVisible();
   await page.reload();
-  await unfoldLatestVersion(brief);
-  await expect(editor).toHaveValue(CORRECTED_BRIEF);
-  await expect(brief.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Validée · retenue/]);
-  // Under its Interview, the Interview Brief still fits a phone screen
+  await expect(brief.getByRole('heading', { name: 'Présentez-vous' })).toBeVisible();
+  await expect(brief.getByText('Validée · retenue')).toBeVisible();
+  // Beside its Interview, the Interview Brief still fits a phone screen
   await page.setViewportSize({ width: 375, height: 812 });
   await expect.poll(() => findOverflowing(page)).toEqual([]);
 });

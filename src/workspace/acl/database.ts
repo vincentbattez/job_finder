@@ -748,14 +748,16 @@ export function openDatabase(databasePath: string) {
     },
 
     // Numbered after the last Interview of its Posting, like a Version
-    async createInterview({ id }: Posting, fields: InterviewFields): Promise<void> {
-      await prisma.$transaction(async (transaction) => {
-        const { _max: max } = await transaction.interview.aggregate({
-          where: { postingId: id },
-          _max: { number: true },
-        });
-        await transaction.interview.create({ data: { ...fields, postingId: id, number: (max.number ?? 0) + 1 } });
-      });
+    async createInterview({ id }: Posting, fields: InterviewFields): Promise<Interview> {
+      return INTERVIEW_SCHEMA.parse(
+        await prisma.$transaction(async (transaction) => {
+          const { _max: max } = await transaction.interview.aggregate({
+            where: { postingId: id },
+            _max: { number: true },
+          });
+          return transaction.interview.create({ data: { ...fields, postingId: id, number: (max.number ?? 0) + 1 } });
+        }),
+      );
     },
 
     // Each edit counts, so a calendar importing it again updates its event

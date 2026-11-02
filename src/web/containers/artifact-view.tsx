@@ -23,7 +23,7 @@ interface IArtifactName {
 // Validates a Draft, which becomes the Chosen Version (ADR-0019), or chooses an older Validated one again.
 // The fetcher lives with the Artifact, not with its button: the banner that holds the button goes with the
 // validation, while its toast must still tell it.
-export function useValidation({ reference, interviewNumber, artifact }: IArtifactName) {
+function useValidation({ reference, interviewNumber, artifact }: IArtifactName) {
   const { t } = useTranslation('posting');
   const fetcher = useFetcher<IRefusal | null>();
   const submitted = useRef({ number: 0 });
