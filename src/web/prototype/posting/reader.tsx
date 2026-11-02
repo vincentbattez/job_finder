@@ -87,16 +87,32 @@ export function ArtifactContent({
 // ——— What the reader remembers while the page lives: notes per section, sections mastered ———
 
 const memory = new Map<string, unknown>();
+// The V1 keeps them with the Candidate; the prototype, in this browser, so they survive a reload
+const STORAGE_PREFIX = 'jf-prototype:reader:';
+
+function readStored<T>(key: string): T | undefined {
+  try {
+    const raw = localStorage.getItem(`${STORAGE_PREFIX}${key}`);
+    return raw === null ? undefined : (JSON.parse(raw) as T);
+  } catch {
+    return undefined;
+  }
+}
 
 function useMemory<T>(key: string, initial: T): [T, (next: T) => void] {
   const [value, setValue] = useState<T>(() => (memory.get(key) as T | undefined) ?? initial);
   useEffect(() => {
-    // The initial value only matters for a key never written
-    setValue((memory.get(key) as T | undefined) ?? initial);
+    // The initial value only matters for a key never written; the browser's copy loads after hydration
+    setValue((memory.get(key) as T | undefined) ?? readStored<T>(key) ?? initial);
   }, [key]);
   const set = useCallback(
     (next: T) => {
       memory.set(key, next);
+      try {
+        localStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(next));
+      } catch {
+        // Storage refused (private mode): the session's copy still holds
+      }
       setValue(next);
     },
     [key],
@@ -367,7 +383,9 @@ function MarginNotes({
           placeholder="Ce que tu veux retenir de cette section, une formule à dire, un doute à lever…"
           className="min-h-28 resize-none bg-background text-sm"
         />
-        <p className="mt-1.5 text-[11px] text-muted-foreground">Gardée le temps de la session (prototype).</p>
+        <p className="mt-1.5 text-[11px] text-muted-foreground">
+          Gardée dans ce navigateur (prototype) ; la V1 l’enregistrera avec toi.
+        </p>
       </div>
       {otherList.length === 0 ? null : (
         <div>
@@ -590,6 +608,9 @@ function StudyReader({ source, format, memoryKey, headerOffset = DEFAULT_HEADER_
             <span className="text-muted-foreground">≈ {readingMinutes(source)} min de lecture</span>
           </div>
           <Progress value={(masteredCount / total) * 100} className="h-1.5" />
+          <p className="mt-1.5 text-[11px] text-muted-foreground">
+            Sections maîtrisées gardées dans ce navigateur (prototype) ; la V1 les enregistrera avec toi.
+          </p>
         </div>
       </div>
       <div className="grid gap-6 @4xl:grid-cols-[15rem_minmax(0,1fr)]">

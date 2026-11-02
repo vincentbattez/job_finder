@@ -2,7 +2,8 @@
 // the full-screen « Réviser l'Entretien » (DECISIONS.md « Revision »), out of the Sidebar: a countdown
 // to the Interview, the Interview Brief full width in the reading variant of ?variant=A|B|C (the same
 // layouts as the Posting page, posting/reader.tsx), and side access to the Portrait, the Posting and the
-// Letter in a Sheet. It shows the newest Version, a Draft with its « Valider » at hand.
+// Letter in a Sheet. It opens the Chosen Version of the Interview Brief; a newer Draft waiting for
+// validation shows as a banner that leads to it, with its « Valider » at hand.
 import {
   ArrowLeftIcon,
   BriefcaseIcon,
@@ -98,7 +99,11 @@ export default function RevisionPage() {
   const portrait = detail?.artifacts.find(({ key }) => key === artifactKeyOf('portrait', interviewNumber));
   const letter = detail?.artifacts.find(({ key }) => key === 'letter');
   const versionList = brief?.versions ?? [];
-  const version = versionList.find((other) => other.number === selectedNumber) ?? versionList.at(-1);
+  const chosen = brief === undefined ? undefined : chosenVersionOf(brief);
+  const latest = versionList.at(-1);
+  const version = versionList.find((other) => other.number === selectedNumber) ?? chosen ?? latest;
+  const pendingDraft =
+    latest !== undefined && latest.state === 'draft' && latest.number !== version?.number ? latest : undefined;
   const backTo = `/prototype/postings/${reference}?tab=interviews&interview=${number}${
     searchParams.get('variant') === null ? '' : `&variant=${searchParams.get('variant') ?? ''}`
   }`;
@@ -110,6 +115,7 @@ export default function RevisionPage() {
     setIsValidating(true);
     await actions.validateVersion(reference, briefKey, versionNumber);
     setIsValidating(false);
+    setSelectedNumber(null);
   }
 
   return (
@@ -227,6 +233,21 @@ export default function RevisionPage() {
                 {isValidating ? 'Validation…' : `Valider la Version ${String(version.number)}`}
               </Button>
             ) : null}
+          </div>
+        )}
+
+        {pendingDraft === undefined ? null : (
+          <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-primary/30 bg-primary/[0.05] px-4 py-3 text-sm">
+            <span className="size-1.5 rounded-full bg-primary" />
+            <span className="min-w-0 flex-1">
+              <span className="font-medium">La Version {pendingDraft.number}, plus récente, attend ta validation.</span>{' '}
+              <span className="text-muted-foreground">
+                Tu révises la Version {version?.number} retenue tant qu’elle n’est pas validée.
+              </span>
+            </span>
+            <Button variant="outline" size="sm" onClick={() => setSelectedNumber(pendingDraft.number)}>
+              Relire la Version {pendingDraft.number}
+            </Button>
           </div>
         )}
 
