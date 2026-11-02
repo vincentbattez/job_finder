@@ -406,3 +406,13 @@ RUN_BY_VERSION[`${veraPosting.reference.slice(0, BETHUNE_REFERENCE.length)} rese
 await actions.runModule({ module: 'research', reference: veraPosting.reference });
 await actions.runQueuedJobs();
 await actions.validateVersion({ reference: veraPosting.reference, artifact: 'research', number: 1 });
+
+// Ugo, without Watch, edits his Research Instructions in the generation panel of e2e/instructions.test.ts,
+// on his one imported Posting; the test never launches, so his Posting stays as seeded
+await actions.createCandidate({ id: 'ugo', name: 'Ugo' });
+await actions.importJobDescription({
+  candidateId: 'ugo',
+  fileName: 'greffier-vienne.md',
+  markdown: '# Greffier – Vienne\n\nAccueillir le public du tribunal judiciaire de Vienne.\n',
+});
+await actions.runQueuedJobs();

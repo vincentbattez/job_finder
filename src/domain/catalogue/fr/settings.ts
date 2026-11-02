@@ -12,7 +12,7 @@ export const SETTINGS_FR: typeof SETTINGS_EN = {
   settingsPage: {
     pageTitle: 'Réglages · Job Finder',
     heading: 'Réglages',
-    description: 'Tes notifications, puis les Candidats et le Délai par défaut que tous partagent.',
+    description: 'Tes notifications et tes Consignes, puis les Candidats et le Délai par défaut que tous partagent.',
   },
   candidates: {
     heading: 'Candidats',
@@ -125,21 +125,25 @@ export const SETTINGS_FR: typeof SETTINGS_EN = {
     keepSaved: 'Laisse vide pour garder la valeur enregistrée',
   },
 
+  // The Instructions editor, in the generation panel and in the Settings (spec #125)
   instructions: {
-    pageTitle: 'Consignes · Job Finder',
-    noCandidateHeading: 'Qui consulte ses Consignes ?',
-    noCandidateHint: 'Choisissez votre nom en tête du menu. Le front s’en souviendra.',
-    heading: 'Consignes de {{candidateName}}',
-    intro:
-      'Les Consignes disent à chaque module comment produire son Artefact. Les vôtres remplacent celles par défaut pour ses prochaines Versions. Ses règles fixes, comme ne jamais inventer un fait, s’appliquent toujours.',
+    heading: 'Consignes',
+    description:
+      'Comment l’IA écrit chaque type de document. Les tiennes remplacent celles par défaut pour les prochaines générations ; la Partie fixe du Prompt, comme ne jamais inventer un fait, s’applique toujours.',
     candidateOrigin: 'Consignes du Candidat',
     defaultOrigin: 'Consignes par défaut',
-    candidateBadge: 'Vos Consignes',
-    candidateLabel: 'Vos Consignes, que suit le module',
-    defaultLabel: 'Les Consignes par défaut, à modifier pour en faire les vôtres',
-    placeholder: '- Un ton sobre et direct\n- Une page au plus',
-    save: 'Enregistrer mes Consignes',
-    backToDefault: 'Revenir aux Consignes par défaut',
-    showDefault: 'Voir les Consignes par défaut',
+    candidateBadge: 'Tes Consignes',
+    editorLabel: 'Consignes · {{artifactLabel}}',
+    unsaved: 'Modifiées, pas encore enregistrées',
+    unsavedHint:
+      'Enregistrées, elles deviennent tes Consignes pour chaque {{artifactLabel}} qui suivra, sur toutes tes Offres, pas seulement celle-ci. Enregistre ou annule avant de lancer.',
+    candidateHint: 'Elles s’appliquent à chaque {{artifactLabel}}.',
+    defaultHint: 'Modifie-les puis enregistre : elles deviendront les tiennes pour chaque {{artifactLabel}}.',
+    save: 'Enregistrer',
+    discard: 'Annuler mes modifications',
+    restore: 'Rétablir celles par défaut',
+    saved: 'Consignes enregistrées',
+    restored: 'Consignes par défaut rétablies',
+    unsavedBlocker: 'Consignes modifiées mais pas enregistrées : enregistre-les ou annule tes modifications.',
   },
 };

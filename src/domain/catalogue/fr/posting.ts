@@ -206,12 +206,15 @@ export const POSTING_FR: typeof POSTING_EN = {
     unfold: 'Détailler',
     fold: 'Replier',
     writeIntro:
-      'Claude suit d’abord la Partie fixe de la {{artifactLabel}}, puis ces Consignes. Tu peux les modifier depuis la page des Consignes.',
+      'Claude suit d’abord la Partie fixe de la {{artifactLabel}}, puis ces Consignes, que tu peux modifier ici.',
     writeIntro_portrait:
-      'Claude suit d’abord la Partie fixe du {{artifactLabel}}, puis ces Consignes. Tu peux les modifier depuis la page des Consignes.',
+      'Claude suit d’abord la Partie fixe du {{artifactLabel}}, puis ces Consignes, que tu peux modifier ici.',
     instructions: 'Consignes en vigueur',
     fixedPart: 'Partie fixe du Prompt',
     notEditable: 'non modifiable',
+    substitutedChip: 'surligné',
+    substitutedLegend: 'remplacé automatiquement pour cette Offre',
+    substituted: 'Remplacé automatiquement',
     doesByArtifact: {
       research:
         'Claude cherche sur le web ce que l’employeur, le service et le lieu attendent de ce poste, et cite chaque source.',

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
-import { MARK_END, MARK_START, promptOf } from '#/artifact/prompt.ts';
+import { promptOf } from '#/artifact/prompt.ts';
 import { DEFAULT_INSTRUCTIONS_EN } from '#/domain/catalogue/en/default-instructions.ts';
 import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructions.ts';
 import type { Artifact } from '#/domain/index.ts';
+import { MARK_END, MARK_START } from '#/domain/substitution.ts';
 
 import { applyTo } from './apply.ts';
 import { detectPostings } from './data-directory.ts';
