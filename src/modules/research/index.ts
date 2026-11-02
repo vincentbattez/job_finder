@@ -20,6 +20,7 @@ export const RESEARCH_MODULE = {
   fileName: RESEARCH_FILE_NAME,
   outputFileList: [{ name: RESEARCH_FILE_NAME, findFormatError }],
   composePrompt: composeResearchPrompt,
+  isInliningInputs: true,
   // A Repost starts from the work done for the Posting it publishes again
   isReadingRepostedPosting: true,
 } satisfies IAiModule;

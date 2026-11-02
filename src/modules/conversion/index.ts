@@ -35,7 +35,7 @@ export function createUploadConversion(aiSession: IAiSession) {
     ): Promise<SessionResult> {
       const session = await aiSession.runHeadless({
         fixedPrompt: composeConversionPrompt(candidate, uploadPath, path.relative(profileDirectory, outputDirectory)),
-        instructions: CONVERSION_REQUEST,
+        message: CONVERSION_REQUEST,
         directory: profileDirectory,
         // Inside the Profile, where the session runs: nothing to add
         readDirectoryList: [],

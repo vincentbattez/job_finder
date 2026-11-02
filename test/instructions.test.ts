@@ -213,8 +213,8 @@ describe('language of the Artifacts', () => {
     expect(leaResearch?.fixedPrompt).toContain(LANGUAGE_RULE);
     expect(emmaResearch?.fixedPrompt).toContain(LANGUAGE_RULE);
     expect(emmaResearch?.fixedPrompt).not.toMatch(/English/);
-    expect(leaResearch?.instructions).toMatch(/^Pars de la Fiche de poste/);
-    expect(emmaResearch?.instructions).toMatch(/^Start from the Job Description/);
+    expect(leaResearch?.message).toContain('# Instructions\n\nPars de la Fiche de poste');
+    expect(emmaResearch?.message).toContain('# Instructions\n\nStart from the Job Description');
   });
 
   it("keeps the language of the Job Description over the Candidate's own Instructions", async () => {
@@ -225,7 +225,7 @@ describe('language of the Artifacts', () => {
     await importThenRunResearch(actions, 'emma');
 
     const [, research] = aiSession.headlessSessionList;
-    expect(research?.instructions).toBe('Dig into the city.\n');
+    expect(research?.message).toMatch(/# Instructions\n\nDig into the city\.$/);
     expect(research?.fixedPrompt).toContain(LANGUAGE_RULE);
   });
 });

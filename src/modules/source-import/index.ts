@@ -41,7 +41,7 @@ export function createImportSource(aiSession: IAiSession) {
       emptyExtractionDirectory(outputDirectory);
       const session = await aiSession.runHeadless({
         fixedPrompt: composeExtractionPrompt(path.join(EXTRACTION_DIRECTORY_NAME, EXTRACTION_FILE_NAME)),
-        instructions: EXTRACTION_REQUEST,
+        message: EXTRACTION_REQUEST,
         directory: postingDirectory,
         readDirectoryList: [],
         outputDirectory,

@@ -432,8 +432,16 @@ const PROMPT_READ_VERSION_SCHEMA = z.object({
   number: z.int(),
 });
 
+// markedFixedPart: the Fixed Part with each value the tool substituted between private-use marks; prompt:
+// the whole Markdown the session receives, its checked Inputs inlined (ADR-0021)
 const PROMPT_SCHEMA = z
-  .object({ fixedPart: z.string(), instructions: z.string(), readVersionList: z.array(PROMPT_READ_VERSION_SCHEMA) })
+  .object({
+    fixedPart: z.string(),
+    markedFixedPart: z.string(),
+    instructions: z.string(),
+    prompt: z.string(),
+    readVersionList: z.array(PROMPT_READ_VERSION_SCHEMA),
+  })
   .brand<'Domain'>();
 
 // A Markdown file of a Version, and whether the Candidate may correct it by hand
