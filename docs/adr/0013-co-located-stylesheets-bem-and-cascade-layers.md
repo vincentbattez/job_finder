@@ -1,5 +1,7 @@
 # The front's CSS is one stylesheet per component, in BEM, ordered by cascade layers
 
+> Superseded by ADR-0017: the V1 front is styled with Tailwind v4 and shadcn tokens, and the BEM stylesheets, cascade layers and their checks go away.
+
 Spec #77 split `app.css`, a single stylesheet of over 1,100 lines where every Dumb, the buttons and the layout were mixed, cross-component selector lists styled the same button, and the cascade depended on line order. Every front ticket had appended its rules at the bottom. Each Dumb of `src/web/components/` that has styles now gets a same-named `.css` beside its `.tsx`, which alone imports it and which styles only its BEM block, named like the file (`badge.css` → `.badge`, `.badge__x`, `.badge--y`). What belongs to no component sits in short global stylesheets beside the root (tokens, base, layout, controls, utilities), imported by the entry stylesheet `app.css`, which declares the order once: `@layer vendor, tokens, base, layout, components, utilities;`. A rule wins by its layer before its specificity or its line. Stylelint and the architecture test check it, so the next ticket cannot append its styles to a global file.
 
 - **Global stylesheets stay beside the root.** Hallmark's sloplint groups files by folder and does not follow JS imports: tokens and base must sit beside `app.css`, which keeps the Hallmark stamp at its head.
