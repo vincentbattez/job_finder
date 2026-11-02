@@ -138,7 +138,11 @@ function FocusButton() {
   );
 }
 
+// A Letter reads every past Letter: past this many Inputs, the line folds instead of filling the screen
+const INPUT_PREVIEW_COUNT = 8;
+
 function ProducedFrom({ version }: { version: IVersion }) {
+  const [isAllShown, setIsAllShown] = useState(false);
   if (version.origin === 'candidate') {
     return (
       <p className="text-xs text-muted-foreground">
@@ -153,11 +157,26 @@ function ProducedFrom({ version }: { version: IVersion }) {
       {version.inputs.length === 0 ? (
         <span className="italic">Inputs non conservés pour cette Version</span>
       ) : (
-        version.inputs.map((input) => (
-          <Badge key={input.key} variant="outline" className="h-5 px-1.5 text-[11px] font-normal text-muted-foreground">
-            {input.label}
-          </Badge>
-        ))
+        <>
+          {(isAllShown ? version.inputs : version.inputs.slice(0, INPUT_PREVIEW_COUNT)).map((input) => (
+            <Badge
+              key={input.key}
+              variant="outline"
+              className="h-5 px-1.5 text-[11px] font-normal text-muted-foreground"
+            >
+              {input.label}
+            </Badge>
+          ))}
+          {version.inputs.length > INPUT_PREVIEW_COUNT ? (
+            <button
+              type="button"
+              className="text-[11px] text-primary underline-offset-4 hover:underline"
+              onClick={() => setIsAllShown(!isAllShown)}
+            >
+              {isAllShown ? 'Réduire' : `+ ${String(version.inputs.length - INPUT_PREVIEW_COUNT)} autres`}
+            </button>
+          ) : null}
+        </>
       )}
     </p>
   );
@@ -311,193 +330,212 @@ export function ArtifactView({
     </>
   );
 
-  if (version === undefined) {
+  // The dialogs keep their place whichever body shows: the panel of a first Version must survive the
+  // switch from the empty state to the reader, or its run and « Voir le Brouillon » vanish
+  return (
+    <>
+      {bodyOf()}
+      {dialogs}
+    </>
+  );
+
+  function bodyOf() {
+    if (version === undefined) {
+      return (
+        <div className="space-y-4">
+          <RunProgress reference={posting.reference} artifactKey={artifactKey} />
+          <div className="flex flex-col items-center rounded-2xl border border-dashed px-6 py-14 text-center">
+            <div className="mb-4 grid size-11 place-items-center rounded-full bg-muted">
+              <SparklesIcon className="size-5 text-muted-foreground" />
+            </div>
+            <h3 className="text-base font-semibold">Pas encore de {ARTIFACT_LABEL[type]}</h3>
+            <p className="mt-1.5 max-w-md text-sm text-balance text-muted-foreground">{EMPTY_PITCH[type]}</p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              {generateButton}
+              <Button variant="outline" size="sm" onClick={() => setIsAddOpen(true)}>
+                <FileUpIcon />
+                Ajouter la mienne
+              </Button>
+            </div>
+            {refusal === null ? null : <p className="mt-3 max-w-md text-xs text-muted-foreground">{refusal}</p>}
+          </div>
+        </div>
+      );
+    }
+
+    const hasOriginal = version.original !== null;
+    const isDraft = version.state === 'draft';
+
     return (
       <div className="space-y-4">
-        <RunProgress reference={posting.reference} artifactKey={artifactKey} />
-        <div className="flex flex-col items-center rounded-2xl border border-dashed px-6 py-14 text-center">
-          <div className="mb-4 grid size-11 place-items-center rounded-full bg-muted">
-            <SparklesIcon className="size-5 text-muted-foreground" />
+        {/* Toolbar */}
+        <div className="@container space-y-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={String(version.number)}
+              onValueChange={(value) => {
+                setSelectedNumber(Number(value));
+                setMode('read');
+              }}
+            >
+              <SelectTrigger size="sm" className="min-w-44 font-medium" aria-label="Version">
+                <SelectValue>
+                  Version {version.number} · {VERSION_STATE_LABEL[version.state]}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent align="start">
+                {versionList.toReversed().map((other) => (
+                  <SelectItem key={other.number} value={String(other.number)}>
+                    <span className="font-medium">Version {other.number}</span>
+                    <span className="text-muted-foreground">
+                      · {VERSION_STATE_LABEL[other.state]}
+                      {other.isChosen ? ' · retenue' : ''} · {other.origin === 'ai' ? 'IA' : 'toi'} ·{' '}
+                      {formatDate(other.createdAt)}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <VersionStateBadge version={version} />
+            <div className="ml-auto flex items-center gap-1.5">
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                size="sm"
+                spacing={0}
+                value={mode}
+                onValueChange={(value) => {
+                  if (value !== '') {
+                    setMode(value as Mode);
+                  }
+                }}
+                className="hidden @xl:flex"
+              >
+                {MODE_LIST.map(({ mode: itemMode, label, icon: Icon }) => {
+                  const isDisabled = itemMode === 'compare' && !hasOriginal;
+                  return (
+                    <ToggleGroupItem
+                      key={itemMode}
+                      value={itemMode}
+                      disabled={isDisabled}
+                      aria-label={label}
+                      title={isDisabled ? 'Version apportée par toi : pas d’Original' : label}
+                      className="gap-1.5 px-2.5"
+                    >
+                      <Icon />
+                      <span className={cn(itemMode === 'compare' && 'hidden @5xl:inline')}>
+                        {itemMode === 'compare' ? 'Comparer à l’Original' : label}
+                      </span>
+                    </ToggleGroupItem>
+                  );
+                })}
+              </ToggleGroup>
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden @4xl:inline-flex"
+                onClick={() => setIsAddOpen(true)}
+              >
+                <FileUpIcon />
+                Ajouter la mienne
+              </Button>
+              {generateButton}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon-sm" className="@4xl:hidden" aria-label="Plus d’actions">
+                    <MoreHorizontalIcon />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {MODE_LIST.map(({ mode: itemMode, label, icon: Icon }) => (
+                    <DropdownMenuItem
+                      key={itemMode}
+                      disabled={itemMode === 'compare' && !hasOriginal}
+                      onSelect={() => setMode(itemMode)}
+                      className="md:hidden"
+                    >
+                      <Icon />
+                      {label}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator className="md:hidden" />
+                  <DropdownMenuItem onSelect={() => setIsAddOpen(true)}>
+                    <FileUpIcon />
+                    Ajouter la mienne
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {canFocus ? <FocusButton /> : null}
+            </div>
           </div>
-          <h3 className="text-base font-semibold">Pas encore de {ARTIFACT_LABEL[type]}</h3>
-          <p className="mt-1.5 max-w-md text-sm text-balance text-muted-foreground">{EMPTY_PITCH[type]}</p>
-          <div className="mt-5 flex flex-wrap justify-center gap-2">
-            {generateButton}
-            <Button variant="outline" size="sm" onClick={() => setIsAddOpen(true)}>
-              <FileUpIcon />
-              Ajouter la mienne
+          <ProducedFrom version={version} />
+        </div>
+
+        <RunProgress reference={posting.reference} artifactKey={artifactKey} />
+
+        {isDraft ? (
+          <div className="flex flex-col gap-3 rounded-xl border border-primary/30 bg-primary/[0.05] p-4 sm:flex-row sm:items-center">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">Version {version.number} en Brouillon : relis-la, puis valide-la</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {type === 'letter'
+                  ? 'Seule la Version retenue part chez l’employeur.'
+                  : 'Tant qu’elle n’est pas validée, aucun autre Artifact ne la lit.'}{' '}
+                {chosen === undefined
+                  ? 'Aucune Version n’est retenue pour l’instant.'
+                  : `En attendant, la Version ${String(chosen.number)} reste la Version retenue.`}
+              </p>
+            </div>
+            <Button className="shrink-0" disabled={isValidating} onClick={() => void validate(version.number)}>
+              <CheckIcon />
+              {isValidating ? 'Validation…' : `Valider la Version ${String(version.number)}`}
             </Button>
           </div>
-          {refusal === null ? null : <p className="mt-3 max-w-md text-xs text-muted-foreground">{refusal}</p>}
+        ) : null}
+        {!isDraft && !version.isChosen && chosen !== undefined ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+            Ancienne Version. La Version retenue est la {chosen.number}.
+            <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setSelectedNumber(chosen.number)}>
+              La voir
+            </Button>
+          </div>
+        ) : null}
+
+        {/* Body */}
+        <div className="pt-2">
+          {mode === 'edit' ? (
+            <ArtifactEditor
+              key={`${artifactKey}:${String(version.number)}`}
+              text={version.text}
+              original={version.original}
+              format={format}
+              onCancel={() => setMode('read')}
+              onSave={async (text) => {
+                await actions.editVersion(posting.reference, artifactKey, version.number, text);
+                setMode('read');
+              }}
+            />
+          ) : mode === 'compare' && version.original !== null ? (
+            <CompareView
+              original={version.original}
+              text={version.text}
+              format={format}
+              versionNumber={version.number}
+            />
+          ) : type === 'letter' ? (
+            <LetterPage version={version} recipients={recipients} />
+          ) : (
+            <ArtifactReader
+              key={`${artifactKey}:${String(version.number)}`}
+              variant={variant}
+              source={version.text}
+              format={format}
+              memoryKey={`${posting.reference}:${artifactKey}:${String(version.number)}`}
+              headerOffset={headerOffset}
+            />
+          )}
         </div>
-        {dialogs}
       </div>
     );
   }
-
-  const hasOriginal = version.original !== null;
-  const isDraft = version.state === 'draft';
-
-  return (
-    <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="@container space-y-2.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={String(version.number)}
-            onValueChange={(value) => {
-              setSelectedNumber(Number(value));
-              setMode('read');
-            }}
-          >
-            <SelectTrigger size="sm" className="min-w-44 font-medium" aria-label="Version">
-              <SelectValue>
-                Version {version.number} · {VERSION_STATE_LABEL[version.state]}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent align="start">
-              {versionList.toReversed().map((other) => (
-                <SelectItem key={other.number} value={String(other.number)}>
-                  <span className="font-medium">Version {other.number}</span>
-                  <span className="text-muted-foreground">
-                    · {VERSION_STATE_LABEL[other.state]}
-                    {other.isChosen ? ' · retenue' : ''} · {other.origin === 'ai' ? 'IA' : 'toi'} ·{' '}
-                    {formatDate(other.createdAt)}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <VersionStateBadge version={version} />
-          <div className="ml-auto flex items-center gap-1.5">
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              size="sm"
-              spacing={0}
-              value={mode}
-              onValueChange={(value) => {
-                if (value !== '') {
-                  setMode(value as Mode);
-                }
-              }}
-              className="hidden @xl:flex"
-            >
-              {MODE_LIST.map(({ mode: itemMode, label, icon: Icon }) => {
-                const isDisabled = itemMode === 'compare' && !hasOriginal;
-                return (
-                  <ToggleGroupItem
-                    key={itemMode}
-                    value={itemMode}
-                    disabled={isDisabled}
-                    aria-label={label}
-                    title={isDisabled ? 'Version apportée par toi : pas d’Original' : label}
-                    className="gap-1.5 px-2.5"
-                  >
-                    <Icon />
-                    <span className={cn(itemMode === 'compare' && 'hidden @5xl:inline')}>
-                      {itemMode === 'compare' ? 'Comparer à l’Original' : label}
-                    </span>
-                  </ToggleGroupItem>
-                );
-              })}
-            </ToggleGroup>
-            <Button variant="outline" size="sm" className="hidden @4xl:inline-flex" onClick={() => setIsAddOpen(true)}>
-              <FileUpIcon />
-              Ajouter la mienne
-            </Button>
-            {generateButton}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" className="@4xl:hidden" aria-label="Plus d’actions">
-                  <MoreHorizontalIcon />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {MODE_LIST.map(({ mode: itemMode, label, icon: Icon }) => (
-                  <DropdownMenuItem
-                    key={itemMode}
-                    disabled={itemMode === 'compare' && !hasOriginal}
-                    onSelect={() => setMode(itemMode)}
-                    className="md:hidden"
-                  >
-                    <Icon />
-                    {label}
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator className="md:hidden" />
-                <DropdownMenuItem onSelect={() => setIsAddOpen(true)}>
-                  <FileUpIcon />
-                  Ajouter la mienne
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {canFocus ? <FocusButton /> : null}
-          </div>
-        </div>
-        <ProducedFrom version={version} />
-      </div>
-
-      <RunProgress reference={posting.reference} artifactKey={artifactKey} />
-
-      {isDraft ? (
-        <div className="flex flex-col gap-3 rounded-xl border border-primary/30 bg-primary/[0.05] p-4 sm:flex-row sm:items-center">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Version {version.number} en Brouillon : relis-la, puis valide-la</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {type === 'letter'
-                ? 'Seule la Version retenue part chez l’employeur.'
-                : 'Tant qu’elle n’est pas validée, aucun autre Artifact ne la lit.'}{' '}
-              {chosen === undefined
-                ? 'Aucune Version n’est retenue pour l’instant.'
-                : `En attendant, la Version ${String(chosen.number)} reste la Version retenue.`}
-            </p>
-          </div>
-          <Button className="shrink-0" disabled={isValidating} onClick={() => void validate(version.number)}>
-            <CheckIcon />
-            {isValidating ? 'Validation…' : `Valider la Version ${String(version.number)}`}
-          </Button>
-        </div>
-      ) : null}
-      {!isDraft && !version.isChosen && chosen !== undefined ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-          Ancienne Version. La Version retenue est la {chosen.number}.
-          <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setSelectedNumber(chosen.number)}>
-            La voir
-          </Button>
-        </div>
-      ) : null}
-
-      {/* Body */}
-      <div className="pt-2">
-        {mode === 'edit' ? (
-          <ArtifactEditor
-            key={`${artifactKey}:${String(version.number)}`}
-            text={version.text}
-            original={version.original}
-            format={format}
-            onCancel={() => setMode('read')}
-            onSave={async (text) => {
-              await actions.editVersion(posting.reference, artifactKey, version.number, text);
-              setMode('read');
-            }}
-          />
-        ) : mode === 'compare' && version.original !== null ? (
-          <CompareView original={version.original} text={version.text} format={format} versionNumber={version.number} />
-        ) : type === 'letter' ? (
-          <LetterPage version={version} recipients={recipients} />
-        ) : (
-          <ArtifactReader
-            key={`${artifactKey}:${String(version.number)}`}
-            variant={variant}
-            source={version.text}
-            format={format}
-            memoryKey={`${posting.reference}:${artifactKey}:${String(version.number)}`}
-            headerOffset={headerOffset}
-          />
-        )}
-      </div>
-      {dialogs}
-    </div>
-  );
 }

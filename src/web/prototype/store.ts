@@ -56,6 +56,7 @@ import { toast } from 'sonner';
 
 import {
   ARTIFACT_LABEL,
+  artifactKeyOf,
   formatDateTime,
   listInputs,
   STEP_LABEL,
@@ -75,10 +76,12 @@ import {
   type IVersion,
   type PostingStatus,
 } from './model.ts';
+import { SHOWCASE_REFERENCE, SHOWCASE_VERSION_LIST } from './posting/showcase.ts';
 
 // ——— State ———
 
-type NewVersion = Pick<IVersion, 'text' | 'origin'> & Partial<Pick<IVersion, 'inputs' | 'instructions' | 'original'>>;
+type NewVersion = Pick<IVersion, 'text' | 'origin'> &
+  Partial<Pick<IVersion, 'inputs' | 'instructions' | 'original' | 'fileName'>>;
 
 type ArtifactOp =
   | { kind: 'addVersion'; artifactKey: string; version: NewVersion; createdAt: string }
@@ -165,6 +168,7 @@ const EMPTY_OVERLAY: ICandidateOverlay = {
 
 type Action =
   | { type: 'tick'; now: number }
+  | { type: 'init'; candidateId: string; overlay: ICandidateOverlay }
   | { type: 'patch'; candidateId: string; reference: string; patch: IPostingPatch }
   | { type: 'op'; candidateId: string; reference: string; op: ArtifactOp }
   | { type: 'instructions'; candidateId: string; artifactType: GeneratedArtifactType; text: string | null }
@@ -188,6 +192,11 @@ function reduce(state: IState, action: Action): IState {
   switch (action.type) {
     case 'tick': {
       return { ...state, now: action.now };
+    }
+    case 'init': {
+      return state.overlayByCandidate[action.candidateId] === undefined
+        ? updateOverlay(state, action.candidateId, () => action.overlay)
+        : state;
     }
     case 'patch': {
       return updateOverlay(state, action.candidateId, (overlay) => ({
@@ -329,7 +338,7 @@ function applyOp(artifactList: IArtifact[], op: ArtifactOp): IArtifact[] {
           isChosen: false,
           origin: op.version.origin,
           createdAt: op.createdAt,
-          fileName: artifact.versions.at(-1)?.fileName ?? `${artifact.type}.md`,
+          fileName: op.version.fileName ?? artifact.versions.at(-1)?.fileName ?? `${artifact.type}.md`,
           text: op.version.text,
           original: op.version.original ?? (op.version.origin === 'ai' ? op.version.text : null),
           inputs: op.version.inputs ?? [],
@@ -384,6 +393,33 @@ function applyPosting(posting: IPosting, overlay: ICandidateOverlay, now: Date):
     research: applySummary(merged.research, 'research', opList),
     letter: applySummary(merged.letter, 'letter', opList),
   };
+}
+
+// Why a run is refused now, from the overlaid state rather than the snapshot's: the real module's two
+// rules, the Letter frozen once Applied and a required Artifact without a Chosen Version
+function refusalOf(
+  artifact: IArtifact,
+  artifactList: IArtifact[],
+  posting: IPosting | undefined,
+  inputRules: IPrototypeData['inputRules'],
+): string | null {
+  if (artifact.type === 'custom') {
+    return null;
+  }
+  if (
+    artifact.type === 'letter' &&
+    posting !== undefined &&
+    (posting.appliedAt !== null || (posting.status !== 'to_apply' && posting.status !== 'new'))
+  ) {
+    return 'La Lettre est figée : l’Offre est déjà Postulée, la Lettre envoyée ne change plus.';
+  }
+  for (const required of inputRules[artifact.type].requiredList) {
+    const key = artifactKeyOf(required, inputRules[required].isAttachedToInterview ? artifact.interviewNumber : null);
+    if (artifactList.find((other) => other.key === key)?.chosenNumber == null) {
+      return `Valide d’abord une Version de la ${ARTIFACT_LABEL[required]} : la ${ARTIFACT_LABEL[artifact.type]} s’appuie dessus.`;
+    }
+  }
+  return null;
 }
 
 // ——— Simulation ———
@@ -521,7 +557,8 @@ function simulatedText(artifact: IArtifact | undefined, artifactKey: string, pos
   const note = `> Version simulée par le prototype le ${formatDateTime(now.toISOString())} : aucune session Claude n’a tourné.`;
   const previous = artifact?.versions.find(({ isChosen }) => isChosen) ?? artifact?.versions.at(-1);
   if (previous !== undefined) {
-    return `${note}\n\n${previous.text}`;
+    // One note only, however many times it was regenerated
+    return `${note}\n\n${previous.text.replaceAll(/^> Version simulée par le prototype .*\n+/gmu, '')}`;
   }
   if (type === 'letter') {
     return `${note}\n\nMadame, Monsieur,\n\nJe vous adresse ma candidature au poste de ${posting.title}.\n\n…`;
@@ -593,6 +630,21 @@ export interface ISeedArtifact {
   isValidated: boolean;
 }
 
+// A Candidate's overlay before any mutation: the hand-written MDX showcase (posting/showcase.ts) as the
+// newest Versions of the Béziers Posting, so every screen reads them from the store, never from a loader
+function initialOverlayOf(data: IPrototypeData): ICandidateOverlay {
+  if (!data.postings.some(({ reference }) => reference === SHOWCASE_REFERENCE)) {
+    return EMPTY_OVERLAY;
+  }
+  const opList: ArtifactOp[] = SHOWCASE_VERSION_LIST.map(({ artifactKey, createdAt, ...version }) => ({
+    kind: 'addVersion',
+    artifactKey,
+    createdAt,
+    version: { ...version, origin: 'ai' },
+  }));
+  return { ...EMPTY_OVERLAY, opsByReference: { [SHOWCASE_REFERENCE]: opList } };
+}
+
 const PrototypeContext = createContext<IPrototypeContext | null>(null);
 
 function instructionsOf(data: IPrototypeData, overlay: ICandidateOverlay): IInstructions[] {
@@ -603,9 +655,17 @@ function instructionsOf(data: IPrototypeData, overlay: ICandidateOverlay): IInst
 }
 
 export function PrototypeStoreProvider({ data, children }: { data: IPrototypeData; children: ReactNode }) {
-  const [state, dispatch] = useReducer(reduce, { now: Date.now(), overlayByCandidate: {} });
   const candidateId = data.candidate.id;
-  const overlay = state.overlayByCandidate[candidateId] ?? EMPTY_OVERLAY;
+  const [state, dispatch] = useReducer(reduce, null, () => ({
+    now: Date.now(),
+    overlayByCandidate: { [candidateId]: initialOverlayOf(data) },
+  }));
+  // A Candidate seen for the first time (a switch): its initial overlay, during this very render
+  const knownOverlay = state.overlayByCandidate[candidateId];
+  if (knownOverlay === undefined) {
+    dispatch({ type: 'init', candidateId, overlay: initialOverlayOf(data) });
+  }
+  const overlay = knownOverlay ?? EMPTY_OVERLAY;
   // The mutations read the latest state without being recreated at each tick
   const latest = useRef({ data, overlay });
   latest.current = { data, overlay };
@@ -634,9 +694,20 @@ export function PrototypeStoreProvider({ data, children }: { data: IPrototypeDat
         return null;
       }
       const opList = overlay.opsByReference[reference] ?? [];
-      return { ...known, artifacts: opList.reduce(applyOp, known.artifacts) };
+      const artifacts = opList.reduce(applyOp, known.artifacts);
+      const posting =
+        data.postings.find((other) => other.reference === reference) ??
+        overlay.syntheticList.find((other) => other.reference === reference);
+      const overlaid = posting === undefined ? undefined : applyPosting(posting, overlay, new Date());
+      return {
+        ...known,
+        artifacts: artifacts.map((artifact) => ({
+          ...artifact,
+          refusal: refusalOf(artifact, artifacts, overlaid, data.inputRules),
+        })),
+      };
     },
-    [overlay],
+    [data, overlay],
   );
 
   const patch = useCallback(

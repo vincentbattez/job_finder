@@ -12,7 +12,6 @@ import { DetectionCard, NewHeaderActions } from './lists/detection.tsx';
 import { ListProvider, useListController } from './lists/list-context.tsx';
 import { MobileLayout } from './lists/mobile.tsx';
 import { PostingSheet } from './lists/posting-sheet.tsx';
-import { useSeedToApply } from './lists/seed.ts';
 import { VariantA } from './lists/variant-a.tsx';
 import { VariantB } from './lists/variant-b.tsx';
 import { VariantC } from './lists/variant-c.tsx';
@@ -63,7 +62,6 @@ function ListPage() {
 export default function Lists() {
   const { pathname } = useLocation();
   const list = LIST_BY_PATH[pathname] ?? 'new';
-  useSeedToApply();
   return (
     <ListProvider key={list} list={list}>
       <ListPage />

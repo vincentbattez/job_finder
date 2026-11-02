@@ -118,6 +118,7 @@ export function PrototypeSwitcher({ variants, param = 'variant', label, keys = '
     <div
       className="pointer-events-auto flex items-center gap-1 rounded-full bg-foreground px-1 py-1 font-mono text-xs text-background shadow-xl ring-1 ring-background/20"
       data-prototype-switcher={param}
+      data-variant={current}
     >
       <button
         type="button"
@@ -131,7 +132,7 @@ export function PrototypeSwitcher({ variants, param = 'variant', label, keys = '
         {label === undefined ? null : <span className="opacity-60">{label} · </span>}
         <span className="font-semibold">{current}</span>
         {name === undefined ? null : <span className="opacity-80"> ({name})</span>}
-        <span className="ml-2 opacity-50">
+        <span className="ml-2 opacity-50 max-sm:hidden">
           {keys === 'shift+arrows' ? '⇧' : ''}←→ · ?{param}=
         </span>
       </span>
@@ -153,6 +154,12 @@ export function PrototypeSwitcherDock({ className }: { className?: string }) {
       id={DOCK_ID}
       className={cn(
         'pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex flex-col-reverse items-center gap-2',
+        // While a generation panel is open, only its switcher shows: the page's sits behind the modal
+        '[&:has(>[data-prototype-switcher=panel])>[data-prototype-switcher]:not([data-prototype-switcher=panel])]:hidden',
+        // The full-height Sheet of panel B keeps its footer (summary, Annuler, Lancer) visible
+        '[&:has(>[data-prototype-switcher=panel][data-variant=B])]:bottom-20',
+        // On a phone the bottom belongs to the list's Drawer: the dock goes under the page header
+        'max-sm:top-[4.25rem] max-sm:bottom-auto max-sm:flex-col',
         className,
       )}
     />

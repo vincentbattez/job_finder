@@ -1,11 +1,11 @@
 // PROTOTYPE · Posting page agent. The target rendering of ADR-0020 on real data: an Interview Brief
 // hand-written in MDX with the closed catalogue (mdx-catalogue.tsx), for the Béziers Posting's first
-// Interview, rewritten from its Markdown Version 2. The loaders of posting.tsx and revision.tsx append
+// Interview, rewritten from its Markdown Version 2. The store (store.ts) seeds
 // it as the newest Version, a Draft produced by the AI, whose Original differs from its text by a few
 // corrections of the Candidate (so « Comparer à l'Original » has something to show). The store then
 // overlays it like any other Version: validating, correcting or regenerating it works as usual.
-import type { IArtifact, IInputRef, IPostingDetail, IVersion } from '../model.ts';
-import { RESEARCH_SHOWCASE } from './research-showcase.server.ts';
+import type { IInputRef } from '../model.ts';
+import { RESEARCH_SHOWCASE } from './research-showcase.ts';
 
 export const SHOWCASE_REFERENCE = '2026-2417004';
 const SHOWCASE_ARTIFACT_KEY = 'interview_brief@1';
@@ -466,54 +466,35 @@ function briefOf(pick: 'original' | 'corrected'): string {
   );
 }
 
-function appended(artifact: IArtifact, version: Omit<IVersion, 'number' | 'instructions'>): IArtifact {
-  const previous = artifact.versions.at(-1);
-  return {
-    ...artifact,
-    format: 'mdx',
-    versions: [
-      ...artifact.versions,
-      { ...version, number: (previous?.number ?? 0) + 1, instructions: previous?.instructions ?? '' },
-    ],
-  };
+// The showcase Versions the store adds on top of the loaded snapshot, newest last: each a Draft produced
+// by the AI, so the lists, the Sheet, the Posting page and the Revision all read the same state
+export interface IShowcaseVersion {
+  artifactKey: string;
+  createdAt: string;
+  fileName: string;
+  text: string;
+  original: string;
+  inputs: IInputRef[];
 }
 
-// The detail with the showcase Versions on top, as a new object: the loader's snapshot is shared
-export function withShowcase(detail: IPostingDetail | null): IPostingDetail | null {
-  if (detail?.reference !== SHOWCASE_REFERENCE) {
-    return detail;
-  }
-  return {
-    ...detail,
-    artifacts: detail.artifacts.map((artifact) => {
-      if (artifact.key === SHOWCASE_ARTIFACT_KEY) {
-        return appended(artifact, {
-          state: 'draft',
-          isChosen: false,
-          origin: 'ai',
-          createdAt: SHOWCASE_CREATED_AT,
-          fileName: 'interview-brief.mdx',
-          text: briefOf('corrected'),
-          original: briefOf('original'),
-          inputs: SHOWCASE_INPUT_LIST,
-        });
-      }
-      if (artifact.key === 'research') {
-        return appended(artifact, {
-          state: 'draft',
-          isChosen: false,
-          origin: 'ai',
-          createdAt: '2026-11-02T07:40:00.000Z',
-          fileName: 'research.mdx',
-          text: RESEARCH_SHOWCASE,
-          original: RESEARCH_SHOWCASE,
-          inputs: [
-            { key: 'job_description', label: 'Fiche de poste' },
-            { key: 'notes', label: 'Notes' },
-          ],
-        });
-      }
-      return artifact;
-    }),
-  };
-}
+export const SHOWCASE_VERSION_LIST: IShowcaseVersion[] = [
+  {
+    artifactKey: 'research',
+    createdAt: '2026-11-02T07:40:00.000Z',
+    fileName: 'research.mdx',
+    text: RESEARCH_SHOWCASE,
+    original: RESEARCH_SHOWCASE,
+    inputs: [
+      { key: 'job_description', label: 'Fiche de poste' },
+      { key: 'notes', label: 'Notes' },
+    ],
+  },
+  {
+    artifactKey: SHOWCASE_ARTIFACT_KEY,
+    createdAt: SHOWCASE_CREATED_AT,
+    fileName: 'interview-brief.mdx',
+    text: briefOf('corrected'),
+    original: briefOf('original'),
+    inputs: SHOWCASE_INPUT_LIST,
+  },
+];

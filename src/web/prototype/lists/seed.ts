@@ -1,5 +1,5 @@
 // PROTOTYPE. The snapshot has 48 New Postings and 1 To Apply: To Apply could not show what it is for.
-// At the first list the prototype opens, six New Postings are kept, silently, in the client store only
+// At the first page the prototype opens (layout.tsx), six New Postings are kept, silently, in the client store only
 // (store.ts `seed`, never the database): those whose Deadline comes first, in six different Cities,
 // each with Research / Letter states that show the workflow (a Letter to validate, ready to send…).
 import { useEffect } from 'react';

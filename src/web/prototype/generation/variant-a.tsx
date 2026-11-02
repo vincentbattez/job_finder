@@ -64,7 +64,7 @@ export function PanelDialog({
       }}
     >
       <DialogContent
-        className="flex max-h-[calc(100svh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
+        className="flex max-h-[calc(100svh-9rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
         onInteractOutside={keepSwitcherClicks}
         onOpenAutoFocus={focusSelf}
       >

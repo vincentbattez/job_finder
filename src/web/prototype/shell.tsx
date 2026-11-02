@@ -60,12 +60,15 @@ const OTHER_ENTRY_LIST: { label: string; to: string; icon: LucideIcon }[] = [
 ];
 
 function initialsOf(name: string): string {
-  return name
-    .split(/\s+/u)
-    .map((word) => word.charAt(0))
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  return (
+    name
+      .split(/\s+/u)
+      // Letters only: « Démo (vide) » is « DV », not « D( »
+      .map((word) => word.replaceAll(/[^\p{L}]/gu, '').charAt(0))
+      .join('')
+      .slice(0, 2)
+      .toUpperCase()
+  );
 }
 
 function CandidateSwitcher() {

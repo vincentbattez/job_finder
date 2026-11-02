@@ -52,14 +52,13 @@ import {
 } from './model.ts';
 import { VersionStateBadge } from './posting/artifact-view.tsx';
 import { ArtifactContent, ArtifactReader, READING_VARIANT_LIST, type ReadingVariant } from './posting/reader.tsx';
-import { withShowcase } from './posting/showcase.server.ts';
 import { countdownOf, formatLongDay, formatTime, useNow } from './posting/time.ts';
 import { PrototypeSwitcher, usePrototypeVariant } from './prototype-switcher.tsx';
 import { useActions, usePosting, usePostingDetail } from './store.ts';
 import { ThemeToggle } from './theme-toggle.tsx';
 
-export async function loader({ request, params }: LoaderFunctionArgs) {
-  return withShowcase(await loadPostingDetail(request, params.reference ?? ''));
+export function loader({ request, params }: LoaderFunctionArgs) {
+  return loadPostingDetail(request, params.reference ?? '');
 }
 
 export function shouldRevalidate({ currentParams, nextParams, currentUrl, nextUrl }: ShouldRevalidateFunctionArgs) {

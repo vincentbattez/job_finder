@@ -25,12 +25,11 @@ import { InterviewsTab } from './posting/interviews-tab.tsx';
 import { NotesTab } from './posting/notes-tab.tsx';
 import { PostingTab } from './posting/posting-tab.tsx';
 import { READING_VARIANT_LIST, type ReadingVariant } from './posting/reader.tsx';
-import { withShowcase } from './posting/showcase.server.ts';
 import { PrototypeSwitcher, usePrototypeVariant } from './prototype-switcher.tsx';
 import { usePosting, usePostingDetail } from './store.ts';
 
-export async function loader({ request, params }: LoaderFunctionArgs) {
-  return withShowcase(await loadPostingDetail(request, params.reference ?? ''));
+export function loader({ request, params }: LoaderFunctionArgs) {
+  return loadPostingDetail(request, params.reference ?? '');
 }
 
 // The snapshot never changes: loaded again only for another Posting, never for a ?variant= or ?tab=

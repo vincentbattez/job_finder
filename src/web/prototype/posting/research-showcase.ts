@@ -1,5 +1,5 @@
 // PROTOTYPE · Posting page agent. The Béziers Research rewritten in MDX with the closed catalogue, from
-// its Markdown Version 1: appended by showcase.server.ts as a Draft produced by the AI, so the Research
+// its Markdown Version 1: seeded by showcase.ts into the store as a Draft produced by the AI, so the Research
 // tab shows the target rendering too. Its sources keep their links.
 
 export const RESEARCH_SHOWCASE = `# Recherche : attaché(e) de justice au siège, TJ de Béziers

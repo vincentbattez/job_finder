@@ -18,6 +18,7 @@ import { Toaster } from '#/web/prototype/components/ui/sonner.tsx';
 import { TooltipProvider } from '#/web/prototype/components/ui/tooltip.tsx';
 
 import { loadPrototype } from './data.server.ts';
+import { useSeedToApply } from './lists/seed.ts';
 import { PrototypeSwitcherDock } from './prototype-switcher.tsx';
 import { PrototypeStoreProvider } from './store.ts';
 
@@ -38,6 +39,13 @@ export function links() {
   return [{ rel: 'icon', href: 'data:,' }];
 }
 
+// The few New Postings kept at startup (lists/seed.ts), whatever page the prototype opens on: a deep link
+// to a Posting page must find the same state as the lists
+function SeedToApply() {
+  useSeedToApply();
+  return null;
+}
+
 function Providers({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
@@ -51,6 +59,7 @@ export default function PrototypeLayout() {
   return (
     <Providers>
       <PrototypeStoreProvider data={data}>
+        <SeedToApply />
         <Outlet />
         <Toaster position="bottom-right" closeButton />
         <PrototypeSwitcherDock />
