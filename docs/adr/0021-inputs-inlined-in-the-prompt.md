@@ -9,6 +9,6 @@ A run used to name its Inputs by path in the Fixed Part and let the Claude sessi
 
 ## Consequences
 
-- The Prompt grows with every checked Input: an Annex costs its full length on every run that checks it, and a sent Letter its Original too. The Candidate weighs it from the recap's word counts and shares; Annexes unchecked by default and only the five most recent past letters checked keep the default Prompt small.
+- The Prompt grows with every checked Input: an Annex costs its full length on every run that checks it, and a sent Letter its Original too. The Candidate weighs it from the recap's word counts and shares; Annexes unchecked by default and only the five most recent Past Letters checked keep the default Prompt small.
 - The AI no longer chooses how far to read: the Profile's description loses its advice to skim a long Annex or hand it to a subagent, and the session no longer needs read access to the Profile or to other Postings' folders.
 - What a Version records as its Inputs is what its session received, which makes the Inputs a Version shows exact.
