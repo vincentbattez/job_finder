@@ -29,6 +29,15 @@ export type InterviewDocument = (typeof INTERVIEW_DOCUMENT_LIST)[number];
 
 const MINUTE_MS = 60_000;
 
+// The Interview on its Posting page, and its full-screen Revision (spec #125, « Reading and Revision »)
+export function interviewPathOf(reference: string, number: number): string {
+  return `/postings/${encodeURIComponent(reference)}?tab=interviews&interview=${String(number)}`;
+}
+
+export function revisionPathOf(reference: string, number: number): string {
+  return `/postings/${encodeURIComponent(reference)}/interviews/${String(number)}/revision`;
+}
+
 // Over once its duration has passed
 export function isPast({ startAt, durationMinutes }: IInterview, now: number): boolean {
   return startAt.getTime() + durationMinutes * MINUTE_MS <= now;
@@ -288,7 +297,7 @@ export function InterviewSummary({
             {t('interviews.facts', { number: interview.number, minutes: interview.durationMinutes })}
           </p>
         </div>
-        <div className="flex items-center gap-1.5">{actions}</div>
+        <div className="flex flex-wrap items-center gap-1.5">{actions}</div>
       </div>
       <dl className="mt-4 grid gap-3 border-t pt-4 text-sm sm:grid-cols-[auto_1fr] sm:gap-x-6">
         <dt className="flex items-center gap-1.5 text-muted-foreground">
