@@ -274,10 +274,18 @@ Artifact that prepares a given Interview by crossing the Posting and its Intervi
 _Avoid_: review sheet, cheat sheet, study notes
 _Formerly_: Fiche d'entretien
 
+**Revision**:
+The Candidate's study of the Chosen Version of an Interview Brief before its Interview, section by section; it keeps, for each section, a note of theirs and whether they marked it Mastered.
+_Avoid_: review, study session, rehearsal
+
+**Mastered**:
+Said of a section of an Interview Brief the Candidate marked as known during their Revision.
+_Avoid_: done, read, learned
+
 **Custom Artifact**:
 Artifact the Candidate writes or drops for one Posting, or one of its Interviews, so a run can read it: a text of their own or a file; it is Validated from the start and has a single Version.
 _Avoid_: note, attachment, extra input
 
 **Input**:
-What a run producing an Artifact reads: the Job Description, the Chosen Version of another Artifact of the Posting, Custom Artifacts included, or a document of the Profile; each type of Artifact checks some by default and requires some, which cannot be unchecked, the Candidate adds the others, and each Version keeps the Inputs it was produced from. An Artifact that reads the Profile requires the CV and the Facts, checks each past letter, and leaves the Annexes to add.
+What a run producing an Artifact reads: the Job Description, the Chosen Version of another Artifact of the Posting, Custom Artifacts included, or a document of the Profile; each type of Artifact checks some by default and requires some, which cannot be unchecked, the Candidate adds the others, and each Version keeps the Inputs it was produced from. An Artifact that reads the Profile requires the CV and the Facts, checks the five most recent past letters, and leaves the older ones and the Annexes to add.
 _Avoid_: source, context, data
