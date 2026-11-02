@@ -27,7 +27,13 @@ ignorePaths:
   - test/fixtures/**
   # The migration history is kept as is
   - prisma/migrations/**
+  # The design sidecar, generated from DESIGN.md for the impeccable skill, with sample French copy
+  - .impeccable/**
 overrides:
+  # The design docs quote the French UI copy in « », checked by the French pass
+  - filename: [PRODUCT.md, DESIGN.md]
+    ignoreRegExpList:
+      - '/«[^»]*»/gu'
   - filename: src/domain/catalogue/fr/**
     language: en,fr
   # A module's copy stays in its folder, in both locales (ADR-0010): the string literals of its copy

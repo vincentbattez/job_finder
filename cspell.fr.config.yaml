@@ -27,3 +27,8 @@ overrides:
     language: en,fr
     includeRegExpList:
       - "/(?<![\\p{L}\\p{N}’)\\].])(?:'(?:\\\\.|[^'\\\\\\n])*'|\"(?:\\\\.|[^\"\\\\\\n])*\"|`(?:\\\\.|[^`\\\\])*`)/gu"
+  # The French UI copy the design docs quote in « »
+  - filename: [PRODUCT.md, DESIGN.md]
+    language: en,fr
+    includeRegExpList:
+      - '/«[^»]*»/gu'

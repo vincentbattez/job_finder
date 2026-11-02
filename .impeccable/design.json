@@ -1,0 +1,656 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-02T17:29:43.428Z",
+  "title": "Design System: Job Finder",
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "displayName": "Paper White",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0.000 0)",
+          "oklch(0.3 0.000 0)",
+          "oklch(0.4 0.000 0)",
+          "oklch(0.5 0.000 0)",
+          "oklch(0.6 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(0.145 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0.000 0)",
+          "oklch(0.3 0.000 0)",
+          "oklch(0.4 0.000 0)",
+          "oklch(0.5 0.000 0)",
+          "oklch(0.6 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Paper White (card)",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0.000 0)",
+          "oklch(0.3 0.000 0)",
+          "oklch(0.4 0.000 0)",
+          "oklch(0.5 0.000 0)",
+          "oklch(0.6 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Mist",
+        "canonical": "oklch(0.97 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0.000 0)",
+          "oklch(0.3 0.000 0)",
+          "oklch(0.4 0.000 0)",
+          "oklch(0.5 0.000 0)",
+          "oklch(0.6 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Pencil Grey",
+        "canonical": "oklch(0.556 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0.000 0)",
+          "oklch(0.3 0.000 0)",
+          "oklch(0.4 0.000 0)",
+          "oklch(0.5 0.000 0)",
+          "oklch(0.6 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(0.922 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0.000 0)",
+          "oklch(0.3 0.000 0)",
+          "oklch(0.4 0.000 0)",
+          "oklch(0.5 0.000 0)",
+          "oklch(0.6 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "sidebar": {
+        "role": "neutral",
+        "displayName": "Mist (Sidebar)",
+        "canonical": "oklch(0.985 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0.000 0)",
+          "oklch(0.3 0.000 0)",
+          "oklch(0.4 0.000 0)",
+          "oklch(0.5 0.000 0)",
+          "oklch(0.6 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "sidebar-accent": {
+        "role": "neutral",
+        "displayName": "Mist (active Sidebar item)",
+        "canonical": "oklch(0.955 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0.000 0)",
+          "oklch(0.3 0.000 0)",
+          "oklch(0.4 0.000 0)",
+          "oklch(0.5 0.000 0)",
+          "oklch(0.6 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "primary": {
+        "role": "primary",
+        "displayName": "Copilot Blue",
+        "canonical": "oklch(0.488 0.217 264.376)",
+        "tonalRamp": [
+          "oklch(0.2 0.098 264.376)",
+          "oklch(0.3 0.152 264.376)",
+          "oklch(0.4 0.195 264.376)",
+          "oklch(0.5 0.217 264.376)",
+          "oklch(0.6 0.217 264.376)",
+          "oklch(0.72 0.174 264.376)",
+          "oklch(0.84 0.108 264.376)",
+          "oklch(0.95 0.043 264.376)"
+        ]
+      },
+      "primary-foreground": {
+        "role": "neutral",
+        "displayName": "Copilot Blue foreground",
+        "canonical": "oklch(0.985 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0.000 0)",
+          "oklch(0.3 0.000 0)",
+          "oklch(0.4 0.000 0)",
+          "oklch(0.5 0.000 0)",
+          "oklch(0.6 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "ring": {
+        "role": "primary",
+        "displayName": "Copilot Blue focus ring",
+        "canonical": "oklch(0.488 0.217 264.376 / 55%)",
+        "tonalRamp": [
+          "oklch(0.2 0.098 264.376)",
+          "oklch(0.3 0.152 264.376)",
+          "oklch(0.4 0.195 264.376)",
+          "oklch(0.5 0.217 264.376)",
+          "oklch(0.6 0.217 264.376)",
+          "oklch(0.72 0.174 264.376)",
+          "oklch(0.84 0.108 264.376)",
+          "oklch(0.95 0.043 264.376)"
+        ]
+      },
+      "destructive": {
+        "role": "error",
+        "displayName": "Destructive Red",
+        "canonical": "oklch(0.577 0.245 27.325)",
+        "tonalRamp": [
+          "oklch(0.2 0.110 27.325)",
+          "oklch(0.3 0.171 27.325)",
+          "oklch(0.4 0.221 27.325)",
+          "oklch(0.5 0.245 27.325)",
+          "oklch(0.6 0.245 27.325)",
+          "oklch(0.72 0.196 27.325)",
+          "oklch(0.84 0.122 27.325)",
+          "oklch(0.95 0.049 27.325)"
+        ]
+      },
+      "dark-background": {
+        "role": "neutral",
+        "displayName": "Night",
+        "canonical": "oklch(0.145 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0.000 0)",
+          "oklch(0.3 0.000 0)",
+          "oklch(0.4 0.000 0)",
+          "oklch(0.5 0.000 0)",
+          "oklch(0.6 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "dark-foreground": {
+        "role": "neutral",
+        "displayName": "Ink (dark mode)",
+        "canonical": "oklch(0.985 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0.000 0)",
+          "oklch(0.3 0.000 0)",
+          "oklch(0.4 0.000 0)",
+          "oklch(0.5 0.000 0)",
+          "oklch(0.6 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "dark-card": {
+        "role": "neutral",
+        "displayName": "Night (card)",
+        "canonical": "oklch(0.205 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0.000 0)",
+          "oklch(0.3 0.000 0)",
+          "oklch(0.4 0.000 0)",
+          "oklch(0.5 0.000 0)",
+          "oklch(0.6 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "Night (muted)",
+        "canonical": "oklch(0.269 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0.000 0)",
+          "oklch(0.3 0.000 0)",
+          "oklch(0.4 0.000 0)",
+          "oklch(0.5 0.000 0)",
+          "oklch(0.6 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "dark-muted-foreground": {
+        "role": "neutral",
+        "displayName": "Pencil Grey (dark mode)",
+        "canonical": "oklch(0.708 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0.000 0)",
+          "oklch(0.3 0.000 0)",
+          "oklch(0.4 0.000 0)",
+          "oklch(0.5 0.000 0)",
+          "oklch(0.6 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "dark-border": {
+        "role": "neutral",
+        "displayName": "Hairline (dark mode)",
+        "canonical": "oklch(1 0 0 / 10%)",
+        "tonalRamp": [
+          "oklch(0.2 0.000 0)",
+          "oklch(0.3 0.000 0)",
+          "oklch(0.4 0.000 0)",
+          "oklch(0.5 0.000 0)",
+          "oklch(0.6 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "dark-primary": {
+        "role": "primary",
+        "displayName": "Copilot Blue (dark mode)",
+        "canonical": "oklch(0.585 0.2 262)",
+        "tonalRamp": [
+          "oklch(0.2 0.090 262)",
+          "oklch(0.3 0.140 262)",
+          "oklch(0.4 0.180 262)",
+          "oklch(0.5 0.200 262)",
+          "oklch(0.6 0.200 262)",
+          "oklch(0.72 0.160 262)",
+          "oklch(0.84 0.100 262)",
+          "oklch(0.95 0.040 262)"
+        ]
+      },
+      "dark-destructive": {
+        "role": "error",
+        "displayName": "Destructive Red (dark mode)",
+        "canonical": "oklch(0.704 0.191 22.216)",
+        "tonalRamp": [
+          "oklch(0.2 0.086 22.216)",
+          "oklch(0.3 0.134 22.216)",
+          "oklch(0.4 0.172 22.216)",
+          "oklch(0.5 0.191 22.216)",
+          "oklch(0.6 0.191 22.216)",
+          "oklch(0.72 0.153 22.216)",
+          "oklch(0.84 0.096 22.216)",
+          "oklch(0.95 0.038 22.216)"
+        ]
+      },
+      "state-validated": {
+        "role": "state",
+        "displayName": "Validated Green",
+        "canonical": "oklch(59.6% 0.145 163.225)",
+        "tonalRamp": [
+          "oklch(0.2 0.065 163.225)",
+          "oklch(0.3 0.101 163.225)",
+          "oklch(0.4 0.131 163.225)",
+          "oklch(0.5 0.145 163.225)",
+          "oklch(0.6 0.145 163.225)",
+          "oklch(0.72 0.116 163.225)",
+          "oklch(0.84 0.072 163.225)",
+          "oklch(0.95 0.029 163.225)"
+        ]
+      },
+      "state-pending": {
+        "role": "state",
+        "displayName": "Pending Amber",
+        "canonical": "oklch(76.9% 0.188 70.08)",
+        "tonalRamp": [
+          "oklch(0.2 0.085 70.08)",
+          "oklch(0.3 0.132 70.08)",
+          "oklch(0.4 0.169 70.08)",
+          "oklch(0.5 0.188 70.08)",
+          "oklch(0.6 0.188 70.08)",
+          "oklch(0.72 0.150 70.08)",
+          "oklch(0.84 0.094 70.08)",
+          "oklch(0.95 0.038 70.08)"
+        ]
+      },
+      "urgency-week": {
+        "role": "state",
+        "displayName": "Week Red",
+        "canonical": "oklch(64.5% 0.246 16.439)",
+        "tonalRamp": [
+          "oklch(0.2 0.111 16.439)",
+          "oklch(0.3 0.172 16.439)",
+          "oklch(0.4 0.221 16.439)",
+          "oklch(0.5 0.246 16.439)",
+          "oklch(0.6 0.246 16.439)",
+          "oklch(0.72 0.197 16.439)",
+          "oklch(0.84 0.123 16.439)",
+          "oklch(0.95 0.049 16.439)"
+        ]
+      },
+      "step-applied": {
+        "role": "state",
+        "displayName": "Applied Sky",
+        "canonical": "oklch(68.5% 0.169 237.323)",
+        "tonalRamp": [
+          "oklch(0.2 0.076 237.323)",
+          "oklch(0.3 0.118 237.323)",
+          "oklch(0.4 0.152 237.323)",
+          "oklch(0.5 0.169 237.323)",
+          "oklch(0.6 0.169 237.323)",
+          "oklch(0.72 0.135 237.323)",
+          "oklch(0.84 0.085 237.323)",
+          "oklch(0.95 0.034 237.323)"
+        ]
+      },
+      "step-invited": {
+        "role": "state",
+        "displayName": "Invited Violet",
+        "canonical": "oklch(60.6% 0.25 292.717)",
+        "tonalRamp": [
+          "oklch(0.2 0.113 292.717)",
+          "oklch(0.3 0.175 292.717)",
+          "oklch(0.4 0.225 292.717)",
+          "oklch(0.5 0.250 292.717)",
+          "oklch(0.6 0.250 292.717)",
+          "oklch(0.72 0.200 292.717)",
+          "oklch(0.84 0.125 292.717)",
+          "oklch(0.95 0.050 292.717)"
+        ]
+      },
+      "step-interviewed": {
+        "role": "state",
+        "displayName": "Interviewed Indigo",
+        "canonical": "oklch(58.5% 0.233 277.117)",
+        "tonalRamp": [
+          "oklch(0.2 0.105 277.117)",
+          "oklch(0.3 0.163 277.117)",
+          "oklch(0.4 0.210 277.117)",
+          "oklch(0.5 0.233 277.117)",
+          "oklch(0.6 0.233 277.117)",
+          "oklch(0.72 0.186 277.117)",
+          "oklch(0.84 0.117 277.117)",
+          "oklch(0.95 0.047 277.117)"
+        ]
+      },
+      "step-closed": {
+        "role": "state",
+        "displayName": "Closed Zinc",
+        "canonical": "oklch(55.2% 0.016 285.938)",
+        "tonalRamp": [
+          "oklch(0.2 0.007 285.938)",
+          "oklch(0.3 0.011 285.938)",
+          "oklch(0.4 0.014 285.938)",
+          "oklch(0.5 0.016 285.938)",
+          "oklch(0.6 0.016 285.938)",
+          "oklch(0.72 0.013 285.938)",
+          "oklch(0.84 0.008 285.938)",
+          "oklch(0.95 0.003 285.938)"
+        ]
+      },
+      "substituted-value": {
+        "role": "state",
+        "displayName": "Substitution Violet",
+        "canonical": "oklch(60.6% 0.25 292.717)",
+        "tonalRamp": [
+          "oklch(0.2 0.113 292.717)",
+          "oklch(0.3 0.175 292.717)",
+          "oklch(0.4 0.225 292.717)",
+          "oklch(0.5 0.250 292.717)",
+          "oklch(0.6 0.250 292.717)",
+          "oklch(0.72 0.200 292.717)",
+          "oklch(0.84 0.125 292.717)",
+          "oklch(0.95 0.050 292.717)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The countdown of the Revision header only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "The title of an Artifact in reading mode; the Revision date at 1.875rem."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Sheet and Dialog titles, an Interview date; page header titles at 1rem."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All UI text, rows, buttons and menus."
+      },
+      "reading": {
+        "displayName": "Reading",
+        "purpose": "Artifacts in reading mode, at most 72ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase section overlines in the Sheet and the panels."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "The Posting reference in the Sheet corner only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "whisper",
+        "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        "purpose": "Cards, outline buttons, inputs, the Letter page."
+      },
+      {
+        "name": "float",
+        "value": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+        "purpose": "The list panel floating over the map."
+      },
+      {
+        "name": "sheet",
+        "value": "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+        "purpose": "The Posting Sheet."
+      },
+      {
+        "name": "drawer",
+        "value": "0 -8px 30px rgb(0 0 0 / 0.12)",
+        "purpose": "The mobile list drawer, cast upward."
+      },
+      {
+        "name": "marker",
+        "value": "0 1px 3px rgb(0 0 0 / 0.45)",
+        "purpose": "A map marker, with a 2px white ring."
+      }
+    ],
+    "motion": [
+      {
+        "name": "overlay",
+        "value": "tw-animate-css defaults (fade and slide)",
+        "purpose": "Sheets, Dialogs, menus and popovers, as shadcn ships them."
+      },
+      {
+        "name": "marker-emphasis",
+        "value": "150ms ease-out, scale 1.5 on hover, 1.7 when selected",
+        "purpose": "Map markers answering the list."
+      },
+      {
+        "name": "press",
+        "value": "translateY(1px)",
+        "purpose": "Button press."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "mobile",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one primary action of a header or panel.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6 9 17l-5-5\"/></svg>Valider la Version 2</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 10px 0 8px; border: 1px solid transparent; border-radius: 8px; background: oklch(0.488 0.217 264.376); color: oklch(0.985 0 0); font: 500 14px/1 'Inter Variable', ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background 0.15s; } .ds-btn-primary:hover { background: oklch(0.488 0.217 264.376 / 80%); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.488 0.217 264.376 / 27%); } .ds-btn-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary actions: Import, Add mine, Compare, Open the full page.",
+      "html": "<button class=\"ds-btn-outline\">Ajouter la mienne</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 10px; border: 1px solid oklch(0.922 0 0); border-radius: 8px; background: oklch(1 0 0); color: oklch(0.145 0 0); font: 500 14px/1 'Inter Variable', ui-sans-serif, system-ui, sans-serif; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); cursor: pointer; transition: background 0.15s; } .ds-btn-outline:hover { background: oklch(0.97 0 0); } .ds-btn-outline:focus-visible { outline: none; border-color: oklch(0.488 0.217 264.376); box-shadow: 0 0 0 3px oklch(0.488 0.217 264.376 / 27%); }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "The confirm button of an AlertDialog before a destructive action; a soft red tint, never solid.",
+      "html": "<button class=\"ds-btn-destructive\">Archiver</button>",
+      "css": ".ds-btn-destructive { display: inline-flex; align-items: center; height: 36px; padding: 0 10px; border: 1px solid transparent; border-radius: 8px; background: oklch(0.577 0.245 27.325 / 10%); color: oklch(0.577 0.245 27.325); font: 500 14px/1 'Inter Variable', ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background 0.15s; } .ds-btn-destructive:hover { background: oklch(0.577 0.245 27.325 / 20%); } .ds-btn-destructive:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.577 0.245 27.325 / 20%); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A 36px field with a hairline border and the blue focus ring.",
+      "html": "<input class=\"ds-input\" placeholder=\"Ce que tu veux retenir de cette section…\" />",
+      "css": ".ds-input { width: 280px; height: 36px; padding: 4px 10px; border: 1px solid oklch(0.922 0 0); border-radius: 8px; background: transparent; color: oklch(0.145 0 0); font: 400 14px/1.4 'Inter Variable', ui-sans-serif, system-ui, sans-serif; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); transition: box-shadow 0.15s, border-color 0.15s; } .ds-input::placeholder { color: oklch(0.556 0 0); } .ds-input:focus-visible { outline: none; border-color: oklch(0.488 0.217 264.376); box-shadow: 0 0 0 3px oklch(0.488 0.217 264.376 / 27%); }"
+    },
+    {
+      "name": "Sidebar Item",
+      "kind": "nav",
+      "refersTo": "sidebar",
+      "description": "A Sidebar entry; New carries the blue count of Postings to sort.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item is-active\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 12h-6l-2 3h-4l-2-3H2\"/><path d=\"M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z\"/></svg>Nouvelles<span class=\"ds-nav-badge\">42</span></a><a class=\"ds-nav-item\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 12h18\"/><path d=\"M3 6h18\"/><path d=\"M3 18h12\"/></svg>À traiter</a></nav>",
+      "css": ".ds-nav { display: flex; flex-direction: column; gap: 4px; width: 240px; padding: 8px; background: oklch(0.985 0 0); font: 400 14px/1 'Inter Variable', ui-sans-serif, system-ui, sans-serif; } .ds-nav-item { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; border-radius: 8px; color: oklch(0.145 0 0); text-decoration: none; transition: background 0.15s; } .ds-nav-item:hover { background: oklch(0.955 0 0); } .ds-nav-item.is-active { background: oklch(0.955 0 0); font-weight: 500; } .ds-nav-item:focus-visible { outline: none; box-shadow: 0 0 0 2px oklch(0.488 0.217 264.376 / 55%); } .ds-nav-badge { margin-left: auto; min-width: 20px; padding: 2px 6px; border-radius: 999px; background: oklch(0.488 0.217 264.376); color: oklch(0.985 0 0); font-size: 12px; font-weight: 500; text-align: center; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Version State Badges",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "A Draft in blue with its dot; the Chosen Version neutral with a check.",
+      "html": "<span class=\"ds-badge ds-badge-draft\"><span class=\"ds-dot\"></span>Brouillon</span> <span class=\"ds-badge ds-badge-chosen\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6 9 17l-5-5\"/></svg>Validée · retenue</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 2px 8px; border: 1px solid transparent; border-radius: 26px; font: 500 12px/1 'Inter Variable', ui-sans-serif, system-ui, sans-serif; white-space: nowrap; } .ds-badge-draft { border-color: oklch(0.488 0.217 264.376 / 40%); color: oklch(0.488 0.217 264.376); } .ds-dot { width: 6px; height: 6px; border-radius: 50%; background: oklch(0.488 0.217 264.376); } .ds-badge-chosen { background: oklch(0.97 0 0); color: oklch(0.205 0 0); }"
+    },
+    {
+      "name": "Draft Banner",
+      "kind": "custom",
+      "refersTo": "draft-banner",
+      "description": "Under the Artifact toolbar whenever the shown Version is a Draft: validation is never hidden.",
+      "html": "<div class=\"ds-draft-banner\"><div class=\"ds-draft-text\"><p class=\"ds-draft-title\">Version 2 en Brouillon : relis-la, puis valide-la</p><p class=\"ds-draft-hint\">Tant qu’elle n’est pas validée, aucun autre Artifact ne la lit.</p></div><button class=\"ds-draft-action\">Valider la Version 2</button></div>",
+      "css": ".ds-draft-banner { display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid oklch(0.488 0.217 264.376 / 30%); border-radius: 14px; background: oklch(0.488 0.217 264.376 / 5%); font-family: 'Inter Variable', ui-sans-serif, system-ui, sans-serif; } .ds-draft-text { flex: 1; min-width: 0; } .ds-draft-title { margin: 0; font-size: 14px; font-weight: 600; color: oklch(0.145 0 0); } .ds-draft-hint { margin: 2px 0 0; font-size: 14px; color: oklch(0.556 0 0); } .ds-draft-action { height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: oklch(0.488 0.217 264.376); color: oklch(0.985 0 0); font: 500 14px/1 'Inter Variable', ui-sans-serif, system-ui, sans-serif; cursor: pointer; } .ds-draft-action:hover { background: oklch(0.488 0.217 264.376 / 80%); } .ds-draft-action:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.488 0.217 264.376 / 27%); }"
+    },
+    {
+      "name": "List Row",
+      "kind": "custom",
+      "refersTo": "list-panel",
+      "description": "A Posting in the floating list over the map: City first, title, Deadline countdown, Artifact chips; selected with a blue inset bar.",
+      "html": "<ul class=\"ds-rows\"><li class=\"ds-row is-active\"><p class=\"ds-row-place\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0\"/><circle cx=\"12\" cy=\"10\" r=\"3\"/></svg><strong>Béthune</strong><span>· Cour d’Appel de Douai</span></p><p class=\"ds-row-title\">Attaché de justice affecté auprès des magistrats du siège</p><p class=\"ds-row-meta\">20 nov. <span class=\"ds-row-soon\">dans 18 j</span><span class=\"ds-chip ds-chip-ok\">✓ R</span><span class=\"ds-chip ds-chip-ok\">✓ LM</span></p></li></ul>",
+      "css": ".ds-rows { width: 400px; margin: 0; padding: 0; list-style: none; background: oklch(1 0 0); font-family: 'Inter Variable', ui-sans-serif, system-ui, sans-serif; } .ds-row { padding: 12px 16px; border-bottom: 1px solid oklch(0.922 0 0); cursor: pointer; transition: background 0.15s; } .ds-row:hover { background: oklch(0.97 0 0); } .ds-row.is-active { background: oklch(0.488 0.217 264.376 / 7%); box-shadow: inset 3px 0 0 oklch(0.488 0.217 264.376); } .ds-row p { margin: 0; } .ds-row-place { display: flex; align-items: center; gap: 6px; font-size: 14px; color: oklch(0.145 0 0); } .ds-row-place svg { color: oklch(0.488 0.217 264.376); } .ds-row-place span { font-size: 12px; color: oklch(0.556 0 0); } .ds-row-title { margin-top: 4px !important; font-size: 14px; color: oklch(0.145 0 0 / 85%); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-row-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px !important; font-size: 12px; } .ds-row-soon { color: oklch(55.5% 0.163 48.998); } .ds-chip { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border: 1px solid oklch(0.922 0 0); border-radius: 26px; font-size: 11px; } .ds-chip-ok { border-color: oklch(69.6% 0.17 162.48 / 40%); background: oklch(69.6% 0.17 162.48 / 10%); color: oklch(43.2% 0.095 166.913); }"
+    },
+    {
+      "name": "Substituted Value",
+      "kind": "custom",
+      "refersTo": "substituted-value",
+      "description": "A value the tool substituted into the Fixed Part of a Prompt, shown in the generation panel.",
+      "html": "<p class=\"ds-fixed\">Lis la Fiche de poste de l’Offre <mark class=\"ds-mark\">2026-2417004</mark> pour <mark class=\"ds-mark\">Tribunal judiciaire de Béziers</mark>, puis écris <mark class=\"ds-mark\">research/v3/research.md</mark>.</p>",
+      "css": ".ds-fixed { max-width: 560px; margin: 0; font: 400 13px/1.6 'Inter Variable', ui-sans-serif, system-ui, sans-serif; color: oklch(0.556 0 0); } .ds-mark { padding: 0 2px; border-radius: 3px; background: oklch(60.6% 0.25 292.717 / 12%); color: oklch(43.2% 0.232 292.759); box-shadow: inset 0 0 0 1px oklch(60.6% 0.25 292.717 / 30%); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "A content card: 14px radius, a 10% ring instead of a border, the Whisper shadow.",
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-title\">Les deux matières</p><p class=\"ds-card-sub\">Civil et pénal, sans hiérarchie</p><p class=\"ds-card-body\">Un niveau « excellent ou très bon » dans les deux.</p></div>",
+      "css": ".ds-card { width: 320px; padding: 16px; border-radius: 14px; background: oklch(1 0 0); box-shadow: 0 0 0 1px oklch(0.145 0 0 / 10%), 0 1px 2px 0 rgb(0 0 0 / 0.05); font-family: 'Inter Variable', ui-sans-serif, system-ui, sans-serif; } .ds-card p { margin: 0; } .ds-card-title { font-size: 14px; font-weight: 600; color: oklch(0.145 0 0); } .ds-card-sub { margin-top: 4px !important; font-size: 14px; color: oklch(0.556 0 0); } .ds-card-body { margin-top: 12px !important; font-size: 14px; color: oklch(0.145 0 0); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Copilot's Study",
+    "overview": "A calm, neutral workroom where the Candidate stays in charge. The map tells where the Postings are; the lists float over it, grouped by what needs attention first; every document the AI drafts is read on a well-set column, annotated in the margin and signed off by the Candidate. The interface is shadcn's neutral base with a single blue accent: brand lives in precision, in the state colors that always mean the same thing, and in how plainly the tool shows what the AI reads.\n\nDensity is that of a working tool, desktop-first: 14px UI text, 36px controls, sticky headers, side Sheets instead of page changes. Reading is the exception, and it is generous: 16px prose at a 1.75 line height on a 70 to 72 character column. Light and dark modes are equals; dark mode is neutral grey, never blue-tinted.\n\nThe rejected look is the POC's: its DM Mono labels, dashed stubs, \"plastic compartment\" Artifacts and green Dose theme do not carry over.",
+    "keyCharacteristics": [
+      "Neutral greys plus one blue accent; other hues only encode a state.",
+      "Map first for every list; the list is a translucent floating panel.",
+      "One primary action per header; everything else in an outline button or the `⋯` menu.",
+      "A Draft is always loud: a banner with its « Valider » button.",
+      "Reading mode with a numbered rail, a ~72ch column and margin notes.",
+      "What the AI reads is shown before every run, substituted values highlighted."
+    ],
+    "rules": [
+      {
+        "name": "The One Accent Rule",
+        "body": "Blue is the only brand color. A second accent never appears; a new need for emphasis uses weight, size or position first.",
+        "section": "colors"
+      },
+      {
+        "name": "The State Hue Rule",
+        "body": "A non-neutral hue other than blue always encodes a state from the glossary, and always comes with its label or icon: a colored dot or chip never stands alone.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Every count, percentage, countdown and word count uses tabular figures (`tabular-nums`).",
+        "section": "typography"
+      },
+      {
+        "name": "The Reading Column Rule",
+        "body": "Long text never exceeds 72ch; UI text is never set at the reading size.",
+        "section": "typography"
+      },
+      {
+        "name": "The Float-Only Rule",
+        "body": "A shadow larger than Whisper means the surface floats over the map or the page; content inside the page never gets one.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do build from shadcn components and their CSS-variable tokens (ADR-0017); write a custom component only where shadcn covers nothing, the map being the example.",
+      "Do keep one primary button per header or panel; the rest go in outline buttons or the `⋯` menu.",
+      "Do show every Draft with its banner and its « Valider la Version N »: validation must never be a hidden step.",
+      "Do show what a run reads before it starts, every Input with a preview, substituted values marked.",
+      "Do pair every state hue with its label or icon, in both modes.",
+      "Do confirm every destructive action in an AlertDialog and end every mutation in a toast.",
+      "Do check every screen in light and dark mode, and at 390px for the lists.",
+      "Do name the Letter « Lettre de motivation » in full in the French UI."
+    ],
+    "donts": [
+      "Don't reuse the POC's look: no DM Mono labels, dashed stubs, \"plastic compartment\" Artifacts, or its green Dose palette.",
+      "Don't add a second accent color or use a state hue for decoration.",
+      "Don't set reading text wider than 72ch, nor UI text at the reading size.",
+      "Don't put a shadow larger than Whisper on anything that does not float.",
+      "Don't run a generation straight from a button: « Générer » always opens the panel.",
+      "Don't use solid red buttons; destructive stays the soft red tint."
+    ]
+  }
+}
