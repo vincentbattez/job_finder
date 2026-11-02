@@ -138,6 +138,7 @@ describe('the prompt of the Portrait', () => {
     );
     // The session reads no Input from disk (ADR-0021), and nothing about the Candidate portrays the Interviewers
     expect(session?.fixedPrompt).not.toMatch(/research\.md|job-description\.md/);
+    expect(session).toMatchObject({ isReadingDirectory: false, isSearchingWeb: true });
     expect(readVersionsOf(version)).toEqual([
       { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
     ]);

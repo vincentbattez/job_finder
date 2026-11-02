@@ -11,6 +11,8 @@ const FAKE_CLAUDE_DIRECTORY = path.join(import.meta.dirname, 'fixtures', 'claude
 const SESSION: Omit<IHeadlessSession, 'directory' | 'outputDirectory'> = {
   fixedPrompt: "Tu produis la Recherche d'une Offre.\nN'invente jamais un fait.",
   message: 'Va droit au but.\n',
+  isReadingDirectory: false,
+  isSearchingWeb: true,
   locale: 'fr',
 };
 
@@ -76,15 +78,51 @@ describe('the headless launch of Claude Code', () => {
     expect(readRecord(recordDirectory, 'environment')).not.toMatch(/^(?:ANTHROPIC_API_KEY|CLAUDECODE)=/m);
   });
 
-  // A subagent takes on part of the work, and reports only what serves the Artifact
-  it('lets the session delegate its reading to subagents', async () => {
+  // Its Inputs come inlined in its message (ADR-0021): it may only write its Version, and search the web
+  it("lets an Artifact's session write its Version and search the web, and read nothing else", async () => {
     const recordDirectory = stubClaude({ subtype: 'success', is_error: false, session_id: 'session-4' });
 
     await CLAUDE_CODE.runHeadless({ ...SESSION, directory: createDirectory(), outputDirectory: '/v1' });
 
     const argumentList = readRecord(recordDirectory, 'arguments').split('\0');
-    expect(argumentList[argumentList.indexOf('--tools') + 1]?.split(',')).toContain('Agent');
-    expect(argumentList.slice(argumentList.indexOf('--allowedTools'))).toContain('Agent');
+    expect(argumentList[argumentList.indexOf('--tools') + 1]).toBe('WebSearch,WebFetch,Write,Edit');
+    expect(
+      argumentList.slice(argumentList.indexOf('--allowedTools') + 1, argumentList.indexOf('--append-system-prompt')),
+    ).toEqual(['WebSearch', 'WebFetch', 'Edit(//v1/**)']);
+  });
+
+  it('gives a session that searches nothing no web tool', async () => {
+    const recordDirectory = stubClaude({ subtype: 'success', is_error: false, session_id: 'session-5' });
+
+    await CLAUDE_CODE.runHeadless({
+      ...SESSION,
+      isSearchingWeb: false,
+      directory: createDirectory(),
+      outputDirectory: '/v1',
+    });
+
+    const argumentList = readRecord(recordDirectory, 'arguments').split('\0');
+    expect(argumentList[argumentList.indexOf('--tools') + 1]).toBe('Write,Edit');
+    expect(argumentList).not.toContain('WebSearch');
+  });
+
+  // A conversion or an extraction reads the file it works on, in its folder
+  it('lets a session that reads its folder read, search and list it', async () => {
+    const recordDirectory = stubClaude({ subtype: 'success', is_error: false, session_id: 'session-6' });
+
+    await CLAUDE_CODE.runHeadless({
+      ...SESSION,
+      isReadingDirectory: true,
+      isSearchingWeb: false,
+      directory: createDirectory(),
+      outputDirectory: '/v1',
+    });
+
+    const argumentList = readRecord(recordDirectory, 'arguments').split('\0');
+    expect(argumentList[argumentList.indexOf('--tools') + 1]).toBe('Read,Glob,Grep,Write,Edit');
+    expect(
+      argumentList.slice(argumentList.indexOf('--allowedTools') + 1, argumentList.indexOf('--append-system-prompt')),
+    ).toEqual(['Read', 'Glob', 'Grep', 'Edit(//v1/**)']);
   });
 
   // Its Inputs come inlined in its message: it reads no folder besides its own (ADR-0021)

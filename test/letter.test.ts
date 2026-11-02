@@ -175,6 +175,8 @@ describe('letter', () => {
     );
     // The session reads no Input from disk (ADR-0021): no path, no folder, an Annex only once checked
     expect(session?.fixedPrompt).not.toMatch(/job-description\.md|research\.md|profile|annex|uploads/);
+    // It writes its Version only: no folder to read, no web to search
+    expect(session).toMatchObject({ isReadingDirectory: false, isSearchingWeb: false });
     expect(session?.fixedPrompt).not.toContain(UNSENT_REFERENCE);
     expect(version?.inputList).toEqual([
       { key: 'job_description', readVersion: null },
