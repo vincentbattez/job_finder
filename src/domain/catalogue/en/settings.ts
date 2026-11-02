@@ -10,29 +10,36 @@ export const SETTINGS_EN = {
     errorCode: 'Error Code: {{errorCode}}',
   },
   unsavedChanges: 'Unsaved changes',
+  // The Settings page: the Candidate's Notification Channel, then what every Candidate shares
+  settingsPage: {
+    pageTitle: 'Settings · Job Finder',
+    heading: 'Settings',
+    description: 'Your notifications, then the Candidates and the Default Deadline Period everyone shares.',
+  },
   candidates: {
-    pageTitle: 'Candidates · Job Finder',
     heading: 'Candidates',
-    intro:
-      'The people looking for a job with the tool. Each sets their Watches in their Profile; a Candidate is never deleted.',
+    intro: 'The people looking for a job with the tool. A Candidate is never deleted.',
     obsoleteConfig: '{{path}} is no longer read: its content was imported here. Delete it from the Mac mini.',
-    renameHeading: 'Rename a Candidate',
     noCandidate: 'No Candidate yet: create the first one below.',
     nameOf: 'Name of {{candidateId}}',
-    fullNamePlaceholder: 'Emma Smith',
     renameOf: 'Rename {{candidateId}}',
     rename: 'Rename',
+    renamed: 'Candidate renamed.',
     creationHeading: 'New Candidate',
     name: 'Name',
     namePlaceholder: 'Emma',
-    id: 'Identifier, which names their folder and their jf commands: lowercase letters, digits and dashes',
+    id: 'Identifier',
+    idHint: 'It names their folder and their jf commands: lowercase letters, digits and dashes.',
     idPlaceholder: 'emma',
     create: 'Create the Candidate',
-    defaultDeadlinePeriodHeading: 'Default Deadline Period',
-    defaultDeadlinePeriodHint:
-      'A Posting published without a Deadline is Expired this many months after its publication, for everyone.',
-    defaultDeadlinePeriodMonths: 'Default Deadline Period, in months',
-    saveDefaultDeadlinePeriod: 'Save the Default Deadline Period',
+    created: 'Candidate created.',
+  },
+  defaultDeadlinePeriod: {
+    heading: 'Default Deadline Period',
+    hint: 'A Posting published without a Deadline is Expired this many months after its publication, for every Candidate.',
+    months: 'Default Deadline Period, in months',
+    save: 'Save the Default Deadline Period',
+    saved: 'Default Deadline Period saved.',
   },
   profile: {
     pageTitle: 'Profile · Job Finder',
@@ -40,7 +47,7 @@ export const SETTINGS_EN = {
     // Around the link to the Candidates page
     noCandidateHintStart:
       'Pick your name at the head of the menu. The front will remember it. Not in the menu yet? The',
-    noCandidateHintLink: 'Candidates',
+    noCandidateHintLink: 'Settings',
     noCandidateHintEnd: 'page adds you to it.',
     heading: '{{candidateName}}’s Profile',
     intro: 'What the tool knows about you to write in your place: your validated facts, your CV and your past letters.',
@@ -103,26 +110,27 @@ export const SETTINGS_EN = {
   notificationChannel: {
     heading: 'Notifications',
     intro:
-      'Your Notification Channel sends each new Posting to your phone. The test and the list of choices try what you typed; the test notification goes to what is saved.',
+      'Your Notification Channel sends you each Detection Summary. The test and the choices try what you typed; the test notification goes to what is saved.',
     channel: 'Notification Channel',
     reloadChoicesFirst: 'Reload the list of choices',
     choose: 'Choose',
     reloadChoicesOf: 'Reload the choices of {{label}}',
-    reloadChoices: 'Reload the choices',
     test: 'Test the Channel',
-    save: 'Save',
+    save: 'Save the Channel',
     notify: 'Send a test notification',
     saved: 'Notification Channel saved.',
     answers: 'The Notification Channel answers.',
-    choicesFound: '{{count}} choices found.',
+    choicesFound_one: '{{count}} choice found.',
+    choicesFound_other: '{{count}} choices found.',
     notified: 'Test notification sent: look at your phone.',
   },
   // A field built from the descriptor of a module (ADR-0010)
   parameter: {
-    configured: ' configured ✓',
+    configured: 'configured',
     keepSaved: 'Leave empty to keep the saved value',
     onePerLine: '{{label}}, one per line',
   },
+
   instructions: {
     pageTitle: 'Instructions · Job Finder',
     noCandidateHeading: 'Who is looking at their Instructions?',

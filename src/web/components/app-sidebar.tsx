@@ -39,7 +39,7 @@ const LIST_ENTRY_LIST: IEntry[] = [
 const SETTINGS_ENTRY_LIST: IEntry[] = [
   { key: 'profile', pathname: '/profile', hash: '', icon: <UserRoundIcon /> },
   { key: 'watches', pathname: '/profile', hash: '#watches', icon: <RadarIcon /> },
-  { key: 'settings', pathname: '/candidates', hash: '', icon: <SettingsIcon /> },
+  { key: 'settings', pathname: '/settings', hash: '', icon: <SettingsIcon /> },
 ];
 
 // What each entry counts, shown as a badge beside it: New counts the Postings left to sort

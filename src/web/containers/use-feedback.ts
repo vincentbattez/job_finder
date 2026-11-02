@@ -19,15 +19,19 @@ export function useFeedback(
   undo?: () => { label: string; onClick: () => void },
 ): void {
   const sentReference = useRef<{ data: unknown } | null>(null);
+  // What the fetcher held before its mutation: under load React may skip the submitting render and
+  // first show the fetcher loading, its answer already in, so the answer cannot be read off then
+  const idleDataReference = useRef<unknown>(fetcher.data);
   const successMessageReference = useRef(successMessage);
   successMessageReference.current = successMessage;
   const undoReference = useRef(undo);
   undoReference.current = undo;
   useEffect(() => {
     if (fetcher.state !== 'idle') {
-      sentReference.current ??= { data: fetcher.data };
+      sentReference.current ??= { data: idleDataReference.current };
       return;
     }
+    idleDataReference.current = fetcher.data;
     const sent = sentReference.current;
     if (sent === null) {
       return;

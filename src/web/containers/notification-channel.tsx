@@ -1,22 +1,27 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { BellRingIcon, PlugZapIcon, RefreshCwIcon, SaveIcon } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher, type FetcherWithComponents } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
 import { PARAMETER_FIELD_PREFIX, ParameterField } from '#/web/components/parameter-field.tsx';
-import { SettingsPanel, SettingsStep } from '#/web/components/settings-panel.tsx';
+import { SettingsSection } from '#/web/components/settings-section.tsx';
+import { Button } from '#/web/components/ui/button.tsx';
+import { Label } from '#/web/components/ui/label.tsx';
+import { NativeSelect } from '#/web/components/ui/native-select.tsx';
 import { useIsHydrated } from '#/web/components/use-is-hydrated.ts';
+
+import { useFeedback } from './use-feedback.ts';
 
 type NotificationChannel = Awaited<ReturnType<Actions['readNotificationChannel']>>;
 type NotificationChannelModule = Awaited<ReturnType<Actions['listNotificationChannels']>>[number];
 type Parameter = NotificationChannelModule['parameterList'][number];
 type ParameterChoice = Awaited<ReturnType<Actions['listParameterChoices']>>[number];
 
-// What /notification-channel answers each button: a message or a refusal, and the choices it listed
+// What /notification-channel answers each button: the refusal, or the choices it listed
 interface IOutcome {
-  message: string | null;
-  error: string | null;
-  choiceList: ParameterChoice[] | null;
+  error?: string | null;
+  choiceList?: ParameterChoice[] | null;
 }
 
 type Fetcher = FetcherWithComponents<IOutcome>;
@@ -34,37 +39,8 @@ function send(form: RefObject<HTMLFormElement | null>, fetcher: Fetcher, intent:
   void fetcher.submit(formData, { method: 'post', action: '/notification-channel' });
 }
 
-// A button and, beside it, what its last click answered
-function Step({
-  fetcher,
-  isHydrated,
-  children,
-  accessibleName,
-  className = 'button',
-  ...buttonProperties
-}: Readonly<{
-  fetcher: Fetcher;
-  isHydrated: boolean;
-  children: ReactNode;
-  type: 'button' | 'submit';
-  className?: string;
-  // When the text of the button alone does not say what it acts on
-  accessibleName?: string;
-  onClick?: () => void;
-}>) {
-  const isIdle = fetcher.state === 'idle';
-  return (
-    <SettingsStep>
-      <button {...buttonProperties} className={className} aria-label={accessibleName} disabled={!isHydrated || !isIdle}>
-        {children}
-      </button>
-      {isIdle && fetcher.data?.error != null && <p role="alert">{fetcher.data.error}</p>}
-      {isIdle && fetcher.data?.message != null && <p role="status">{fetcher.data.message}</p>}
-    </SettingsStep>
-  );
-}
-
-// A Parameter chosen among what the module lists, such as a service of the Channel
+// A Parameter chosen among what the module lists, such as a service of the Channel, with the button
+// that lists them again
 function ChoiceField({
   parameter: { name, label },
   savedValue,
@@ -76,14 +52,16 @@ function ChoiceField({
   form: RefObject<HTMLFormElement | null>;
   isHydrated: boolean;
 }>) {
+  const fieldId = useId();
   const fetcher = useFetcher<IOutcome>();
   const { t } = useTranslation('settings');
+  useFeedback(fetcher, () => t('notificationChannel.choicesFound', { count: fetcher.data?.choiceList?.length ?? 0 }));
   const valueList = fetcher.data?.choiceList?.map(({ value }) => value) ?? (savedValue === '' ? [] : [savedValue]);
   return (
-    <>
-      <label className="field">
-        {label}
-        <select name={`${PARAMETER_FIELD_PREFIX}${name}`} defaultValue={savedValue}>
+    <div className="grid gap-2">
+      <Label htmlFor={fieldId}>{label}</Label>
+      <div className="flex gap-2">
+        <NativeSelect id={fieldId} name={`${PARAMETER_FIELD_PREFIX}${name}`} defaultValue={savedValue}>
           {/* A hint, never a choice: a Parameter left out keeps the one saved */}
           <option value="" disabled>
             {valueList.length === 0 ? t('notificationChannel.reloadChoicesFirst') : t('notificationChannel.choose')}
@@ -93,42 +71,49 @@ function ChoiceField({
               {value}
             </option>
           ))}
-        </select>
-      </label>
-      <Step
-        type="button"
-        fetcher={fetcher}
-        isHydrated={isHydrated}
-        accessibleName={t('notificationChannel.reloadChoicesOf', { label })}
-        onClick={() => {
-          send(form, fetcher, 'choices', name);
-        }}
-      >
-        {t('notificationChannel.reloadChoices')}
-      </Step>
-    </>
+        </NativeSelect>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          title={t('notificationChannel.reloadChoicesOf', { label })}
+          aria-label={t('notificationChannel.reloadChoicesOf', { label })}
+          disabled={!isHydrated}
+          isPending={fetcher.state !== 'idle'}
+          onClick={() => {
+            send(form, fetcher, 'choices', name);
+          }}
+        >
+          <RefreshCwIcon />
+        </Button>
+      </div>
+    </div>
   );
 }
 
-// The Candidate's Notification Channel, which pushes each new Posting to their phone: a module of the
-// family, and the form its descriptor describes (ADR-0010)
+// The Candidate's Notification Channel, which sends them each Detection Summary: a module of the
+// family, and the form its descriptor describes (ADR-0010). Each button ends in its toast.
 export function NotificationChannelForm({
   channel,
   moduleList,
 }: Readonly<{ channel: NotificationChannel; moduleList: NotificationChannelModule[] }>) {
   const isHydrated = useIsHydrated();
   const { t } = useTranslation('settings');
+  const channelId = useId();
   const formReference = useRef<HTMLFormElement>(null);
   const secretInputList = useRef(new Set<HTMLInputElement>());
   const [moduleId, setModuleId] = useState(channel.module ?? moduleList[0]?.id ?? '');
   const saveFetcher = useFetcher<IOutcome>();
   const testFetcher = useFetcher<IOutcome>();
   const notifyFetcher = useFetcher<IOutcome>();
+  useFeedback(saveFetcher, () => t('notificationChannel.saved'));
+  useFeedback(testFetcher, () => t('notificationChannel.answers'));
+  useFeedback(notifyFetcher, () => t('notificationChannel.notified'));
   const module = moduleList.find(({ id }) => id === moduleId);
   // The saved Parameters belong to the saved module: another one starts blank
   const isSavedModule = channel.module === moduleId;
 
-  // Once saved, the secrets leave the page: their fields empty, a “configured ✓” takes over (ADR-0006)
+  // Once saved, the secrets leave the page: their fields empty, « configured » takes over (ADR-0006)
   const isSaved = saveFetcher.state === 'idle' && saveFetcher.data?.error === null;
   useEffect(() => {
     if (isSaved) {
@@ -144,20 +129,21 @@ export function NotificationChannelForm({
   }
 
   return (
-    <SettingsPanel heading={t('notificationChannel.heading')}>
-      <p>{t('notificationChannel.intro')}</p>
+    <SettingsSection heading={t('notificationChannel.heading')} description={t('notificationChannel.intro')}>
       <form
         ref={formReference}
         method="post"
         action="/notification-channel"
+        className="grid gap-5"
         onSubmit={(event) => {
           event.preventDefault();
           send(formReference, saveFetcher, 'save');
         }}
       >
-        <label className="field">
-          {t('notificationChannel.channel')}
-          <select
+        <div className="grid gap-2">
+          <Label htmlFor={channelId}>{t('notificationChannel.channel')}</Label>
+          <NativeSelect
+            id={channelId}
             name="channel"
             value={moduleId}
             onChange={(event) => {
@@ -169,8 +155,8 @@ export function NotificationChannelForm({
                 {name}
               </option>
             ))}
-          </select>
-        </label>
+          </NativeSelect>
+        </div>
         {/* Keyed by the module, so that another one starts from its own saved values */}
         {module?.parameterList.map((parameter) =>
           parameter.hasChoices ? (
@@ -195,32 +181,39 @@ export function NotificationChannelForm({
             />
           ),
         )}
-        {module?.isTestable === true && (
-          <Step
+        <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+          {module?.isTestable === true && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!isHydrated}
+              isPending={testFetcher.state !== 'idle'}
+              onClick={() => {
+                send(formReference, testFetcher, 'test');
+              }}
+            >
+              <PlugZapIcon />
+              {t('notificationChannel.test')}
+            </Button>
+          )}
+          <Button
             type="button"
-            fetcher={testFetcher}
-            isHydrated={isHydrated}
+            variant="outline"
+            disabled={!isHydrated}
+            isPending={notifyFetcher.state !== 'idle'}
             onClick={() => {
-              send(formReference, testFetcher, 'test');
+              send(formReference, notifyFetcher, 'notify');
             }}
           >
-            {t('notificationChannel.test')}
-          </Step>
-        )}
-        <Step type="submit" className="button button--primary" fetcher={saveFetcher} isHydrated={isHydrated}>
-          {t('notificationChannel.save')}
-        </Step>
-        <Step
-          type="button"
-          fetcher={notifyFetcher}
-          isHydrated={isHydrated}
-          onClick={() => {
-            send(formReference, notifyFetcher, 'notify');
-          }}
-        >
-          {t('notificationChannel.notify')}
-        </Step>
+            <BellRingIcon />
+            {t('notificationChannel.notify')}
+          </Button>
+          <Button type="submit" disabled={!isHydrated} isPending={saveFetcher.state !== 'idle'}>
+            <SaveIcon />
+            {t('notificationChannel.save')}
+          </Button>
+        </div>
       </form>
-    </SettingsPanel>
+    </SettingsSection>
   );
 }
