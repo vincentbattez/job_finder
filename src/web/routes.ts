@@ -37,6 +37,8 @@ export default [
       route('profile', 'prototype/placeholder.tsx', { id: 'prototype/profile' }),
       route('watches', 'prototype/placeholder.tsx', { id: 'prototype/watches' }),
       route('settings', 'prototype/placeholder.tsx', { id: 'prototype/settings' }),
+      // The generation panel alone, on a Posting, while the Posting page is being built
+      route('generation-demo/:reference', 'prototype/generation/demo.tsx'),
     ]),
     // Full screen, out of the Sidebar
     route('postings/:reference/interviews/:number/revision', 'prototype/revision.tsx'),

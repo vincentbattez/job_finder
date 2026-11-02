@@ -1,25 +1,29 @@
-// PROTOTYPE · PLACEHOLDER owned by the generation panel agent (DECISIONS.md « Generation panel »):
-// clicking « Générer » never runs directly; this panel explains the run, lists its Inputs (required
-// locked with a tooltip, default checked, Annexes to add, « + Ajouter un texte ou un fichier »), shows
-// the Instructions editable in place and the Fixed Part folded, then « Lancer ». Variants (Dialog,
-// Sheet, a third form) on ?panel= with <PrototypeSwitcher param="panel" keys="shift+arrows" />.
-// posting.tsx mounts it only while open, and keeps this signature.
+// PROTOTYPE · owned by the generation panel agent (DECISIONS.md « Generation panel »): clicking
+// « Générer » never runs directly; this panel explains the run in plain words (what Claude reads, does,
+// writes, how long), lists its Inputs (required locked with a tooltip, default checked, Annexes to add,
+// « + Ajouter un texte ou un fichier »), previews each Input's exact text, shows the Instructions
+// editable in place and the Fixed Part folded, prefills a regeneration with the previous Version's
+// Inputs, then « Lancer » → simulated progress → a new Draft Version.
 //
-// This stub only proves the wiring: the Inputs the run would read, and « Lancer ».
-import { useState } from 'react';
-
-import { Button } from '#/web/prototype/components/ui/button.tsx';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '#/web/prototype/components/ui/dialog.tsx';
-
+// Three structurally different variants on ?panel= (independent from the page's ?variant=), Shift + ←→:
+//   A « Dialog »  centered, a single scroll, previews unfold in place          generation/variant-a.tsx
+//   B « Sheet »   wide right Sheet, checklist left, live Prompt preview right   generation/variant-b.tsx
+//   C « Étapes »  a 3-step stepper ending on a one-paragraph recap             generation/variant-c.tsx
+// Their shared state lives in generation/use-generation-panel.ts, so switching keeps the checks.
+// posting.tsx mounts it only while open, and keeps this signature (additive props only).
+// Without the Posting page: /prototype/generation-demo/:reference?artifact=letter&panel=B.
+import { useGenerationPanel } from './generation/use-generation-panel.ts';
+import { PanelDialog } from './generation/variant-a.tsx';
+import { PanelSheet } from './generation/variant-b.tsx';
+import { PanelStepper } from './generation/variant-c.tsx';
 import type { IArtifact, IInterview, IPosting } from './model.ts';
-import { useActions, useInputs, usePostingDetail } from './store.ts';
+import { PrototypeSwitcher, usePrototypeVariant } from './prototype-switcher.tsx';
+
+export const PANEL_VARIANTS = [
+  { key: 'A', name: 'Dialog' },
+  { key: 'B', name: 'Sheet + aperçu' },
+  { key: 'C', name: 'Étapes' },
+] as const;
 
 export interface IGenerationPanelProps {
   artifact: IArtifact;
@@ -30,56 +34,16 @@ export interface IGenerationPanelProps {
 }
 
 export function GenerationPanel({ artifact, posting, interview, onClose }: IGenerationPanelProps) {
-  // The detail the Posting page loaded, with the store's Versions on top
-  const detail = usePostingDetail(posting.reference, null);
-  const inputs = useInputs(posting.reference, artifact.key, detail);
-  const { startGeneration } = useActions();
-  const [isPending, setIsPending] = useState(false);
-
-  async function launch() {
-    setIsPending(true);
-    await startGeneration({
-      reference: posting.reference,
-      artifactKey: artifact.key,
-      inputs: inputs.filter(({ mode }) => mode !== 'optional'),
-    });
-    onClose();
-  }
-
+  const variant = usePrototypeVariant('panel', PANEL_VARIANTS);
+  const panel = useGenerationPanel({ artifact, posting, interview });
+  const subtitle = interview === undefined ? posting.title : `${posting.title} · Entretien ${String(interview.number)}`;
+  const props = { panel, onClose, subtitle };
   return (
-    <Dialog
-      open
-      onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          onClose();
-        }
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            Générer : {artifact.label}
-            {interview === undefined ? '' : ` · Entretien ${String(interview.number)}`}
-          </DialogTitle>
-          <DialogDescription>Placeholder du panneau de génération.</DialogDescription>
-        </DialogHeader>
-        <ul className="max-h-72 space-y-1 overflow-auto text-sm">
-          {inputs.map((input) => (
-            <li key={input.key} className="flex justify-between gap-4">
-              <span className="truncate">{input.label}</span>
-              <span className="shrink-0 text-muted-foreground">{input.mode}</span>
-            </li>
-          ))}
-        </ul>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Annuler
-          </Button>
-          <Button disabled={isPending || artifact.refusal !== null} onClick={() => void launch()}>
-            Lancer
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <>
+      {variant === 'B' ? <PanelSheet {...props} /> : null}
+      {variant === 'C' ? <PanelStepper {...props} /> : null}
+      {variant !== 'B' && variant !== 'C' ? <PanelDialog {...props} /> : null}
+      <PrototypeSwitcher param="panel" variants={PANEL_VARIANTS} label="Panneau" keys="shift+arrows" />
+    </>
   );
 }
