@@ -25,13 +25,6 @@ interface ISearchResult {
   publishedReferenceList: string[];
 }
 
-// A Posting's detail page, and whether the Posting is in the Zone of the Watch, which the Source alone
-// knows how to tell
-export interface ISourceReadResult {
-  jobDescription: JobDescription;
-  isInZone: boolean;
-}
-
 // What a module of the family declares to defineSource. Its operations read the site with the fetch
 // the Source was created with, which the tests replace with recorded responses, and tell a failure in
 // the locale of the Watch's Candidate.
@@ -49,7 +42,7 @@ interface ISourceDefinition<TShape extends ParameterShape> {
     parameters: ParametersOf<TShape>,
     httpFetch: typeof fetch | undefined,
     locale: Locale,
-  ) => Promise<ISourceReadResult>;
+  ) => Promise<JobDescription>;
   // The Start Date a Job Description the Source stored gives, so a Posting saved before the Start
   // Date existed gets it too; null when it says nothing
   readStartDate: (markdown: string) => Date | null;
@@ -62,7 +55,7 @@ export interface ISource {
   description: SourceModule;
   parseParameters(rawParameters: unknown, locale: Locale): Parameters;
   search(watch: Watch, locale: Locale): Promise<ISearchResult>;
-  readJobDescription(reference: string, watch: Watch, locale: Locale): Promise<ISourceReadResult>;
+  readJobDescription(reference: string, watch: Watch, locale: Locale): Promise<JobDescription>;
   readStartDate(markdown: string): Date | null;
 }
 

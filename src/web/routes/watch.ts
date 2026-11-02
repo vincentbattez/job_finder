@@ -8,18 +8,16 @@ import { readParameters } from '#/web/parameters.server.ts';
 import { relayAction } from '#/web/relay-action.server.ts';
 
 // The buttons of a Watch in the Profile, for the Candidate of the menu; each answers its own fetcher, a
-// refusal in the words of the action. A list Parameter comes one value per line, as its descriptor says.
+// refusal in the words of the action.
 export async function action({ request }: ActionFunctionArgs) {
   const { candidate, locale } = await readCandidate(request);
   const t = tFor(locale, 'settings');
   const formData = await request.formData();
-  const sourceId = formData.get('source');
-  const sourceList = await ACTIONS.listSources();
   const input = {
     candidateId: candidate?.id,
     watchId: formData.get('watchId') ?? undefined,
-    source: sourceId,
-    parameters: readParameters(formData, sourceList.find(({ id }) => id === sourceId)?.parameterList),
+    source: formData.get('source'),
+    parameters: readParameters(formData),
   };
   return relayAction(
     request,

@@ -19,7 +19,7 @@ import { LEA_WATCH, LEA_WATCH_ID } from './lea.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 import { runAndValidate } from './run-module.ts';
 
-// A Béthune Posting in Léa's Zone, from the responses recorded on 2026-10-29
+// A Béthune Posting, from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
 // A Version of each Artifact, as the fake Claude writes them, so that every action reading one has it

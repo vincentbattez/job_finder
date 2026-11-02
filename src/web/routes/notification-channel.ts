@@ -12,13 +12,11 @@ import { relayAction } from '#/web/relay-action.server.ts';
 export async function action({ request }: ActionFunctionArgs) {
   const { candidate, locale } = await readCandidate(request);
   const formData = await request.formData();
-  const moduleId = formData.get('channel');
-  const moduleList = await ACTIONS.listNotificationChannels();
   const input = {
     candidateId: candidate?.id,
-    channel: moduleId ?? undefined,
+    channel: formData.get('channel') ?? undefined,
     parameter: formData.get('parameter') ?? undefined,
-    parameters: readParameters(formData, moduleList.find(({ id }) => id === moduleId)?.parameterList),
+    parameters: readParameters(formData),
   };
   return relayAction(request, async () => {
     switch (formData.get('intent')) {

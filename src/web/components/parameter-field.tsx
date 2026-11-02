@@ -6,18 +6,14 @@ import type { Actions } from '#/actions/index.ts';
 import { Badge } from '#/web/components/ui/badge.tsx';
 import { Input } from '#/web/components/ui/input.tsx';
 import { Label } from '#/web/components/ui/label.tsx';
-import { Textarea } from '#/web/components/ui/textarea.tsx';
 
 type Parameter = Awaited<ReturnType<Actions['listSources']>>[number]['parameterList'][number];
 
 // The name of a Parameter's field, apart from the fields of the form itself, such as the intent
 export const PARAMETER_FIELD_PREFIX = 'parameters.';
 
-// The value a field shows: a list Parameter one value per line, such as the titles a Watch searches
+// The value a field shows
 function valueOf(value: unknown): string {
-  if (Array.isArray(value)) {
-    return value.filter((item) => typeof item === 'string').join('\n');
-  }
   return typeof value === 'string' ? value : '';
 }
 
@@ -58,21 +54,6 @@ export function ParameterField({
           name={fieldName}
           autoComplete="off"
           placeholder={isConfigured ? t('parameter.keepSaved') : placeholder}
-        />
-      </div>
-    );
-  }
-  if (type === 'list') {
-    return (
-      <div className="grid gap-2">
-        <Label htmlFor={fieldId}>{t('parameter.onePerLine', { label })}</Label>
-        <Textarea
-          id={fieldId}
-          name={fieldName}
-          rows={3}
-          required={isRequired}
-          defaultValue={valueOf(savedValue)}
-          placeholder={placeholder}
         />
       </div>
     );

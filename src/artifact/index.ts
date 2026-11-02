@@ -353,6 +353,7 @@ export function createArtifacts({
           // A queued job has no Version yet, while the worker runs another one (ADR-0003), and a claimed
           // job has none until the worker starts it: the job tells its state
           ...state,
+          validation,
           module: { refusal: run.refusal === null ? null : wordForFront(run.refusal), prompt: run.prompt },
           isEditable: editRefusal === null,
           fileName: aiModule.fileName,

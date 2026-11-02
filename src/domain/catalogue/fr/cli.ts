@@ -19,8 +19,6 @@ export const CLI_FR: typeof CLI_EN = {
 
   deadline: '{{deadline, datetime(timeZone: UTC)}}',
   startDate: 'Prise de poste le {{startDate, datetime(timeZone: UTC)}}',
-  inZone: 'Zone',
-  outOfZone: 'hors Zone',
   repostOf: 'Republication de {{reference}}',
   repostedAs: 'Republiée en {{reference}}',
 

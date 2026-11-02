@@ -7,13 +7,12 @@ import { PARAMETER_SCHEMA, PARAMETERS_SCHEMA, type Locale, type Parameter, type 
 // How each family of interchangeable modules declares its Parameters, so that the front builds its
 // form from the descriptor of a module (ADR-0010)
 
-// How the front shows a Parameter: a list takes several values, such as the courts of appeal of a
-// Zone. A secret one is write-only: no action returns it (ADR-0006). Its texts are keys of the
-// module's namespace (textKeyOf).
+// How the front shows a Parameter. A secret one is write-only: no action returns it (ADR-0006). Its
+// texts are keys of the module's namespace (textKeyOf).
 interface IParameterMeta {
   label: string;
   placeholder?: string;
-  type?: 'text' | 'url' | 'list';
+  type?: 'text' | 'url';
   isSecret?: boolean;
 }
 

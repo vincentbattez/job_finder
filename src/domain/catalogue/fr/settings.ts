@@ -94,7 +94,7 @@ export const SETTINGS_FR: typeof SETTINGS_EN = {
   watches: {
     heading: 'Veilles',
     intro:
-      'Chaque Veille cherche en permanence les nouvelles Offres d’une Source. Une Veille créée ou modifiée importe d’abord les Offres déjà en ligne, sans rien lancer ; ensuite, chaque nouvelle Offre de sa Zone lance sa Recherche et vous est notifiée. Supprimer une Veille garde ses Offres.',
+      'Chaque Veille cherche en permanence les nouvelles Offres d’une Source. Une Veille créée ou modifiée importe d’abord les Offres déjà en ligne, sans rien lancer ; ensuite, chaque nouvelle Offre vous est notifiée, à trier. Supprimer une Veille garde ses Offres.',
     newWatch: 'Nouvelle Veille',
     watch: 'Veille {{watchId}}',
     source: 'Source',
@@ -123,7 +123,6 @@ export const SETTINGS_FR: typeof SETTINGS_EN = {
   parameter: {
     configured: 'configuré',
     keepSaved: 'Laisse vide pour garder la valeur enregistrée',
-    onePerLine: '{{label}}, une par ligne',
   },
 
   instructions: {

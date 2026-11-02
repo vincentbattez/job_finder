@@ -114,8 +114,8 @@ describe('actions', () => {
   });
 
   // The main checkout migrates the real data/: each Watch keeps its Parameters and its first launch
-  // stays over, so the next Detection triggers as before
-  it('gathers the criteria and the Zone of each Watch into the Parameters of its Source, without loss', () => {
+  // stays over, so the next Detection triggers as before. Its Zone went away since (ADR-0018).
+  it('gathers the criteria of each Watch into the Parameters of its Source, without loss', () => {
     const dataDirectory = createEmptyDataDirectory();
     const databasePath = writeOlderDatabase(dataDirectory, NOTIFICATION_CHANNEL_MIGRATION);
     const database = new DatabaseSync(databasePath);
@@ -133,7 +133,7 @@ describe('actions', () => {
         id: 'attache-de-justice-hauts-de-france',
         candidateId: 'lea',
         source: 'pep',
-        parameters: '{"title":"attaché de justice","courtOfAppealList":["Douai","Amiens"]}',
+        parameters: '{"title":"attaché de justice"}',
         detectedAt: '2026-10-30T10:44:22.500+00:00',
       },
     ]);

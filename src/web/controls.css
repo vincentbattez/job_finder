@@ -73,7 +73,7 @@
   font: 400 var(--text-sm) / 1.4 var(--font-outlier);
 }
 
-/* A list Parameter, one value per line, such as the courts of appeal of a Zone */
+/* A field typed over several lines */
 .field textarea {
   padding: var(--space-xs) var(--space-sm);
   resize: vertical;

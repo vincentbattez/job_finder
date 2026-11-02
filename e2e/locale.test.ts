@@ -55,7 +55,6 @@ test('shows the Sidebar and the Profile in English to a Candidate with the en lo
   ).toBeVisible();
   const newWatch = page.getByRole('group', { name: 'New Watch' });
   await expect(newWatch.getByRole('textbox', { name: 'Searched title' })).toBeVisible();
-  await expect(newWatch.getByRole('textbox', { name: 'Courts of appeal of the Zone, one per line' })).toBeVisible();
   await expect(newWatch.getByRole('button', { name: 'Create the Watch' })).toBeVisible();
 });
 

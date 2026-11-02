@@ -40,7 +40,6 @@ function fakePosting(candidateId: string): Prisma.PostingUncheckedCreateInput {
     contact2: faker.helpers.maybe(() => faker.person.fullName()) ?? null,
     status: faker.helpers.arrayElement(['to_apply', 'applied'] as const),
     archivedAt: faker.helpers.maybe(() => faker.date.recent({ days: 30 }), { probability: 0.2 }) ?? null,
-    isInZone: faker.datatype.boolean(),
     versionList: {
       create: hasResearch
         ? [{ artifact: 'research', number: 1, isChosen: true, state: 'ready', instructions: '' }]

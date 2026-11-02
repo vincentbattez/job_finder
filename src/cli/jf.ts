@@ -82,7 +82,6 @@ function formatPosting(posting: Posting, t: Cli): string {
     // Only on the Postings whose Job Description gives one
     ...(startDate === null ? [] : [t('startDate', { startDate })]),
     statusLabelList.join(', '),
-    posting.isInZone ? t('inZone') : t('outOfZone'),
     // The link of a Repost, both ways, only on the Postings that have one
     ...(repostOf === null ? [] : [t('repostOf', { reference: repostOf.reference })]),
     ...repostList.map(({ reference }) => t('repostedAs', { reference })),

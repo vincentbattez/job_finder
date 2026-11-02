@@ -34,8 +34,7 @@ export const PARAMETERS_SCHEMA = z.record(z.string(), z.json()).brand<'Domain'>(
 
 export type Parameters = z.infer<typeof PARAMETERS_SCHEMA>;
 
-// A Watch follows one of the Sources, which alone knows its Parameters, its Zone among them
-// (ADR-0010). detectedAt stays null until a Detection of the Watch went through: until then, it is
+// A Watch follows one of the Sources, which alone knows its Parameters (ADR-0010). detectedAt stays null until a Detection of the Watch went through: until then, it is
 // the first launch.
 export const WATCH_SCHEMA = z
   .object({
@@ -157,7 +156,6 @@ export const POSTING_SCHEMA = z
     unpublishedAt: z.date().nullable(),
     // Free Markdown the Candidate keeps on it, whatever its Status; empty by default
     notes: z.string(),
-    isInZone: z.boolean(),
     isExpired: z.boolean(),
     // The Posting it publishes again, and the Postings that publish it again
     repostOf: LINKED_POSTING_SCHEMA.nullable(),
@@ -517,6 +515,8 @@ export type ArtifactState = z.infer<typeof ARTIFACT_STATE_SCHEMA>;
 const ARTIFACT_VERSIONS_SCHEMA = z.object({
   artifact: ARTIFACT_SCHEMA,
   ...ARTIFACT_STATE_SHAPE,
+  // Where it stands for the Candidate, as the lists and the Sheet tell it (ADR-0019)
+  validation: VALIDATION_SCHEMA,
   // The module that produces it: why it cannot run now, null when it can; else the Prompt a run started
   // now would receive, with the Chosen Versions it reads, null while it is refused
   module: z.object({ refusal: z.string().nullable(), prompt: PROMPT_SCHEMA.nullable() }),
@@ -637,7 +637,7 @@ export const ICAL_FILE_SCHEMA = z.object({ fileName: z.string(), text: z.string(
 
 export type IcalFile = z.infer<typeof ICAL_FILE_SCHEMA>;
 
-// A Parameter as the front builds its field: typed in, a list of values, secret, or chosen among what
+// A Parameter as the front builds its field: typed in, secret, or chosen among what
 // the module lists. Its label and placeholder are i18next keys of the module's own namespace, whose
 // copy stays in its folder (ADR-0010, ADR-0012).
 export const PARAMETER_SCHEMA = z
@@ -645,7 +645,7 @@ export const PARAMETER_SCHEMA = z
     name: z.string(),
     label: z.string(),
     placeholder: z.string().nullable(),
-    type: z.enum(['text', 'url', 'list']),
+    type: z.enum(['text', 'url']),
     isRequired: z.boolean(),
     isSecret: z.boolean(),
     hasChoices: z.boolean(),

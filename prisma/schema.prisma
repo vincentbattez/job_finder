@@ -52,7 +52,7 @@ model Watch {
   id          String    @id
   candidate   Candidate @relation(fields: [candidateId], references: [id])
   candidateId String
-  // The Source the Watch follows, and its Parameters, its Zone among them: they are those of the
+  // The Source the Watch follows, and its Parameters: they are those of the
   // Source, parsed by the Source's schema (ADR-0010)
   source      String
   parameters  Json
@@ -100,7 +100,6 @@ model Posting {
   repostOfId       Int?
   repostList       Posting[]     @relation("Repost")
   detectedAt       DateTime      @default(now())
-  isInZone         Boolean
   versionList      Version[]
   jobList          Job[]
   interviewList    Interview[]

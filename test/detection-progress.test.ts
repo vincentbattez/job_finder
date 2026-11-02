@@ -238,7 +238,7 @@ describe('the scope of a Detection', () => {
     await actions.saveWatch({
       candidateId: 'emma',
       source: 'pep',
-      parameters: { title: 'attaché de justice', courtOfAppealList: ['Douai'] },
+      parameters: { title: 'attaché de justice' },
     });
 
     await actions.startDetection({ candidateId: 'emma' });

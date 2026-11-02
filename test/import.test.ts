@@ -96,8 +96,6 @@ describe('import of a Job Description in Markdown', () => {
       employer: null,
       url: null,
       status: 'to_apply',
-      // No Zone of a Watch holds it: the import queues its Research whatever the Zone
-      isInZone: false,
     });
     const { jobDescription, extraction } = await actions.readPosting({ reference: job.posting.reference });
     expect(jobDescription).toBe(JOB_DESCRIPTION);

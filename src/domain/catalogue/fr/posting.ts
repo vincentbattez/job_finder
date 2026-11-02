@@ -182,6 +182,39 @@ export const POSTING_FR: typeof POSTING_EN = {
   copyMarkdown: 'Copier le Markdown',
   copiedMarkdown: 'Copié',
 
+  // The Sheet a list opens on a Posting (spec #125 « The Sheet »)
+  sheet: {
+    noEmployer: 'Employeur non précisé',
+    deadline: 'Date limite le {{date, datetime(dateStyle: medium; timeZone: Europe/Paris)}}',
+    noDeadline: 'Sans date limite',
+    startDate: 'Prise de poste le {{date, datetime(dateStyle: medium; timeZone: Europe/Paris)}}',
+    noStartDate: 'Prise de poste non précisée',
+    publication_ordinal_one: '{{count}}re publication de ce Poste',
+    // French has one ordinal form beside the first: English's two and few take it
+    publication_ordinal_two: '{{count}}e publication de ce Poste',
+    publication_ordinal_few: '{{count}}e publication de ce Poste',
+    publication_ordinal_other: '{{count}}e publication de ce Poste',
+    publicationSince_ordinal_one:
+      '{{count}}re publication de ce Poste depuis le {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    publicationSince_ordinal_two:
+      '{{count}}e publication de ce Poste depuis le {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    publicationSince_ordinal_few:
+      '{{count}}e publication de ce Poste depuis le {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    publicationSince_ordinal_other:
+      '{{count}}e publication de ce Poste depuis le {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    documentsHeading: 'Documents',
+    artifactState: {
+      running: 'En cours de rédaction',
+      draft: 'Brouillon · à valider',
+      validated: 'Validée',
+      failed: 'Échec',
+      none: 'Pas encore',
+    },
+    interviewCount_one: '{{count}} Entretien',
+    interviewCount_other: '{{count}} Entretiens',
+    openPage: 'Ouvrir la page complète',
+  },
+
   notes: {
     heading: 'Notes',
     label: 'Notes en Markdown',

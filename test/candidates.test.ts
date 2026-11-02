@@ -136,7 +136,7 @@ describe('the config an older jf left', () => {
         id: 'attache-de-justice-hauts-de-france',
         candidateId: 'lea',
         source: 'pep',
-        parameters: { title: 'attaché de justice', courtOfAppealList: ['Douai', 'Amiens'] },
+        parameters: { title: 'attaché de justice' },
         detectedAt: null,
       },
     ]);

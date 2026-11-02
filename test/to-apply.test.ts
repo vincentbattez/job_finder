@@ -59,6 +59,21 @@ describe('To Apply list', () => {
     });
   });
 
+  // The Sheet and the Posting page tell the same state as the list's chips
+  it('tells, on the Posting, where each of its Artifacts stands', async () => {
+    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, RESEARCH_RUN));
+    await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
+    await actions.runQueuedJobs();
+    await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
+    await actions.runQueuedJobs();
+    await actions.chooseVersion({ reference: BETHUNE_REFERENCE, artifact: 'research', number: 1 });
+
+    const { artifactList } = await actions.readPosting({ reference: BETHUNE_REFERENCE });
+
+    expect(artifactList.find(({ artifact }) => artifact === 'research')).toMatchObject({ validation: 'draft' });
+    expect(artifactList.find(({ artifact }) => artifact === 'letter')).toMatchObject({ validation: 'none' });
+  });
+
   it('refuses to list the To Apply Postings of an unknown Candidate', async () => {
     const { actions } = await detectPostings();
 
