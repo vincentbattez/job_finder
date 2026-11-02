@@ -49,7 +49,7 @@ const ICAL_INPUT_SCHEMA = INTERVIEW_INPUT_SCHEMA.extend({ origin: z.url().transf
 // then the Interview Brief of the Interview, in its section
 const REVIEWED_ARTIFACT_LIST = ['research', 'letter'] as const;
 
-// What the Candidate reviews from their phone before the Interview: the official ad, if the Posting has
+// Whom the Candidate meets, then what they review from their phone before the Interview: the official ad, if the Posting has
 // one, then the Posting page and its sections, and the Interview on it, all on the origin they opened
 // Job Finder through
 function describeLinks(
@@ -71,7 +71,11 @@ function describeLinks(
     },
     { label: t('interviews.title', { number: interview.number }), url: interviewUrl },
   ];
-  return linkList.map((link) => t('ical.link', link)).join('\n');
+  const interviewers = interview.interviewers.trim();
+  return [
+    ...(interviewers === '' ? [] : [t('ical.interviewers', { interviewers })]),
+    ...linkList.map((link) => t('ical.link', link)),
+  ].join('\n');
 }
 
 // An employer given on several lines stays on the single line of the event's title
@@ -101,8 +105,9 @@ export function createInterviewActions({ workspace, findPosting, findLocale }: A
       return workspace.listInterviews(await findPosting(reference));
     },
 
-    // Only an Application has Interviews: a To Apply Posting would get one before its Letter was sent
-    async addInterview(rawInput: unknown): Promise<void> {
+    // Only an Application has Interviews: a To Apply Posting would get one before its Letter was sent. Gives
+    // the Interview added, which the front lands on.
+    async addInterview(rawInput: unknown): Promise<Interview> {
       const { reference, start, ...fields } = NEW_INTERVIEW_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
       if (!hasBeenApplied(posting)) {
@@ -112,7 +117,7 @@ export function createInterviewActions({ workspace, findPosting, findLocale }: A
           { locale: await findLocale(posting.candidateId) },
         );
       }
-      await workspace.createInterview(posting, { ...fields, startAt: start });
+      return workspace.createInterview(posting, { ...fields, startAt: start });
     },
 
     async editInterview(rawInput: unknown): Promise<void> {

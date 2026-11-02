@@ -83,17 +83,17 @@ describe('the iCal file of an Interview', () => {
     expect(unfold(winter.text)).toContain('BEGIN:VTIMEZONE\r\nTZID:Europe/Paris\r\n');
   });
 
-  it('rings a day before the Interview', async () => {
+  it('rings the day before the Interview, then an hour before', async () => {
     await addInterview('2026-2445183');
 
     const { text } = await actions.readIcalFile({ reference: '2026-2445183', number: 1, origin: ORIGIN });
 
-    expect(unfold(text)).toMatch(
-      /BEGIN:VALARM\r\nACTION:DISPLAY\r\n(?:.*\r\n)*?TRIGGER:-P1D\r\n(?:.*\r\n)*?END:VALARM/,
-    );
+    const alarmList = unfold(text).match(/BEGIN:VALARM\r\n(?:.*\r\n)*?END:VALARM/g) ?? [];
+    expect(alarmList.map((alarm) => /TRIGGER:(.*)\r\n/.exec(alarm)?.[1])).toEqual(['-P1D', '-PT1H']);
+    expect(alarmList.every((alarm) => alarm.includes('ACTION:DISPLAY\r\n'))).toBe(true);
   });
 
-  it('describes the links to the official ad and to the Posting page and its sections, on the origin passed', async () => {
+  it('describes the Interviewers, then the links to the official ad and to the Posting page and its sections, on the origin passed', async () => {
     await addInterview('2026-2350473');
 
     const { text } = await actions.readIcalFile({
@@ -103,6 +103,7 @@ describe('the iCal file of an Interview', () => {
     });
 
     expect(valueOf(text, 'DESCRIPTION')?.split(String.raw`\n`)).toEqual([
+      'Interlocuteurs : Mme Durand',
       'Annonce officielle : https://choisirleservicepublic.gouv.fr/offre-emploi/2026-2350473/?tracking=1&idOrigine=502',
       'Page Job Finder : https://job-finder.example.org/postings/2026-2350473',
       'Recherche : https://job-finder.example.org/postings/2026-2350473?tab=research',
@@ -113,13 +114,13 @@ describe('the iCal file of an Interview', () => {
     expect(valueOf(text, 'URL')).toBe('https://job-finder.example.org/postings/2026-2350473');
   });
 
-  it('leaves the official ad out of the description of an imported Posting, which has none', async () => {
+  it('leaves out of the description the Interviewers not given, and the official ad an imported Posting lacks', async () => {
     const { posting } = await actions.importJobDescription({
       candidateId: 'lea',
       fileName: 'greffier-lille.md',
       markdown: '# Greffier\n\nTribunal judiciaire de Lille.\n',
     });
-    await addInterview(posting.reference);
+    await addInterview(posting.reference, { interviewers: '' });
 
     const { text } = await actions.readIcalFile({ reference: posting.reference, number: 1, origin: ORIGIN });
 

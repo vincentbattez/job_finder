@@ -7,12 +7,6 @@ type VersionState = 'running' | 'ready' | 'failed';
 
 export type Validation = 'draft' | 'validated';
 
-export const STATE_BY_VERSION_STATE: Record<VersionState, State> = {
-  running: 'in_progress',
-  ready: 'ready',
-  failed: 'failed',
-};
-
 // Its Fixed Part and its Instructions as raw text, and the Chosen Versions it reads, of this Posting or
 // of another one
 export interface IPrompt {

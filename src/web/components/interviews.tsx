@@ -1,204 +1,307 @@
+import { cn } from 'cn';
+import { CalendarCheck2Icon, CalendarPlusIcon, MapPinIcon, UsersIcon } from 'lucide-react';
 import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 
-import type { Actions } from '#/actions/index.ts';
 import { DEFAULT_DURATION_MINUTES } from '#/actions/interview-duration.ts';
-import { interviewIdOf } from '#/actions/interview-section.ts';
 import { parisDateTimeOf } from '#/actions/paris-time.ts';
+import { Badge } from '#/web/components/ui/badge.tsx';
+import { Input } from '#/web/components/ui/input.tsx';
+import { Label } from '#/web/components/ui/label.tsx';
+import { Textarea } from '#/web/components/ui/textarea.tsx';
 
-import { ButtonRow } from './button-row.tsx';
-import { Deletion } from './deletion.tsx';
-import { IcalButton } from './ical-button.tsx';
+import { StateDot, StateLabel, type TabSummary } from './posting-tabs.tsx';
 
-import './interviews.css';
-
-// An Interview as the actions give it to the Posting page, its start an instant read in Paris time; its
-// Artifacts are laid out by its Container
-type Interview = Omit<Awaited<ReturnType<Actions['readPosting']>>['interviewList'][number], 'artifactList'>;
-
-// The form of the section its Container posts, under a key telling it apart; it lays out the fields
-// with the refusal of the action, if any
-type FormRenderer = (formKey: string, renderFieldList: (error: string | null | undefined) => ReactNode) => ReactNode;
-
-// The Artifacts of an Interview, such as its Interview Brief, which its Container lays out
-type ArtifactsRenderer = (interviewNumber: number) => ReactNode;
-
-// Where an Interview most often takes place: the place of work, then its City when it does not name it
-function defaultPlaceOf({ workplace, city }: Readonly<{ workplace: string | null; city: string | null }>): string {
-  const hasCity = city !== null && !(workplace ?? '').toLowerCase().includes(city.toLowerCase());
-  return [workplace, hasCity ? city : null].filter((part) => part !== null && part !== '').join(', ');
+// An Interview as the actions give it to the Posting page, its start an instant read in Paris time
+export interface IInterview {
+  number: number;
+  startAt: Date;
+  durationMinutes: number;
+  place: string;
+  interviewers: string;
 }
 
-function InterviewFields({
-  intent,
+// The documents that prepare an Interview, each a tab of the selected one (spec #125, « Interviews »)
+export const INTERVIEW_DOCUMENT_LIST = ['interview_brief', 'portrait'] as const;
+
+export type InterviewDocument = (typeof INTERVIEW_DOCUMENT_LIST)[number];
+
+const MINUTE_MS = 60_000;
+
+// Over once its duration has passed
+export function isPast({ startAt, durationMinutes }: IInterview, now: number): boolean {
+  return startAt.getTime() + durationMinutes * MINUTE_MS <= now;
+}
+
+// A place or Interviewers left blank read as a dash
+function orDash(text: string): string {
+  return text.trim() === '' ? '—' : text;
+}
+
+function PlaceLine({ place, className }: Readonly<{ place: string; className?: string }>) {
+  const { t } = useTranslation('posting');
+  return (
+    <p className={cn('flex items-start gap-1.5', className)}>
+      <MapPinIcon aria-label={t('interviews.place')} className="mt-px size-3.5 shrink-0" />
+      <span className="line-clamp-1">{orDash(place)}</span>
+    </p>
+  );
+}
+
+function InterviewersLine({ interviewers, className }: Readonly<{ interviewers: string; className?: string }>) {
+  const { t } = useTranslation('posting');
+  return (
+    <p className={cn('flex items-start gap-1.5', className)}>
+      <UsersIcon aria-label={t('interviews.interviewers')} className="mt-px size-3.5 shrink-0" />
+      <span className="line-clamp-2">{orDash(interviewers)}</span>
+    </p>
+  );
+}
+
+// The fields of the Interview Dialog: day and time typed in Paris, duration, place and Interviewers in free
+// text; a new Interview starts on the place of the Posting and the default duration
+export function InterviewFields({
   interview,
   defaultPlace,
-  error,
-}: Readonly<{
-  intent: 'add' | 'edit';
-  interview: Interview | null;
-  defaultPlace: string;
-  error: string | null | undefined;
-}>) {
+}: Readonly<{ interview: IInterview | null; defaultPlace: string }>) {
   const { t } = useTranslation('posting');
+  const id = useId();
+  const [day = '', time = ''] = interview === null ? [] : parisDateTimeOf(interview.startAt).split('T');
   return (
-    <>
-      {interview !== null && <input type="hidden" name="number" value={interview.number} />}
-      <div className="interviews__fields">
-        <label className="field">
-          {t('interviews.start')}
-          <input
-            type="datetime-local"
-            name="start"
-            placeholder={t('interviews.startPlaceholder')}
-            required
-            defaultValue={interview === null ? '' : parisDateTimeOf(interview.startAt)}
-          />
-        </label>
-        <label className="field">
-          {t('interviews.duration')}
-          <input
+    <div className="grid gap-4">
+      <div className="grid gap-4 sm:grid-cols-[1fr_1fr_7rem]">
+        <div className="grid gap-1.5">
+          <Label htmlFor={`${id}-day`}>{t('interviews.day')}</Label>
+          <Input id={`${id}-day`} type="date" name="day" required defaultValue={day} />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor={`${id}-time`}>{t('interviews.time')}</Label>
+          <Input id={`${id}-time`} type="time" name="time" required defaultValue={time} />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor={`${id}-duration`}>{t('interviews.duration')}</Label>
+          <Input
+            id={`${id}-duration`}
             type="number"
             name="durationMinutes"
-            placeholder={String(DEFAULT_DURATION_MINUTES)}
             min={1}
             required
+            className="tabular-nums"
             defaultValue={interview?.durationMinutes ?? DEFAULT_DURATION_MINUTES}
           />
-        </label>
-        <label className="field interviews__wide">
-          {t('interviews.place')}
-          <input
-            type="text"
-            name="place"
-            placeholder={t('interviews.placePlaceholder')}
-            defaultValue={interview?.place ?? defaultPlace}
-          />
-        </label>
-        <label className="field interviews__wide">
-          {t('interviews.interviewers')}
-          <textarea
-            name="interviewers"
-            rows={3}
-            placeholder={t('interviews.interviewersPlaceholder')}
-            defaultValue={interview?.interviewers ?? ''}
-          />
-        </label>
+        </div>
       </div>
-      <ButtonRow>
-        <button type="submit" name="intent" value={intent} className="button button--primary">
-          {intent === 'add' ? t('interviews.add') : t('interviews.save')}
-        </button>
-        {error != null && <p role="alert">{error}</p>}
-      </ButtonRow>
-    </>
+      <div className="grid gap-1.5">
+        <Label htmlFor={`${id}-place`}>{t('interviews.place')}</Label>
+        <Input
+          id={`${id}-place`}
+          name="place"
+          placeholder={t('interviews.placePlaceholder')}
+          defaultValue={interview?.place ?? defaultPlace}
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor={`${id}-interviewers`}>{t('interviews.interviewers')}</Label>
+        <Textarea
+          id={`${id}-interviewers`}
+          name="interviewers"
+          placeholder={t('interviews.interviewersPlaceholder')}
+          className="min-h-24"
+          defaultValue={interview?.interviewers ?? ''}
+        />
+      </div>
+    </div>
   );
 }
 
-function InterviewItem({
-  reference,
+// The Interview-added step: the Interview as the calendar will show it, then the iCal file and the later choice
+export function InterviewAdded({
   interview,
-  renderForm,
-  renderArtifacts,
-}: Readonly<{
-  reference: string;
-  interview: Interview;
-  renderForm: FormRenderer;
-  renderArtifacts: ArtifactsRenderer;
-}>) {
-  const headingId = useId();
-  const { t } = useTranslation('posting');
-  const { number, startAt, durationMinutes, place, interviewers, editCount } = interview;
+  postingTitle,
+  actions,
+}: Readonly<{ interview: IInterview; postingTitle: string; actions: ReactNode }>) {
+  const { t, i18n } = useTranslation('posting');
+  const parts = new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short', timeZone: 'Europe/Paris' });
+  const partOf = (type: 'day' | 'month') =>
+    parts
+      .formatToParts(interview.startAt)
+      .find((part) => part.type === type)
+      ?.value.replace('.', '') ?? '';
   return (
-    <li>
-      <article className="interviews__item" id={interviewIdOf(number)} aria-labelledby={headingId}>
-        <h3 id={headingId}>{t('interviews.title', { number })}</h3>
-        <dl className="interviews__facts">
-          <dt>{t('interviews.start')}</dt>
-          <dd>
-            <time dateTime={startAt.toISOString()}>{t('dateTime', { ns: 'common', date: startAt })}</time>
-          </dd>
-          <dt>{t('interviews.duration')}</dt>
-          <dd>{t('interviews.minutes', { minutes: durationMinutes })}</dd>
-          <dt>{t('interviews.place')}</dt>
-          <dd>{place === '' ? '—' : place}</dd>
-          <dt>{t('interviews.interviewers')}</dt>
-          <dd className="interviews__interviewers">{interviewers === '' ? '—' : interviewers}</dd>
-        </dl>
-        <IcalButton reference={reference} number={number} />
-        <details className="interviews__edit">
-          <summary>{t('interviews.edit', { number })}</summary>
-          {/* Keyed by its edits, so a saved edit shows the saved values */}
-          {renderForm(`edit-${String(number)}-${String(editCount)}`, (error) => (
-            <InterviewFields intent="edit" interview={interview} defaultPlace="" error={error} />
-          ))}
-        </details>
-        <Deletion summary={`${t('interviews.delete', { number })}…`}>
-          {renderForm(`delete-${String(number)}`, (error) => (
-            <ButtonRow>
-              <input type="hidden" name="number" value={number} />
-              <button type="submit" name="intent" value="delete" className="button button--danger">
-                {t('interviews.deleteForGood', { number })}
-              </button>
-              {error != null && <p role="alert">{error}</p>}
-            </ButtonRow>
-          ))}
-        </Deletion>
-        {renderArtifacts(number)}
-      </article>
-    </li>
+    <div className="grid gap-5">
+      <div
+        className="flex gap-4 rounded-xl border bg-muted/30 p-4"
+        aria-label={t('interviews.title', { number: interview.number })}
+      >
+        <div
+          aria-hidden
+          className="flex w-14 shrink-0 flex-col items-center justify-center rounded-lg border bg-background py-1.5"
+        >
+          <span className="text-[11px] font-medium text-primary uppercase">{partOf('month')}</span>
+          <span className="text-2xl leading-none font-semibold tabular-nums">{partOf('day')}</span>
+        </div>
+        <div className="min-w-0 space-y-1 text-sm">
+          <p className="font-semibold first-letter:uppercase">
+            {t('interviews.when', { date: interview.startAt })} ·{' '}
+            {t('interviews.minutes', { minutes: interview.durationMinutes })}
+          </p>
+          <p className="line-clamp-1 text-muted-foreground">
+            {t('interviews.title', { number: interview.number })} · {postingTitle}
+          </p>
+          <PlaceLine place={interview.place} className="text-xs text-muted-foreground" />
+          <InterviewersLine interviewers={interview.interviewers} className="text-xs text-muted-foreground" />
+        </div>
+      </div>
+      <div className="grid gap-2">{actions}</div>
+    </div>
   );
 }
 
-// The Interviews of an Application, by date, each edited and deleted in place with the Artifacts that
-// prepare it, and the form adding the next one; a To Apply Posting has none (ADR-0009)
-export function Interviews({
-  posting,
-  hasApplication,
-  interviewList,
-  renderForm,
-  renderArtifacts,
-}: Readonly<{
-  posting: { reference: string; workplace: string | null; city: string | null };
-  hasApplication: boolean;
-  interviewList: Interview[];
-  renderForm: FormRenderer;
-  renderArtifacts: ArtifactsRenderer;
-}>) {
-  const headingId = useId();
-  const newHeadingId = useId();
+// The head of the Interview-added step: a check, its title and what the iCal file brings
+export function InterviewAddedIcon() {
+  return (
+    <div aria-hidden className="mb-1 grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
+      <CalendarCheck2Icon className="size-6" />
+    </div>
+  );
+}
+
+// Before any Interview: what an Interview brings, and the way to add one; a Posting not Applied has none
+export function InterviewsEmpty({ action }: Readonly<{ action: ReactNode }>) {
   const { t } = useTranslation('posting');
   return (
-    <section className="interviews" id="interviews" aria-labelledby={headingId}>
-      <h2 id={headingId}>{t('interviews.heading')}</h2>
-      {hasApplication ? (
-        <>
-          {interviewList.length === 0 ? (
-            <p className="interviews__empty">{t('interviews.noInterview')}</p>
-          ) : (
-            <ol className="interviews__list">
-              {interviewList.map((interview) => (
-                <InterviewItem
-                  key={interview.number}
-                  reference={posting.reference}
-                  interview={interview}
-                  renderForm={renderForm}
-                  renderArtifacts={renderArtifacts}
+    <div className="flex flex-col items-center rounded-2xl border border-dashed px-6 py-14 text-center">
+      <div className="mb-4 grid size-11 place-items-center rounded-full bg-muted">
+        <CalendarPlusIcon aria-hidden className="size-5 text-muted-foreground" />
+      </div>
+      <h2 className="max-w-none text-base font-semibold">{t('interviews.emptyTitle')}</h2>
+      <p className="mt-1.5 max-w-md text-sm text-balance text-muted-foreground">
+        {action === null ? t('interviews.applyFirst') : t('interviews.emptyDescription')}
+      </p>
+      {action !== null && <div className="mt-5">{action}</div>}
+    </div>
+  );
+}
+
+function PastBadge({ isShown }: Readonly<{ isShown: boolean }>) {
+  const { t } = useTranslation('posting');
+  return isShown ? (
+    <Badge variant="outline" className="text-muted-foreground">
+      {t('interviews.past')}
+    </Badge>
+  ) : null;
+}
+
+// The Interviews by date, each a link that selects it, with its date, place and Interviewers, and the
+// state of its documents
+export function InterviewList({
+  interviewList,
+  selectedNumber,
+  searchOf,
+  summaryOf,
+  now,
+  addButton,
+}: Readonly<{
+  interviewList: IInterview[];
+  selectedNumber: number;
+  // The search of the Posting page that selects an Interview
+  searchOf: (number: number) => string;
+  summaryOf: (number: number, document: InterviewDocument) => TabSummary;
+  now: number;
+  addButton: ReactNode;
+}>) {
+  const { t } = useTranslation('posting');
+  const headingId = useId();
+  return (
+    <nav aria-labelledby={headingId} className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 id={headingId} className="max-w-none text-sm font-semibold">
+          <span className="sr-only">{t('interviews.listLabel')} · </span>
+          {t('interviews.count', { count: interviewList.length })}
+        </h2>
+        {addButton}
+      </div>
+      <ul className="space-y-2">
+        {interviewList.map((interview) => {
+          const isSelected = interview.number === selectedNumber;
+          return (
+            <li key={interview.number}>
+              <Link
+                to={{ search: searchOf(interview.number) }}
+                replace
+                preventScrollReset
+                aria-current={isSelected ? 'true' : undefined}
+                className={cn(
+                  'block rounded-xl border bg-card p-3 transition-colors outline-none hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50',
+                  isSelected && 'border-primary/40 bg-primary/[0.04] ring-1 ring-primary/20 hover:bg-primary/[0.06]',
+                )}
+              >
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold">{t('interviews.title', { number: interview.number })}</span>
+                  <PastBadge isShown={isPast(interview, now)} />
+                </span>
+                <span className="mt-1 block text-sm tabular-nums">
+                  {t('interviews.shortWhen', { date: interview.startAt })}
+                </span>
+                <PlaceLine place={interview.place} className="mt-1.5 text-xs text-muted-foreground" />
+                <InterviewersLine
+                  interviewers={interview.interviewers}
+                  className="mt-1 text-xs text-muted-foreground"
                 />
-              ))}
-            </ol>
-          )}
-          <div className="interviews__new" role="group" aria-labelledby={newHeadingId}>
-            <h3 id={newHeadingId}>{t('interviews.newInterview')}</h3>
-            {/* Keyed by the count, so the form empties once the Interview is added */}
-            {renderForm(`add-${String(interviewList.length)}`, (error) => (
-              <InterviewFields intent="add" interview={null} defaultPlace={defaultPlaceOf(posting)} error={error} />
-            ))}
+                <span className="mt-2.5 flex gap-3 border-t pt-2 text-[11px] text-muted-foreground">
+                  {INTERVIEW_DOCUMENT_LIST.map((document) => (
+                    <span key={document} className="inline-flex items-center gap-1.5">
+                      <StateDot summary={summaryOf(interview.number, document)} />
+                      {t(`artifactLabelByArtifact.${document}`, { ns: 'common' })}
+                      <StateLabel summary={summaryOf(interview.number, document)} />
+                    </span>
+                  ))}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+// The selected Interview: its date, its facts, and its actions on the right
+export function InterviewSummary({
+  interview,
+  now,
+  actions,
+}: Readonly<{ interview: IInterview; now: number; actions: ReactNode }>) {
+  const { t } = useTranslation('posting');
+  return (
+    <div className="rounded-2xl border bg-card p-4 shadow-whisper sm:p-5">
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
+        <div className="min-w-0 flex-1 basis-72">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="max-w-none text-title first-letter:uppercase">
+              {t('interviews.when', { date: interview.startAt })}
+            </h2>
+            <PastBadge isShown={isPast(interview, now)} />
           </div>
-        </>
-      ) : (
-        <p className="interviews__empty">{t('interviews.applyFirst')}</p>
-      )}
-    </section>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {t('interviews.facts', { number: interview.number, minutes: interview.durationMinutes })}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5">{actions}</div>
+      </div>
+      <dl className="mt-4 grid gap-3 border-t pt-4 text-sm sm:grid-cols-[auto_1fr] sm:gap-x-6">
+        <dt className="flex items-center gap-1.5 text-muted-foreground">
+          <MapPinIcon aria-hidden className="size-4" />
+          {t('interviews.place')}
+        </dt>
+        <dd>{orDash(interview.place)}</dd>
+        <dt className="flex items-center gap-1.5 text-muted-foreground">
+          <UsersIcon aria-hidden className="size-4" />
+          {t('interviews.interviewers')}
+        </dt>
+        <dd className="whitespace-pre-line">{orDash(interview.interviewers)}</dd>
+      </dl>
+    </div>
   );
 }
