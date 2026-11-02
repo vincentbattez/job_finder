@@ -27,6 +27,7 @@ export default defineConfig(({ mode }) => ({
       'sonner',
       '@mdx-js/mdx',
       'mermaid',
+      'cmdk',
     ],
   },
   // The e2e tests (playwright.config.ts) serve the front with the actions of test/, which fake the

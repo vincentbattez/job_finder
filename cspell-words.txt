@@ -24,6 +24,7 @@ gstatic
 ianvs
 isbot
 knip
+cmdk
 lefthook
 mdxjs
 nums
@@ -88,6 +89,7 @@ Inès
 Lou
 Malo
 Mila
+Yara
 Noé
 Sacha
 Théo
