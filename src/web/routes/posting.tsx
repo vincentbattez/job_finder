@@ -1,9 +1,8 @@
-import { useEffect, useId } from 'react';
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLoaderData, useSearchParams, type LoaderFunctionArgs, type MetaArgs } from 'react-router';
 
 import { localeOf, tFor } from '#/actions/i18n.ts';
-import { interviewIdOf, interviewSectionIdOf } from '#/actions/interview-section.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { summaryOf, type IArtifactVersions } from '#/web/components/artifact.ts';
@@ -58,17 +57,6 @@ export default function Posting() {
   const [searchParameters, setSearchParameters] = useSearchParams();
   const requestedTab = searchParameters.get('tab');
   const tab = isPostingTab(requestedTab) ? requestedTab : 'posting';
-  const interviewNumber = Number(searchParameters.get('interview'));
-  const document = searchParameters.get('doc');
-
-  // The Interview a deep link names, and its document, scrolled into view once the tab shows them
-  useEffect(() => {
-    if (tab !== 'interviews' || !Number.isSafeInteger(interviewNumber) || interviewNumber < 1) {
-      return;
-    }
-    const id = document === null ? interviewIdOf(interviewNumber) : interviewSectionIdOf(interviewNumber, document);
-    globalThis.document.querySelector(`#${id}`)?.scrollIntoView({ block: 'start' });
-  }, [tab, interviewNumber, document]);
 
   const changeTab = (nextTab: string) => {
     setSearchParameters(
@@ -132,15 +120,7 @@ export default function Posting() {
         );
       }
       case 'interviews': {
-        return (
-          <Interviews
-            reference={posting.reference}
-            title={posting.title}
-            posting={posting}
-            hasApplication={detail.hasApplication}
-            interviewList={interviewList}
-          />
-        );
+        return <Interviews posting={posting} hasApplication={detail.hasApplication} interviewList={interviewList} />;
       }
       case 'notes': {
         return <Notes reference={posting.reference} notes={posting.notes} />;
@@ -164,6 +144,7 @@ export default function Posting() {
               url={posting.url}
               repostOf={posting.repostOf}
               nextInterviewNumber={nextInterview?.number ?? null}
+              posting={posting}
               letter={{
                 draftNumber:
                   latestLetter?.version.validation === 'draft' && latestLetter.isValidatable

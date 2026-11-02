@@ -47,7 +47,7 @@ test.describe('the header of the Posting page', () => {
     );
   });
 
-  test('marks a To Apply Posting Applied without a Letter, leads to its Interviews, then puts it back To Apply', async ({
+  test('marks a To Apply Posting Applied without a Letter, offers to add an Interview, then puts it back To Apply', async ({
     page,
     openPage,
   }) => {
@@ -63,9 +63,11 @@ test.describe('the header of the Posting page', () => {
 
     await expect(page.getByText('Offre passée à « Postulée »')).toBeVisible();
     await expect(findStepBadge(page)).toHaveText('Postulée');
-    await page.getByRole('link', { name: 'Ajouter un Entretien' }).click();
-    await expect(page).toHaveURL(/\?tab=interviews$/);
-    await expect(page.getByRole('tab', { name: /Entretiens/ })).toHaveAttribute('aria-selected', 'true');
+    // Adding an Interview opens its Dialog on the page as it is
+    await page.getByRole('button', { name: 'Ajouter un Entretien' }).click();
+    await expect(page.getByRole('dialog', { name: 'Ajouter un Entretien' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toBeHidden();
     // An Applied Posting without an Interview was maybe never sent
     await findMoreActions(page).click();
     await page.getByRole('menuitem', { name: 'Remettre À traiter (pas envoyée)' }).click();
@@ -107,7 +109,9 @@ test.describe('the header of the Posting page', () => {
     await page.getByRole('link', { name: 'Voir l’Entretien 1' }).click();
 
     await expect(page).toHaveURL(/\?tab=interviews&interview=1$/);
-    await expect(page.getByRole('article', { name: 'Entretien 1' })).toBeVisible();
+    await expect(
+      page.getByRole('navigation', { name: /^Entretiens de la Candidature/ }).getByRole('link'),
+    ).toHaveAttribute('aria-current', 'true');
   });
 
   test('archives at once with an undo in its toast, then unarchives', async ({ page, openPage }) => {

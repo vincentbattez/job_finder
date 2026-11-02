@@ -44,6 +44,22 @@ describe('New list', () => {
     expect(itemList.filter(({ isFound }) => isFound)).toEqual([]);
   });
 
+  // Dismissing archives a New Posting, which stays New (ADR-0018): the Archived filter finds it there
+  it('lists the dismissed New Postings apart, under Archived, and the unarchived one back among the followed', async () => {
+    const { actions } = await detectPostings();
+    await actions.keep({ reference: KEPT_REFERENCE });
+    await actions.archive({ reference: KEPT_REFERENCE });
+    await actions.archive({ reference: DISMISSED_REFERENCE });
+
+    const archivedList = await actions.listNew({ candidateId: 'lea', isArchived: true });
+    await actions.unarchive({ reference: DISMISSED_REFERENCE });
+
+    expect(archivedList.map(({ posting }) => posting.reference)).toEqual([DISMISSED_REFERENCE]);
+    expect(await actions.listNew({ candidateId: 'lea', isArchived: true })).toEqual([]);
+    const followedList = await actions.listNew({ candidateId: 'lea' });
+    expect(followedList.map(({ posting }) => posting.reference)).toContain(DISMISSED_REFERENCE);
+  });
+
   it('refuses to list the New Postings of an unknown Candidate', async () => {
     const { actions } = await detectPostings();
 

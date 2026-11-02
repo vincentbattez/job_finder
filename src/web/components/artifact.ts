@@ -7,12 +7,6 @@ type VersionState = 'running' | 'ready' | 'failed';
 
 export type Validation = 'draft' | 'validated';
 
-export const STATE_BY_VERSION_STATE: Record<VersionState, State> = {
-  running: 'in_progress',
-  ready: 'ready',
-  failed: 'failed',
-};
-
 // What the generation panel shows before a run: each Input with its exact content, the refusal, the Prompt
 // of the checked Inputs (spec #125, « Inputs and the generation panel »)
 export type Generation = Awaited<ReturnType<Actions['readGeneration']>>;

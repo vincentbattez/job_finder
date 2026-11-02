@@ -1,11 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { useLoaderData, useSearchParams, type LoaderFunctionArgs, type MetaArgs } from 'react-router';
+import { useLoaderData, type LoaderFunctionArgs, type MetaArgs } from 'react-router';
 
 import { localeOf, tFor } from '#/actions/i18n.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
-import { EmptyState } from '#/web/components/empty-state.tsx';
-import { filterPostings, PostingFilters } from '#/web/components/posting-filters.tsx';
 import { PostingList } from '#/web/components/posting-list.tsx';
 import { Detection } from '#/web/containers/detection.tsx';
 import { JobDescriptionImport } from '#/web/containers/job-description-import.tsx';
@@ -31,7 +29,6 @@ export function meta({ loaderData }: MetaArgs<typeof loader>) {
 export default function Postings() {
   const { candidate, postingList, detection } = useLoaderData<typeof loader>();
   const { t } = useTranslation('postingList');
-  const [searchParameters] = useSearchParams();
   if (candidate === null || detection === null) {
     return (
       <main className="container page">
@@ -42,20 +39,17 @@ export default function Postings() {
       </main>
     );
   }
-  const filteredPostingList = filterPostings(postingList, searchParameters);
   return (
     <main className="container page">
       <div className="page__head">
         <h1>{t('heading', { candidateName: candidate.name })}</h1>
         <Detection overview={detection} />
         <JobDescriptionImport />
-        {postingList.length > 0 && <PostingFilters postingList={postingList} />}
       </div>
-      {filteredPostingList.length === 0 && postingList.length > 0 ? (
-        <EmptyState>{t('noFilteredPosting')}</EmptyState>
-      ) : (
-        <PostingList postingList={filteredPostingList} newReferenceList={detection.newReferenceList} />
-      )}
+      <PostingList
+        postingList={postingList.filter(({ archivedAt }) => archivedAt === null)}
+        newReferenceList={detection.newReferenceList}
+      />
     </main>
   );
 }

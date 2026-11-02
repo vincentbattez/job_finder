@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
-import type { ISheetSelection } from '#/web/components/map-list.tsx';
+import type { IMapListFiltering, ISheetSelection } from '#/web/components/map-list.tsx';
 import { NewList, SortButtons, type NewItem, type SortDecision } from '#/web/components/new-list.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
@@ -62,13 +62,16 @@ function SortRequest({
 }
 
 // New and its sorting (spec #125 « Sorting New »): Keep and Dismiss on each row; a sorted
-// Posting leaves the list at once and comes back only if the sorting was refused
+// Posting leaves the list at once and comes back only if the sorting was refused. The Archived ones,
+// dismissed already, have nothing to sort.
 export function NewSorting({
   itemList,
   now,
+  isArchived,
+  filtering,
   selectedReference,
   onSelect,
-}: Readonly<{ itemList: NewItem[]; now: Date } & ISheetSelection>) {
+}: Readonly<{ itemList: NewItem[]; now: Date; isArchived: boolean; filtering: IMapListFiltering } & ISheetSelection>) {
   const { t } = useTranslation('lists');
   const [sortList, setSortList] = useState<ISort[]>([]);
   const undoFetcher = useFetcher<IRefusal | null>();
@@ -87,15 +90,20 @@ export function NewSorting({
       <NewList
         itemList={itemList.filter(({ posting }) => !sortingSet.has(posting.reference))}
         now={now}
+        renderActions={
+          isArchived
+            ? undefined
+            : ({ reference }) => (
+                <SortButtons
+                  onSort={(decision) => {
+                    setSortList((previousList) => [...previousList, { reference, decision }]);
+                  }}
+                />
+              )
+        }
+        filtering={filtering}
         selectedReference={selectedReference}
         onSelect={onSelect}
-        renderActions={({ reference }) => (
-          <SortButtons
-            onSort={(decision) => {
-              setSortList((previousList) => [...previousList, { reference, decision }]);
-            }}
-          />
-        )}
       />
       {sortList.map((sort) => (
         <SortRequest

@@ -40,6 +40,7 @@ import {
 } from '#/web/components/ui/dropdown-menu.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
+import { InterviewDialog, type IInterviewPosting } from './interview-dialog.tsx';
 import { useFeedback } from './use-feedback.ts';
 
 interface IPostingActions {
@@ -52,6 +53,8 @@ interface IPostingActions {
   repostOf: { reference: string } | null;
   // The first Interview still to come, which an Invited Application leads to
   nextInterviewNumber: number | null;
+  // What the Interview Dialog reads, which its add-an-Interview action opens here
+  posting: IInterviewPosting;
   // Where the Letter stands before marking Applied: its latest Version still a Draft, and whether it has a
   // Chosen Version, the one recorded as sent
   letter: { draftNumber: number | null; hasChosen: boolean };
@@ -128,6 +131,7 @@ export function PostingActions({
   url,
   repostOf,
   nextInterviewNumber,
+  posting,
   letter,
 }: Readonly<IPostingActions>) {
   const { t } = useTranslation('posting');
@@ -184,7 +188,10 @@ export function PostingActions({
   const isApplying = statusFetcher.state !== 'idle' && submittedStatus.current === 'applied';
   const isInProgress = IN_PROGRESS_STEP_LIST.has(step) && !isArchived;
   const outcomeList = (['hired', 'rejected'] as const).filter((status) => statusChoiceList.includes(status));
-  const interviewsTab = { search: '?tab=interviews' };
+  const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false);
+  const openInterviewDialog = () => {
+    setIsInterviewDialogOpen(true);
+  };
   let archiveLabel = isArchived ? t('unarchive') : t('archive');
   let archiveIcon = isArchived ? <ArchiveRestoreIcon /> : <ArchiveIcon />;
   if (isNew && !isArchived) {
@@ -235,11 +242,9 @@ export function PostingActions({
       }
       case 'applied': {
         return (
-          <Button size="sm" asChild>
-            <Link to={interviewsTab} preventScrollReset>
-              <CalendarPlusIcon />
-              <ButtonLabel>{t('page.addInterview')}</ButtonLabel>
-            </Link>
+          <Button size="sm" onClick={openInterviewDialog}>
+            <CalendarPlusIcon />
+            <ButtonLabel>{t('page.addInterview')}</ButtonLabel>
           </Button>
         );
       }
@@ -309,6 +314,12 @@ export function PostingActions({
           changeStatus('applied', letterNumber);
         }}
       />
+      <InterviewDialog
+        posting={posting}
+        interview={null}
+        isOpen={isInterviewDialogOpen}
+        onOpenChange={setIsInterviewDialogOpen}
+      />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon-sm" aria-label={t('page.moreActions')}>
@@ -319,11 +330,9 @@ export function PostingActions({
           {isInProgress && (
             <>
               {step !== 'applied' && (
-                <DropdownMenuItem asChild>
-                  <Link to={interviewsTab} preventScrollReset>
-                    <CalendarPlusIcon />
-                    {t('page.addInterview')}
-                  </Link>
+                <DropdownMenuItem onSelect={openInterviewDialog}>
+                  <CalendarPlusIcon />
+                  {t('page.addInterview')}
                 </DropdownMenuItem>
               )}
               {outcomeList.map((status) => (

@@ -104,11 +104,7 @@ export const POSTING_EN = {
 
   // The Versions of an Artifact
   versionNumber: 'v{{versionNumber}}',
-  noVersion: 'No Version yet.',
   validationLabelByValidation: { draft: 'Draft', validated: 'Validated' },
-  versionInstructions: 'Instructions of this Version',
-  noFile: 'No file in this Version.',
-  validateVersion: 'Validate this Version',
 
   // The Artifact view of the Research and Letter tabs (spec #125, « Versions: Draft, Validated, Original »)
   artifactView: {
@@ -284,15 +280,11 @@ export const POSTING_EN = {
   },
 
   // The editor of a file of the Chosen Version
-  documentLabel: 'Markdown',
-  documentPlaceholder: '# Title\n\nThe text of the document, in Markdown',
   save: 'Save',
   unsavedChanges: 'Unsaved changes',
   preview: 'Preview',
   copy: 'Copy',
   copiedCommand: 'Copied',
-  copyMarkdown: 'Copy the Markdown',
-  copiedMarkdown: 'Copied',
 
   // The Sheet a list opens on a Posting (spec #125 « The Sheet »)
   sheet: {
@@ -337,27 +329,55 @@ export const POSTING_EN = {
     saved: 'Notes saved',
   },
 
-  // The Interviews of an Application, one per round, by date
+  // The Interviews tab (spec #125, « Interviews »): the Interviews by date beside the selected one, its
+  // Interview Brief and Portrait as tabs, added and edited in a Dialog, deleted after confirming
   interviews: {
     heading: 'Interviews',
+    listLabel: 'Interviews of the Application',
+    count_one: '{{count}} Interview',
+    count_other: '{{count}} Interviews',
     applyFirst: 'An Interview belongs to an Application: mark the Posting Applied to add one.',
-    noInterview: 'No Interview yet.',
+    emptyTitle: 'No Interview yet',
+    emptyDescription:
+      'When the employer invites you, add the Interview: its Portrait and its Interview Brief are prepared here.',
+    add: 'Add an Interview',
+    addShort: 'Add',
     title: 'Interview {{number}}',
-    start: 'Start',
-    duration: 'Duration (minutes)',
+    when: '{{date, datetime(dateStyle: full; timeStyle: short; timeZone: Europe/Paris)}}',
+    shortWhen: '{{date, datetime(dateStyle: medium; timeStyle: short; timeZone: Europe/Paris)}}',
+    facts: 'Interview {{number}} · {{minutes}} min',
     minutes: '{{minutes}} min',
+    past: 'Past',
+    documents: 'Documents of Interview {{number}}',
+    day: 'Day',
+    time: 'Time (Paris)',
+    duration: 'Duration (min)',
     place: 'Place',
     interviewers: 'Interviewers',
-    interviewersPlaceholder: 'Name, role, what you know about them',
-    startPlaceholder: '2026-11-19T14:00',
     placePlaceholder: 'Room 3 of the court, or by video',
-    newInterview: 'New Interview',
-    add: 'Add the Interview',
+    interviewersPlaceholder: 'Name, role, all you know about them: the Portrait starts from there.',
+    dialogDescription: 'The Application is Invited while an Interview is to come, then Interviewed.',
+    editTitle: 'Edit Interview {{number}}',
+    submitAdd: 'Add the Interview',
+    submitEdit: 'Save',
+    cancel: 'Cancel',
+    addedToast: 'Interview {{number}} added',
+    savedToast: 'Interview {{number}} saved',
+    deletedToast: 'Interview {{number}} deleted',
+    addedTitle: 'Interview added',
+    addedDescription:
+      'Add it to your calendar: the iCal file opens in Calendar, Google Calendar or Outlook, with a reminder the day before and an hour before.',
+    downloadIcal: 'Download the iCal file (.ics)',
+    later: 'Later',
+    seeInterview: 'See the Interview',
     edit: 'Edit Interview {{number}}',
-    save: 'Save the Interview',
     delete: 'Delete Interview {{number}}',
-    deleteForGood: 'Delete Interview {{number}} for good',
     ical: 'Add to calendar (iCal)',
+    deleteTitle: 'Delete Interview {{number}}?',
+    deleteDescription:
+      'Its Portrait and its Interview Brief go with it. The Application is Applied again if no Interview is left.',
+    keep: 'Keep',
+    confirmDelete: 'Delete',
   },
 
   // The iCal file of an Interview: the event in the calendar and the links its description gives
@@ -366,6 +386,7 @@ export const POSTING_EN = {
     summaryWithoutEmployer: 'Interview · {{title}}',
     officialAd: 'Official ad',
     postingPage: 'Job Finder page',
+    interviewers: 'Interviewers: {{interviewers}}',
     link: '{{label}}: {{url}}',
   },
 
@@ -430,12 +451,6 @@ export const POSTING_EN = {
   importLabel: 'Import a Job Description',
   importedPosting: 'Posting imported:',
   importedPostingNext: 'The worker reads its fields with Claude, then runs its Research.',
-  filtersLabel: 'Filters',
-  cityFilter: 'City',
-  regionFilter: 'Region',
-  allChoices: 'All',
-  showArchived: 'Show the Archived',
-  filter: 'Filter',
   mapLabel: 'Map of the Postings',
   unlocatedPostings_one: '{{count}} Posting without coordinates is not on the map.',
   unlocatedPostings_other: '{{count}} Postings without coordinates are not on the map.',

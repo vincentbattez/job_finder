@@ -1,3 +1,5 @@
+'use client';
+
 import { cn } from 'cn';
 import { XIcon } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
@@ -43,7 +45,7 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
 }) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation();
   return (
     <DialogPortal>
       <DialogOverlay />
