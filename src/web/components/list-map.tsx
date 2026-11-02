@@ -81,6 +81,10 @@ interface IListMapProperties {
   focusNonce: number;
   // The width the floating list covers on the left, in pixels: the view keeps its points beside it
   coveredLeft: number;
+  // The extent the view fits, a Region's, rather than the points'
+  fitCornerList: [[number, number], [number, number]] | undefined;
+  // Changes with the list's filters: the view fits again, even after the Candidate moved it
+  fitKey: string;
   onHover: (reference: string | null) => void;
   onSelect: (reference: string) => void;
   className?: string;
@@ -95,6 +99,8 @@ export function ListMap({
   activeReference,
   focusNonce,
   coveredLeft,
+  fitCornerList,
+  fitKey,
   onHover,
   onSelect,
   className,
@@ -107,10 +113,10 @@ export function ListMap({
   // Once the Candidate moved the view, a resize no longer fits it again
   const userMovedReference = useRef(false);
   // The handlers of the markers read the latest props without rebuilding the markers
-  const latest = useRef({ pointList, coveredLeft, onHover, onSelect });
-  latest.current = { pointList, coveredLeft, onHover, onSelect };
+  const latest = useRef({ pointList, coveredLeft, fitCornerList, onHover, onSelect });
+  latest.current = { pointList, coveredLeft, fitCornerList, onHover, onSelect };
 
-  // The view fits the points, mainland France first, the overseas ones when alone
+  // The view fits the Region filtered, else the points, mainland France first, the overseas ones when alone
   const fitView = useRef(() => {});
   fitView.current = () => {
     const current = mapReference.current;
@@ -124,7 +130,11 @@ export function ListMap({
     const mainland = leaflet.latLngBounds(MAINLAND_CORNER_LIST);
     const mainlandList = coordinateList.filter((coordinate) => mainland.contains(coordinate));
     const shownList = mainlandList.length > 0 ? mainlandList : coordinateList;
-    map.fitBounds(shownList.length > 0 ? leaflet.latLngBounds(shownList) : mainland, {
+    let bounds = shownList.length > 0 ? leaflet.latLngBounds(shownList) : mainland;
+    if (latest.current.fitCornerList !== undefined) {
+      bounds = leaflet.latLngBounds(latest.current.fitCornerList);
+    }
+    map.fitBounds(bounds, {
       maxZoom: FIT_MAX_ZOOM,
       animate: false,
       paddingTopLeft: [latest.current.coveredLeft + FIT_PADDING, FIT_PADDING_TOP],
@@ -221,6 +231,17 @@ export function ListMap({
       fitView.current();
     }
   }, [isReady, pointKey]);
+
+  // A filter changed: the view fits what it now shows, wherever the Candidate had moved it
+  const fitKeyReference = useRef(fitKey);
+  useEffect(() => {
+    if (!isReady || fitKeyReference.current === fitKey) {
+      return;
+    }
+    fitKeyReference.current = fitKey;
+    userMovedReference.current = false;
+    fitView.current();
+  }, [isReady, fitKey]);
 
   // The highlight: hovered, else active, else none; the hovered one opens its label
   useEffect(() => {

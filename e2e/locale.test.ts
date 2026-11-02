@@ -103,11 +103,6 @@ test('shows the tools of the Posting list in English to a Candidate with the en 
       .or(page.getByRole('region', { name: 'Detection in progress' })),
   ).toBeVisible();
   await expect(page.getByText('Import a Job Description')).toBeVisible();
-  const filters = page.getByRole('search', { name: 'Filters' });
-  await expect(filters.getByRole('combobox', { name: 'City' })).toBeVisible();
-  await expect(filters.getByRole('combobox', { name: 'Region' })).toBeVisible();
-  await expect(filters.getByRole('checkbox', { name: 'Show the Archived' })).toBeVisible();
-  await expect(filters.getByRole('button', { name: 'Filter' })).toBeVisible();
 });
 
 test('shows To Apply over the map in English to a Candidate with the en locale', async ({
@@ -125,6 +120,10 @@ test('shows To Apply over the map in English to a Candidate with the en locale',
   await expect(panel.getByRole('listitem')).toHaveText([/^Unknown place/]);
   await expect(panel.getByLabel('Research: none yet')).toBeVisible();
   await expect(page.getByText('1 Posting without a known place')).toBeVisible();
+  const filters = panel.getByRole('search', { name: 'Filters' });
+  await expect(filters.getByRole('combobox', { name: 'City: All cities' })).toBeVisible();
+  await expect(filters.getByRole('combobox', { name: 'Region' })).toHaveValue('');
+  await expect(filters.getByRole('button', { name: /^Archived/ })).toHaveAttribute('aria-pressed', 'false');
 });
 
 // Oliver reads the interface in English too, and owns the one Posting this test changes
@@ -136,11 +135,13 @@ test('takes a Candidate with the en locale through a Posting and its Status in E
   openPage,
 }) => {
   await asCandidate('oliver');
-  await openPage('/postings');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Oliver’s Postings');
-  await page.getByRole('checkbox', { name: 'Show the Archived' }).check();
-  await page.getByRole('button', { name: 'Filter' }).click();
-  await page.getByRole('link', { name: 'registry-officer-douai.md' }).click();
+  await openPage('/to-apply');
+  const link = page.getByRole('link', { name: 'registry-officer-douai.md' });
+  // Left Archived by a run stopped halfway: under the Archived filter
+  if (!(await link.isVisible())) {
+    await page.getByRole('button', { name: /^Archived/ }).click();
+  }
+  await link.click();
   const stepBadge = page.locator('main > header [data-step]');
   const unarchive = page.getByRole('button', { name: 'Unarchive' });
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('registry-officer-douai.md');

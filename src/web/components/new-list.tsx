@@ -7,7 +7,7 @@ import { Button } from '#/web/components/ui/button.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from '#/web/components/ui/tooltip.tsx';
 import { groupNew, type NewGroupKey } from '#/web/list-model.ts';
 
-import { MapList } from './map-list.tsx';
+import { MapList, type IMapListFiltering } from './map-list.tsx';
 
 export type NewItem = Awaited<ReturnType<Actions['listNew']>>[number];
 type Row = NewItem['posting'] & { isFound: boolean };
@@ -72,12 +72,18 @@ export function SortButtons({ onSort }: Readonly<{ onSort: (decision: SortDecisi
 
 // New over the map (spec #125 « Lists »): what the last Detection found first, then by the urgency of the
 // Deadline, each row telling its publication date, its Deadline and whether it is a Repost. Its sorting
-// comes from its Container, through renderActions.
+// comes from its Container, through renderActions; the Archived ones are sorted already.
 export function NewList({
   itemList,
   now,
   renderActions,
-}: Readonly<{ itemList: NewItem[]; now: Date; renderActions: (row: Row) => ReactNode }>) {
+  filtering,
+}: Readonly<{
+  itemList: NewItem[];
+  now: Date;
+  renderActions?: ((row: Row) => ReactNode) | undefined;
+  filtering?: IMapListFiltering | undefined;
+}>) {
   const { t } = useTranslation('lists');
   const shortDate = useShortDate();
   const rowList: Row[] = itemList.map(({ posting, isFound }) => ({ ...posting, isFound }));
@@ -125,6 +131,7 @@ export function NewList({
         </>
       )}
       renderActions={renderActions}
+      filtering={filtering}
     />
   );
 }

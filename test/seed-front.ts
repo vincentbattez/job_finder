@@ -315,6 +315,24 @@ for (const { id, name } of [
 }
 await actions.runQueuedJobs();
 
+// The lists' filters are e2e/list-filters.test.ts's own: Nora has six imported Postings, which the test
+// places, sorts and archives; Yara one, which it dismisses then finds under Archived
+await actions.createCandidate({ id: 'nora', name: 'Nora' });
+for (const index of [1, 2, 3, 4, 5, 6]) {
+  await actions.importJobDescription({
+    candidateId: 'nora',
+    fileName: `greffier-nora-${String(index)}.md`,
+    markdown: `# Greffier placé – Nora ${String(index)}\n`,
+  });
+}
+await actions.createCandidate({ id: 'yara', name: 'Yara' });
+await actions.importJobDescription({
+  candidateId: 'yara',
+  fileName: 'greffier-yara.md',
+  markdown: '# Greffier placé – Yara\n',
+});
+await actions.runQueuedJobs();
+
 // Paul, without Watch, has one imported Posting per journey of e2e/posting-page.test.ts, which finds
 // each by the reference its Markdown gives (e2e/paul.ts): one Interviewed, its Interview past, one
 // Invited, its Interview to come

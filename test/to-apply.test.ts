@@ -61,6 +61,20 @@ describe('To Apply list', () => {
     });
   });
 
+  it('lists the Archived To Apply Postings apart, under Archived', async () => {
+    const { actions } = await detectPostings();
+    for (const reference of [RENNES_REFERENCE, ARCHIVED_REFERENCE]) {
+      await actions.keep({ reference });
+    }
+    await actions.archive({ reference: ARCHIVED_REFERENCE });
+    // Archived while still New: it belongs to New's Archived, not To Apply's
+    await actions.archive({ reference: NEW_REFERENCE });
+
+    const itemList = await actions.listToApply({ candidateId: 'lea', isArchived: true });
+
+    expect(itemList.map(({ posting }) => posting.reference)).toEqual([ARCHIVED_REFERENCE]);
+  });
+
   it('refuses to list the To Apply Postings of an unknown Candidate', async () => {
     const { actions } = await detectPostings();
 

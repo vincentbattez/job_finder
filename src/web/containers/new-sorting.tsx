@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
+import type { IMapListFiltering } from '#/web/components/map-list.tsx';
 import { NewList, SortButtons, type NewItem, type SortDecision } from '#/web/components/new-list.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
@@ -61,8 +62,14 @@ function SortRequest({
 }
 
 // New and its sorting (spec #125 « Sorting New »): Keep and Dismiss on each row; a sorted
-// Posting leaves the list at once and comes back only if the sorting was refused
-export function NewSorting({ itemList, now }: Readonly<{ itemList: NewItem[]; now: Date }>) {
+// Posting leaves the list at once and comes back only if the sorting was refused. The Archived ones,
+// dismissed already, have nothing to sort.
+export function NewSorting({
+  itemList,
+  now,
+  isArchived,
+  filtering,
+}: Readonly<{ itemList: NewItem[]; now: Date; isArchived: boolean; filtering: IMapListFiltering }>) {
   const { t } = useTranslation('lists');
   const [sortList, setSortList] = useState<ISort[]>([]);
   const undoFetcher = useFetcher<IRefusal | null>();
@@ -81,13 +88,18 @@ export function NewSorting({ itemList, now }: Readonly<{ itemList: NewItem[]; no
       <NewList
         itemList={itemList.filter(({ posting }) => !sortingSet.has(posting.reference))}
         now={now}
-        renderActions={({ reference }) => (
-          <SortButtons
-            onSort={(decision) => {
-              setSortList((previousList) => [...previousList, { reference, decision }]);
-            }}
-          />
-        )}
+        renderActions={
+          isArchived
+            ? undefined
+            : ({ reference }) => (
+                <SortButtons
+                  onSort={(decision) => {
+                    setSortList((previousList) => [...previousList, { reference, decision }]);
+                  }}
+                />
+              )
+        }
+        filtering={filtering}
       />
       {sortList.map((sort) => (
         <SortRequest

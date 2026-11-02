@@ -27,6 +27,9 @@ import { findWorkerFailure } from './stalled-job.ts';
 
 const CANDIDATE_INPUT_SCHEMA = z.object({ candidateId: z.string() });
 
+// A list of the Candidate's Postings: the ones they follow, or under the Archived filter the Archived ones
+export const LIST_INPUT_SCHEMA = z.object({ isArchived: z.boolean().default(false) });
+
 export const REFERENCE_INPUT_SCHEMA = z.object({ reference: z.string() });
 
 // The Interview, by its number on the Posting, for an Artifact attached to one

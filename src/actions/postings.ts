@@ -16,7 +16,7 @@ import { STATE_BY_JOB_STATE } from '#/domain/state.ts';
 import { LETTER_MODULE } from '#/modules/letter/index.ts';
 import { hasBeenApplied, listStatusChoices } from '#/status/index.ts';
 
-import { ARTIFACT_INPUT_SCHEMA, REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
+import { ARTIFACT_INPUT_SCHEMA, LIST_INPUT_SCHEMA, REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
 import { foundReferencesOf } from './detect.ts';
 import { findWorkerFailure } from './stalled-job.ts';
 
@@ -63,24 +63,28 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
     },
 
     // What the Candidate sorts: the New Postings they have not dismissed, those the last Detection found
-    // flagged, which the list shows first (ADR-0018). Its count is the Sidebar's badge.
+    // flagged, which the list shows first (ADR-0018). Its count is the Sidebar's badge. Under the
+    // Archived filter, the dismissed ones instead, which stay New (ADR-0007).
     async listNew(rawInput: unknown): Promise<NewItem[]> {
       const candidate = await findCandidate(rawInput);
+      const { isArchived } = LIST_INPUT_SCHEMA.parse(rawInput);
       const postingList = await workspace.listPostings(candidate.id);
       const { last } = await workspace.findDetections(candidate.id);
       const foundReferenceSet = new Set(foundReferencesOf(last));
       return postingList
-        .filter(({ status, archivedAt }) => status === 'new' && archivedAt === null)
+        .filter(({ status, archivedAt }) => status === 'new' && (archivedAt !== null) === isArchived)
         .map((posting) => NEW_ITEM_SCHEMA.parse({ posting, isFound: foundReferenceSet.has(posting.reference) }));
     },
 
-    // What the Candidate prepares: the To Apply Postings they still follow, the list groups them
+    // What the Candidate prepares: the To Apply Postings they still follow, the list groups them; under
+    // the Archived filter, the Archived ones instead
     async listToApply(rawInput: unknown): Promise<ListItem[]> {
       const candidate = await findCandidate(rawInput);
+      const { isArchived } = LIST_INPUT_SCHEMA.parse(rawInput);
       const postingList = await workspace.listPostings(candidate.id);
       return Promise.all(
         postingList
-          .filter(({ status, archivedAt }) => status === 'to_apply' && archivedAt === null)
+          .filter(({ status, archivedAt }) => status === 'to_apply' && (archivedAt !== null) === isArchived)
           .map(async (posting) => {
             const [research, letter] = await Promise.all([
               artifacts.find({ posting, artifact: 'research' }),
