@@ -64,23 +64,23 @@ test('shows the Instructions and the Settings in English to a Candidate with the
   openPage,
 }) => {
   await asCandidate('emma');
-  await openPage('/instructions');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Instructions');
-  await expect(page).toHaveTitle('Instructions · Job Finder');
-  const letter = page.getByRole('region', { name: 'Letter' });
-  await expect(letter.getByText('Default Instructions', { exact: true })).toBeVisible();
-  // The default Instructions of her locale; the Letter itself is written in the Job Description's
-  await expect(letter.getByRole('textbox')).toHaveValue(/^Write a one-page cover letter/);
-  await expect(letter.getByRole('button', { name: 'Save my Instructions' })).toBeVisible();
-
+  await openPage('/');
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Settings');
   await expect(page).toHaveTitle('Settings · Job Finder');
   await expect(page.getByRole('heading', { level: 2 })).toHaveText([
     'Notifications',
+    'Instructions',
     'Candidates',
     'Default Deadline Period',
   ]);
+  // The default Instructions of her locale; the Letter itself is written in the Job Description's
+  const instructions = page.getByRole('region', { name: 'Instructions', exact: true });
+  const letter = instructions.getByRole('region', { name: 'Letter' });
+  await expect(letter.getByText('Default Instructions', { exact: true })).toBeVisible();
+  await expect(letter.getByRole('textbox', { name: 'Instructions · Letter' })).toHaveValue(
+    /^Write a one-page cover letter/,
+  );
   const notifications = page.getByRole('region', { name: 'Notifications', exact: true });
   await expect(notifications.getByRole('combobox', { name: 'Notification Channel' })).toHaveValue('home-assistant');
   await expect(notifications.getByRole('textbox', { name: 'Home Assistant address' })).toBeVisible();

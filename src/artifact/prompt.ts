@@ -1,13 +1,10 @@
 import { INPUT_HEADING_PREFIX, INPUTS_HEADING, INSTRUCTIONS_HEADING, type IPromptInput } from '#/ai-module/index.ts';
 import type { Artifact, Posting } from '#/domain/index.ts';
+import { MARK_END, MARK_START } from '#/domain/substitution.ts';
 
 import type { IInput } from './inputs.ts';
 
-// Private-use characters around each value a composer substitutes in its Fixed Part, which the generation
-// panel highlights; the run's Fixed Part carries none (spec #125)
-export const MARK_START = '';
-export const MARK_END = '';
-
+// Each value a composer substitutes, marked for the generation panel to highlight (spec #125)
 export const markSubstitution: IPromptInput['mark'] = (value) => `${MARK_START}${value}${MARK_END}`;
 
 export const leaveUnmarked: IPromptInput['mark'] = (value) => value;

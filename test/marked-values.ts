@@ -1,4 +1,4 @@
-import { MARK_END, MARK_START } from '#/artifact/prompt.ts';
+import { MARK_END, MARK_START } from '#/domain/substitution.ts';
 
 // The values a marked Fixed Part highlights, in order
 export function markedValuesOf(markedFixedPart = ''): string[] {
