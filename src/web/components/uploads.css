@@ -1,5 +1,5 @@
 /* The PDFs of the Profile, kept as dropped: one row each, name and date, deletion folded */
-@layer components {
+@layer poc {
   .uploads h2 {
     font: 600 var(--text-md) / 1.4 var(--font-body);
   }

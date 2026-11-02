@@ -20,16 +20,18 @@ colors:
   dark-muted: 'oklch(0.269 0 0)'
   dark-muted-foreground: 'oklch(0.708 0 0)'
   dark-border: 'oklch(1 0 0 / 10%)'
-  dark-primary: 'oklch(0.585 0.2 262)'
+  dark-primary: 'oklch(0.68 0.17 258)'
+  dark-primary-foreground: 'oklch(0.145 0 0)'
   dark-destructive: 'oklch(0.704 0.191 22.216)'
-  state-validated: 'oklch(59.6% 0.145 163.225)'
-  state-pending: 'oklch(76.9% 0.188 70.08)'
+  draft: '{colors.primary}'
+  validated: 'oklch(59.6% 0.145 163.225)'
+  pending: 'oklch(76.9% 0.188 70.08)'
   urgency-week: 'oklch(64.5% 0.246 16.439)'
   step-applied: 'oklch(68.5% 0.169 237.323)'
   step-invited: 'oklch(60.6% 0.25 292.717)'
   step-interviewed: 'oklch(58.5% 0.233 277.117)'
   step-closed: 'oklch(55.2% 0.016 285.938)'
-  substituted-value: 'oklch(60.6% 0.25 292.717)'
+  substituted-value: 'oklch(59.1% 0.293 322.896)'
 typography:
   display:
     fontFamily: "'Inter Variable', ui-sans-serif, system-ui, sans-serif"
@@ -45,9 +47,9 @@ typography:
     letterSpacing: '-0.025em'
   title:
     fontFamily: "'Inter Variable', ui-sans-serif, system-ui, sans-serif"
-    fontSize: '1.125rem'
+    fontSize: '1.25rem'
     fontWeight: 600
-    lineHeight: 1.375
+    lineHeight: 1.4
   body:
     fontFamily: "'Inter Variable', ui-sans-serif, system-ui, sans-serif"
     fontSize: '0.875rem'
@@ -55,7 +57,7 @@ typography:
     lineHeight: 1.43
   reading:
     fontFamily: "'Inter Variable', ui-sans-serif, system-ui, sans-serif"
-    fontSize: '1rem'
+    fontSize: '1.0625rem'
     fontWeight: 400
     lineHeight: 1.75
   label:
@@ -143,14 +145,14 @@ components:
     rounded: '{rounded.xl}'
     width: '768px'
   substituted-value:
-    backgroundColor: 'oklch(60.6% 0.25 292.717 / 12%)'
+    backgroundColor: 'oklch(59.1% 0.293 322.896 / 12%)'
     rounded: '3px'
     padding: '0 2px'
 ---
 
 # Design System: Job Finder
 
-Derived on 2026-11-02 from the shipped code and the rendering, light and dark, of the V1 prototype the product owner validated (branch `prototype/v1-ux`, `src/web/prototype/`, its `DECISIONS.md` and Verdicts). The prototype is the visual authority; the POC front still on this branch (BEM stylesheets, `src/web/app.css` and its Hallmark stamp) is an anti-reference. Product truth lives in `PRODUCT.md`; French UI copy is quoted in « ».
+Derived on 2026-11-02 from the shipped code and the rendering, light and dark, of the V1 prototype the product owner validated (branch `prototype/v1-ux`, `src/web/prototype/`, its `DECISIONS.md` and Verdicts). The prototype is the visual authority; the POC pages still on this branch (BEM stylesheets quarantined in the `poc` cascade layer) are an anti-reference. Product truth lives in `PRODUCT.md`; French UI copy is quoted in « ».
 
 ## Overview
 
@@ -177,7 +179,7 @@ A neutral shadcn base (achromatic OKLCH greys) with one saturated blue, plus a s
 
 ### Primary
 
-- **Copilot Blue** (`primary`, `dark-primary` in dark mode): the one accent. The primary button of a view, the active Sidebar badge, the New count, links, the focus ring (at 55 to 60%), the active rail step, the map pin icon before each City, and every Draft that waits for validation (its dot, badge, banner and « Valider » button).
+- **Copilot Blue** (`primary`, `dark-primary` in dark mode): the one accent. The primary button of a view, the active Sidebar badge, the New count, links, the focus ring (at 55 to 60%), the active rail step, the map pin icon before each City, and every Draft that waits for validation (its dot, badge, banner and « Valider » button), wherever it shows: the `draft` token. In dark mode it is lighter, with `dark-primary-foreground` (near-black) text on it, so both blue text on the dark surfaces and text on a blue fill reach 4.5:1 (white on the former dark blue read 4.1:1).
 
 ### Neutral
 
@@ -190,16 +192,17 @@ A neutral shadcn base (achromatic OKLCH greys) with one saturated blue, plus a s
 
 ### State hues
 
-They are the only other colors on screen, and each always means the same state. In the prototype they are raw Tailwind classes (`emerald-600`, `amber-500`…); the V1 turns them into semantic tokens before using them.
+They are the only other colors on screen, and each always means the same state. They are semantic tokens of `src/web/app.css`, each with a `-foreground` text shade (Tailwind classes `bg-validated/10 text-validated-foreground`…), never raw palette classes.
 
-- **Validated Green** (`state-validated`, emerald): a Validated Version, a Hired outcome, a finished step, the « tip » Callout.
-- **Pending Amber** (`state-pending`, amber): a Draft waiting in a list chip and in the Sheet, a Deadline within the month, unsaved Instructions, the « warning » Callout.
+- **Draft Blue** (`draft`, the `primary`): a Draft, everywhere: the Posting page, the list chips and the Sheet.
+- **Validated Green** (`validated`, emerald): a Validated Version, a Hired outcome, a finished step, the « tip » Callout.
+- **Pending Amber** (`pending`, amber): a Deadline within the month, unsaved Instructions, the « warning » Callout.
 - **Week Red** (`urgency-week`, rose): a Deadline within seven days.
 - **Applied Sky** (`step-applied`, sky): the Applied Step, and the Repost notice.
 - **Invited Violet** (`step-invited`, violet): the Invited Step.
 - **Interviewed Indigo** (`step-interviewed`, indigo): the Interviewed Step.
 - **Closed Zinc** (`step-closed`, zinc): Rejected, a passed or missing Deadline.
-- **Substitution Violet** (`substituted-value`): a value the tool substituted into a Prompt's Fixed Part.
+- **Substitution Fuchsia** (`substituted`, fuchsia): a value the tool substituted into a Prompt's Fixed Part; never violet, which is Invited's.
 - **Destructive Red** (`destructive`): failures, blockers and destructive confirmations only; it is never a state hue.
 
 Tints follow one recipe: a 10 to 12% fill of the hue, its 700 shade for text (300 in dark mode), and a 25 to 40% border when the element has one.
@@ -210,12 +213,14 @@ Tints follow one recipe: a 10 to 12% fill of the hue, its 700 shade for text (30
 
 **The State Hue Rule.** A non-neutral hue other than blue always encodes a state from the glossary, and always comes with its label or icon: a colored dot or chip never stands alone.
 
+### Settled by the V1
+
+- One Draft hue: blue, the accent, wherever a Draft shows; the prototype's amber Draft chip in the lists and the Sheet is gone.
+- A substituted value is fuchsia, no longer Invited's violet.
+- Dark `primary` reaches 4.5:1 as text and under its `primary-foreground`.
+
 ### Open in the prototype
 
-The V1 settles these before tokenizing the states:
-
-- A Draft is blue on the Posting page (tab dot, toolbar badge, banner) but amber in the list chips and the Sheet (« Brouillon v2 · à valider »).
-- Violet means both Invited and a substituted value.
 - The Step badge is a neutral `secondary` badge in the Posting header but a tinted one in the Sheet.
 
 ## Typography
@@ -228,12 +233,14 @@ The V1 settles these before tokenizing the states:
 
 ### Hierarchy
 
+Each step is distinct from the next, 12, 14, 17 then 20px for label, body, reading and title (a flat 12/14/16 before the V1); each is a Tailwind `text-*` token with its line height.
+
 - **Display** (600, 3rem, tabular figures): the countdown of the Revision header only; 2.25rem below `sm`.
 - **Headline** (600, 1.7rem, line height 1.25, tracking -0.025em): the title of an Artifact in reading mode. Its h2 is 1.35rem with 3.5rem above, its h3 1.08rem. The Revision header's date is 1.875rem.
-- **Title** (600, 1.125rem): the Sheet's title, a Dialog's title, an Interview's date. A page header's title is 1rem semibold with a 0.875rem muted description line, both truncated to one line.
-- **Body** (400 or 500, 0.875rem): all UI text, rows, buttons, menus. Secondary lines are 0.75rem muted.
-- **Reading** (400, 1rem, line height 1.75): Artifacts through Tailwind Typography (`prose prose-neutral dark:prose-invert`), at most 72ch. The Letter reads larger, `prose-lg` (1.125rem), as a page.
-- **Label** (500, 0.75rem, uppercase, tracking 0.025em, muted): the small capital headings of the Sheet and the panels (« Documents », « Contacts »). In primary for the Revision header's eyebrow line.
+- **Title** (600, 1.25rem, `text-title`): the Sheet's title, a Dialog's title, an Interview's date. A page header's title is 1rem semibold with a 0.875rem muted description line, both truncated to one line.
+- **Body** (400 or 500, 0.875rem, `text-body`): all UI text, rows, buttons, menus. Secondary lines are 0.75rem muted.
+- **Reading** (400, 1.0625rem, line height 1.75, `text-reading`): Artifacts through Tailwind Typography (`prose prose-neutral dark:prose-invert`), at most 72ch. The Letter reads larger, `prose-lg` (1.125rem), as a page.
+- **Label** (500, 0.75rem, `text-label`, uppercase, tracking 0.025em, muted): the small capital headings of the Sheet and the panels (« Documents », « Contacts »). In primary for the Revision header's eyebrow line.
 - **Mono** (0.6875rem, muted): the Posting's reference in the Sheet's corner.
 
 ### Named Rules
@@ -288,7 +295,7 @@ Gently rounded throughout from one base radius (10px): 8px controls (buttons, in
 ### Badges and chips
 
 - **Badge:** a 20px pill, 12px medium text. `secondary` for neutral states, `outline` for quiet ones, a state tint for Steps.
-- **Artifact chips:** in list rows, « R » and « LM » pills (Research, Letter) in outline; Validated adds a check and the green tint, a Draft an amber dot.
+- **Artifact chips:** in list rows, « R » and « LM » pills (Research, Letter) in outline; Validated adds a check and the green tint, a Draft a blue dot.
 - **Version state:** a Draft is an outline badge in `primary` with a 6px dot (« Brouillon »); the Chosen Version a `secondary` badge with a check (« Validée · retenue »).
 
 ### Cards / Containers
@@ -306,7 +313,7 @@ Gently rounded throughout from one base radius (10px): 8px controls (buttons, in
 
 ### Navigation (Sidebar)
 
-The Candidate switcher heads it: a 32px rounded-square avatar in `primary` with the initial, the name and « Candidat », a chevron opening the Candidates menu; switching keeps the page. Below, New, To Apply and Applications, New carrying a `primary` pill with the count to sort; a separator; Profile, Watches, Settings. The active item takes `sidebar-accent`. The footer holds the theme toggle. Collapsed, only icons remain, with tooltips.
+The Candidate switcher heads it: a 32px rounded-square avatar in `primary` with the initial, the name and « Candidat », a chevron opening the Candidates menu; switching keeps the page. Below, New, To Apply and Applications, New carrying a `primary` pill with the count to sort; a separator; Profile, Watches, Settings. The active item takes `sidebar-accent`. The footer holds the Locale Switcher (FR and EN, the current one in `secondary`) and the theme toggle on its right. Collapsed, only icons remain, with tooltips, and the footer stacks.
 
 ### Map-first list (signature)
 
@@ -334,7 +341,7 @@ Clicking « Générer » never runs: it opens a Dialog (768px wide, as tall as `
 
 ### Substituted values (signature)
 
-Inside the Fixed Part, each value the tool substituted (reference, title, employer, place, file paths, Interview details) is a `mark`: violet at 12%, violet text (700 shade light, 200 dark), a 1px inset violet ring at 30%, a 3px radius. A legend chip above the text reads « surligné : remplacé automatiquement pour cette Offre ».
+Inside the Fixed Part, each value the tool substituted (reference, title, employer, place, file paths, Interview details) is a `mark`: fuchsia at 12%, fuchsia text (`substituted-foreground`: 700 shade light, 300 dark), a 1px inset fuchsia ring at 30%, a 3px radius. A legend chip above the text reads « surligné : remplacé automatiquement pour cette Offre ».
 
 ### Revision header
 
@@ -342,7 +349,7 @@ A sticky header with a back arrow, « Réviser l'Entretien N », the Posting's t
 
 ### Feedback
 
-- **Toasts:** Sonner, bottom-right, with a close button; every mutation ends in one, success or failure.
+- **Toasts:** Sonner, bottom-right, with a close button; every mutation ends in one: its success, or the message of the Error Code it was refused with. A Container posts it through a fetcher and `useFeedback` (`src/web/containers/use-feedback.ts`); its button takes `isPending` meanwhile.
 - **Confirmation:** an AlertDialog before every destructive action (archive, delete an Interview), its confirm button in the Destructive style. Marking Applied while the Letter is a Draft offers two paths: « Valider la Lettre de motivation et marquer Postulée » or « Marquer Postulée sans Lettre de motivation ».
 - **Empty state:** a dashed 18px card, a 44px `muted` circle with a sparkles icon, a title, one line on what the Artifact is for, and its actions.
 

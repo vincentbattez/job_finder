@@ -1,4 +1,4 @@
-@layer components {
+@layer poc {
   /* The Reference of a linked Posting, in DM Mono like every Reference */
   .repost__reference {
     font-family: var(--font-outlier);

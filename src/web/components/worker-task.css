@@ -1,5 +1,5 @@
 /* The state of a task, the button that starts it, then why it waits or what failed, a line each */
-@layer components {
+@layer poc {
   .worker-task {
     display: flex;
     flex-wrap: wrap;

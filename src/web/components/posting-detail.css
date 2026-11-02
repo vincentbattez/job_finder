@@ -1,5 +1,5 @@
 /* The label above its Artifacts, beside the contacts, the recipients and the Job Description */
-@layer components {
+@layer poc {
   .posting-detail {
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);

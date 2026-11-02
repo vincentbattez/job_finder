@@ -1,5 +1,5 @@
 /* The filters under the title, in the plain controls of the Candidate menu */
-@layer components {
+@layer poc {
   .posting-filters {
     display: flex;
     flex-wrap: wrap;

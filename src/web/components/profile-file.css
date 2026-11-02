@@ -1,5 +1,5 @@
 /* Each file of the Profile, named as on disk */
-@layer components {
+@layer poc {
   .profile-file {
     display: grid;
     gap: var(--space-md);

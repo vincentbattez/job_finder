@@ -1,5 +1,5 @@
 /* The drop zone of a file, such as a Job Description or an Upload: a dashed tray that lights up under a file */
-@layer components {
+@layer poc {
   .drop-zone {
     display: grid;
     justify-items: start;

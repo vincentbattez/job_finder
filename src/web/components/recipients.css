@@ -1,4 +1,4 @@
-@layer components {
+@layer poc {
   /* Each recommendation names the raw contact it comes from, as a small tag after it */
   .recipients {
     display: grid;

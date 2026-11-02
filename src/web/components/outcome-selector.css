@@ -1,4 +1,4 @@
-@layer components {
+@layer poc {
   /* The outcomes of an Application side by side, the current one filled like the Locale Switcher's */
   .outcome-selector {
     display: flex;

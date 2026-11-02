@@ -1,6 +1,6 @@
 /* A point per Posting in its status's color, ringed in white to stand out of the tiles; an
    Archived or Unpublished keeps the dashed rim of its badge */
-@layer components {
+@layer poc {
   .posting-map {
     display: grid;
     gap: var(--space-md);

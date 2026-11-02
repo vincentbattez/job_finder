@@ -1,5 +1,5 @@
 /* The Postings of the Candidate, one row each */
-@layer components {
+@layer poc {
   .posting-list {
     width: 100%;
     border-collapse: collapse;

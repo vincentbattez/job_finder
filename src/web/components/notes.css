@@ -1,5 +1,5 @@
 /* Between the Posting and its Artifacts, the Candidate's own words under a hairline rule */
-@layer components {
+@layer poc {
   .notes {
     display: grid;
     align-content: start;

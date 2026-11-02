@@ -27,7 +27,7 @@ export function showStatus({ step, isExpired }: Pick<IShownPosting, 'step' | 'is
 }
 
 // Archived is a mark beside the Status, which it keeps (ADR-0007): its own badge, next to the Status one
-export function ArchivedBadge() {
+function ArchivedBadge() {
   const { t } = useTranslation();
   return (
     <span className="badge" data-archived="">
@@ -37,7 +37,7 @@ export function ArchivedBadge() {
 }
 
 // Unpublished is a mark beside the Status too, which it keeps: its own badge, in the look of Archived
-export function UnpublishedBadge() {
+function UnpublishedBadge() {
   const { t } = useTranslation();
   return (
     <span className="badge" data-unpublished="">
@@ -60,7 +60,7 @@ export function StatusBadge(posting: Readonly<IShownPosting>) {
   );
 }
 
-export { STATE_LIST, type State } from '#/actions/state.ts';
+export { type State } from '#/actions/state.ts';
 
 export function StateBadge({ state }: Readonly<{ state: State }>) {
   const { t } = useTranslation('posting');

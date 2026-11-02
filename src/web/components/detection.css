@@ -1,6 +1,6 @@
 /* The Detection beside the name of the list: the button, then a panel with a surface and a title,
  * its progress while one runs or the verdict of the last one (#63) */
-@layer components {
+@layer poc {
   .detection {
     display: grid;
     justify-items: start;

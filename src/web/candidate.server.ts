@@ -22,6 +22,13 @@ export function rememberCandidate(candidateId: unknown): Promise<string> {
   return CANDIDATE_COOKIE.serialize(candidateId);
 }
 
+// The page a switch was posted from, to show again: only the path of the Referer, never another site,
+// since a path starting with // would lead to one
+export function backUrlOf(request: Request): string {
+  const { pathname, search } = new URL(request.headers.get('Referer') ?? '/', request.url);
+  return `/${pathname.replace(/^\/+/, '')}${search}`;
+}
+
 export function rememberLocale(locale: Locale): Promise<string> {
   return LOCALE_COOKIE.serialize(locale);
 }

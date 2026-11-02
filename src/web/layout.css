@@ -1,67 +1,10 @@
-/* The frame of every screen: the top bar with its wordmark and nav, and the page it tops */
+/* The frame of the POC pages, inside the V1 shell until their ticket replaces them (ADR-0017) */
 .container {
   width: 100%;
   max-width: var(--container);
   margin-inline: auto;
   padding-inline: var(--gutter);
   box-sizing: border-box;
-}
-
-.topbar {
-  border-bottom: var(--rule-hair) solid var(--color-rule);
-}
-
-.topbar .container {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-xs) var(--space-md);
-  min-height: 56px;
-  padding-block: var(--space-xs);
-}
-
-.wordmark {
-  font: var(--display-weight) var(--text-lg) / 1 var(--font-display);
-  letter-spacing: var(--tracking-display);
-  text-decoration: none;
-}
-
-.topbar__end {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-xs) var(--space-md);
-}
-
-/* The pages of the Candidate chosen in the menu: their Postings, their Profile, their Instructions */
-.topbar__nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2xs) var(--space-md);
-}
-
-.topbar__nav a {
-  padding-block: var(--space-2xs);
-  border-bottom: 2px solid transparent;
-  color: var(--color-ink-2);
-  font-weight: 500;
-  text-decoration: none;
-  transition: border-color var(--dur-short) var(--ease-out);
-}
-
-.topbar__nav a:hover {
-  border-bottom-color: var(--color-rule);
-}
-
-.topbar__nav a[aria-current='page'] {
-  border-bottom-color: var(--color-accent);
-  color: var(--color-ink);
-}
-
-/* Pressed, a link of the nav takes the deep accent like every other link of base */
-.topbar__nav a:active {
-  color: var(--color-accent-deep);
 }
 
 .page {
@@ -84,20 +27,4 @@
 
 .page__head p {
   color: var(--color-ink-2);
-}
-
-/* The samples of /design: the Detection panels stacked */
-.design-detection {
-  display: grid;
-  gap: var(--space-md);
-}
-
-/* The samples of /design: the badges side by side, as no component lists them */
-.badge-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }

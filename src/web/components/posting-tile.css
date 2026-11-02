@@ -1,5 +1,5 @@
 /* A Posting as a card: its title, then who and where, its dates in DM Mono below a dashed stub */
-@layer components {
+@layer poc {
   .posting-tile {
     display: grid;
     align-content: start;

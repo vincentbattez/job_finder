@@ -82,7 +82,7 @@ test.describe('/applications', () => {
     await expect(page).toHaveURL('/applications');
   });
 
-  test('is reached from the home and from the menu', async ({ page, asCandidate, openPage }) => {
+  test('is reached from the home and from the Sidebar', async ({ page, asCandidate, openPage }) => {
     await asCandidate('lea');
     await openPage('/');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Léa');
@@ -91,7 +91,8 @@ test.describe('/applications', () => {
     await expect(page).toHaveURL('/applications');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Candidatures de Léa');
 
-    await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Accueil' }).click();
+    await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Nouvelles' }).click();
+    await expect(page).toHaveURL('/');
     await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Candidatures' }).click();
     await expect(page).toHaveURL('/applications');
   });

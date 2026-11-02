@@ -22,6 +22,7 @@ export const COMMON_FR: typeof COMMON_EN = {
   date: '{{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
   dateTime: '{{date, datetime(dateStyle: medium; timeStyle: short; timeZone: Europe/Paris)}}',
   missingDate: 'Non précisée',
+  close: 'Fermer',
   localeSwitcherLabel: 'Langue',
   localeLabelByLocale: {
     fr: 'Français',

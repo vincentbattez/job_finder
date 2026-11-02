@@ -1,5 +1,5 @@
 /* An Application as a card: its title and where, its outcome beside its step, then its facts */
-@layer components {
+@layer poc {
   .application-row {
     display: grid;
     gap: var(--space-sm);

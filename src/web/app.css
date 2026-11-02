@@ -1,16 +1,215 @@
-/* Hallmark · shape: app screen · genre: modern-minimal · theme: Dose (deal 3/3, seed soft-friendly-app-track-8518·cf75787d·2026-10-29·r0)
- * nav: a top bar, the wordmark, the Candidate's pages (Postings, Profile, Instructions: #14) and the Candidate menu (#11) · signature: the Posting label, reference and Deadline in DM Mono over a dashed stub, above four plastic Artifact compartments · states: full and empty list, the four states · dose: white
- * axes: light/grotesk-sans/chromatic-green · posture: committed · contrast: pass · v2.0.0 */
-/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a list and a Posting page fit any tracker; the Posting became a pharmacy label with its Artifacts as an organizer's compartments */
-/* Hallmark · deviation: Expired and Failed are red, against Dose's grey for a missed state, because the map of issue #20 asks red for Expired · no fibre grain: an app screen takes the theme's surfaces, not its ornament */
-/* Hallmark · finish-review: subagent · 8 findings · 5 resolved 3 partial · gap: the list's loading and error states and the empty list's action (#12) */
-/* Hallmark · update #63: the Detection's states, a progress panel (determinate bar, sweep until the total, still hatching without motion) and a verdict panel each (none new, new, first launch, failure), sampled on /design · sweep: sloplint --scope app --render 0 FAIL */
-/* The cascade order, once: a rule wins by its layer before its specificity or its line */
-@layer vendor, tokens, base, layout, components, utilities;
+/* The V1 front: Tailwind v4 and shadcn's CSS-variable tokens, light and dark through the .dark class
+ * that next-themes sets on <html> (ADR-0017). The values are DESIGN.md's. */
 
-@import url('leaflet/dist/leaflet.css') layer(vendor);
-@import url('./tokens.css') layer(tokens);
-@import url('./base.css') layer(base);
-@import url('./layout.css') layer(layout);
-@import url('./controls.css') layer(components);
-@import url('./utilities.css') layer(utilities);
+/* The cascade order, once. The POC's BEM stylesheets sit in the poc layer, below every Tailwind layer:
+ * they keep the POC pages working until their ticket replaces them, and can never override a
+ * shadcn style. Leaflet's own !important guards keep its tiles out of Tailwind's preflight. */
+@layer vendor, poc, theme, base, components, utilities;
+
+@import 'leaflet/dist/leaflet.css' layer(vendor);
+@import './tokens.css' layer(poc);
+@import './base.css' layer(poc);
+@import './layout.css' layer(poc);
+@import './controls.css' layer(poc);
+@import './utilities.css' layer(poc);
+
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/inter';
+
+/* prose, dark:prose-invert: the reading mode of the Artifacts and the Letter */
+@plugin '@tailwindcss/typography';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+
+  /* The type scale: each step distinct from the next (DESIGN.md « Typography ») */
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.33;
+  --text-label--letter-spacing: 0.025em;
+  --text-label--font-weight: 500;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.43;
+  --text-reading: 1.0625rem;
+  --text-reading--line-height: 1.75;
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.4;
+  --text-title--font-weight: 600;
+  --text-headline: 1.75rem;
+  --text-headline--line-height: 1.25;
+  --text-headline--letter-spacing: -0.025em;
+  --text-headline--font-weight: 600;
+  --text-display: 3rem;
+  --text-display--line-height: 1;
+  --text-display--letter-spacing: -0.025em;
+  --text-display--font-weight: 600;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* The state hues: each always means the same state of GLOSSARY.md, with its label or icon. The
+   * hue fills and borders; its -foreground is the text shade, 700 in light, 300 in dark. */
+  --color-draft: var(--draft);
+  --color-draft-foreground: var(--draft-foreground);
+  --color-validated: var(--validated);
+  --color-validated-foreground: var(--validated-foreground);
+  --color-pending: var(--pending);
+  --color-pending-foreground: var(--pending-foreground);
+  --color-urgency-week: var(--urgency-week);
+  --color-urgency-week-foreground: var(--urgency-week-foreground);
+  --color-step-applied: var(--step-applied);
+  --color-step-applied-foreground: var(--step-applied-foreground);
+  --color-step-invited: var(--step-invited);
+  --color-step-invited-foreground: var(--step-invited-foreground);
+  --color-step-interviewed: var(--step-interviewed);
+  --color-step-interviewed-foreground: var(--step-interviewed-foreground);
+  --color-step-closed: var(--step-closed);
+  --color-step-closed-foreground: var(--step-closed-foreground);
+  --color-substituted: var(--substituted);
+  --color-substituted-foreground: var(--substituted-foreground);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Only what floats gets more than the whisper (DESIGN.md « Elevation & Depth ») */
+  --shadow-whisper: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-float: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-sheet: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-drawer: 0 -8px 30px rgb(0 0 0 / 0.12);
+  --shadow-marker: 0 1px 3px rgb(0 0 0 / 0.45);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  /* The one accent */
+  --primary: oklch(0.488 0.217 264.376);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.488 0.217 264.376 / 55%);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.955 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: var(--ring);
+
+  /* A Draft is the accent, wherever it shows */
+  --draft: var(--primary);
+  --draft-foreground: var(--primary);
+  --validated: oklch(0.596 0.145 163.225);
+  --validated-foreground: oklch(0.508 0.118 165.612);
+  --pending: oklch(0.769 0.188 70.08);
+  --pending-foreground: oklch(0.555 0.163 48.998);
+  --urgency-week: oklch(0.645 0.246 16.439);
+  --urgency-week-foreground: oklch(0.514 0.222 16.935);
+  --step-applied: oklch(0.685 0.169 237.323);
+  --step-applied-foreground: oklch(0.5 0.134 242.749);
+  --step-invited: oklch(0.606 0.25 292.717);
+  --step-invited-foreground: oklch(0.491 0.27 292.581);
+  --step-interviewed: oklch(0.585 0.233 277.117);
+  --step-interviewed-foreground: oklch(0.457 0.24 277.023);
+  --step-closed: oklch(0.552 0.016 285.938);
+  --step-closed-foreground: oklch(0.37 0.013 285.805);
+  /* Fuchsia: a substituted value never reads as the Invited Step */
+  --substituted: oklch(0.591 0.293 322.896);
+  --substituted-foreground: oklch(0.518 0.253 323.949);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  /* Lighter than in light mode, with dark text on it: 4.5:1 at least both as text and under text */
+  --primary: oklch(0.68 0.17 258);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.68 0.17 258 / 60%);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+
+  --validated-foreground: oklch(0.845 0.143 164.978);
+  --pending-foreground: oklch(0.879 0.169 91.605);
+  --urgency-week-foreground: oklch(0.81 0.117 11.638);
+  --step-applied-foreground: oklch(0.828 0.111 230.318);
+  --step-invited-foreground: oklch(0.811 0.111 293.571);
+  --step-interviewed-foreground: oklch(0.785 0.115 274.713);
+  --step-closed-foreground: oklch(0.871 0.006 286.286);
+  --substituted-foreground: oklch(0.833 0.145 321.434);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+  }
+
+  body {
+    @apply bg-background text-body text-foreground antialiased;
+  }
+}

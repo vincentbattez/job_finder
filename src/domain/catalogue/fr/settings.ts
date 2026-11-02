@@ -2,23 +2,11 @@ import type { SETTINGS_EN } from '#/domain/catalogue/en/settings.ts';
 
 export const SETTINGS_FR: typeof SETTINGS_EN = {
   layout: {
-    navigationLabel: 'Pages',
-    homeLink: 'Accueil',
-    applicationsLink: 'Candidatures',
-    postingsLink: 'Offres',
-    profileLink: 'Profil',
-    instructionsLink: 'Consignes',
-    candidatesLink: 'Candidats',
     notFoundHeading: 'Page introuvable',
     notFoundHint: 'Cette adresse ne mène à aucune page du front.',
     errorHeading: 'Cette page n’a pas pu s’afficher',
     errorHint: 'Rechargez la page. Si l’erreur revient, les journaux du front disent ce qui a échoué.',
     errorCode: 'Code d’erreur : {{errorCode}}',
-  },
-  menu: {
-    candidateLabel: 'Candidat',
-    namePlaceholder: 'Votre nom',
-    choose: 'Choisir',
   },
   unsavedChanges: 'Modifications non enregistrées',
   candidates: {
@@ -49,7 +37,7 @@ export const SETTINGS_FR: typeof SETTINGS_EN = {
     pageTitle: 'Profil · Job Finder',
     noCandidateHeading: 'Qui consulte son Profil ?',
     noCandidateHintStart:
-      'Choisissez votre nom dans le menu en haut de la page. Le front s’en souviendra. Pas encore dans le menu ? La page',
+      'Choisissez votre nom en tête du menu. Le front s’en souviendra. Pas encore dans le menu ? La page',
     noCandidateHintLink: 'Candidats',
     noCandidateHintEnd: 'vous y ajoute.',
     heading: 'Profil de {{candidateName}}',
@@ -134,7 +122,7 @@ export const SETTINGS_FR: typeof SETTINGS_EN = {
   instructions: {
     pageTitle: 'Consignes · Job Finder',
     noCandidateHeading: 'Qui consulte ses Consignes ?',
-    noCandidateHint: 'Choisissez votre nom dans le menu en haut de la page. Le front s’en souviendra.',
+    noCandidateHint: 'Choisissez votre nom en tête du menu. Le front s’en souviendra.',
     heading: 'Consignes de {{candidateName}}',
     intro:
       'Les Consignes disent à chaque module comment produire son Artefact. Les vôtres remplacent celles par défaut pour ses prochaines Versions. Ses règles fixes, comme ne jamais inventer un fait, s’appliquent toujours.',
@@ -147,18 +135,5 @@ export const SETTINGS_FR: typeof SETTINGS_EN = {
     save: 'Enregistrer mes Consignes',
     backToDefault: 'Revenir aux Consignes par défaut',
     showDefault: 'Voir les Consignes par défaut',
-  },
-  design: {
-    pageTitle: 'Système de design de Job Finder',
-    description: 'Les composants du front de Job Finder, montrés avec des Offres d’exemple.',
-    heading: 'Système de design',
-    intro: 'Les composants du front, montrés avec des Offres d’exemple.',
-    statuses: 'Statuts d’une Offre',
-    states: 'États d’un Artefact',
-    postingList: 'Liste d’Offres',
-    detection: 'Détection : sa progression, puis chaque verdict',
-    emptyList: 'Liste vide',
-    postingDetail: 'Fiche d’une Offre',
-    editor: 'Éditeur Markdown',
   },
 };

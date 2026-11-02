@@ -71,7 +71,7 @@ function currentStepOf(detection: IRecordedDetection | null): IDetectionWatch['s
   return detection?.watchList.findLast(({ step }) => step !== 'waiting' && step !== 'done')?.step ?? 'waiting';
 }
 
-export function DetectionProgress({ detection }: Readonly<{ detection: IRecordedDetection | null }>) {
+function DetectionProgress({ detection }: Readonly<{ detection: IRecordedDetection | null }>) {
   const { t } = useTranslation('posting');
   const headingId = useId();
   const now = useNow(SECOND_MS);
@@ -197,7 +197,7 @@ function WatchVerdict({ watch }: Readonly<{ watch: IDetectionWatch }>) {
   );
 }
 
-export function DetectionResult({ detection }: Readonly<{ detection: IRecordedDetection }>) {
+function DetectionResult({ detection }: Readonly<{ detection: IRecordedDetection }>) {
   const { t, i18n } = useTranslation('posting');
   const headingId = useId();
   const now = useNow(MINUTE_MS);
