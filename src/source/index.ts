@@ -50,6 +50,9 @@ interface ISourceDefinition<TShape extends ParameterShape> {
     httpFetch: typeof fetch | undefined,
     locale: Locale,
   ) => Promise<ISourceReadResult>;
+  // The Start Date a Job Description the Source stored gives, so a Posting saved before the Start
+  // Date existed gets it too; null when it says nothing
+  readStartDate: (markdown: string) => Date | null;
 }
 
 // A module as the Detection uses it, whatever its Parameters: each operation parses those of the
@@ -60,6 +63,7 @@ export interface ISource {
   parseParameters(rawParameters: unknown, locale: Locale): Parameters;
   search(watch: Watch, locale: Locale): Promise<ISearchResult>;
   readJobDescription(reference: string, watch: Watch, locale: Locale): Promise<ISourceReadResult>;
+  readStartDate(markdown: string): Date | null;
 }
 
 // What a module of the family exports: it creates the Source, bound to the fetch it reads the site with
@@ -77,6 +81,7 @@ export function defineSource<TShape extends ParameterShape>({
   parameterSchema,
   search,
   readJobDescription,
+  readStartDate,
 }: ISourceDefinition<TShape>): SourceFactory {
   const parameters = declareParameters(name, parameterSchema);
   const description = SOURCE_MODULE_SCHEMA.parse({ id, name, parameterList: parameters.parameterList });
@@ -101,5 +106,6 @@ export function defineSource<TShape extends ParameterShape>({
     search: (watch, locale) => search(parseParametersOf(watch, locale), httpFetch, locale),
     readJobDescription: (reference, watch, locale) =>
       readJobDescription(reference, parseParametersOf(watch, locale), httpFetch, locale),
+    readStartDate,
   });
 }

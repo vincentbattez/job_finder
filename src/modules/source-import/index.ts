@@ -22,6 +22,7 @@ export function createImportSource(aiSession: IAiSession) {
         listedPosting: LISTED_POSTING_SCHEMA.parse({ reference, title: fileName, url: null, publishedAt: new Date() }),
         jobDescription: JOB_DESCRIPTION_SCHEMA.parse({
           deadline: null,
+          startDate: null,
           employer: null,
           workplace: null,
           applicationEmail: null,

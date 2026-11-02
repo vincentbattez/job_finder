@@ -27,6 +27,7 @@ function fakePosting(candidateId: string): Prisma.PostingUncheckedCreateInput {
     url: `https://example.org/postings/${reference}`,
     publishedAt: faker.date.recent({ days: 60 }),
     deadline: faker.date.soon({ days: 45 }),
+    startDate: faker.helpers.maybe(() => faker.date.soon({ days: 120, refDate: '2026-12-01' })) ?? null,
     employer: `Cour d'appel de ${faker.helpers.arrayElement(COURT_OF_APPEAL_LIST)}`,
     workplace: `Tribunal judiciaire de ${city}`,
     // cspell:enable

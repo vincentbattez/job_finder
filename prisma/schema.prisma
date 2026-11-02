@@ -71,6 +71,8 @@ model Posting {
   url              String?
   publishedAt      DateTime?
   deadline         DateTime?
+  // The day its Position is to be filled, when its Job Description says so
+  startDate        DateTime?
   employer         String?
   workplace        String?
   city             String?
