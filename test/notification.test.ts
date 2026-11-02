@@ -44,6 +44,8 @@ function linkOf(reference: string): string {
 }
 
 const BETHUNE_TITLE = 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE';
+const OUT_OF_ZONE_TITLE =
+  'Attaché(e) de justice affecté auprès des magistrats au parquet du tribunal judiciaire de Créteil';
 const OTHER_BETHUNE_TITLE =
   "Attaché de justice affecté auprès des magistrats du siège - Service de l'instruction - TJ BETHUNE";
 
@@ -52,7 +54,8 @@ describe('the Detection Summary', () => {
     vi.useRealTimers();
   });
 
-  it('tells the Candidate, once per Detection, its new Postings in the Zone, when it ran, its Watches and its Near Misses', async () => {
+  // Every Posting it saved New, with no Zone to filter them (ADR-0018)
+  it('tells the Candidate, once per Detection, every Posting found New, when it ran, its Watches and its Near Misses', async () => {
     const { actions, notificationChannel } = await detectBefore([REFERENCE, OTHER_REFERENCE, OUT_OF_ZONE_REFERENCE]);
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-11-01T06:00:00Z'));
@@ -62,8 +65,9 @@ describe('the Detection Summary', () => {
     expect(notificationChannel.sentList).toEqual([
       {
         target: LEA_TARGET,
-        title: '2 nouvelles Offres',
+        title: '3 nouvelles Offres',
         message:
+          `• ${OUT_OF_ZONE_TITLE} — Parquet Tribunal judiciaire de Créteil\n` +
           `• ${BETHUNE_TITLE} — Tribunal Judiciaire de Béthune\n` +
           `• ${OTHER_BETHUNE_TITLE} — Tribunal Judiciaire de Béthune\n` +
           'Détection du 01/11/2026 07:00 · 4 titres écartés de peu',
@@ -71,6 +75,11 @@ describe('the Detection Summary', () => {
           {
             heading: 'Nouvelles Offres',
             lineList: [
+              {
+                text: OUT_OF_ZONE_TITLE,
+                detail: 'Parquet Tribunal judiciaire de Créteil · Date limite : 05/04/2026 · Réf. 2026-2215099',
+                url: linkOf(OUT_OF_ZONE_REFERENCE),
+              },
               {
                 text: BETHUNE_TITLE,
                 detail: 'Tribunal Judiciaire de Béthune · Date limite : 20/11/2026 · Réf. 2026-2445600',
@@ -92,7 +101,7 @@ describe('the Detection Summary', () => {
             lineList: [
               {
                 text: 'attaché de justice',
-                detail: 'Place de l’Emploi Public · 2 nouvelles Offres · 4 titres écartés de peu',
+                detail: 'Place de l’Emploi Public · 3 nouvelles Offres · 4 titres écartés de peu',
                 url: null,
               },
             ],
@@ -193,12 +202,13 @@ describe('the notification of a Research ready', () => {
   });
 });
 
-// No one waits in front of the screen for a job the Detection or an extraction queued: its failure
+// No one waits in front of the screen for a job keeping a Posting or an extraction queued: its failure
 // warns the Candidate, or they would think it still runs (CODING_STANDARDS “Visible failure”)
 describe('the notification of a Research queued automatically that failed', () => {
   it('tells the Candidate which Posting has its Research failed, why, and to relaunch it from its page', async () => {
     const { actions, notificationChannel } = await detectBefore([REFERENCE], createFakeAiSession({ isSuccess: false }));
     await actions.detect();
+    await actions.keep({ reference: REFERENCE });
     notificationChannel.sentList.length = 0;
 
     const jobList = await actions.runQueuedJobs();
@@ -223,6 +233,7 @@ describe('the notification of a Research queued automatically that failed', () =
       createFakeAiSession({ errorMessage: 'spawn claude ENOENT' }),
     );
     await actions.detect();
+    await actions.keep({ reference: REFERENCE });
     notificationChannel.sentList.length = 0;
 
     await actions.runQueuedJobs();
@@ -292,9 +303,8 @@ describe('the notification of a Research queued automatically that failed', () =
 describe('a notification that cannot be sent', () => {
   const ERROR_MESSAGE = 'Home Assistant injoignable.';
 
-  it('reports the Detection Summary not sent with what the Detection found, once every new Posting is saved and its Research queued', async () => {
+  it('reports the Detection Summary not sent with what the Detection found, once every new Posting is saved', async () => {
     const dataDirectory = createDataDirectory();
-    const aiSession = createFakeAiSession(RESEARCH, RESEARCH);
     const earlierFetch = createRecordedFetch({
       [DSJ_FEED_URL]: { body: feedWithout([REFERENCE, OTHER_REFERENCE]) },
     }).fetch;
@@ -303,7 +313,6 @@ describe('a notification that cannot be sent', () => {
     const notificationChannel = createFakeNotificationChannel({ errorMessage: ERROR_MESSAGE });
     const actions = await createActions({
       dataDirectory,
-      aiSession,
       fetch: createRecordedFetch().fetch,
       notificationChannelList: notificationChannel.notificationChannelList,
     });
@@ -319,18 +328,6 @@ describe('a notification that cannot be sent', () => {
     ]);
     const postingList = await actions.listPostings({ candidateId: 'lea' });
     expect(postingList.map(({ reference }) => reference)).toEqual(expect.arrayContaining([REFERENCE, OTHER_REFERENCE]));
-    // The worker, a process of its own, whose notifications go through
-    const worker = await createActions({
-      dataDirectory,
-      aiSession,
-      notificationChannelList: createFakeNotificationChannel().notificationChannelList,
-    });
-    const jobList = await worker.runQueuedJobs();
-    expect(jobList).toMatchObject([
-      { module: 'research', posting: { reference: REFERENCE }, state: 'done' },
-      { module: 'research', posting: { reference: OTHER_REFERENCE }, state: 'done' },
-    ]);
-    expect(jobList).toHaveLength(2);
   });
 
   // A failure written only to the worker's log, lpm logs worker, would be seen by no one: it stays on

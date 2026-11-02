@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { type Actions } from '#/actions/index.ts';
 import { ARTIFACT_SCHEMA, type Artifact } from '#/domain/index.ts';
 
+import { applyTo } from './apply.ts';
 import { detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
@@ -59,7 +60,7 @@ async function readArtifactList(actions: Actions) {
 
 // The Posting Applied, with a first Interview: its Letter is frozen from then on
 async function addInterview(actions: Actions) {
-  await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+  await applyTo(actions, REFERENCE);
   await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: 'Béthune', interviewers: '' });
 }
 
@@ -124,7 +125,7 @@ describe('the failure of a module', () => {
       await actions.runQueuedJobs();
     }
     await actions.runModule({ module: 'letter', reference: REFERENCE });
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
 
     await actions.runQueuedJobs();
 

@@ -57,26 +57,21 @@ function compareArchivedAt(first: Application, second: Application): number {
   return (second.posting.archivedAt?.getTime() ?? 0) - (first.posting.archivedAt?.getTime() ?? 0);
 }
 
-// An upcoming Interview first, the nearest first, then the most recently changed (GLOSSARY.md « In progress »)
-function compareApplications(first: Application, second: Application): number {
-  if (first.hasUpcomingInterview !== second.hasUpcomingInterview) {
-    return first.hasUpcomingInterview ? -1 : 1;
-  }
-  if (first.hasUpcomingInterview && first.nextInterview !== null && second.nextInterview !== null) {
-    return first.nextInterview.startAt.getTime() - second.nextInterview.startAt.getTime();
-  }
-  return compareLastChanges(first, second);
-}
-
 // The sections the archiving date sorts (ADR-0007)
 const ARCHIVED_SECTION_SET = new Set<ApplicationSectionName>(['archived', 'archived_without_application']);
 
-// The section of /applications a Posting goes in; none for a To Apply Posting still followed
+// The section of /applications a Posting goes in; none for a New or To Apply Posting still followed
 function findSection(posting: Posting): ApplicationSectionName | null {
   if (posting.archivedAt !== null) {
     return hasBeenApplied(posting) ? 'archived' : 'archived_without_application';
   }
-  const sectionByStatus = { to_apply: null, applied: 'in_progress', hired: 'hired', rejected: 'rejected' } as const;
+  const sectionByStatus = {
+    new: null,
+    to_apply: null,
+    applied: 'in_progress',
+    hired: 'hired',
+    rejected: 'rejected',
+  } as const;
   return sectionByStatus[posting.status];
 }
 
@@ -97,19 +92,6 @@ export function createApplicationActions({ workspace, findCandidate }: ActionCon
   }
 
   return {
-    // The overview of the home: the Applications with no outcome that the Candidate still follows
-    async listApplicationsInProgress(rawInput: unknown): Promise<Application[]> {
-      const candidate = await findCandidate(rawInput);
-      const now = new Date();
-      const postingList = await workspace.listPostings(candidate.id);
-      const applicationList = await Promise.all(
-        postingList
-          .filter(({ status, archivedAt }) => status === 'applied' && archivedAt === null)
-          .map((posting) => readApplication(posting, now)),
-      );
-      return applicationList.toSorted(compareApplications);
-    },
-
     // The historical record of /applications: every Application, and the Postings archived without one,
     // each section in its order with the most recently changed first, the Archived ones the most recently archived first
     async listApplications(rawInput: unknown): Promise<ApplicationSection[]> {

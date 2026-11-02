@@ -51,7 +51,9 @@ test.describe('/applications', () => {
       'Archivées sans Candidature',
       ARCHIVED_WITHOUT_APPLICATION_REFERENCE,
     );
-    await expect(archivedWithoutApplication.getByRole('button', { name: 'Marquer comme Postulée' })).toBeVisible();
+    // Dismissed while New: it is kept or dismissed, never marked Applied as it stands (ADR-0018)
+    await expect(archivedWithoutApplication.locator('.badge')).toHaveText(['Nouvelle', 'Archivée']);
+    await expect(archivedWithoutApplication.getByRole('button', { name: 'Marquer comme Postulée' })).toHaveCount(0);
     await expect(archivedWithoutApplication.getByRole('group', { name: 'Issue de la Candidature' })).toHaveCount(0);
   });
 
@@ -82,19 +84,16 @@ test.describe('/applications', () => {
     await expect(page).toHaveURL('/applications');
   });
 
-  test('is reached from the home and from the Sidebar', async ({ page, asCandidate, openPage }) => {
+  test('is reached from the Sidebar', async ({ page, asCandidate, openPage }) => {
     await asCandidate('lea');
     await openPage('/');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Léa');
 
-    await page.getByRole('link', { name: 'Toutes les Candidatures' }).click();
+    await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Candidatures' }).click();
     await expect(page).toHaveURL('/applications');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Candidatures de Léa');
 
     await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Nouvelles' }).click();
     await expect(page).toHaveURL('/');
-    await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Candidatures' }).click();
-    await expect(page).toHaveURL('/applications');
   });
 
   test('fits a phone screen', async ({ page, asCandidate, openPage }) => {

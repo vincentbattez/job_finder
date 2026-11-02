@@ -25,7 +25,7 @@ test('shows the Posting list in English to a Candidate with the en locale', asyn
 // Her home, once asCandidate chose her
 async function openHomeOfEmma({ page, openPage }: IFront) {
   await openPage('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Emma');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('New');
 }
 
 test('shows the Sidebar and the Profile in English to a Candidate with the en locale', async ({

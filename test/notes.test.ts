@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import type { Actions } from '#/actions/index.ts';
 
+import { applyTo } from './apply.ts';
 import { detectPostings } from './data-directory.ts';
 
 // The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
@@ -31,7 +32,7 @@ describe('the Notes of a Posting', () => {
   });
 
   it('are rewritten at will, on an Archived Applied Posting too', async () => {
-    await actions.changeStatus({ reference: '2026-2445183', status: 'applied' });
+    await applyTo(actions, '2026-2445183');
     await actions.archive({ reference: '2026-2445183' });
     await actions.saveNotes({ reference: '2026-2445183', notes: 'Premier tour : bon retour.' });
 

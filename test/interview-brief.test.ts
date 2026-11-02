@@ -7,6 +7,7 @@ import { type Actions } from '#/actions/index.ts';
 import { promptOf } from '#/artifact/prompt.ts';
 import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructions.ts';
 
+import { applyTo } from './apply.ts';
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { markedValuesOf } from './marked-values.ts';
@@ -87,7 +88,7 @@ function briefRun(markdown = INTERVIEW_BRIEF) {
 async function applyWithInterview(aiSession: ReturnType<typeof createFakeAiSession>) {
   const { actions, dataDirectory } = await detectRecordedPostings(aiSession);
   await runModule(actions, 'research');
-  await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+  await applyTo(actions, REFERENCE);
   await actions.addInterview({ reference: REFERENCE, ...HR_INTERVIEW });
   return {
     actions,
@@ -188,12 +189,12 @@ describe('interview brief', () => {
     writeFileSync(path.join(dataDirectory, 'candidates/lea/profile/cv.md'), CV);
     await runModule(actions, 'research', undefined, SENT_REFERENCE);
     await runModule(actions, 'letter', undefined, SENT_REFERENCE);
-    await actions.changeStatus({ reference: SENT_REFERENCE, status: 'applied' });
+    await applyTo(actions, SENT_REFERENCE);
     await runModule(actions, 'research');
     await runModule(actions, 'research');
     await actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: 1 });
     await runModule(actions, 'letter');
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
     await actions.addInterview({ reference: REFERENCE, ...HR_INTERVIEW });
 
     const { version } = await runModule(actions, 'brief', 1);

@@ -185,9 +185,10 @@ describe('actions', () => {
         })),
     ).toEqual([
       { reference: '2026-1', status: 'applied', appliedAt: new Date('2026-10-20T09:00:00Z'), isArchived: true },
-      { reference: '2026-2', status: 'to_apply', appliedAt: null, isArchived: true },
+      // Never Applied and with no Research, both are New since ADR-0018
+      { reference: '2026-2', status: 'new', appliedAt: null, isArchived: true },
       { reference: '2026-3', status: 'applied', appliedAt: new Date('2026-10-21T09:00:00Z'), isArchived: false },
-      { reference: '2026-4', status: 'to_apply', appliedAt: null, isArchived: false },
+      { reference: '2026-4', status: 'new', appliedAt: null, isArchived: false },
     ]);
     // Dated from the migration, the day it was archived having never been kept; SQLite keeps seconds
     const archivedAt = postingList.find(({ reference }) => reference === '2026-2')?.archivedAt;

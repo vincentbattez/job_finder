@@ -10,6 +10,7 @@ import { addResources, textKeyOf } from '#/domain/catalogue/i18n.ts';
 import { defineNotificationChannel, type INotificationChannel } from '#/notification/index.ts';
 import { parameter } from '#/parameter/index.ts';
 
+import { applyTo } from './apply.ts';
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { startFakeHomeAssistant } from './fake-home-assistant.ts';
@@ -56,6 +57,8 @@ const INPUT_BY_ACTION: Record<string, object> = {
   // The Posting is Applied by changeStatus first, which runs before: an Interview needs an Application
   addInterview: { start: '2026-11-19T14:00', place: 'Béthune', interviewers: 'Mme Durand' },
   readIcalFile: { origin: 'https://10.8.0.1:5180' },
+  // The Posting of the check was kept before it was Applied: another one, still New
+  keep: { reference: '2026-2445609' },
 };
 
 type ActionMap = Record<string, (rawInput: unknown) => Promise<unknown>>;
@@ -154,7 +157,7 @@ async function saveChannel(module: INotificationChannel, parameters: Record<stri
     // The Interview Brief prepares an Interview, which only an Application has
     const interview = artifactModule === 'interview_brief' ? 1 : undefined;
     if (artifactModule === 'interview_brief') {
-      await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+      await applyTo(actions, REFERENCE);
       await actions.addInterview({ reference: REFERENCE, ...INPUT_BY_ACTION.addInterview });
     }
     await actions.runModule({ module: artifactModule, reference: REFERENCE, interview });

@@ -44,6 +44,8 @@ export const ERROR_FR: typeof ERROR_EN = {
   sourceParameters: "La Source {{sourceName}} attend d'autres Paramètres : renseigner {{labels}}.",
   notificationsNotSent: '{{failures}}',
 
+  notNew: "L'Offre {{reference}} n'est plus Nouvelle : elle a déjà été triée.",
+  newNotSorted: "L'Offre {{reference}} est Nouvelle : garde-la ou écarte-la d'abord.",
   statusChange: "L'Offre {{reference}} est {{statusLabel}} : elle ne peut passer qu'en {{nextLabels}}.",
   toApplyAfterOutcome:
     "L'Offre {{reference}} a un résultat : la remettre Envoyée d'abord, seule une Offre Postulée sans Entretien revient À traiter.",

@@ -11,7 +11,7 @@ import { IcalButton } from './ical-button.tsx';
 import './application-row.css';
 
 // An Application as the actions give it to its row
-export type Application = Awaited<ReturnType<Actions['listApplicationsInProgress']>>[number];
+export type Application = Awaited<ReturnType<Actions['listApplications']>>[number]['applicationList'][number];
 
 interface IApplicationRow {
   application: Application;
@@ -19,8 +19,8 @@ interface IApplicationRow {
   outcomeSelector: ReactNode;
 }
 
-// Where an Application stands at a glance, its outcome changed without opening the Posting page; the
-// home and /applications share it
+// Where an Application stands at a glance on /applications, its outcome changed without opening the
+// Posting page
 export function ApplicationRow({ application, outcomeSelector }: Readonly<IApplicationRow>) {
   const { posting, nextInterview, hasUpcomingInterview, interviewCount, notesExcerpt, lastChangeAt } = application;
   const { t } = useTranslation('posting');

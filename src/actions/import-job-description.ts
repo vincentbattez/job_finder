@@ -29,7 +29,7 @@ export async function runExtraction(
     { title: title ?? posting.title, jobDescription, location },
     locale,
   );
-  // Imported by the Candidate, it gets its Research whatever the Zone
+  // Imported by the Candidate, who decided to pursue it, it gets its Research (ADR-0018)
   const research = await artifacts.find({ posting: filledPosting, artifact: 'research' });
   await research.queueRun({ isAutomatic: true });
   const log = [session.log, locator.failureFor(locale)].filter((line) => line !== null && line !== '').join('\n');
@@ -63,6 +63,8 @@ export function createImportActions({ workspace, importSource, findCandidate, lo
         listedPosting,
         jobDescription,
         location: await locate(null, candidate.locale),
+        // Importing it is already the decision to pursue it: it skips New (ADR-0018)
+        status: 'to_apply',
         // No Watch detected it, so no Zone holds it; chosen by the Candidate, it gets its Research
         // once extracted, whatever the Zone (ADR-0003)
         isInZone: false,

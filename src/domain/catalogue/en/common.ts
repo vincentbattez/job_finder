@@ -3,6 +3,7 @@ import type { Artifact, Locale, Step } from '#/domain/index.ts';
 // The copy several screens, the CLI and the messages share, named as GLOSSARY.md names them
 export const COMMON_EN = {
   statusLabelByStatus: {
+    new: 'New',
     to_apply: 'To Apply',
     applied: 'Applied',
     invited: 'Invited',

@@ -6,6 +6,7 @@ import { DEFAULT_INSTRUCTIONS_EN } from '#/domain/catalogue/en/default-instructi
 import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructions.ts';
 import type { Artifact } from '#/domain/index.ts';
 
+import { applyTo } from './apply.ts';
 import { detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { markedValuesOf } from './marked-values.ts';
@@ -44,7 +45,7 @@ async function runModule(actions: Actions, module: Artifact, reference = REFEREN
 
 // The Posting Applied, with a first Interview, which the Interview Brief prepares
 async function addInterview(actions: Actions) {
-  await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+  await applyTo(actions, REFERENCE);
   await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: 'Béthune', interviewers: '' });
 }
 
@@ -86,7 +87,7 @@ describe('the Prompt beside an Artifact', () => {
     const { actions } = await detectPostings(aiSession);
     await runModule(actions, 'research', SENT_REFERENCE);
     await runModule(actions, 'letter', SENT_REFERENCE);
-    await actions.changeStatus({ reference: SENT_REFERENCE, status: 'applied' });
+    await applyTo(actions, SENT_REFERENCE);
     await runModule(actions, 'research');
     await actions.saveInstructions({ candidateId: 'lea', module: 'letter', instructions: 'Une page au plus.' });
     const prompt = await readPrompt(actions, 'letter');
@@ -118,7 +119,7 @@ describe('the Prompt beside an Artifact', () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, LETTER_RUN, RESEARCH_RUN));
     await runModule(actions, 'research', SENT_REFERENCE);
     await runModule(actions, 'letter', SENT_REFERENCE);
-    await actions.changeStatus({ reference: SENT_REFERENCE, status: 'applied' });
+    await applyTo(actions, SENT_REFERENCE);
 
     await runModule(actions, 'research');
 
@@ -160,7 +161,7 @@ describe('the Prompt beside an Artifact', () => {
     const withoutResearch = await readPrompt(actions, 'letter');
     await runModule(actions, 'research');
 
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
 
     expect(withoutResearch).toBeNull();
     expect(await readPrompt(actions, 'letter')).toBeNull();

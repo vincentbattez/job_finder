@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
 
+import { applyTo } from './apply.ts';
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
@@ -104,15 +105,15 @@ describe('a Repost detected', () => {
 });
 
 describe('the Repost of an Applied Posting', () => {
-  it('launches no Research and tells the Candidate, who decides whether to apply again', async () => {
-    const aiSession = createFakeAiSession();
-    const { actions, notificationChannel } = await detectBeforeRepost(aiSession);
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+  it('is New like any other, and tells the Candidate, who decides whether to apply again', async () => {
+    const { actions, notificationChannel } = await detectBeforeRepost();
+    await applyTo(actions, REFERENCE);
 
     await actions.detect();
 
-    expect(await actions.runQueuedJobs()).toEqual([]);
-    expect(aiSession.headlessSessionList).toEqual([]);
+    expect(await findPosting(actions, REPOST_REFERENCE)).toMatchObject({ status: 'new' });
+    const { artifactList } = await actions.readPosting({ reference: REPOST_REFERENCE });
+    expect(artifactList.find(({ artifact }) => artifact === 'research')).toMatchObject({ state: 'absent' });
     expect(notificationChannel.sentList.map(({ target, title }) => ({ target, title }))).toEqual([
       { target: 'notify.mobile_app_iphone_de_lea', title: '1 nouvelle Offre' },
     ]);
@@ -123,7 +124,7 @@ describe('the Repost of an Applied Posting', () => {
     expect(summary?.sectionList?.[0]?.lineList).toEqual([
       {
         text: 'Attaché de justice affecté auprès des magistrats du parquet',
-        detail: `Tribunal Judiciaire de Boulogne-sur-mer · Date limite : 03/08/2026 · Réf. ${REPOST_REFERENCE} · Republication de l'Offre ${REFERENCE}, Postulée : aucune Recherche lancée`,
+        detail: `Tribunal Judiciaire de Boulogne-sur-mer · Date limite : 03/08/2026 · Réf. ${REPOST_REFERENCE} · Republication de l'Offre ${REFERENCE}, déjà Postulée`,
         url: `https://choisirleservicepublic.gouv.fr/offre-emploi/${REPOST_REFERENCE}/?tracking=1&idOrigine=502`,
       },
     ]);
@@ -135,7 +136,7 @@ describe('the Repost of an Applied Posting out of the Zone', () => {
     const { actions, notificationChannel } = await detectBeforeRepost(createFakeAiSession(), {
       isOutOfZone: true,
     });
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
 
     await actions.detect();
 
@@ -143,7 +144,6 @@ describe('the Repost of an Applied Posting out of the Zone', () => {
     expect(notificationChannel.sentList.map(({ message }) => message)).toEqual([
       expect.stringContaining('· Republication, déjà Postulée\n'),
     ]);
-    expect(await actions.runQueuedJobs()).toEqual([]);
   });
 
   // Archived since, the Posting was Applied all the same
@@ -151,7 +151,7 @@ describe('the Repost of an Applied Posting out of the Zone', () => {
     const { actions, notificationChannel } = await detectBeforeRepost(createFakeAiSession(), {
       isOutOfZone: true,
     });
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
     await actions.archive({ reference: REFERENCE });
 
     await actions.detect();
@@ -176,31 +176,35 @@ describe('the Repost of a Posting not Applied', () => {
     expect(summary?.sectionList?.[0]?.lineList).toEqual([
       {
         text: 'Attaché de justice affecté auprès des magistrats du parquet',
-        detail: `Tribunal Judiciaire de Boulogne-sur-mer · Date limite : 03/08/2026 · Réf. ${REPOST_REFERENCE} · Republication de l'Offre ${REFERENCE} : sa Recherche part de celle de cette Offre`,
+        detail: `Tribunal Judiciaire de Boulogne-sur-mer · Date limite : 03/08/2026 · Réf. ${REPOST_REFERENCE} · Republication de l'Offre ${REFERENCE} : gardée, sa Recherche partira de celle de cette Offre`,
         url: `https://choisirleservicepublic.gouv.fr/offre-emploi/${REPOST_REFERENCE}/?tracking=1&idOrigine=502`,
       },
     ]);
   });
 
-  it('tells nothing out of the Zone', async () => {
+  // The Zone no longer filters what the Detection Summary tells (ADR-0018)
+  it('tells it out of the Zone too', async () => {
     const { actions, notificationChannel } = await detectBeforeRepost(createFakeAiSession(), {
       isOutOfZone: true,
     });
 
     await actions.detect();
 
-    expect(notificationChannel.sentList).toEqual([]);
+    expect(notificationChannel.sentList.map(({ message }) => message)).toEqual([
+      expect.stringContaining('· Republication\n'),
+    ]);
   });
 
-  it('launches its Research, which reads the Chosen Artifacts of the Posting it publishes again', async () => {
+  it('launches its Research once kept, which reads the Chosen Artifacts of the Posting it publishes again', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, LETTER_RUN, RESEARCH_RUN);
     const { actions } = await detectBeforeRepost(aiSession);
     await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runQueuedJobs();
     await actions.runModule({ module: 'letter', reference: REFERENCE });
     await actions.runQueuedJobs();
-
     await actions.detect();
+
+    await actions.keep({ reference: REPOST_REFERENCE });
 
     expect(await actions.runQueuedJobs()).toMatchObject([
       {
@@ -275,7 +279,7 @@ describe('the Repost on its Posting page', () => {
 
   it('tells the Application to an earlier Posting of its Position, and its outcome', async () => {
     const { actions } = await detectBeforeRepost();
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
     await actions.changeStatus({ reference: REFERENCE, status: 'rejected' });
     await actions.detect();
     const earlierPosting = await findPosting(actions, REFERENCE);

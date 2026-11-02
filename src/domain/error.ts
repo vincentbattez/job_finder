@@ -86,6 +86,10 @@ export const ERROR_CATALOGUE = {
   // Statuses
   // A Posting cannot move to this Status from its own
   status_change: 'error:statusChange',
+  // A New Posting moves only by being kept or dismissed (ADR-0018)
+  new_not_sorted: 'error:newNotSorted',
+  // Only a New Posting is kept: one already sorted is not sorted again
+  not_new: 'error:notNew',
   // A Hired or Rejected Posting cannot go back to To Apply: only In progress is undone, Archived or not
   to_apply_after_outcome: 'error:toApplyAfterOutcome',
   // An Applied Posting with an Interview cannot go back to To Apply: the Interview proves its Letter was sent

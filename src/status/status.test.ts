@@ -71,6 +71,8 @@ describe('Applied once', () => {
     { case: 'it is Applied without a date', posting: { status: 'applied', appliedAt: null }, isExpected: true },
     { case: 'it is To Apply, Applied once', posting: { status: 'to_apply', appliedAt: new Date() }, isExpected: true },
     { case: 'it was never Applied', posting: { status: 'to_apply', appliedAt: null }, isExpected: false },
+    // Not sorted yet: like To Apply, never Applied
+    { case: 'it is New', posting: { status: 'new', appliedAt: null }, isExpected: false },
   ] as const)('is $isExpected when $case', ({ posting, isExpected }) => {
     expect(hasBeenApplied(posting)).toBe(isExpected);
   });
@@ -81,6 +83,7 @@ describe('Applied once', () => {
 // Interview proves it was
 describe('Status choices of a Posting', () => {
   it.each([
+    { status: 'new', appliedAt: null, hasInterview: false, expectedList: [] },
     { status: 'to_apply', appliedAt: null, hasInterview: false, expectedList: ['applied'] },
     { status: 'applied', appliedAt: new Date(), hasInterview: false, expectedList: ['to_apply', 'hired', 'rejected'] },
     { status: 'applied', appliedAt: new Date(), hasInterview: true, expectedList: ['hired', 'rejected'] },
@@ -115,6 +118,30 @@ describe('Status change of a Posting', () => {
     expect(() => {
       assertStatusChange(posting, to, 'fr');
     }).not.toThrow();
+  });
+
+  // Keeping and dismissing are its own acts: a New Posting moves to no Status through the selector
+  it.each(['to_apply', 'applied', 'hired', 'rejected'] as const)('refuses New to %s', (status) => {
+    expect(() => {
+      assertStatusChange(
+        { reference: '2026-2445600', status: 'new', appliedAt: null, hasInterview: false },
+        status,
+        'en',
+      );
+    }).toThrow('Posting 2026-2445600 is New: keep it or dismiss it first.');
+  });
+
+  it.each(['to_apply', 'applied', 'hired', 'rejected'] as const)('refuses %s back to New', (status) => {
+    const posting = {
+      reference: '2026-2445600',
+      status,
+      appliedAt: status === 'to_apply' ? null : APPLIED_AT,
+      hasInterview: false,
+    };
+
+    expect(() => {
+      assertStatusChange(posting, 'new', 'en');
+    }).toThrow(/^Posting 2026-2445600 is .+: it can only move to /);
   });
 
   // An outcome only comes once the Application started
@@ -160,6 +187,7 @@ describe('Step of a Posting', () => {
   }
 
   it.each([
+    { case: 'a New Posting', status: 'new', interviewList: [], expected: 'new' },
     { case: 'a To Apply Posting', status: 'to_apply', interviewList: [], expected: 'to_apply' },
     { case: 'an Applied Posting without an Interview', status: 'applied', interviewList: [], expected: 'applied' },
     {
