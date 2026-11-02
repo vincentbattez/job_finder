@@ -53,9 +53,10 @@ test('imports a Job Description dropped on the Postings: it shows at once, then 
   await expect(extraction.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(TITLE);
   await page.getByRole('tab', { name: /^Recherche/ }).click();
-  await expect(page.getByRole('region', { name: 'Recherche' }).getByRole('status')).toHaveText('Prêt', {
-    timeout: READY_TIMEOUT_MS,
-  });
+  await expect(page.getByRole('region', { name: 'Recherche' }).getByRole('combobox', { name: 'Version' })).toHaveText(
+    'Version 1 · Brouillon',
+    { timeout: READY_TIMEOUT_MS },
+  );
 
   await page.goto('/to-apply');
   // Located in Grenoble by API Géo's recorded answer, with its Deadline read by Claude

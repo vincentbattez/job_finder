@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { generate } from './generation.ts';
 import { prepareInterview } from './interview.ts';
 import { unfoldLatestVersion } from './version.ts';
 
@@ -21,11 +22,12 @@ test('launches the Portrait of an Interview without a Research, then corrects it
   const portrait = interview.getByRole('region', { name: 'Portrait' });
   await expect(interview.getByRole('region')).toHaveText([/^Portrait/, /^Fiche d’entretien/]);
 
-  await portrait.getByRole('button', { name: 'Lancer le Portrait' }).click();
+  await generate(page, portrait);
 
-  await expect(portrait.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
   // A Draft until the Candidate validates it (ADR-0019)
-  await expect(portrait.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Brouillon/]);
+  await expect(portrait.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Brouillon/], {
+    timeout: READY_TIMEOUT_MS,
+  });
   await unfoldLatestVersion(portrait);
   await portrait.getByRole('button', { name: 'Valider la Version 1' }).click();
   await expect(portrait.locator('li > details > summary')).toHaveText([/^v1\s*Prêt\s*Validée · retenue/]);

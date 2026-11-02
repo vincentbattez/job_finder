@@ -23,7 +23,7 @@
     --tint: var(--p-wed);
   }
 
-  /* The title floats so that the Prompt's button sits beside it (artifact-prompt.css) */
+  /* The title floats, on the same center line as the controls */
   .artifact-versions__head {
     display: flow-root;
   }

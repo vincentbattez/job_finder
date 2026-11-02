@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { interviewSectionIdOf } from '#/actions/interview-section.ts';
 import { ORIGINAL_FILE_NAME } from '#/actions/original.ts';
 
-import { ArtifactPrompt } from './artifact-prompt.tsx';
 import { STATE_BY_VERSION_STATE, type IArtifactVersions } from './artifact.ts';
 import { Badge, StateBadge } from './badge.tsx';
 import { CopyCommand } from './copy-command.tsx';
@@ -47,7 +46,7 @@ function VersionFiles({
   );
 }
 
-// Every Version of an Artifact, oldest first, each folded until asked, beside the Prompt of a run not refused;
+// Every Version of an Artifact, oldest first, each folded until asked;
 // an Artifact of an Interview has its section under that Interview, a heading a level below
 export function ArtifactVersions({
   reference,
@@ -55,15 +54,13 @@ export function ArtifactVersions({
   artifact,
   isEditable,
   fileName,
-  prompt,
   versionList,
   launch,
   renderValidateButton,
   renderDocument,
 }: Readonly<
-  Pick<IArtifactVersions, 'artifact' | 'isEditable' | 'fileName' | 'versionList'> & {
-    prompt: IArtifactVersions['module']['prompt'];
-  } & IArtifactVersionsSlots & { reference: string; interviewNumber?: number | null }
+  Pick<IArtifactVersions, 'artifact' | 'isEditable' | 'fileName' | 'versionList'> &
+    IArtifactVersionsSlots & { reference: string; interviewNumber?: number | null }
 >) {
   const { t } = useTranslation('posting');
   const headingId = useId();
@@ -80,7 +77,6 @@ export function ArtifactVersions({
         <HEADING_TAG id={headingId} className="artifact-versions__title">
           {t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' })}
         </HEADING_TAG>
-        {prompt !== null && <ArtifactPrompt prompt={prompt} isUnderInterview={interviewNumber !== null} />}
       </div>
       {launch}
       {isEditable && <CopyCommand command={`jf edit ${editArgumentList.join(' ')}`} />}

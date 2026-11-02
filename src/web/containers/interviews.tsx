@@ -27,11 +27,14 @@ type InterviewsViewProperties = ComponentProps<typeof InterviewsView>;
 // with its Interview Brief, run, rerun and chosen under it
 export function Interviews({
   reference,
+  title,
   interviewList,
   ...properties
 }: Readonly<
   {
     reference: string;
+    // The Posting's title, which the generation panel names
+    title: string;
     interviewList: (InterviewsViewProperties['interviewList'][number] & { artifactList: IArtifactVersions[] })[];
   } & Omit<InterviewsViewProperties, 'renderForm' | 'renderArtifacts' | 'interviewList'>
 >) {
@@ -49,6 +52,7 @@ export function Interviews({
             <ArtifactVersions
               key={artifactVersions.artifact}
               reference={reference}
+              title={title}
               interviewNumber={interviewNumber}
               {...artifactVersions}
             />

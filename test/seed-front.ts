@@ -361,3 +361,19 @@ for (const { journey, start } of [
   await applyTo(actions, reference);
   await actions.addInterview({ reference, start, place: 'Tribunal judiciaire', interviewers: 'M. Martin' });
 }
+
+// Vera, without Watch, opens the generation panel of e2e/generation.test.ts on her one imported Posting,
+// whose Research is validated; the test writes her Profile first, so that the Letter has Inputs to uncheck
+await actions.createCandidate({ id: 'vera', name: 'Vera' });
+const { posting: veraPosting } = await actions.importJobDescription({
+  candidateId: 'vera',
+  fileName: 'greffier-valence.md',
+  markdown: '# Greffier – Valence\n\nTenir les audiences du tribunal judiciaire de Valence.\n',
+});
+await actions.runQueuedJobs();
+RUN_BY_VERSION[`${veraPosting.reference.slice(0, BETHUNE_REFERENCE.length)} research v1`] = researchRun(
+  'Recherche : le tribunal judiciaire de Valence',
+);
+await actions.runModule({ module: 'research', reference: veraPosting.reference });
+await actions.runQueuedJobs();
+await actions.validateVersion({ reference: veraPosting.reference, artifact: 'research', number: 1 });

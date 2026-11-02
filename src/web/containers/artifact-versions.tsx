@@ -3,55 +3,46 @@ import type { IArtifactVersions } from '#/web/components/artifact.ts';
 
 import { useValidation } from './artifact-view.tsx';
 import { ArtifactDocument } from './edition.tsx';
-import { ModuleLaunch } from './module-launch.tsx';
+import { useGeneration } from './generation.tsx';
 
-// Every Version of an Artifact, with the launch of its module, the choice of a Version and the
-// correction of its files; an Artifact of an Interview names it to each action
+// Every Version of an Artifact, with its generation panel, the choice of a Version and the correction of its
+// files; an Artifact of an Interview names it to each action
 export function ArtifactVersions({
   reference,
+  title,
   interviewNumber = null,
-  artifact,
-  state,
-  failure,
-  notificationFailure,
-  module,
-  isEditable,
-  fileName,
-  versionList,
-  workerFailure,
-}: Readonly<IArtifactVersions & { reference: string; interviewNumber?: number | null }>) {
+  ...artifactVersions
+}: Readonly<IArtifactVersions & { reference: string; title: string; interviewNumber?: number | null }>) {
+  const { artifact, isEditable, fileName, versionList } = artifactVersions;
   const renderValidateButton = useValidation({ reference, interviewNumber, artifact });
+  const generation = useGeneration({ reference, title, interviewNumber, artifactVersions });
   return (
-    <ArtifactVersionsView
-      reference={reference}
-      interviewNumber={interviewNumber}
-      artifact={artifact}
-      isEditable={isEditable}
-      fileName={fileName}
-      prompt={module.prompt}
-      versionList={versionList}
-      launch={
-        <ModuleLaunch
-          reference={reference}
-          interviewNumber={interviewNumber}
-          artifact={artifact}
-          state={state}
-          failure={failure}
-          notificationFailure={notificationFailure}
-          module={module}
-          workerFailure={workerFailure}
-        />
-      }
-      renderValidateButton={(number) => renderValidateButton(number, 'validate')}
-      renderDocument={(number, document) => (
-        <ArtifactDocument
-          reference={reference}
-          interviewNumber={interviewNumber}
-          artifact={artifact}
-          number={number}
-          {...document}
-        />
-      )}
-    />
+    <>
+      {generation.panel}
+      <ArtifactVersionsView
+        reference={reference}
+        interviewNumber={interviewNumber}
+        artifact={artifact}
+        isEditable={isEditable}
+        fileName={fileName}
+        versionList={versionList}
+        launch={
+          <div className="space-y-2">
+            {generation.launch}
+            {generation.failure}
+          </div>
+        }
+        renderValidateButton={(number) => renderValidateButton(number, 'validate')}
+        renderDocument={(number, document) => (
+          <ArtifactDocument
+            reference={reference}
+            interviewNumber={interviewNumber}
+            artifact={artifact}
+            number={number}
+            {...document}
+          />
+        )}
+      />
+    </>
   );
 }

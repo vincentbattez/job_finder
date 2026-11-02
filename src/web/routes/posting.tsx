@@ -112,7 +112,9 @@ export default function Posting() {
         );
       }
       case 'research': {
-        return research === undefined ? null : <ArtifactView reference={posting.reference} {...research} />;
+        return research === undefined ? null : (
+          <ArtifactView reference={posting.reference} title={posting.title} {...research} />
+        );
       }
       case 'letter': {
         return (
@@ -125,7 +127,7 @@ export default function Posting() {
                 <Recipients recipients={detail.recipients} />
               </section>
             )}
-            {letter !== undefined && <ArtifactView reference={posting.reference} {...letter} />}
+            {letter !== undefined && <ArtifactView reference={posting.reference} title={posting.title} {...letter} />}
           </div>
         );
       }
@@ -133,6 +135,7 @@ export default function Posting() {
         return (
           <Interviews
             reference={posting.reference}
+            title={posting.title}
             posting={posting}
             hasApplication={detail.hasApplication}
             interviewList={interviewList}
