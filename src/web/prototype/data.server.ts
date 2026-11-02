@@ -11,6 +11,7 @@ import { AI_MODULE_BY_ARTIFACT } from '#/artifact/registry.ts';
 import type { Posting, PostingDetail } from '#/domain/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 
+import { markedFixedPartOf } from './generation/fixed-part.server.ts';
 import {
   ARTIFACT_LABEL,
   artifactKeyOf,
@@ -138,6 +139,7 @@ function artifactOf(
     chosenNumber,
     refusal: entry.module.refusal,
     fixedPart: fixedPart ?? fixedPartExampleByType.get(type) ?? null,
+    fixedPartMarked: markedFixedPartOf(fixedPart ?? fixedPartExampleByType.get(type) ?? null),
     isFixedPartExample: fixedPart === null && fixedPartExampleByType.has(type),
   };
 }
@@ -145,7 +147,7 @@ function artifactOf(
 function profileDocumentOf({ fileName, markdown }: { fileName: string; markdown: string }): IProfileDocument {
   const name = fileName.replace(/\.md$/u, '');
   const kind = name === 'cv' ? 'cv' : name === 'facts' ? 'facts' : name.startsWith('letter-') ? 'letter' : 'annex';
-  const labelByKind = { cv: 'CV', facts: 'Faits', letter: 'Lettre passée', annex: 'Annexe' };
+  const labelByKind = { cv: 'CV', facts: 'Faits', letter: 'Lettre de motivation passée', annex: 'Annexe' };
   const subject = name.replace(/^(?:letter|annex)-/u, '').replaceAll('-', ' ');
   return {
     key: fileName,
@@ -242,7 +244,7 @@ async function readCandidate(candidateId: string): Promise<ICandidateSnapshot> {
       : [
           {
             key: detail.reference,
-            label: `Lettre envoyée · ${posting.title}`,
+            label: `Lettre de motivation envoyée · ${posting.title}`,
             fileName: chosen.fileName,
             text: chosen.text,
           },

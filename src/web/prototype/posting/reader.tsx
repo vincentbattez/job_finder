@@ -47,10 +47,11 @@ import { readingMinutes, slugify, splitSections } from './text.ts';
 
 export type ReadingVariant = 'A' | 'B' | 'C';
 
+// The first one is the default: B, chosen by the user on 2026-11-02; A and C stay reachable
 export const READING_VARIANT_LIST: Variant[] = [
-  { key: 'A', name: 'Colonne' },
   { key: 'B', name: 'Rail et marge' },
   { key: 'C', name: 'Étude' },
+  { key: 'A', name: 'Colonne' },
 ];
 
 export const PROSE = cn(

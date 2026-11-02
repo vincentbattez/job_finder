@@ -32,6 +32,7 @@ import {
   AddInputDialog,
   Blockers,
   FixedPartBody,
+  FixedPartText,
   focusSelf,
   InputBundle,
   InputCheckbox,
@@ -430,7 +431,7 @@ function Pane({
           text={panel.artifact.fixedPart ?? ''}
           onOpen={() => onSelect('fixed')}
         >
-          <InputContent input={{ content: panel.artifact.fixedPart ?? '' }} className="text-muted-foreground" />
+          <FixedPartText artifact={panel.artifact} />
         </PromptBlock>
         <div className="space-y-3">
           <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">

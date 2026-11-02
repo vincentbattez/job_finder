@@ -59,3 +59,19 @@ Grilled with the user on 2026-11-02. Vocabulary: `GLOSSARY.md`. Architecture: AD
 ## Statuses
 
 New → (Garder) To Apply / (Écarter) Archived. To Apply → Applied (In progress; Invited/Interviewed computed from Interviews) → Hired | Rejected. "Remettre en cours" removes an outcome. In the snapshot, there is no New yet: treat To Apply Postings with no Research Version as New.
+
+## Verdicts (2026-11-02)
+
+The user went through the variants; the winners are the defaults (no `?variant=` / `?panel=`), the others stay reachable.
+
+- **Lists: B, map first, with C's urgency grouping.** Plus the user's 7 feedback points:
+  1. clicking a map marker opens the Posting's Sheet;
+  2. the Region filter fits the map to the whole region, not only its Postings;
+  3. Applications are grouped Interviewed → Invited → Applied, each with its own sort key (Interviewed: last Interview, most recent first; Invited: next Interview, soonest first; Applied: Deadline, soonest first);
+  4. the City is prominent on each item;
+  5. clicking an item centers the map on its marker;
+  6. the open Sheet lives in the URL, so Back returns to it;
+  7. the French term is « Lettre de motivation ».
+- **Artifact reading and Revision: B, rail and margin.**
+- **Generation panel: C, the 3 steps** (Ce que Claude lit → Comment il écrit → Récapitulatif & Lancer). In its Fixed Part, every value the tool substituted (Posting reference, title, employer, place, file paths, Interview number, date, duration, place, Interviewers, Notes) is highlighted with a legend « remplacé automatiquement ». The values are marked where the real composers put them: the prototype re-runs each `composePrompt` on a copy of its input whose values carry sentinels, plus a parallel composition with the Interview date shifted, without changing the composers.
+- **French copy: « Lettre de motivation »**, never « Lettre » alone, everywhere in the UI (tabs, toolbar, panel, Revision, AlertDialog « Valider la Lettre de motivation et marquer Postulée »); a short label may abbreviate only where the full form breaks the layout.

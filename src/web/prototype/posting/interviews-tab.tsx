@@ -38,7 +38,7 @@ import { countdownOf, formatLongDay, formatTime, useNow, type ICountdown } from 
 type Doc = 'brief' | 'portrait';
 
 export function revisionPathOf(reference: string, number: number, variant: string | null): string {
-  const query = variant === null || variant === 'A' ? '' : `?variant=${variant}`;
+  const query = variant === null || variant === 'B' ? '' : `?variant=${variant}`;
   return `/prototype/postings/${reference}/interviews/${String(number)}/revision${query}`;
 }
 

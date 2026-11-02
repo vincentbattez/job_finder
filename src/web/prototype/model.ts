@@ -122,6 +122,8 @@ export interface IArtifact {
   // The Fixed Part of its Prompt; isExample when the real module refused to compose it for this Posting
   // and it comes from another Posting (its paths and reference are then that Posting's)
   fixedPart: string | null;
+  // The same with each value the tool substituted between sentinels (generation/fixed-part.ts)
+  fixedPartMarked?: string | null;
   isFixedPartExample: boolean;
 }
 
@@ -197,7 +199,7 @@ export const STEP_LABEL: Record<Step, string> = {
 
 export const ARTIFACT_LABEL: Record<ArtifactType, string> = {
   research: 'Recherche',
-  letter: 'Lettre',
+  letter: 'Lettre de motivation',
   portrait: 'Portrait',
   interview_brief: 'Fiche d’entretien',
   custom: 'Document',

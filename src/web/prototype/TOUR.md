@@ -6,11 +6,13 @@ Prototype jetable (branche `prototype/v1-ux`), sur une copie des données de Lé
 
 Une pastille noire en bas de l'écran (sous l'en-tête sur téléphone) change de variante ; ← → au clavier, Shift + ← → pour le panneau.
 
-| Zone                            | Paramètre   | A               | B                        | C            |
-| ------------------------------- | ----------- | --------------- | ------------------------ | ------------ |
-| Listes + carte                  | `?variant=` | Tableau + carte | Carte d'abord            | Par échéance |
-| Lecture d'un Artifact, Révision | `?variant=` | Colonne         | Rail et marge            | Étude        |
-| Panneau de génération           | `?panel=`   | Dialog          | Sheet + aperçu du Prompt | Étapes       |
+| Zone                            | Paramètre   | A               | B                          | C                   |
+| ------------------------------- | ----------- | --------------- | -------------------------- | ------------------- |
+| Listes + carte                  | `?variant=` | Tableau + carte | Carte d'abord              | Par échéance        |
+| Lecture d'un Artifact, Révision | `?variant=` | Colonne         | **Rail et marge (défaut)** | Étude               |
+| Panneau de génération           | `?panel=`   | Dialog          | Sheet + aperçu du Prompt   | **Étapes (défaut)** |
+
+En gras, la variante retenue le 2 novembre 2026 : elle s'affiche sans paramètre ; les autres restent accessibles par la pastille ou l'URL.
 
 Exemples : <http://192.168.100.3:5182/prototype/new?variant=B>, <http://192.168.100.3:5182/prototype/postings/2026-2417004?tab=research&variant=C&panel=B>.
 
@@ -20,8 +22,8 @@ Exemples : <http://192.168.100.3:5182/prototype/new?variant=B>, <http://192.168.
 2. **Détection** : « Lancer une Détection » sur Nouvelles ; la progression s'affiche par Veille, puis deux Republications arrivent en tête (« Juste trouvée »), la Sheet dit « Tu as postulé le … ».
 3. **À traiter** : <http://192.168.100.3:5182/prototype/to-apply>. L'Offre gardée y est, avec ses pastilles R · L. Sheet → « Ouvrir la page complète ».
 4. **Recherche** (onglet) : « Regénérer » ouvre le panneau → « Lancer » → « Voir le Brouillon » → « Valider la Version ». Le point de l'onglet passe au vert, la liste et la Sheet suivent.
-5. **Lettre** : « Générer » (débloqué dès qu'une Recherche est validée) → « Lancer » → « Valider » → « Comparer à l'Original ».
-6. **Marquer Postulée** (en-tête). Sans Lettre validée, une AlertDialog propose « Valider la Lettre et marquer Postulée » ou « sans Lettre » : essaie-la sur une Offre d'À traiter dont la pastille L est orange. Une fois Postulée, la Lettre est figée.
+5. **Lettre de motivation** : « Générer » (débloqué dès qu'une Recherche est validée) → « Lancer » → « Valider » → « Comparer à l'Original ».
+6. **Marquer Postulée** (en-tête). Sans Lettre de motivation validée, une AlertDialog propose « Valider la Lettre de motivation et marquer Postulée » ou « sans Lettre de motivation » : essaie-la sur une Offre d'À traiter dont la pastille L est orange. Une fois Postulée, la Lettre de motivation est figée.
 7. **Candidatures** : <http://192.168.100.3:5182/prototype/applications>. Ouvre l'Offre → « Ajouter un Entretien » (Dialog) → onglet **Entretiens** : Fiche d'entretien | Portrait → « Réviser l'Entretien » → flèche retour.
 8. **Notes** : modifie-les dans la Sheet ou dans l'onglet Notes, l'autre suit.
 9. **Changer de Candidat** (en tête de la barre latérale) : la page reste la même ; depuis une page d'Offre, retour à Nouvelles.

@@ -67,7 +67,7 @@ export function shouldRevalidate({ currentParams, nextParams, currentUrl, nextUr
 
 type Side = 'portrait' | 'posting' | 'letter';
 
-const SIDE_LABEL: Record<Side, string> = { portrait: 'Portrait', posting: 'Offre', letter: 'Lettre' };
+const SIDE_LABEL: Record<Side, string> = { portrait: 'Portrait', posting: 'Offre', letter: 'Lettre de motivation' };
 
 function readableOf(artifact: IArtifact | undefined): IVersion | undefined {
   return artifact === undefined ? undefined : (chosenVersionOf(artifact) ?? artifact.versions.at(-1));
@@ -148,7 +148,7 @@ export default function RevisionPage() {
             </Button>
             <Button variant="ghost" size="sm" className="hidden md:inline-flex" onClick={() => setSide('letter')}>
               <MailIcon />
-              Lettre
+              Lettre de motivation
             </Button>
           </div>
           <ThemeToggle />
@@ -258,7 +258,9 @@ export default function RevisionPage() {
         <SheetContent side="right" className="w-full gap-0 sm:max-w-2xl">
           <SheetHeader className="border-b">
             <SheetTitle>À portée de main</SheetTitle>
-            <SheetDescription>Le Portrait, l’Offre et la Lettre envoyée, sans quitter ta révision.</SheetDescription>
+            <SheetDescription>
+              Le Portrait, l’Offre et la Lettre de motivation envoyée, sans quitter ta révision.
+            </SheetDescription>
           </SheetHeader>
           <Tabs
             value={side ?? 'portrait'}
@@ -293,7 +295,7 @@ export default function RevisionPage() {
               </TabsContent>
               <TabsContent value="letter">
                 {letterVersion === undefined ? (
-                  <SideEmpty>Pas de Lettre pour cette Offre.</SideEmpty>
+                  <SideEmpty>Pas de Lettre de motivation pour cette Offre.</SideEmpty>
                 ) : (
                   <ArtifactContent
                     source={letterVersion.text}

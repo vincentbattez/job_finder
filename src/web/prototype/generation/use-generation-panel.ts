@@ -84,9 +84,9 @@ function explanationOf(
     research:
       'Cherche sur le web ce que l’employeur, le service et le lieu attendent de ce poste, et cite chaque source.',
     letter:
-      'Rédige ta lettre de motivation à partir de la Recherche validée et de ton Profil, dans la langue de la Fiche de poste.',
+      'Rédige ta Lettre de motivation à partir de la Recherche validée et de ton Profil, dans la langue de la Fiche de poste.',
     portrait: `Cherche sur le web ce qui est public sur le parcours et les prises de position de ${interviewers === '' ? 'tes interlocuteurs' : interviewers}, et cite chaque source.`,
-    interview_brief: `Croise l’Offre, la Recherche, ta Lettre et le Portrait pour préparer ${interviewName} : quoi leur dire, quoi réviser, comment t’entraîner.`,
+    interview_brief: `Croise l’Offre, la Recherche, ta Lettre de motivation et le Portrait pour préparer ${interviewName} : quoi leur dire, quoi réviser, comment t’entraîner.`,
   };
   const chosenNumber = artifact.chosenNumber;
   return {
@@ -128,8 +128,8 @@ export function itemsOf(inputList: IPanelInput[]): InputItem[] {
     itemList.push({
       kind: 'bundle',
       key: 'sent_letter',
-      title: 'Lettres déjà envoyées',
-      hint: 'Les Lettres retenues de tes autres Candidatures, avec leur premier jet : Claude compare les deux pour reprendre ton style.',
+      title: 'Lettres de motivation déjà envoyées',
+      hint: 'Les Lettres de motivation retenues de tes autres Candidatures, avec leur premier jet : Claude compare les deux pour reprendre ton style.',
       inputs: sentList,
     });
   }
@@ -152,15 +152,20 @@ export function summarizeInputs(inputList: IPanelInput[]): string[] {
     }
     return [total === 1 ? one : `${String(total)} ${many}`];
   };
-  const isPastLetter = (input: IPanelInput) => input.kind === 'profile' && input.label.startsWith('Lettre passée');
+  const isPastLetter = (input: IPanelInput) =>
+    input.kind === 'profile' && input.label.startsWith('Lettre de motivation passée');
   const isAnnex = (input: IPanelInput) => input.kind === 'profile' && input.label.startsWith('Annexe');
   return [
     ...inputList
       .filter((input) => input.kind !== 'sent_letter' && !isPastLetter(input) && !isAnnex(input))
       .map(({ label }) => label.replaceAll(' · ', ' ')),
-    ...count(isPastLetter, '1 lettre passée', 'lettres passées'),
+    ...count(isPastLetter, '1 lettre de motivation passée', 'lettres de motivation passées'),
     ...count(isAnnex, '1 Annexe', 'Annexes'),
-    ...count(({ kind }) => kind === 'sent_letter', '1 Lettre déjà envoyée', 'Lettres déjà envoyées'),
+    ...count(
+      ({ kind }) => kind === 'sent_letter',
+      '1 Lettre de motivation déjà envoyée',
+      'Lettres de motivation déjà envoyées',
+    ),
   ];
 }
 

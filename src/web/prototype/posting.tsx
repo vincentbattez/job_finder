@@ -43,7 +43,7 @@ type Tab = (typeof TAB_LIST)[number];
 const TAB_LABEL: Record<Tab, string> = {
   posting: 'Offre',
   research: 'Recherche',
-  letter: 'Lettre',
+  letter: 'Lettre de motivation',
   interviews: 'Entretiens',
   notes: 'Notes',
 };

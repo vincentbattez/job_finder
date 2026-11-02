@@ -396,7 +396,7 @@ function applyPosting(posting: IPosting, overlay: ICandidateOverlay, now: Date):
 }
 
 export const LETTER_FROZEN_REASON =
-  'Lettre figée : tu as marqué l’Offre Postulée, la Lettre envoyée ne change plus. Tu peux seulement la relire.';
+  'Lettre de motivation figée : tu as marqué l’Offre Postulée, la Lettre de motivation envoyée ne change plus. Tu peux seulement la relire.';
 
 // Once the Posting was Applied, what the Candidate sent stays as it was (the real module's freeze)
 export function isLetterFrozen(type: ArtifactType, posting: IPosting): boolean {

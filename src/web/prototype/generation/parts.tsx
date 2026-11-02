@@ -38,7 +38,8 @@ import { Textarea } from '#/web/prototype/components/ui/textarea.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from '#/web/prototype/components/ui/tooltip.tsx';
 import { cn } from '#/web/prototype/lib/utils.ts';
 
-import { ARTIFACT_LABEL, type IInputSpec } from '../model.ts';
+import { ARTIFACT_LABEL, type IArtifact, type IInputSpec } from '../model.ts';
+import { segmentsOf } from './fixed-part.ts';
 import {
   checkedPhrase,
   formatWords,
@@ -238,9 +239,58 @@ export function FixedPartBody({ panel }: { panel: GenerationPanelState }) {
       {artifact.fixedPart === null ? (
         <p className="text-sm text-muted-foreground italic">Indisponible dans cet instantané.</p>
       ) : (
-        <InputContent input={{ content: artifact.fixedPart }} className="text-muted-foreground" />
+        <>
+          <SubstitutedLegend artifact={artifact} />
+          <FixedPartText artifact={artifact} />
+        </>
       )}
     </>
+  );
+}
+
+const SUBSTITUTED_CLASS =
+  'rounded-[3px] bg-violet-500/12 px-0.5 text-violet-800 ring-1 ring-violet-500/30 ring-inset dark:bg-violet-400/15 dark:text-violet-200 dark:ring-violet-400/30';
+
+// « ▮ remplacé automatiquement », only when something was
+export function SubstitutedLegend({ artifact, className }: { artifact: IArtifact; className?: string }) {
+  if (artifact.fixedPartMarked == null) {
+    return null;
+  }
+  return (
+    <p className={cn('flex items-center gap-2 text-xs text-muted-foreground', className)}>
+      <span className={cn(SUBSTITUTED_CLASS, 'shrink-0')}>surligné</span>
+      <span>
+        remplacé automatiquement pour cette Offre : référence, titre, employeur, chemins des fichiers, Entretien…
+      </span>
+    </p>
+  );
+}
+
+// The Fixed Part's exact text, each substituted value highlighted
+export function FixedPartText({ artifact, className }: { artifact: IArtifact; className?: string }) {
+  const marked = artifact.fixedPartMarked;
+  if (marked == null) {
+    return (
+      <InputContent input={{ content: artifact.fixedPart ?? '' }} className={cn('text-muted-foreground', className)} />
+    );
+  }
+  return (
+    <pre
+      className={cn(
+        'font-sans text-[13px] leading-relaxed whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]',
+        className,
+      )}
+    >
+      {segmentsOf(marked).map((segment, index) =>
+        segment.isSubstituted ? (
+          <mark key={index} className={SUBSTITUTED_CLASS} title="Remplacé automatiquement">
+            {segment.text}
+          </mark>
+        ) : (
+          segment.text
+        ),
+      )}
+    </pre>
   );
 }
 

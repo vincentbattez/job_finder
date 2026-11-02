@@ -269,12 +269,14 @@ export function PostingActions({ posting }: { posting: IPosting }) {
         <AlertDialogContent className="data-[size=default]:sm:max-w-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {posting.letter.state === 'draft' ? 'La Lettre est encore un Brouillon' : 'Aucune Lettre validée'}
+              {posting.letter.state === 'draft'
+                ? 'La Lettre de motivation est encore un Brouillon'
+                : 'Aucune Lettre de motivation validée'}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {posting.letter.state === 'draft'
-                ? `La Version ${String(posting.letter.latestNumber ?? '')} de la Lettre n’est pas validée. Seule une Lettre validée est celle que tu as envoyée ; une fois Postulée, elle ne change plus.`
-                : 'Cette Offre n’a pas de Lettre. Tu peux la marquer Postulée sans Lettre, si tu as candidaté autrement.'}
+                ? `La Version ${String(posting.letter.latestNumber ?? '')} de la Lettre de motivation n’est pas validée. Seule une Lettre de motivation validée est celle que tu as envoyée ; une fois Postulée, elle ne change plus.`
+                : 'Cette Offre n’a pas de Lettre de motivation. Tu peux la marquer Postulée sans Lettre de motivation, si tu as candidaté autrement.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -283,12 +285,12 @@ export function PostingActions({ posting }: { posting: IPosting }) {
               variant="outline"
               onClick={() => void run('applied', () => actions.setStatus(reference, 'applied'))}
             >
-              Marquer Postulée sans Lettre
+              Marquer Postulée sans Lettre de motivation
             </AlertDialogAction>
             {posting.letter.state === 'draft' ? (
               <AlertDialogAction onClick={() => void run('applied', validateLetterThenApply)}>
                 <CheckIcon />
-                Valider la Lettre et marquer Postulée
+                Valider la Lettre de motivation et marquer Postulée
               </AlertDialogAction>
             ) : null}
           </AlertDialogFooter>

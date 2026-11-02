@@ -15,7 +15,7 @@ const SHOWCASE_INPUT_LIST: IInputRef[] = [
   { key: 'job_description', label: 'Fiche de poste' },
   { key: 'artifact:research', label: 'Recherche · v1' },
   { key: 'artifact:portrait@1', label: 'Portrait · Entretien 1 · v1' },
-  { key: 'artifact:letter', label: 'Lettre · v1' },
+  { key: 'artifact:letter', label: 'Lettre de motivation · v1' },
   { key: 'profile:cv.md', label: 'CV' },
   { key: 'profile:facts.md', label: 'Faits' },
   { key: 'notes', label: 'Notes' },

@@ -25,8 +25,8 @@ export function NotesTab({ posting }: { posting: IPosting }) {
   return (
     <div className="mx-auto max-w-[72ch] space-y-3">
       <p className="text-sm text-muted-foreground">
-        Tes notes sur cette Offre : un appel, une impression, ce qu’il ne faut pas oublier. La Recherche et la Lettre
-        les lisent.
+        Tes notes sur cette Offre : un appel, une impression, ce qu’il ne faut pas oublier. La Recherche et la Lettre de
+        motivation les lisent.
       </p>
       <Textarea
         value={notes}

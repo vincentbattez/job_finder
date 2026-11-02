@@ -5,7 +5,8 @@
 // editable in place and the Fixed Part folded, prefills a regeneration with the previous Version's
 // Inputs, then « Lancer » → simulated progress → a new Draft Version.
 //
-// Three structurally different variants on ?panel= (independent from the page's ?variant=), Shift + ←→:
+// Three structurally different variants on ?panel= (independent from the page's ?variant=), Shift + ←→;
+// the user chose C on 2026-11-02, the default without ?panel=:
 //   A « Dialog »  centered, a single scroll, previews unfold in place          generation/variant-a.tsx
 //   B « Sheet »   wide right Sheet, checklist left, live Prompt preview right   generation/variant-b.tsx
 //   C « Étapes »  a 3-step stepper ending on a one-paragraph recap             generation/variant-c.tsx
@@ -19,10 +20,11 @@ import { PanelStepper } from './generation/variant-c.tsx';
 import type { IArtifact, IInterview, IPosting } from './model.ts';
 import { PrototypeSwitcher, usePrototypeVariant } from './prototype-switcher.tsx';
 
+// The first one is the default: C, chosen by the user on 2026-11-02; A and B stay reachable
 export const PANEL_VARIANTS = [
+  { key: 'C', name: 'Étapes' },
   { key: 'A', name: 'Dialog' },
   { key: 'B', name: 'Sheet + aperçu' },
-  { key: 'C', name: 'Étapes' },
 ] as const;
 
 export interface IGenerationPanelProps {
@@ -40,9 +42,9 @@ export function GenerationPanel({ artifact, posting, interview, onClose }: IGene
   const props = { panel, onClose, subtitle };
   return (
     <>
+      {variant === 'A' ? <PanelDialog {...props} /> : null}
       {variant === 'B' ? <PanelSheet {...props} /> : null}
-      {variant === 'C' ? <PanelStepper {...props} /> : null}
-      {variant !== 'B' && variant !== 'C' ? <PanelDialog {...props} /> : null}
+      {variant !== 'A' && variant !== 'B' ? <PanelStepper {...props} /> : null}
       <PrototypeSwitcher param="panel" variants={PANEL_VARIANTS} label="Panneau" keys="shift+arrows" />
     </>
   );

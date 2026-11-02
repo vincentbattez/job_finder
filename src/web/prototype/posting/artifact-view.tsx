@@ -66,7 +66,7 @@ type Mode = 'read' | 'edit' | 'compare';
 // « la Recherche », « le Portrait »…
 const ARTICLE_LABEL: Record<ArtifactType, string> = {
   research: 'la Recherche',
-  letter: 'la Lettre',
+  letter: 'la Lettre de motivation',
   portrait: 'le Portrait',
   interview_brief: 'la Fiche d’entretien',
   custom: 'ce document',

@@ -238,7 +238,7 @@ function DocumentsCard({ posting, documents }: { posting: IPosting; documents: I
     >
       {documents.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Aucun document. Ajoute un texte ou un fichier que la Recherche, la Lettre ou les Fiches liront.
+          Aucun document. Ajoute un texte ou un fichier que la Recherche, la Lettre de motivation ou les Fiches liront.
         </p>
       ) : (
         <ul className="-mx-1 space-y-0.5">
