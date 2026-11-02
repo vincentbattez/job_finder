@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { applyTo } from './apply.ts';
 import { detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { runAndValidate } from './run-module.ts';
 
 // Postings detected from the responses recorded on 2026-10-29: Béthune juvenile court, Rennes, Melun
 const BETHUNE_REFERENCE = '2026-2445600';
@@ -14,7 +15,7 @@ const NEW_REFERENCE = '2026-2445609';
 const RESEARCH_RUN = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
 const LETTER_RUN = {
   fileByName: {
-    'draft.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal pour enfants de Béthune.\n',
+    'letter.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal pour enfants de Béthune.\n',
     'recipients.json': JSON.stringify({
       to: { email: 'p.tj-bethune@justice.fr', source: 'applicationEmail' },
       ccList: [],
@@ -28,14 +29,11 @@ const LETTER_RUN = {
 describe('To Apply list', () => {
   it('lists the followed To Apply Postings, each with the state of its Research and its Letter', async () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, LETTER_RUN, RESEARCH_RUN));
+    await runAndValidate(actions, { module: 'research', reference: BETHUNE_REFERENCE });
+    await runAndValidate(actions, { module: 'letter', reference: BETHUNE_REFERENCE });
+    // A second Research, a Draft while the Candidate keeps the first one chosen
     await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
     await actions.runQueuedJobs();
-    await actions.runModule({ module: 'letter', reference: BETHUNE_REFERENCE });
-    await actions.runQueuedJobs();
-    // A second Research, while the Candidate keeps the first one chosen
-    await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
-    await actions.runQueuedJobs();
-    await actions.chooseVersion({ reference: BETHUNE_REFERENCE, artifact: 'research', number: 1 });
     for (const reference of [BETHUNE_REFERENCE, RENNES_REFERENCE, ARCHIVED_REFERENCE]) {
       await actions.keep({ reference });
     }
@@ -68,7 +66,7 @@ describe('To Apply list', () => {
     await actions.runQueuedJobs();
     await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
     await actions.runQueuedJobs();
-    await actions.chooseVersion({ reference: BETHUNE_REFERENCE, artifact: 'research', number: 1 });
+    await actions.validateVersion({ reference: BETHUNE_REFERENCE, artifact: 'research', number: 1 });
 
     const { artifactList } = await actions.readPosting({ reference: BETHUNE_REFERENCE });
 

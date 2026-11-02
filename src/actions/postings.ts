@@ -21,10 +21,12 @@ import { foundReferencesOf } from './detect.ts';
 import { findWorkerFailure } from './stalled-job.ts';
 
 export function createPostingActions({ workspace, artifacts, findCandidate, findPosting, findLocale }: ActionContext) {
-  // The Letter module reads the recipients of its Chosen Version
-  async function findRecipients(posting: Posting): Promise<Recipients | null> {
+  // The Letter module reads the recipients of its Chosen Version; the Posting page, those of a Draft
+  // before any is chosen, so they are read with the Letter they go with
+  async function findRecipients(posting: Posting, { isDraftRead = false } = {}): Promise<Recipients | null> {
     const handle = await artifacts.find({ posting, artifact: 'letter' });
-    const version = handle.chosenVersion;
+    const latestReady = handle.versionList.findLast(({ version }) => version.state === 'ready')?.version;
+    const version = handle.chosenVersion ?? (isDraftRead ? latestReady : undefined);
     return version === undefined ? null : LETTER_MODULE.readRecipients(handle.directoryOf(version));
   }
 
@@ -129,7 +131,7 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
                 },
         },
         artifactList: artifactListOf(null),
-        recipients: await findRecipients(posting),
+        recipients: await findRecipients(posting, { isDraftRead: true }),
         extraction:
           extractionJob === undefined
             ? null

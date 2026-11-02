@@ -47,7 +47,7 @@ test.describe('the header of the Posting page', () => {
     );
   });
 
-  test('marks a To Apply Posting Applied, leads to its Interviews, then puts it back To Apply', async ({
+  test('marks a To Apply Posting Applied without a Letter, leads to its Interviews, then puts it back To Apply', async ({
     page,
     openPage,
   }) => {
@@ -55,7 +55,11 @@ test.describe('the header of the Posting page', () => {
     await openJourney(front, 'applied', { path: 'status', form: { status: 'to_apply' } });
     await expect(findStepBadge(page)).toHaveText('À traiter');
 
+    // Without a Validated Letter, Applied asks first: the Candidate may have applied another way
     await page.getByRole('button', { name: 'Marquer Postulée' }).click();
+    const dialog = page.getByRole('alertdialog', { name: 'Marquer l’Offre Postulée ?' });
+    await expect(dialog).toContainText('Cette Offre n’a pas de Lettre de motivation validée.');
+    await dialog.getByRole('button', { name: 'Marquer Postulée sans Lettre de motivation' }).click();
 
     await expect(page.getByText('Offre passée à « Postulée »')).toBeVisible();
     await expect(findStepBadge(page)).toHaveText('Postulée');

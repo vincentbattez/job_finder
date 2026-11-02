@@ -15,11 +15,21 @@ import {
   TrophyIcon,
   XIcon,
 } from 'lucide-react';
-import { useRef, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useFetcher } from 'react-router';
 
 import type { Status, Step } from '#/web/components/badge.tsx';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '#/web/components/ui/alert-dialog.tsx';
 import { Button } from '#/web/components/ui/button.tsx';
 import {
   DropdownMenu,
@@ -42,6 +52,59 @@ interface IPostingActions {
   repostOf: { reference: string } | null;
   // The first Interview still to come, which an Invited Application leads to
   nextInterviewNumber: number | null;
+  // Where the Letter stands before marking Applied: its latest Version still a Draft, and whether it has a
+  // Chosen Version, the one recorded as sent
+  letter: { draftNumber: number | null; hasChosen: boolean };
+}
+
+// Marking Applied while the Letter is not validated asks first (spec #125, « The Posting page »): validate the
+// Draft and mark Applied at once, or mark Applied without a Letter
+function AppliedDialog({
+  isOpen,
+  onOpenChange,
+  draftNumber,
+  onApply,
+}: Readonly<{
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  draftNumber: number | null;
+  onApply: (letterNumber: number | null) => void;
+}>) {
+  const { t } = useTranslation('posting');
+  return (
+    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('appliedDialog.title')}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {draftNumber === null
+              ? t('appliedDialog.noLetterDescription')
+              : t('appliedDialog.draftDescription', { number: draftNumber })}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="sm:flex-wrap">
+          <AlertDialogCancel>{t('appliedDialog.cancel')}</AlertDialogCancel>
+          <AlertDialogAction
+            variant={draftNumber === null ? 'default' : 'outline'}
+            onClick={() => {
+              onApply(null);
+            }}
+          >
+            {t('appliedDialog.applyWithoutLetter')}
+          </AlertDialogAction>
+          {draftNumber !== null && (
+            <AlertDialogAction
+              onClick={() => {
+                onApply(draftNumber);
+              }}
+            >
+              {t('appliedDialog.validateAndApply')}
+            </AlertDialogAction>
+          )}
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }
 
 const IN_PROGRESS_STEP_LIST: Set<Step> = new Set(['applied', 'invited', 'interviewed']);
@@ -65,6 +128,7 @@ export function PostingActions({
   url,
   repostOf,
   nextInterviewNumber,
+  letter,
 }: Readonly<IPostingActions>) {
   const { t } = useTranslation('posting');
   const statusFetcher = useFetcher<IRefusal | null>();
@@ -99,12 +163,22 @@ export function PostingActions({
       },
     }),
   );
-  const changeStatus = (status: Status) => {
+  const [isAppliedDialogOpen, setIsAppliedDialogOpen] = useState(false);
+  const changeStatus = (status: Status, letterNumber: number | null = null) => {
     submittedStatus.current = status;
-    void statusFetcher.submit(
-      { status },
-      { method: 'post', action: `/postings/${reference}/status`, preventScrollReset: true },
-    );
+    void statusFetcher.submit(letterNumber === null ? { status } : { status, letterNumber }, {
+      method: 'post',
+      action: `/postings/${reference}/status`,
+      preventScrollReset: true,
+    });
+  };
+  // The Letter sent is the one recorded: Applied waits for the Candidate's word on a Letter not validated
+  const markApplied = () => {
+    if (letter.draftNumber === null && letter.hasChosen) {
+      changeStatus('applied');
+    } else {
+      setIsAppliedDialogOpen(true);
+    }
   };
   // Applied is what both To Apply and an outcome move to: its button alone spins while it is sent
   const isApplying = statusFetcher.state !== 'idle' && submittedStatus.current === 'applied';
@@ -153,13 +227,7 @@ export function PostingActions({
       }
       case 'to_apply': {
         return (
-          <Button
-            size="sm"
-            isPending={isApplying}
-            onClick={() => {
-              changeStatus('applied');
-            }}
-          >
+          <Button size="sm" isPending={isApplying} onClick={markApplied}>
             <SendIcon />
             <ButtonLabel>{t('page.markApplied')}</ButtonLabel>
           </Button>
@@ -233,6 +301,14 @@ export function PostingActions({
   return (
     <>
       {renderPrimary()}
+      <AppliedDialog
+        isOpen={isAppliedDialogOpen}
+        onOpenChange={setIsAppliedDialogOpen}
+        draftNumber={letter.draftNumber}
+        onApply={(letterNumber) => {
+          changeStatus('applied', letterNumber);
+        }}
+      />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon-sm" aria-label={t('page.moreActions')}>

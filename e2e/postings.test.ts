@@ -2,7 +2,6 @@ import type { Page } from '@playwright/test';
 
 import { expect, switchCandidate, test } from './candidate.ts';
 import { findOverflowing } from './overflow.ts';
-import { unfoldChosenVersion } from './version.ts';
 
 // The front runs on the data that test/seed-front.ts made through the actions, with the HTTP of
 // the PEP Source recorded on 2026-10-29: Léa follows the attaché de justice Postings, Camille has
@@ -72,40 +71,23 @@ test.describe('Postings of a Candidate', () => {
     await expect(recipients).toContainText('Le mail de candidature est celui de la présidence');
   });
 
-  test('shows every Version of an Artifact folded and tells the Chosen Version', async ({ page }) => {
-    await page.goto('/postings/2026-2445600?tab=research');
+  test('reads the latest Version of an Artifact, and any other from its Version Select', async ({ page, openPage }) => {
+    await openPage('/postings/2026-2445600?tab=research');
 
     const research = page.getByRole('region', { name: 'Recherche' });
-    await expect(research.locator('li > details > summary')).toHaveText([
-      /^v1\s*Prêt\s*Retenue/,
-      /^v2\s*Prêt\s*Consignes par défaut\s*\d/,
+    const versionSelect = research.getByRole('combobox', { name: 'Version' });
+    await expect(versionSelect).toHaveText('Version 2 · Brouillon');
+    await expect(research.getByRole('heading', { name: /^Recherche relancée/ })).toBeVisible();
+    await versionSelect.click();
+    await expect(page.getByRole('option')).toHaveText([
+      /^Version 2\s*Brouillon · IA/,
+      /^Version 1\s*Validée · retenue · IA/,
     ]);
-    await expect(research.getByRole('heading', { name: /^Recherche retenue/ })).toBeHidden();
-    await unfoldChosenVersion(research);
+    await page.getByRole('option', { name: /^Version 1/ }).click();
     await expect(research.getByRole('heading', { name: /^Recherche retenue/ })).toBeVisible();
     await expect(research.getByRole('heading', { name: /^Recherche relancée/ })).toBeHidden();
-    await research.locator('li > details > summary', { hasText: 'v2' }).click();
-    await expect(research.getByRole('heading', { name: /^Recherche relancée/ })).toBeVisible();
-    await page.goto('/postings/2026-2445600?tab=letter');
-    await expect(page.getByRole('region', { name: 'Lettre' }).locator('figcaption')).toHaveText([
-      'draft.md',
-      'letter.md',
-    ]);
-  });
-
-  test('copies the jf edit command of an Artifact', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-    await page.goto('/postings/2026-2445600?tab=research');
-    const research = page.getByRole('region', { name: 'Recherche' });
-
-    await expect(research.getByRole('code')).toHaveText('jf edit 2026-2445600 research');
-    // A click before React hydrates the server-rendered page does nothing: click again until it copies
-    await expect(async () => {
-      await research.getByRole('button', { name: 'Copier', exact: true }).click();
-      expect(await page.evaluate(() => globalThis.navigator.clipboard.readText())).toBe(
-        'jf edit 2026-2445600 research',
-      );
-    }).toPass();
+    await page.getByRole('tab', { name: /^Lettre de motivation/ }).click();
+    await expect(page.getByRole('region', { name: 'Lettre de motivation' })).toContainText('Madame la Présidente,');
   });
 
   test('fits a phone screen, the list as the Posting page', async ({ page, asCandidate, openPage }) => {
@@ -119,7 +101,7 @@ test.describe('Postings of a Candidate', () => {
     await openPage('/postings/2026-2445600');
     await expect.poll(() => findOverflowing(page)).toEqual([]);
     await openPage('/postings/2026-2445600?tab=research');
-    await page.locator('li > details > summary', { hasText: 'v2' }).click();
+    await expect(page.getByRole('combobox', { name: 'Version' })).toBeVisible();
 
     await expect.poll(() => findOverflowing(page)).toEqual([]);
   });

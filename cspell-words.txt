@@ -1,7 +1,7 @@
 # The project's words that are not in the English dictionary (cspell.config.yaml)
 
 # Glossary terms
-Choosable
+Validatable
 repost
 reposted
 reposts
