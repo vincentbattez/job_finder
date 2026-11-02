@@ -26,7 +26,7 @@ interface IMapListGroup<T extends IMapListItem> {
   itemList: T[];
 }
 
-interface IMapListProps<T extends IMapListItem> {
+interface IMapListProperties<T extends IMapListItem> {
   // The list's name, which also names its panel
   label: string;
   groupList: IMapListGroup<T>[];
@@ -57,7 +57,7 @@ export function MapList<T extends IMapListItem>({
   legendList,
   renderFacts,
   empty,
-}: Readonly<IMapListProps<T>>) {
+}: Readonly<IMapListProperties<T>>) {
   const { t } = useTranslation('lists');
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [hoveredReference, setHoveredReference] = useState<string | null>(null);
@@ -118,7 +118,14 @@ export function MapList<T extends IMapListItem>({
             <p className="text-body font-semibold">
               {label} <span className="font-normal text-muted-foreground tabular-nums">· {count}</span>
             </p>
-            <Button variant="ghost" size="icon-xs" onClick={() => setIsPanelOpen(false)} aria-label={t('fold')}>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => {
+                setIsPanelOpen(false);
+              }}
+              aria-label={t('fold')}
+            >
               <PanelLeftCloseIcon />
             </Button>
           </div>
@@ -145,8 +152,12 @@ export function MapList<T extends IMapListItem>({
                         data-row-reference={item.reference}
                         data-highlighted={item.reference === hoveredReference ? '' : undefined}
                         data-active={item.reference === active.reference ? '' : undefined}
-                        onMouseEnter={() => setHoveredReference(item.reference)}
-                        onMouseLeave={() => setHoveredReference(null)}
+                        onMouseEnter={() => {
+                          setHoveredReference(item.reference);
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredReference(null);
+                        }}
                         className="relative scroll-my-10 px-4 py-3 transition-colors duration-150 data-active:bg-primary/[0.07] data-active:shadow-[inset_3px_0_0_var(--primary)] data-highlighted:bg-muted/70"
                       >
                         <p className="flex min-w-0 items-center gap-1.5 text-body">
@@ -169,7 +180,9 @@ export function MapList<T extends IMapListItem>({
                         {/* The whole row shows its marker; the title above it opens the Posting */}
                         <button
                           type="button"
-                          onClick={() => setActive(({ nonce }) => ({ reference: item.reference, nonce: nonce + 1 }))}
+                          onClick={() => {
+                            setActive(({ nonce }) => ({ reference: item.reference, nonce: nonce + 1 }));
+                          }}
                           className="absolute inset-0 cursor-pointer rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
                         >
                           <span className="sr-only">{t('showOnMap')}</span>
@@ -186,7 +199,9 @@ export function MapList<T extends IMapListItem>({
         <Button
           variant="outline"
           className="absolute top-3 left-3 z-10 bg-background shadow-lg"
-          onClick={() => setIsPanelOpen(true)}
+          onClick={() => {
+            setIsPanelOpen(true);
+          }}
         >
           <ListIcon />
           {t('count', { label, count })}

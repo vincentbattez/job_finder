@@ -1,9 +1,8 @@
 import { cn } from 'cn';
+import type * as LeafletModule from 'leaflet';
 import type { LayerGroup, Map as LeafletMap, Marker } from 'leaflet';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
-type Leaflet = typeof import('leaflet');
 
 interface IMapPoint {
   reference: string;
@@ -63,18 +62,18 @@ function groupByLocation(pointList: ILocatedPoint[]): ILocatedPoint[][] {
     const key = `${String(point.latitude)},${String(point.longitude)}`;
     groupByKey.set(key, [...(groupByKey.get(key) ?? []), point]);
   }
-  return [...groupByKey.values()];
+  return groupByKey.values().toArray();
 }
 
 function escapeHtml(text: string): string {
   return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 }
 
-function prefersReducedMotion(): boolean {
+function isReducedMotionPreferred(): boolean {
   return globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-interface IListMapProps {
+interface IListMapProperties {
   pointList: IMapPoint[];
   hoveredReference: string | null;
   activeReference: string | null;
@@ -99,14 +98,14 @@ export function ListMap({
   onHover,
   onSelect,
   className,
-}: Readonly<IListMapProps>) {
+}: Readonly<IListMapProperties>) {
   const { t } = useTranslation('lists');
   const containerReference = useRef<HTMLDivElement>(null);
-  const mapReference = useRef<{ leaflet: Leaflet; map: LeafletMap; layer: LayerGroup } | null>(null);
+  const mapReference = useRef<{ leaflet: typeof LeafletModule; map: LeafletMap; layer: LayerGroup } | null>(null);
   const markerByReference = useRef(new Map<string, Marker>());
   const [isReady, setIsReady] = useState(false);
   // Once the Candidate moved the view, a resize no longer fits it again
-  const isUserMoved = useRef(false);
+  const userMovedReference = useRef(false);
   // The handlers of the markers read the latest props without rebuilding the markers
   const latest = useRef({ pointList, coveredLeft, onHover, onSelect });
   latest.current = { pointList, coveredLeft, onHover, onSelect };
@@ -150,14 +149,18 @@ export function ListMap({
       mapReference.current = { leaflet, map, layer: leaflet.layerGroup().addTo(map) };
       const currentMap = map;
       currentMap.on('dragstart', () => {
-        isUserMoved.current = true;
+        userMovedReference.current = true;
       });
-      container.addEventListener('wheel', () => {
-        isUserMoved.current = true;
-      });
+      container.addEventListener(
+        'wheel',
+        () => {
+          userMovedReference.current = true;
+        },
+        { passive: true },
+      );
       observer = new ResizeObserver(() => {
         currentMap.invalidateSize();
-        if (!isUserMoved.current) {
+        if (!userMovedReference.current) {
           fitView.current();
         }
       });
@@ -183,7 +186,8 @@ export function ListMap({
     const { leaflet, layer } = current;
     layer.clearLayers();
     markerByReference.current.clear();
-    for (const locationList of groupByLocation(latest.current.pointList.filter((point) => isLocated(point)))) {
+    const locationGroupList = groupByLocation(latest.current.pointList.filter((point) => isLocated(point)));
+    for (const locationList of locationGroupList) {
       for (const [index, point] of locationList.entries()) {
         const shift = (index - (locationList.length - 1) / 2) * POINT_STEP;
         const icon = leaflet.divIcon({
@@ -201,13 +205,19 @@ export function ListMap({
           offset: [shift, -POINT_SIZE / 2 - 4],
           className: TOOLTIP_CLASS,
         });
-        marker.on('mouseover', () => latest.current.onHover(point.reference));
-        marker.on('mouseout', () => latest.current.onHover(null));
-        marker.on('click', () => latest.current.onSelect(point.reference));
+        marker.on('mouseover', () => {
+          latest.current.onHover(point.reference);
+        });
+        marker.on('mouseout', () => {
+          latest.current.onHover(null);
+        });
+        marker.on('click', () => {
+          latest.current.onSelect(point.reference);
+        });
         markerByReference.current.set(point.reference, marker);
       }
     }
-    if (!isUserMoved.current) {
+    if (!userMovedReference.current) {
       fitView.current();
     }
   }, [isReady, pointKey]);
@@ -251,12 +261,12 @@ export function ListMap({
       map.project(marker.getLatLng(), zoom).subtract([latest.current.coveredLeft / 2, 0]),
       zoom,
     );
-    if (prefersReducedMotion()) {
+    if (isReducedMotionPreferred()) {
       map.setView(center, zoom, { animate: false });
     } else {
       map.flyTo(center, zoom, { duration: FOCUS_DURATION_S });
     }
-    isUserMoved.current = true;
+    userMovedReference.current = true;
   }, [focusNonce, isReady]);
 
   const unlocatedCount = pointList.filter((point) => !isLocated(point)).length;
