@@ -83,6 +83,8 @@ interface IListMapProperties {
   coveredLeft: number;
   // The width the open Sheet covers on the right, in pixels
   coveredRight: number;
+  // The height the phone's list drawer covers at the bottom, in pixels
+  coveredBottom: number;
   // The extent the view fits, a Region's, rather than the points'
   fitCornerList: [[number, number], [number, number]] | undefined;
   // Changes with the list's filters: the view fits again, even after the Candidate moved it
@@ -104,6 +106,7 @@ export function ListMap({
   fitCornerList,
   fitKey,
   coveredRight,
+  coveredBottom,
   onHover,
   onSelect,
   className,
@@ -116,8 +119,8 @@ export function ListMap({
   // Once the Candidate moved the view, a resize no longer fits it again
   const userMovedReference = useRef(false);
   // The handlers of the markers read the latest props without rebuilding the markers
-  const latest = useRef({ pointList, coveredLeft, coveredRight, fitCornerList, onHover, onSelect });
-  latest.current = { pointList, coveredLeft, coveredRight, fitCornerList, onHover, onSelect };
+  const latest = useRef({ pointList, coveredLeft, coveredRight, coveredBottom, fitCornerList, onHover, onSelect });
+  latest.current = { pointList, coveredLeft, coveredRight, coveredBottom, fitCornerList, onHover, onSelect };
 
   // The view fits the Region filtered, else the points, mainland France first, the overseas ones when alone
   const fitView = useRef(() => {});
@@ -141,7 +144,7 @@ export function ListMap({
       maxZoom: FIT_MAX_ZOOM,
       animate: false,
       paddingTopLeft: [latest.current.coveredLeft + FIT_PADDING, FIT_PADDING_TOP],
-      paddingBottomRight: [latest.current.coveredRight + FIT_PADDING, FIT_PADDING],
+      paddingBottomRight: [latest.current.coveredRight + FIT_PADDING, latest.current.coveredBottom + FIT_PADDING],
     });
   };
 
@@ -281,10 +284,13 @@ export function ListMap({
     }
     const { map } = current;
     const zoom = Math.min(Math.max(map.getZoom(), FOCUS_ZOOM_MIN), FOCUS_ZOOM_MAX);
-    // The center moves by half the difference of the covered widths, so the marker lands in the middle
-    // of the rest
-    const { coveredLeft: left, coveredRight: right } = latest.current;
-    const center = map.unproject(map.project(marker.getLatLng(), zoom).subtract([(left - right) / 2, 0]), zoom);
+    // The center moves by half the difference of the covered widths, and down by half the covered
+    // height, so the marker lands in the middle of the rest
+    const { coveredLeft: left, coveredRight: right, coveredBottom: bottom } = latest.current;
+    const center = map.unproject(
+      map.project(marker.getLatLng(), zoom).subtract([(left - right) / 2, -bottom / 2]),
+      zoom,
+    );
     if (isReducedMotionPreferred()) {
       map.setView(center, zoom, { animate: false });
     } else {
@@ -303,7 +309,7 @@ export function ListMap({
         className={cn('absolute inset-0 z-0', CONTROL_CLASS)}
       />
       {unlocatedCount > 0 && (
-        <p className="absolute right-3 bottom-14 z-10 rounded-md bg-background/90 px-2 py-1 text-label text-muted-foreground shadow-whisper">
+        <p className="absolute right-3 bottom-14 z-10 rounded-md max-md:top-3 max-md:right-auto max-md:bottom-auto max-md:left-3 bg-background/90 px-2 py-1 text-label text-muted-foreground shadow-whisper">
           {t('unlocated', { count: unlocatedCount })}
         </p>
       )}

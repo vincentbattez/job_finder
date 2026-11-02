@@ -66,6 +66,8 @@ export const LISTS_FR: typeof LISTS_EN = {
   },
   count: '{{label}} · {{count}}',
   fold: 'Replier la liste',
+  expand: 'Agrandir la liste',
+  collapse: 'Réduire la liste',
   openSheet: 'Aperçu de cette Offre',
   mapLabel: 'Carte des Offres',
   legendLabel: 'Légende',

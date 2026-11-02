@@ -279,12 +279,15 @@ export const POSTING_EN = {
     unfold: 'Details',
     fold: 'Fold',
     writeIntro:
-      'Claude follows the Fixed Part of the {{artifactLabel}} first, then these Instructions. You can edit them from the Instructions page.',
+      'Claude follows the Fixed Part of the {{artifactLabel}} first, then these Instructions, which you can edit here.',
     writeIntro_portrait:
-      'Claude follows the Fixed Part of the {{artifactLabel}} first, then these Instructions. You can edit them from the Instructions page.',
+      'Claude follows the Fixed Part of the {{artifactLabel}} first, then these Instructions, which you can edit here.',
     instructions: 'Instructions in effect',
     fixedPart: 'Fixed Part of the Prompt',
     notEditable: 'not editable',
+    substitutedChip: 'highlighted',
+    substitutedLegend: 'substituted automatically for this Posting',
+    substituted: 'Substituted automatically',
     doesByArtifact: {
       research:
         'Claude searches the web for what the employer, the department and the place expect of this position, and cites each source.',

@@ -31,8 +31,12 @@ export function useFeedback(
       sentReference.current ??= { data: idleDataReference.current };
       return;
     }
+    // React may even skip every render of the mutation, its updates being transitions: an answer the
+    // fetcher did not hold before then tells that it settled
+    const sent =
+      sentReference.current ??
+      (fetcher.data === idleDataReference.current ? null : { data: idleDataReference.current });
     idleDataReference.current = fetcher.data;
-    const sent = sentReference.current;
     if (sent === null) {
       return;
     }

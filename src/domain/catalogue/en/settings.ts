@@ -14,7 +14,8 @@ export const SETTINGS_EN = {
   settingsPage: {
     pageTitle: 'Settings · Job Finder',
     heading: 'Settings',
-    description: 'Your notifications, then the Candidates and the Default Deadline Period everyone shares.',
+    description:
+      'Your notifications and Instructions, then the Candidates and the Default Deadline Period everyone shares.',
   },
   candidates: {
     heading: 'Candidates',
@@ -130,21 +131,25 @@ export const SETTINGS_EN = {
     keepSaved: 'Leave empty to keep the saved value',
   },
 
+  // The Instructions editor, in the generation panel and in the Settings (spec #125)
   instructions: {
-    pageTitle: 'Instructions · Job Finder',
-    noCandidateHeading: 'Who is looking at their Instructions?',
-    noCandidateHint: 'Pick your name at the head of the menu. The front will remember it.',
-    heading: '{{candidateName}}’s Instructions',
-    intro:
-      'The Instructions tell each module how to produce its Artifact. Yours replace the default ones for its next Versions. Its fixed rules, such as never making up a fact, always apply.',
+    heading: 'Instructions',
+    description:
+      'How the AI writes each type of document. Yours replace the default ones for the next generations; the Fixed Part of the Prompt, such as never making up a fact, always applies.',
     candidateOrigin: 'Candidate’s Instructions',
     defaultOrigin: 'Default Instructions',
     candidateBadge: 'Your Instructions',
-    candidateLabel: 'Your Instructions, which the module follows',
-    defaultLabel: 'The default Instructions, to modify to make them yours',
-    placeholder: '- A sober, direct tone\n- One page at most',
-    save: 'Save my Instructions',
-    backToDefault: 'Go back to the default Instructions',
-    showDefault: 'See the default Instructions',
+    editorLabel: 'Instructions · {{artifactLabel}}',
+    unsaved: 'Edited, not saved yet',
+    unsavedHint:
+      'Saved, they become your Instructions for every later {{artifactLabel}}, on all your Postings, not only this one. Save or discard them before launching.',
+    candidateHint: 'They apply to every {{artifactLabel}}.',
+    defaultHint: 'Edit them, then save: they become yours for every {{artifactLabel}}.',
+    save: 'Save',
+    discard: 'Discard my changes',
+    restore: 'Restore the defaults',
+    saved: 'Instructions saved',
+    restored: 'Default Instructions restored',
+    unsavedBlocker: 'Instructions edited but not saved: save them or discard your changes.',
   },
 };

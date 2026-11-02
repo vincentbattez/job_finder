@@ -189,7 +189,8 @@ test.describe('Applications on the map', () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await openApplicationsOfRosa({ page, asCandidate, openPage });
 
-    await expect(findPanel(page).getByRole('tab')).toHaveCount(3);
+    // On a phone the list is a drawer over the map (e2e/phone.test.ts)
+    await expect(page.getByRole('dialog', { name: /^Candidatures/ }).getByRole('tab')).toHaveCount(3);
     await expect.poll(() => findOverflowing(page)).toEqual([]);
   });
 
