@@ -72,9 +72,13 @@ async function openArtifacts(...plannedRunList: PlannedRunList) {
     aiSession,
     runNextJob,
     produce,
-    apply: (reference = REFERENCE) => statusActions.changeStatus({ reference, status: 'applied' }),
+    apply: async (reference = REFERENCE) => {
+      await statusActions.keep({ reference });
+      await statusActions.changeStatus({ reference, status: 'applied' });
+    },
     // An Interview needs an Application
     addInterview: async () => {
+      await statusActions.keep({ reference: REFERENCE });
       await statusActions.changeStatus({ reference: REFERENCE, status: 'applied' });
       await interviewActions.addInterview({ reference: REFERENCE, ...INTERVIEW });
     },

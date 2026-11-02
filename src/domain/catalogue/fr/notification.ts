@@ -17,8 +17,8 @@ export const NOTIFICATION_FR: typeof NOTIFICATION_EN = {
   newPostingsHeading_one: 'Nouvelle Offre',
   newPostingsHeading_other: 'Nouvelles Offres',
   reference: 'Réf. {{reference}}',
-  repostLine: "Republication de l'Offre {{repostedReference}} : sa Recherche part de celle de cette Offre",
-  repostAppliedLine: "Republication de l'Offre {{repostedReference}}, Postulée : aucune Recherche lancée",
+  repostLine: "Republication de l'Offre {{repostedReference}} : gardée, sa Recherche partira de celle de cette Offre",
+  repostAppliedLine: "Republication de l'Offre {{repostedReference}}, déjà Postulée",
   detectionHeading: 'Détection',
   startedAt: 'Lancée le {{startedAt, datetime(dateStyle: full; timeStyle: short; timeZone: Europe/Paris)}}',
   originByOrigin: {

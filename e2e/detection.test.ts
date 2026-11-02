@@ -108,7 +108,8 @@ test('names the first new Postings and marks them all New in the list', async ({
     'href',
     '/#posting-list',
   );
-  await expect(page.locator('#posting-list').getByText('Nouvelle', { exact: true })).toHaveCount(81);
+  // The found mark, beside each Posting's own Step, New too
+  await expect(page.locator('#posting-list .posting-list__new')).toHaveCount(81);
 });
 
 test('tells a failure, what was done before it, and offers to run it again', async ({

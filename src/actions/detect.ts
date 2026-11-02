@@ -26,6 +26,14 @@ import { hasBeenApplied } from '#/status/index.ts';
 import type { ActionContext } from './context.ts';
 import { createTolerantLocator } from './locator.ts';
 
+// The Postings a Detection found, outside a Watch's first launch, whose Postings already online are only
+// imported: New's « found » group until the next one (spec #125 « Lists »)
+export function foundReferencesOf(detection: RecordedDetection | null): string[] {
+  return (detection?.watchList ?? [])
+    .filter(({ isFirstLaunch }) => !isFirstLaunch)
+    .flatMap(({ newPostingList }) => newPostingList.map(({ reference }) => reference));
+}
+
 // Every Watch, started from jf detect unless the daily automation says so
 const DETECT_INPUT_SCHEMA = z.object({ origin: DETECTION_ORIGIN_SCHEMA.default('cli') });
 
@@ -87,7 +95,6 @@ interface IWatchRun {
 // may import (ADR-0003). It knows them only through their family (ADR-0010).
 export function createDetectActions({
   workspace,
-  artifacts,
   sourceList,
   findCandidate,
   findSource,
@@ -114,18 +121,9 @@ export function createDetectActions({
     return label ?? description?.name ?? source;
   }
 
-  // In the Zone, a Posting gets its Research (ADR-0003)
-  async function startInZone(posting: Posting, repostOf: Posting | undefined): Promise<ISummarizedPosting> {
-    const research = await artifacts.find({ posting, artifact: 'research' });
-    await research.queueRun({ isAutomatic: true });
-    return {
-      posting,
-      repost: repostOf === undefined ? null : { repostedReference: repostOf.reference, isApplied: false },
-    };
-  }
-
-  // The Postings already online at the first launch start nothing (ADR-0003). The Repost of an
-  // Posting once Applied gets no Research whatever the Zone: the Candidate, who applied already, decides.
+  // A detected Posting is saved New, a Repost included, and starts nothing: the Candidate sorts it
+  // (ADR-0018). The Detection Summary tells it, unless it was already online at the first launch; a
+  // Repost tells the Posting it publishes again, and whether the Candidate applied to it.
   async function saveNewPosting(
     { watch: { candidateId, source }, isFirstLaunch, postingList, locale, locate: locateCity }: IWatchRun,
     listedPosting: ListedPosting,
@@ -138,6 +136,7 @@ export function createDetectActions({
       source,
       listedPosting,
       jobDescription,
+      status: 'new',
       isInZone,
       repostOf,
       location,
@@ -146,22 +145,9 @@ export function createDetectActions({
     if (isFirstLaunch) {
       return { posting, summarized: undefined };
     }
-    if (repostOf !== undefined && hasBeenApplied(repostOf)) {
-      return { posting, summarized: { posting, repost: { repostedReference: repostOf.reference, isApplied: true } } };
-    }
-    return { posting, summarized: isInZone ? await startInZone(posting, repostOf) : undefined };
-  }
-
-  // A Posting another Watch of the Candidate stored out of its Zone, found in the Zone of this one: it
-  // starts what it would have started in the Zone, unless it was online at the first launch of this
-  // Watch. A Repost of a Posting once Applied was told when it was stored.
-  async function enterZone({ isFirstLaunch, postingList }: IWatchRun, posting: Posting) {
-    const inZonePosting = await workspace.setInZone(posting);
-    const repostOf = postingList.find(({ reference }) => reference === posting.repostOf?.reference);
-    if (isFirstLaunch || (repostOf !== undefined && hasBeenApplied(repostOf))) {
-      return;
-    }
-    return startInZone(inZonePosting, repostOf);
+    const repost =
+      repostOf === undefined ? null : { repostedReference: repostOf.reference, isApplied: hasBeenApplied(repostOf) };
+    return { posting, summarized: { posting, repost } };
   }
 
   // A stored Posting of the Watch's Source is Unpublished while the Source no longer lists it, whatever
@@ -228,8 +214,8 @@ export function createDetectActions({
         newPostingList.push(posting);
         summarizedList.push(...(summarized === undefined ? [] : [summarized]));
       } else if (readResult.isInZone) {
-        const summarized = await enterZone(run, outOfZonePosting);
-        summarizedList.push(...(summarized === undefined ? [] : [summarized]));
+        // Told when it was saved: the Zone no longer starts anything (ADR-0018)
+        await workspace.setInZone(outOfZonePosting);
       }
       await workspace.updateDetectionWatch(detection, watch.id, {
         readCount: index + 1,
@@ -393,10 +379,7 @@ export function createDetectActions({
       const candidate = await findCandidate(rawInput);
       await workspace.failStaleDetections(staleOption());
       const { running, last } = await workspace.findDetections(candidate.id);
-      const newReferenceList = (last?.watchList ?? [])
-        .filter(({ isFirstLaunch }) => !isFirstLaunch)
-        .flatMap(({ newPostingList }) => newPostingList.map(({ reference }) => reference));
-      return DETECTION_OVERVIEW_SCHEMA.parse({ running, last, newReferenceList });
+      return DETECTION_OVERVIEW_SCHEMA.parse({ running, last, newReferenceList: foundReferencesOf(last) });
     },
   };
 }

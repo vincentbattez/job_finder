@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { createActions, type Actions } from '#/actions/index.ts';
 import { ERROR_CATALOGUE } from '#/domain/error.ts';
 
+import { applyTo } from './apply.ts';
 import { createMigratedDataDirectory, detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
@@ -34,7 +35,7 @@ describe('an error', () => {
   it('takes the alias of an Artifact, as jf run does', async () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
 
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
     await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: '', interviewers: '' });
 
     expect(await actions.listVersions({ reference: REFERENCE, artifact: 'brief', interview: 1 })).toEqual([]);
@@ -154,7 +155,7 @@ async function createEmma() {
 describe('an error for an English-speaking Candidate', () => {
   it('refuses a Status the Posting cannot move to, in English', async () => {
     const { actions, reference } = await createEmma();
-    await actions.changeStatus({ reference, status: 'applied' });
+    await applyTo(actions, reference);
     await actions.changeStatus({ reference, status: 'rejected' });
 
     await expect(actions.changeStatus({ reference, status: 'to_apply' })).rejects.toThrow(

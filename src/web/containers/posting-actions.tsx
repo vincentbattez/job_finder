@@ -3,6 +3,7 @@ import {
   ArchiveRestoreIcon,
   CalendarClockIcon,
   CalendarPlusIcon,
+  CheckIcon,
   ChevronDownIcon,
   ExternalLinkIcon,
   FlagIcon,
@@ -12,6 +13,7 @@ import {
   SendIcon,
   ThumbsDownIcon,
   TrophyIcon,
+  XIcon,
 } from 'lucide-react';
 import { useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -53,7 +55,8 @@ function ButtonLabel({ children }: Readonly<{ children: ReactNode }>) {
 
 // The head of the Posting page (spec #125, « The Posting page »): ONE primary action that follows the
 // Step, the rest in a ⋯ menu. The Status goes through its route, which refuses what the Status rules
-// forbid; archiving acts at once and offers its undo in the toast.
+// forbid; archiving acts at once and offers its undo in the toast. A New Posting is kept, or dismissed
+// from the menu, which archives it (ADR-0018).
 export function PostingActions({
   reference,
   step,
@@ -66,7 +69,11 @@ export function PostingActions({
   const { t } = useTranslation('posting');
   const statusFetcher = useFetcher<IRefusal | null>();
   const archiveFetcher = useFetcher<IRefusal | null>();
+  const keepFetcher = useFetcher<IRefusal | null>();
   const submittedStatus = useRef<Status>('applied');
+  useFeedback(keepFetcher, () => t('page.kept'));
+  // Archiving a New Posting is dismissing it: the menu and the toast say so
+  const isNew = step === 'new';
   useFeedback(statusFetcher, () =>
     t('page.statusChanged', { statusLabel: t(`statusLabelByStatus.${submittedStatus.current}`, { ns: 'common' }) }),
   );
@@ -79,7 +86,12 @@ export function PostingActions({
   };
   useFeedback(
     archiveFetcher,
-    () => (isArchived ? t('page.archived') : t('page.unarchived')),
+    () => {
+      if (isNew) {
+        return isArchived ? t('page.dismissed') : t('page.unarchived');
+      }
+      return isArchived ? t('page.archived') : t('page.unarchived');
+    },
     () => ({
       label: t('page.undo'),
       onClick: () => {
@@ -99,7 +111,12 @@ export function PostingActions({
   const isInProgress = IN_PROGRESS_STEP_LIST.has(step) && !isArchived;
   const outcomeList = (['hired', 'rejected'] as const).filter((status) => statusChoiceList.includes(status));
   const interviewsTab = { search: '?tab=interviews' };
-  const archiveLabel = isArchived ? t('unarchive') : t('archive');
+  let archiveLabel = isArchived ? t('unarchive') : t('archive');
+  let archiveIcon = isArchived ? <ArchiveRestoreIcon /> : <ArchiveIcon />;
+  if (isNew && !isArchived) {
+    archiveLabel = t('page.dismiss');
+    archiveIcon = <XIcon />;
+  }
 
   function renderPrimary() {
     if (isArchived) {
@@ -117,6 +134,23 @@ export function PostingActions({
       );
     }
     switch (step) {
+      case 'new': {
+        return (
+          <Button
+            size="sm"
+            isPending={keepFetcher.state !== 'idle'}
+            onClick={() => {
+              void keepFetcher.submit(
+                {},
+                { method: 'post', action: `/postings/${reference}/keep`, preventScrollReset: true },
+              );
+            }}
+          >
+            <CheckIcon />
+            <ButtonLabel>{t('page.keep')}</ButtonLabel>
+          </Button>
+        );
+      }
       case 'to_apply': {
         return (
           <Button
@@ -263,7 +297,7 @@ export function PostingActions({
               submitArchive(archiveIntent);
             }}
           >
-            {isArchived ? <ArchiveRestoreIcon /> : <ArchiveIcon />}
+            {archiveIcon}
             {archiveLabel}
           </DropdownMenuItem>
         </DropdownMenuContent>

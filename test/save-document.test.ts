@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
 
+import { applyTo } from './apply.ts';
 import { detectPostings as detectRecordedPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
@@ -136,7 +137,7 @@ describe('saving a correction', () => {
     await runModule(actions, 'letter');
     const beforeAppliedList = await readModifiableFiles(actions);
 
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
 
     expect(beforeAppliedList).toEqual([
       { artifact: 'research', fileNameList: [[], ['research.md']] },
@@ -164,7 +165,7 @@ describe('saving a correction', () => {
     await runModule(actions, 'letter');
     const beforeAppliedList = await readChoosableVersions(actions);
 
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
 
     expect(beforeAppliedList).toEqual([
       { artifact: 'research', numberList: [1] },

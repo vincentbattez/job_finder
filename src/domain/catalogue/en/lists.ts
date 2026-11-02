@@ -1,5 +1,26 @@
-// The lists over the map: To Apply for now, New and Applications next (spec #125 « Lists »)
+// The lists over the map: New and To Apply for now, Applications next (spec #125 « Lists »)
 export const LISTS_EN = {
+  new: {
+    pageTitle: 'New · Job Finder',
+    heading: 'New',
+    description_zero: 'Nothing to sort',
+    description_one: '{{count}} to sort: keep it or dismiss it',
+    description_other: '{{count}} to sort: keep or dismiss each one',
+    empty: 'Nothing to sort. The Postings the next Detection finds land here.',
+    found: { label: 'Just found', hint: 'Last Detection' },
+    legendFound: 'Just found',
+    published: 'Published {{date}}',
+    deadline: 'Deadline {{date}}',
+    repost: 'Repost',
+    repostOf: 'Repost of Posting {{reference}}',
+    keep: 'Keep',
+    keepHint: 'Keep: moves To Apply and starts its Research',
+    dismiss: 'Dismiss',
+    kept: 'Posting kept: its Research starts',
+    dismissed: 'Posting dismissed',
+    restored: 'Posting back in New',
+    undo: 'Undo',
+  },
   toApply: {
     pageTitle: 'To Apply · Job Finder',
     heading: 'To Apply',

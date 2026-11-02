@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { type Actions } from '#/actions/index.ts';
 import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructions.ts';
 
+import { applyTo } from './apply.ts';
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { readVersionsOf } from './read-versions.ts';
@@ -80,7 +81,7 @@ function briefRun(markdown = INTERVIEW_BRIEF) {
 async function applyWithInterview(aiSession: ReturnType<typeof createFakeAiSession>) {
   const { actions, dataDirectory } = await detectRecordedPostings(aiSession);
   await runModule(actions, 'research');
-  await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+  await applyTo(actions, REFERENCE);
   await actions.addInterview({ reference: REFERENCE, ...HR_INTERVIEW });
   return {
     actions,
@@ -182,7 +183,7 @@ describe('interview brief', () => {
     await runModule(actions, 'research');
     await actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: 1 });
     await runModule(actions, 'letter');
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
     await actions.addInterview({ reference: REFERENCE, ...HR_INTERVIEW });
 
     const { version } = await runModule(actions, 'brief', 1);

@@ -18,6 +18,8 @@ const BEFORE_CANDIDATE_MIGRATION = '20261030122214_delai_par_defaut';
 const BEFORE_VISUALIZATION_REMOVAL_MIGRATION = '20261031110442_posting_unpublished_at';
 // The last migration before each Version recorded its Inputs (ADR-0021)
 const BEFORE_VERSION_INPUT_MIGRATION = '20261102182655_remove_visualization';
+// The last migration before a detected Posting started New (ADR-0018)
+const BEFORE_NEW_STATUS_MIGRATION = '20261102184315_version_input';
 
 const FACTS = '# Faits\n\n## Mobilité\n\n- Lille et alentours\n';
 const CV = '# CV de Léa\n';
@@ -219,7 +221,8 @@ describe('the French data folder', () => {
       },
       {
         reference: '2026-2445600',
-        status: 'to_apply',
+        // To Apply with no Research: New, to be sorted (ADR-0018)
+        status: 'new',
         appliedAt: null,
         isArchived: false,
         deadline: null,
@@ -228,8 +231,8 @@ describe('the French data folder', () => {
       },
       {
         reference: '2026-3',
-        // Archived, never Applied: To Apply, with the Archived mark (ADR-0007)
-        status: 'to_apply',
+        // Archived, never Applied and with no Research: New, with the Archived mark (ADR-0007, ADR-0018)
+        status: 'new',
         appliedAt: null,
         isArchived: true,
         deadline: null,
@@ -556,5 +559,47 @@ describe('the read Versions of an older database', () => {
       'profile:letter-tj-lille-2025.md': true,
       'posting:2026-2/letter': false,
     });
+  });
+});
+
+// Léa's To Apply Postings as the jf before New left them: one with a Research Version, one whose
+// Research is only queued, one put back To Apply after it was Applied, one nobody looked at, Archived
+// or not, beside an Applied one
+function writeUnsortedDataDirectory(): string {
+  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+  const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_NEW_STATUS_MIGRATION));
+  database.exec(`INSERT INTO Candidate (id, name) VALUES ('lea', 'Léa');
+    INSERT INTO DefaultDeadlinePeriod (id, months) VALUES (1, 6);
+    INSERT INTO Posting (id, candidateId, source, reference, title, status, appliedAt, archivedAt, isInZone) VALUES
+      (1, 'lea', 'pep', '2026-1', 'Greffier', 'to_apply', NULL, NULL, 1),
+      (2, 'lea', 'pep', '2026-2', 'Greffier', 'to_apply', NULL, NULL, 1),
+      (3, 'lea', 'pep', '2026-3', 'Greffier', 'to_apply', '2026-10-20T09:00:00.000+00:00', NULL, 0),
+      (4, 'lea', 'pep', '2026-4', 'Greffier', 'to_apply', NULL, NULL, 0),
+      (5, 'lea', 'pep', '2026-5', 'Greffier', 'to_apply', NULL, '2026-10-21T09:00:00.000+00:00', 0),
+      (6, 'lea', 'pep', '2026-6', 'Greffier', 'applied', '2026-10-20T09:00:00.000+00:00', NULL, 0);
+    INSERT INTO Version (id, postingId, artifact, number, isChosen, state, instructions)
+    VALUES (1, 1, 'research', 1, 1, 'ready', 'Chercher.');
+    INSERT INTO Job (id, module, postingId, state) VALUES (1, 'research', 2, 'queued');
+    INSERT INTO Job (id, module, postingId, state) VALUES (2, 'conversion', NULL, 'done');`);
+  database.close();
+  return dataDirectory;
+}
+
+// The main checkout migrates Léa's real data/, where To Apply filled up with Postings nobody sorted
+// (ADR-0018): those with no Research become New, which she sorts
+describe('the unsorted Postings of an older database', () => {
+  it('become New when To Apply with no Research, never Applied', async () => {
+    const dataDirectory = writeUnsortedDataDirectory();
+
+    await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'SELECT reference, status FROM Posting ORDER BY id')).toEqual([
+      { reference: '2026-1', status: 'to_apply' },
+      { reference: '2026-2', status: 'to_apply' },
+      { reference: '2026-3', status: 'to_apply' },
+      { reference: '2026-4', status: 'new' },
+      { reference: '2026-5', status: 'new' },
+      { reference: '2026-6', status: 'applied' },
+    ]);
   });
 });

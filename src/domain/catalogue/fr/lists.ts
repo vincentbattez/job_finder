@@ -1,6 +1,27 @@
 import type { LISTS_EN } from '#/domain/catalogue/en/lists.ts';
 
 export const LISTS_FR: typeof LISTS_EN = {
+  new: {
+    pageTitle: 'Nouvelles · Job Finder',
+    heading: 'Nouvelles',
+    description_zero: 'Rien à trier',
+    description_one: '{{count}} à trier : garde-la ou écarte-la',
+    description_other: '{{count}} à trier : garde ou écarte chacune',
+    empty: 'Rien à trier. Les Offres que la prochaine Détection trouve arrivent ici.',
+    found: { label: 'Trouvées à l’instant', hint: 'Dernière Détection' },
+    legendFound: 'Trouvées à l’instant',
+    published: 'Publiée le {{date}}',
+    deadline: 'Date limite {{date}}',
+    repost: 'Republication',
+    repostOf: 'Republication de l’Offre {{reference}}',
+    keep: 'Garder',
+    keepHint: 'Garder : passe À traiter et lance sa Recherche',
+    dismiss: 'Écarter',
+    kept: 'Offre gardée : sa Recherche est lancée',
+    dismissed: 'Offre écartée',
+    restored: 'Offre remise dans les Nouvelles',
+    undo: 'Annuler',
+  },
   toApply: {
     pageTitle: 'À traiter · Job Finder',
     heading: 'À traiter',

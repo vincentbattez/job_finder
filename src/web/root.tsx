@@ -17,6 +17,7 @@ import {
   type LoaderFunctionArgs,
 } from 'react-router';
 
+import { ACTIONS } from './acl/actions.server.ts';
 import { readCandidate } from './candidate.server.ts';
 import { AppSidebar } from './components/app-sidebar.tsx';
 import { PageHeader } from './components/page-header.tsx';
@@ -32,11 +33,18 @@ import { englishUrlOf } from './redirects.ts';
 import { relayLoader } from './relay-action.server.ts';
 
 // An English route reached with the French query of an older link moves for good to the English one.
-// Otherwise the switcher's Candidates and the locale the whole page renders in (ADR-0012).
+// Otherwise the switcher's Candidates, the locale the whole page renders in (ADR-0012) and the count of
+// New Postings left to sort, the Sidebar's badge, which every mutation's revalidation refreshes.
 export function loader({ request }: LoaderFunctionArgs) {
   return relayLoader(request, async () => {
     const englishUrl = englishUrlOf(new URL(request.url));
-    return englishUrl === null ? await readCandidate(request) : redirect(englishUrl, 301);
+    if (englishUrl !== null) {
+      return redirect(englishUrl, 301);
+    }
+    const candidateData = await readCandidate(request);
+    const { candidate } = candidateData;
+    const newItemList = candidate === null ? [] : await ACTIONS.listNew({ candidateId: candidate.id });
+    return { ...candidateData, newCount: newItemList.length };
   });
 }
 
@@ -74,6 +82,7 @@ function Page({ children }: Readonly<{ children: ReactNode }>) {
               <AppSidebar
                 candidateSwitcher={candidateData !== undefined && <CandidateSwitcher {...candidateData} />}
                 localeSwitcher={<LocaleSwitcher />}
+                newCount={candidateData?.newCount ?? 0}
               />
               <SidebarInset className="min-w-0">{children}</SidebarInset>
             </SidebarProvider>

@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import type { Actions } from '#/actions/index.ts';
 
+import { applyTo } from './apply.ts';
 import { detectPostings } from './data-directory.ts';
 
 // The address the Candidate opened Job Finder through, here over the VPN
@@ -33,7 +34,7 @@ describe('the iCal file of an Interview', () => {
 
   // An Application's first Interview, on 19 November 2026 at 14:00 in Paris
   async function addInterview(reference: string, other: Record<string, unknown> = {}) {
-    await actions.changeStatus({ reference, status: 'applied' });
+    await applyTo(actions, reference);
     await actions.addInterview({
       reference,
       start: '2026-11-19T14:00',

@@ -6,6 +6,7 @@ import { createActions } from '#/actions/index.ts';
 import { SOURCE_LIST } from '#/actions/modules.ts';
 import type { IHeadlessSession } from '#/ai-session/acl/claude-code.ts';
 
+import { applyTo } from './apply.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { FAKE_HOME_ASSISTANT_TOKEN } from './fake-home-assistant.ts';
 import { defineSlowSource } from './fake-slow-source.ts';
@@ -205,19 +206,32 @@ await actions.saveInstructions({ candidateId: 'lea', module: 'research', instruc
 await actions.runModule({ module: 'research', reference: INSTRUCTIONS_REFERENCE });
 await actions.runQueuedJobs();
 await actions.deleteInstructions({ candidateId: 'lea', module: 'research' });
+// Léa kept the Postings she prepared, out of New (ADR-0018): their Research ran already, so keeping
+// queues none
+for (const reference of [
+  BETHUNE_REFERENCE,
+  BASTIA_REFERENCE,
+  VERSAILLES_REFERENCE,
+  RENNES_REFERENCE,
+  NARBONNE_REFERENCE,
+  NOTIFICATION_FAILED_REFERENCE,
+  INSTRUCTIONS_REFERENCE,
+]) {
+  await actions.keep({ reference });
+}
 
-await actions.changeStatus({ reference: '2026-2285305', status: 'applied' });
+await applyTo(actions, '2026-2285305');
 // Two more Applications In progress, without Interview, which no e2e test changes
-await actions.changeStatus({ reference: '2026-2448056', status: 'applied' });
-await actions.changeStatus({ reference: '2026-2448209', status: 'applied' });
+await applyTo(actions, '2026-2448056');
+await applyTo(actions, '2026-2448209');
 // The Application whose Interviews e2e/interviews.test.ts adds, edits and deletes, and one more In
 // progress that no e2e test changes
-await actions.changeStatus({ reference: '2026-2448213', status: 'applied' });
-await actions.changeStatus({ reference: '2026-2448215', status: 'applied' });
+await applyTo(actions, '2026-2448213');
+await applyTo(actions, '2026-2448215');
 await actions.archive({ reference: '2026-2290529' });
-// The Applications in progress whose outcome e2e/home.test.ts changes from their row: one with JS, with an
-// upcoming Interview and Notes, and one without JS; their Interviews, the nearest, keep them among the 3 the home shows
-await actions.changeStatus({ reference: '2026-2448220', status: 'applied' });
+// Two more Applications in progress, each with an upcoming Interview, the first with Notes, which no e2e
+// test changes
+await applyTo(actions, '2026-2448220');
 await actions.addInterview({
   reference: '2026-2448220',
   start: '2030-01-15T10:00',
@@ -225,7 +239,7 @@ await actions.addInterview({
   interviewers: 'Mme Durand',
 });
 await actions.saveNotes({ reference: '2026-2448220', notes: '# Appel du greffe\n\nRappeler **lundi**.\n' });
-await actions.changeStatus({ reference: '2026-2448225', status: 'applied' });
+await applyTo(actions, '2026-2448225');
 await actions.addInterview({
   reference: '2026-2448225',
   start: '2030-01-20T10:00',
@@ -241,7 +255,7 @@ for (const [reference, status] of [
   ['2026-2399015', 'rejected'],
   ['2026-2340735', 'applied'],
 ]) {
-  await actions.changeStatus({ reference, status: 'applied' });
+  await applyTo(actions, reference);
   await actions.changeStatus({ reference, status });
 }
 await actions.archive({ reference: '2026-2340735' });
@@ -285,6 +299,22 @@ for (const city of ['lille', 'lyon', 'bordeaux', 'rennes', 'nice', 'strasbourg']
 }
 await actions.runQueuedJobs();
 
+// Ana, Eli and Tom each sort one Posting of e2e/new.test.ts, which puts it back New first: kept from its
+// row, dismissed then restored, kept from its page
+for (const { id, name } of [
+  { id: 'ana', name: 'Ana' },
+  { id: 'eli', name: 'Eli' },
+  { id: 'tom', name: 'Tom' },
+]) {
+  await actions.createCandidate({ id, name });
+  await actions.importJobDescription({
+    candidateId: id,
+    fileName: `greffier-${id}.md`,
+    markdown: `# Greffier placé – ${name}\n`,
+  });
+}
+await actions.runQueuedJobs();
+
 // Paul, without Watch, has one imported Posting per journey of e2e/posting-page.test.ts, which finds
 // each by the reference its Markdown gives (e2e/paul.ts): one Interviewed, its Interview past, one
 // Invited, its Interview to come
@@ -304,6 +334,6 @@ for (const { journey, start } of [
   { journey: 'invited', start: '2030-02-01T10:00' },
 ]) {
   const reference = paulReferenceByJourney.get(journey);
-  await actions.changeStatus({ reference, status: 'applied' });
+  await applyTo(actions, reference);
   await actions.addInterview({ reference, start, place: 'Tribunal judiciaire', interviewers: 'M. Martin' });
 }

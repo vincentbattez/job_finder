@@ -19,8 +19,8 @@ export const NOTIFICATION_EN = {
   newPostingsHeading_one: 'New Posting',
   newPostingsHeading_other: 'New Postings',
   reference: 'Ref. {{reference}}',
-  repostLine: 'Repost of Posting {{repostedReference}}: its Research starts from that of this Posting',
-  repostAppliedLine: 'Repost of Posting {{repostedReference}}, Applied: no Research started',
+  repostLine: 'Repost of Posting {{repostedReference}}: once kept, its Research starts from that of this Posting',
+  repostAppliedLine: 'Repost of Posting {{repostedReference}}, already Applied',
   detectionHeading: 'Detection',
   startedAt: 'Started on {{startedAt, datetime(dateStyle: full; timeStyle: short; timeZone: Europe/Paris)}}',
   originByOrigin: {

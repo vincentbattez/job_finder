@@ -67,3 +67,19 @@ export function groupByDeadline<T extends IDated>(itemList: T[], now: Date): IGr
     itemList: itemList.filter((item) => deadlineGroupOf(item, now) === key).toSorted(COMPARE_BY_GROUP[key]),
   })).filter(({ itemList: groupItemList }) => groupItemList.length > 0);
 }
+
+export type NewGroupKey = 'found' | DeadlineGroupKey;
+
+// New: what the last Detection found first, by Deadline, then the others as To Apply groups them
+// (spec #125 « Lists »)
+export function groupNew<T extends IDated & { isFound: boolean }>(
+  itemList: T[],
+  now: Date,
+): { key: NewGroupKey; itemList: T[] }[] {
+  const foundList = itemList.filter(({ isFound }) => isFound).toSorted(COMPARE_BY_GROUP.week);
+  const groupList = groupByDeadline(
+    itemList.filter(({ isFound }) => !isFound),
+    now,
+  );
+  return foundList.length === 0 ? groupList : [{ key: 'found', itemList: foundList }, ...groupList];
+}

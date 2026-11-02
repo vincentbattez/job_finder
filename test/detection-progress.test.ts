@@ -9,7 +9,6 @@ import { z } from 'zod/v4';
 import { createActions, type Actions } from '#/actions/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
-import { createFakeAiSession } from './fake-ai-session.ts';
 import { LEA_WATCH_ID } from './lea.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
@@ -174,7 +173,7 @@ describe('a running Detection', () => {
 
   // The daily automation and the button at the same instant, each in its own process: the lock
   // refuses one with its code (ADR-0014), so the same new Posting is never saved twice
-  it('lets one of two Detections launched at the same instant run, with no duplicate Posting or job', async () => {
+  it('lets one of two Detections launched at the same instant run, with no duplicate Posting', async () => {
     const dataDirectory = createDataDirectory();
     const bethuneReferenceList = ['2026-2445600', '2026-2445609'];
     const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout(bethuneReferenceList) } });
@@ -188,16 +187,11 @@ describe('a running Detection', () => {
     expect(outcomeList.flatMap((outcome) => ('newReferenceList' in outcome ? outcome.newReferenceList : []))).toEqual(
       bethuneReferenceList,
     );
-    const research = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
-    const worker = await createActions({ dataDirectory, aiSession: createFakeAiSession(research, research) });
-    const postingList = await worker.listPostings({ candidateId: 'lea' });
+    const actions = await createActions({ dataDirectory });
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
     const referenceList = postingList.map(({ reference }) => reference);
     expect(referenceList).toHaveLength(81);
     expect(new Set(referenceList).size).toBe(81);
-    const jobList = await worker.runQueuedJobs();
-    expect(jobList.map((job) => ('posting' in job ? `${job.module} ${job.posting.reference}` : job.module))).toEqual(
-      bethuneReferenceList.map((reference) => `research ${reference}`),
-    );
   });
 
   it('stops holding the lock once its process died, and says it was interrupted', async () => {

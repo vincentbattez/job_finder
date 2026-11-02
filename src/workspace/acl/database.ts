@@ -153,6 +153,8 @@ export interface INewPosting {
   source: string;
   listedPosting: ListedPosting;
   jobDescription: JobDescription;
+  // New when detected, To Apply when imported (ADR-0018)
+  status: Extract<Status, 'new' | 'to_apply'>;
   isInZone: boolean;
   repostOf: Posting | undefined;
   location: Location;
@@ -408,24 +410,6 @@ export function openDatabase(databasePath: string) {
         await prisma.posting.findMany({
           where: { candidateId },
           orderBy: { reference: 'desc' },
-          include: POSTING_INCLUDE,
-        }),
-      );
-    },
-
-    // The To Apply Postings still followed that arrived last, through a Detection in the Zone or an
-    // import, which no Zone holds but the Candidate chose (ADR-0003)
-    async listLatestPostings(candidateId: string, count: number): Promise<Posting[]> {
-      return z.array(POSTING_READ_SCHEMA).parse(
-        await prisma.posting.findMany({
-          where: {
-            candidateId,
-            status: 'to_apply',
-            archivedAt: null,
-            OR: [{ isInZone: true }, { source: 'import' }],
-          },
-          orderBy: [{ detectedAt: 'desc' }, { id: 'desc' }],
-          take: count,
           include: POSTING_INCLUDE,
         }),
       );
@@ -806,6 +790,7 @@ export function openDatabase(databasePath: string) {
       source,
       listedPosting,
       jobDescription,
+      status,
       isInZone,
       repostOf,
       location,
@@ -832,6 +817,7 @@ export function openDatabase(databasePath: string) {
             applicationEmail,
             contact1,
             contact2,
+            status,
             isInZone,
             repostOfId: repostOf?.id ?? null,
           },

@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import type { Actions } from '#/actions/index.ts';
 
+import { applyTo } from './apply.ts';
 import { detectPostings } from './data-directory.ts';
 
 const PLACE = 'Tribunal judiciaire, Béthune';
@@ -17,7 +18,7 @@ describe('the Interviews of an Application', () => {
   });
 
   async function apply(reference: string): Promise<void> {
-    await actions.changeStatus({ reference, status: 'applied' });
+    await applyTo(actions, reference);
   }
 
   async function addInterview(reference: string, start: string, other: Record<string, unknown> = {}) {

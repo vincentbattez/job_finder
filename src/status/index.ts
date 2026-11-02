@@ -65,8 +65,9 @@ export function findStep(
 
 // Applied once, even if Archived since: the Candidate sent its Chosen Letter, and its Application
 // started. A Posting Applied before appliedAt existed has none.
+// New, not sorted yet, is never Applied, like To Apply.
 export function hasBeenApplied({ status, appliedAt }: Pick<Posting, 'status' | 'appliedAt'>): boolean {
-  return status !== 'to_apply' || appliedAt !== null;
+  return (status !== 'new' && status !== 'to_apply') || appliedAt !== null;
 }
 
 // When a Posting moving to the status was first Applied: its Chosen Letter, the one sent, stays
@@ -79,9 +80,12 @@ export function findAppliedAt(posting: Pick<Posting, 'status' | 'appliedAt'>, st
 const APPLICATION_STATUS_LIST: Status[] = ['applied', 'hired', 'rejected'];
 
 // What the outcome selector offers besides the Status the Posting has, Archived or not (ADR-0007):
-// Applied on a To Apply Posting, then the other outcomes of its Application. An Applied Posting goes
+// nothing on a New Posting, which is kept or dismissed instead (ADR-0018), Applied on a To Apply Posting, then the other outcomes of its Application. An Applied Posting goes
 // back to To Apply when its Letter was never sent; an outcome or an Interview proves it was.
 export function listStatusChoices(posting: PostingWithInterview): Status[] {
+  if (posting.status === 'new') {
+    return [];
+  }
   if (!hasBeenApplied(posting)) {
     return ['applied'];
   }
@@ -99,7 +103,10 @@ export function assertStatusChange(
   if (status === posting.status || choiceList.includes(status)) {
     return;
   }
-  if (hasBeenApplied(posting)) {
+  if (posting.status === 'new') {
+    throw codedError('new_not_sorted', { reference: posting.reference }, { locale });
+  }
+  if (status === 'to_apply' && hasBeenApplied(posting)) {
     const code = posting.status === 'applied' ? 'to_apply_with_interview' : 'to_apply_after_outcome';
     throw codedError(code, { reference: posting.reference }, { locale });
   }

@@ -2,6 +2,7 @@ import type { COMMON_EN } from '#/domain/catalogue/en/common.ts';
 
 export const COMMON_FR: typeof COMMON_EN = {
   statusLabelByStatus: {
+    new: 'Nouvelle',
     to_apply: 'À traiter',
     applied: 'Postulée',
     invited: 'Convoquée',

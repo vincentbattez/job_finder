@@ -2,6 +2,8 @@
 // of a switch (spec #125, DESIGN.md « Navigation (Sidebar) »)
 export const SHELL_EN = {
   navigationLabel: 'Pages',
+  newCount_one: '{{count}} Posting to sort',
+  newCount_other: '{{count}} Postings to sort',
   link: {
     new: 'New',
     toApply: 'To Apply',

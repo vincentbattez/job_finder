@@ -18,8 +18,6 @@ const VERSAILLES_WATCH = {
   parameters: { title: 'attaché de justice', courtOfAppealList: ['Versailles'] },
 };
 
-const RESEARCH = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
-
 // Léa's Postings already online, imported by the first Detection of her Watch
 async function detectLeaPostings() {
   const actions = await createActions({ dataDirectory: createDataDirectory(), fetch: createRecordedFetch().fetch });
@@ -128,12 +126,13 @@ describe('Watches', () => {
 
   // Each Watch has its own Zone: a Posting one stored out of its Zone may be in that of another
   describe('a Posting in the Zone of another Watch of the Candidate', () => {
-    it('gets its Research and its notification once, when it is new', async () => {
+    // The Zone starts nothing: the Candidate sorts the New Posting (ADR-0018)
+    it('gets its notification once, when it is new, and no Research', async () => {
       const dataDirectory = createDataDirectory();
       const notificationChannel = createFakeNotificationChannel();
       const option = {
         dataDirectory,
-        aiSession: createFakeAiSession(RESEARCH),
+        aiSession: createFakeAiSession(),
         notificationChannelList: notificationChannel.notificationChannelList,
       };
       const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout([VERSAILLES_REFERENCE]) } });
@@ -155,10 +154,7 @@ describe('Watches', () => {
         { isInZone: true },
       ]);
       expect(notificationChannel.sentList.map(({ title }) => title)).toEqual(['1 nouvelle Offre']);
-      const jobList = await actions.runQueuedJobs();
-      expect(jobList.map((job) => `${job.module} ${'posting' in job ? job.posting.reference : job.upload}`)).toEqual([
-        `research ${VERSAILLES_REFERENCE}`,
-      ]);
+      expect(await actions.runQueuedJobs()).toEqual([]);
     });
 
     it('is placed in the Zone without anything started, when it was online at the first launch', async () => {

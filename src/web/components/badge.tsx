@@ -22,7 +22,7 @@ interface IShownPosting {
 
 // Expired comes from the Deadline, whatever the status (GLOSSARY.md). The badge and the map
 // show it only in place of To Apply: an Applied Posting stays green past its Deadline.
-export function showStatus({ step, isExpired }: Pick<IShownPosting, 'step' | 'isExpired'>): Step | 'expired' {
+function showStatus({ step, isExpired }: Pick<IShownPosting, 'step' | 'isExpired'>): Step | 'expired' {
   return step === 'to_apply' && isExpired ? 'expired' : step;
 }
 
