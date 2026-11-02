@@ -5,7 +5,8 @@ test.describe('French routes', () => {
   for (const { frenchPath, englishPath } of [
     { frenchPath: '/profil', englishPath: '/profile' },
     { frenchPath: '/consignes', englishPath: '/instructions' },
-    { frenchPath: '/candidats', englishPath: '/candidates' },
+    { frenchPath: '/candidats', englishPath: '/settings' },
+    { frenchPath: '/candidates', englishPath: '/settings' },
     { frenchPath: '/candidat', englishPath: '/candidate' },
     { frenchPath: '/offres/2026-2445600', englishPath: '/postings/2026-2445600' },
     { frenchPath: '/offres/2026-2445600/statut', englishPath: '/postings/2026-2445600/status' },
@@ -45,7 +46,7 @@ test.describe('French routes', () => {
   test('opens the English page from a French link', async ({ page }) => {
     await page.goto('/candidats');
 
-    await expect(page).toHaveURL(/\/candidates$/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Candidats');
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Réglages');
   });
 });

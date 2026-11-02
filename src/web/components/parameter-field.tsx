@@ -1,15 +1,19 @@
+import { CheckIcon } from 'lucide-react';
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Actions } from '#/actions/index.ts';
-
-import './parameter-field.css';
+import { Badge } from '#/web/components/ui/badge.tsx';
+import { Input } from '#/web/components/ui/input.tsx';
+import { Label } from '#/web/components/ui/label.tsx';
+import { Textarea } from '#/web/components/ui/textarea.tsx';
 
 type Parameter = Awaited<ReturnType<Actions['listSources']>>[number]['parameterList'][number];
 
 // The name of a Parameter's field, apart from the fields of the form itself, such as the intent
 export const PARAMETER_FIELD_PREFIX = 'parameters.';
 
-// The value a field shows: a list Parameter one value per line, such as the courts of appeal of a Zone
+// The value a field shows: a list Parameter one value per line, such as the titles a Watch searches
 function valueOf(value: unknown): string {
   if (Array.isArray(value)) {
     return value.filter((item) => typeof item === 'string').join('\n');
@@ -31,50 +35,59 @@ export function ParameterField({
   secretReference?: (input: HTMLInputElement | null) => void;
 }>) {
   const { t } = useTranslation('settings');
+  const fieldId = useId();
   // The loader read the module's texts in the locale (translateParameters)
   const placeholder = placeholderOrNull ?? '';
   const fieldName = `${PARAMETER_FIELD_PREFIX}${name}`;
   if (isSecret) {
     return (
-      <label className="field">
-        <span>
+      <div className="grid gap-2">
+        <Label htmlFor={fieldId}>
           {label}
-          {isConfigured && <span className="parameter-field__configured">{t('parameter.configured')}</span>}
-        </span>
-        <input
+          {isConfigured && (
+            <Badge variant="secondary" className="bg-validated/10 text-validated-foreground">
+              <CheckIcon aria-hidden />
+              {t('parameter.configured')}
+            </Badge>
+          )}
+        </Label>
+        <Input
+          id={fieldId}
           ref={secretReference}
           type="password"
           name={fieldName}
           autoComplete="off"
           placeholder={isConfigured ? t('parameter.keepSaved') : placeholder}
         />
-      </label>
+      </div>
     );
   }
   if (type === 'list') {
     return (
-      <label className="field">
-        {t('parameter.onePerLine', { label })}
-        <textarea
+      <div className="grid gap-2">
+        <Label htmlFor={fieldId}>{t('parameter.onePerLine', { label })}</Label>
+        <Textarea
+          id={fieldId}
           name={fieldName}
           rows={3}
           required={isRequired}
           defaultValue={valueOf(savedValue)}
           placeholder={placeholder}
         />
-      </label>
+      </div>
     );
   }
   return (
-    <label className="field">
-      {label}
-      <input
+    <div className="grid gap-2">
+      <Label htmlFor={fieldId}>{label}</Label>
+      <Input
+        id={fieldId}
         type={type}
         name={fieldName}
         required={isRequired}
         defaultValue={valueOf(savedValue)}
         placeholder={placeholder}
       />
-    </label>
+    </div>
   );
 }

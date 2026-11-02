@@ -20,7 +20,7 @@ export default [
   route('profile', 'routes/profile.tsx'),
   route('notification-channel', 'routes/notification-channel.ts'),
   route('watch', 'routes/watch.ts'),
-  route('candidates', 'routes/candidates.tsx'),
+  route('settings', 'routes/settings.tsx'),
   route('instructions', 'routes/instructions.tsx'),
   route('run', 'routes/run.ts'),
   route('detect', 'routes/detect.ts'),

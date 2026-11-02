@@ -16,7 +16,6 @@ import { CopyCommand } from '#/web/components/copy-command.tsx';
 import { EmptyState } from '#/web/components/empty-state.tsx';
 import { FactsForm } from '#/web/components/facts-form.tsx';
 import { ProfileFile, ProfileFileCreation } from '#/web/components/profile-file.tsx';
-import { NotificationChannelForm } from '#/web/containers/notification-channel.tsx';
 import { renderPostForm } from '#/web/containers/post-form.tsx';
 import { Uploads } from '#/web/containers/uploads.tsx';
 import { Watches } from '#/web/containers/watches.tsx';
@@ -32,8 +31,6 @@ export function loader({ request }: LoaderFunctionArgs) {
       profileFileList: candidate === null ? [] : await ACTIONS.listProfileFiles({ candidateId: candidate.id }),
       uploadList: candidate === null ? [] : await ACTIONS.listUploads({ candidateId: candidate.id }),
       sectionList: candidate === null ? [] : await ACTIONS.readFacts({ candidateId: candidate.id }),
-      channel: candidate === null ? null : await ACTIONS.readNotificationChannel({ candidateId: candidate.id }),
-      channelModuleList: translateParameters(await ACTIONS.listNotificationChannels(), locale),
       watchList: candidate === null ? [] : await ACTIONS.listWatches({ candidateId: candidate.id }),
       sourceList: translateParameters(await ACTIONS.listSources(), locale),
     };
@@ -110,8 +107,7 @@ export function meta({ loaderData }: MetaArgs<typeof loader>) {
 }
 
 export default function Profile() {
-  const { candidate, profileFileList, uploadList, sectionList, channel, channelModuleList, watchList, sourceList } =
-    useLoaderData<typeof loader>();
+  const { candidate, profileFileList, uploadList, sectionList, watchList, sourceList } = useLoaderData<typeof loader>();
   const refusal = useActionData<typeof action>()?.refusal ?? null;
   const { t } = useTranslation('settings');
   return (
@@ -120,8 +116,8 @@ export default function Profile() {
         <div className="page__head">
           <h1>{t('profile.noCandidateHeading')}</h1>
           <p>
-            {t('profile.noCandidateHintStart')} <Link to="/candidates">{t('profile.noCandidateHintLink')}</Link>{' '}
-            {t('profile.noCandidateHintEnd')}
+            {t('profile.noCandidateHintStart')}{' '}
+            <Link to="/settings#candidates">{t('profile.noCandidateHintLink')}</Link> {t('profile.noCandidateHintEnd')}
           </p>
         </div>
       ) : (
@@ -159,7 +155,6 @@ export default function Profile() {
             renderForm={renderPostForm}
           />
           <Watches watchList={watchList} sourceList={sourceList} />
-          {channel !== null && <NotificationChannelForm channel={channel} moduleList={channelModuleList} />}
         </>
       )}
     </main>
