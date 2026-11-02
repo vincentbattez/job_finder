@@ -65,6 +65,9 @@ export const LISTS_EN = {
   },
   count: '{{label}} · {{count}}',
   fold: 'Fold the list',
+  // The drawer that holds the list on a phone, from a peek to half the screen to all of it
+  expand: 'Expand the list',
+  collapse: 'Collapse the list',
   openSheet: 'Preview this Posting',
   mapLabel: 'Map of the Postings',
   legendLabel: 'Legend',
