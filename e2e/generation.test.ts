@@ -45,18 +45,22 @@ test('generates the Letter from the panel: Inputs checked, Prompt copied, run fo
 
   const panel = await openGeneration(page, letter);
 
-  // Step 1: what Claude reads, the required Inputs locked, the past letter checked, the Annex to add
-  await expect(panel.getByRole('heading', { level: 2 })).toHaveText(/^(?:Générer|Régénérer) la Lettre de motivation$/);
+  // Step 1: what Claude reads, the required Inputs locked, the past letter checked, the Annex to add; run
+  // again, the test regenerates, prefilled as the previous Version read: without the past letter
+  const heading = panel.getByRole('heading', { level: 2 });
+  await expect(heading).toHaveText(/^(?:Générer|Régénérer) la Lettre de motivation$/);
+  const headingText = await heading.textContent();
+  const isRegeneration = headingText?.startsWith('Régénérer') === true;
   await expect(panel.getByRole('img', { name: /^Toujours lu/ })).toHaveCount(4);
   const pastLetter = panel.getByRole('checkbox', { name: 'Lettre passée · letter-lille.md' });
-  await expect(pastLetter).toBeChecked();
+  await expect(pastLetter).toBeChecked({ checked: !isRegeneration });
   await expect(panel.getByRole('button', { name: /^Annexe · annex-memoire\.md/ })).toHaveAttribute(
     'aria-pressed',
     'false',
   );
   await panel.getByRole('button', { name: 'Aperçu : Lettre passée · letter-lille.md' }).click();
   await expect(panel.getByText('Je souhaite rejoindre le tribunal judiciaire de Lille.')).toBeVisible();
-  await pastLetter.uncheck();
+  await pastLetter.setChecked(false);
 
   // Step 3: the recap weighs the four Inputs left, and copies exactly what the session receives
   await goToRecap(panel);

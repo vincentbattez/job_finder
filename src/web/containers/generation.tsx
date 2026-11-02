@@ -53,11 +53,13 @@ export function useGeneration({ reference, title, interviewNumber, artifactVersi
   const promptFetcher = useFetcher<Generation>();
   const runFetcher = useFetcher<IRefusal>();
   useFeedback(runFetcher, () => t('generation.launched', { context: artifact, artifactLabel }));
-  useRevalidateWhile(isPending(state));
 
   const isRegeneration = versionList.length > 0;
   const isLaunched = launchedNumber !== null && runFetcher.state === 'idle' && runFetcher.data?.error === null;
   const runState = isLaunched ? runViewOf(artifactVersions, launchedNumber) : null;
+  // Until the launched Version is written: a read between the job's start and its Version's may tell the
+  // previous Version's state, which alone would stop the polling
+  useRevalidateWhile(isPending(state) || runState === 'queued' || runState === 'in_progress');
   const failureMessage =
     artifactVersions.failure?.log ??
     artifactVersions.workerFailure?.message ??
