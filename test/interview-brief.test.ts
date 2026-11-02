@@ -8,6 +8,7 @@ import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructi
 
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { readVersionsOf } from './read-versions.ts';
 
 // Léa's, in French
 const INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.interview_brief;
@@ -197,7 +198,7 @@ describe('interview brief', () => {
     expect(session?.fixedPrompt).toContain('`annex-*.md`');
     expect(session?.fixedPrompt).toContain('`uploads/`');
     expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'letter/v1/letter.md')}\``);
-    expect(version?.inputList).toEqual([
+    expect(readVersionsOf(version)).toEqual([
       { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
       { artifact: 'letter', number: 1, posting: { reference: REFERENCE }, interview: null },
     ]);
@@ -214,7 +215,7 @@ describe('interview brief', () => {
     expect(session?.readDirectoryList).toEqual([path.join(dataDirectory, 'candidates/lea/profile')]);
     expect(session?.fixedPrompt).toContain('The Candidate has no Letter for this Posting');
     expect(session?.fixedPrompt).not.toContain('letter.md');
-    expect(version?.inputList).toEqual([
+    expect(readVersionsOf(version)).toEqual([
       { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
     ]);
   });
@@ -242,7 +243,7 @@ describe('the prompt of the Interview Brief', () => {
       `The Chosen Interview Brief of the previous Interview 1: \`${path.join(postingDirectory, 'interviews/1/interview_brief/v1/interview-brief.md')}\``,
     );
     expect(fixedPrompt).not.toContain('interviews/1/interview_brief/v2');
-    expect(version?.inputList).toEqual([
+    expect(readVersionsOf(version)).toEqual([
       { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
       { artifact: 'interview_brief', number: 1, posting: { reference: REFERENCE }, interview: { number: 1 } },
     ]);

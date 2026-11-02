@@ -301,8 +301,11 @@ const READ_VERSION_SCHEMA = z.object({
   interview: VERSION_INTERVIEW_SCHEMA,
 });
 
+// An Input a Version's run read, by its key, with the Version it read for an Artifact Input
+const RECORDED_INPUT_SCHEMA = z.object({ key: z.string(), readVersion: READ_VERSION_SCHEMA.nullable() });
+
 // Each launch of a module creates a new Version, which keeps the Instructions it was produced with
-// and the Versions it read. Its number counts the Versions of its Artifact on its Interview, for an
+// and the Inputs it read. Its number counts the Versions of its Artifact on its Interview, for an
 // Artifact attached to one, else on its Posting.
 export const VERSION_SCHEMA = z
   .object({
@@ -314,7 +317,8 @@ export const VERSION_SCHEMA = z
     state: z.enum(['running', 'ready', 'failed']),
     instructions: z.string(),
     hasCandidateInstructions: z.boolean(),
-    inputList: z.array(READ_VERSION_SCHEMA),
+    // The Inputs its run read, by key, with the Version read for an Artifact Input (ADR-0021)
+    inputList: z.array(RECORDED_INPUT_SCHEMA),
     createdAt: z.date(),
   })
   .brand<'Domain'>();
@@ -346,6 +350,8 @@ export const JOB_SCHEMA = z
     notificationErrorCode: ERROR_CODE_SCHEMA.nullable(),
     notificationFailure: z.string().nullable(),
     sessionId: z.string().nullable(),
+    // The keys of the Inputs checked for an Artifact job; null for the default Inputs of its type
+    inputKeyList: z.array(z.string()).nullable(),
     // When the worker claimed it, null while it is queued
     startedAt: z.date().nullable(),
     version: VERSION_SCHEMA.nullable(),
@@ -380,6 +386,12 @@ const MARKDOWN_FILE_SHAPE = { fileName: z.string(), markdown: z.string() };
 export const MARKDOWN_FILE_SCHEMA = z.object(MARKDOWN_FILE_SHAPE).brand<'Domain'>();
 
 export type MarkdownFile = z.infer<typeof MARKDOWN_FILE_SCHEMA>;
+
+// A Markdown file dated by its last write: a document of the Profile, whose Past Letters are dated by
+// the day they were added
+export const DATED_MARKDOWN_FILE_SCHEMA = z.object({ ...MARKDOWN_FILE_SHAPE, savedAt: z.date() }).brand<'Domain'>();
+
+export type DatedMarkdownFile = z.infer<typeof DATED_MARKDOWN_FILE_SCHEMA>;
 
 // The name of a file of the Profile, which the front chooses: a single segment of safe characters
 // ending in .md, so no name leads out of the Profile folder

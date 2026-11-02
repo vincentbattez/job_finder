@@ -40,7 +40,6 @@ export const LETTER_MODULE = {
   // Candidate sent: the correction of each Draft shows their style
   requiredArtifactList: ['research'],
   isReadingProfile: true,
-  isReadingSentVersions: true,
   isFrozenOnceApplied: true,
   // The Draft stays as the AI wrote it, so that the tool learns from the corrections of the Letter
   readOnlyFileList: [{ name: DRAFT_FILE_NAME, errorCode: 'draft_not_editable' }],

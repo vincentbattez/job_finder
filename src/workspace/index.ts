@@ -23,6 +23,7 @@ import {
   deleteFile,
   emptyDirectory,
   moveDirectory,
+  readDatedMarkdownFiles,
   readMarkdownFiles,
   readTextFile,
   readUploads,
@@ -117,6 +118,11 @@ export async function openWorkspace(dataDirectory: string) {
     // The Profile is a flat folder of Markdown files
     readProfileFiles(candidateId: string) {
       return readMarkdownFiles(profileDirectoryOf(candidateId));
+    },
+
+    // Dated by their last write: a Past Letter of the Profile is dated by the day it was added
+    readProfileDocuments(candidateId: string) {
+      return readDatedMarkdownFiles(profileDirectoryOf(candidateId));
     },
 
     saveProfileFile(candidateId: string, fileName: ProfileFileName, markdown: string): void {

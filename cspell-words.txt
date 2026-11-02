@@ -25,6 +25,7 @@ ianvs
 isbot
 knip
 lefthook
+mdxjs
 nums
 oklab
 oklch

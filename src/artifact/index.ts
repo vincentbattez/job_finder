@@ -21,8 +21,16 @@ import { composeEditPrompt } from '#/edit/prompt.ts';
 import { hasBeenApplied } from '#/status/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
+import {
+  defaultKeysOf,
+  findChosenVersion,
+  isInitiallyChecked,
+  resolveInputs,
+  type IInput,
+  type ITarget,
+} from './inputs.ts';
 import { AI_MODULE_BY_ARTIFACT, commandOf, isAttachedToInterview, parseArtifactName } from './registry.ts';
-import { findChosenVersion, previewPrompt, runSession, type ITarget, type JobFailure } from './session.ts';
+import { previewPrompt, runSession, type JobFailure } from './session.ts';
 
 export { findDefaultInstructions, parseModule } from './registry.ts';
 export type { JobFailure } from './session.ts';
@@ -84,6 +92,28 @@ function missingArtifactRefusal(
       ),
     },
   };
+}
+
+// The Inputs a run reads among those resolved, or why they are refused: an Input the run does not have,
+// or a required one left unchecked; without keys, those the type checks by default
+function checkInputs(
+  { posting: { reference } }: ITarget,
+  inputList: IInput[],
+  keyList: readonly string[] | null,
+): { checkedList: IInput[]; refusal: IRefusal | null } {
+  const checkedKeyList = keyList ?? defaultKeysOf(inputList);
+  const unknownKey = checkedKeyList.find((key) => inputList.every((input) => input.key !== key));
+  if (unknownKey !== undefined) {
+    return { checkedList: [], refusal: { code: 'unknown_input', values: { reference, key: unknownKey } } };
+  }
+  const unchecked = inputList.find(({ mode, key }) => mode === 'required' && !checkedKeyList.includes(key));
+  if (unchecked !== undefined) {
+    return {
+      checkedList: [],
+      refusal: { code: 'required_input_unchecked', values: { reference, key: unchecked.key } },
+    };
+  }
+  return { checkedList: inputList.filter(({ key }) => checkedKeyList.includes(key)), refusal: null };
 }
 
 // The only owner of the Artifact of a Posting or of an Interview, so that a rule of an Artifact changes in
@@ -210,6 +240,8 @@ export function createArtifacts({
     // Computed once per handle: the Posting page reads it for the button and for the Prompt
     let runRefusal: Promise<IRefusal | null> | undefined;
     const findRunRefusal = () => (runRefusal ??= findRunRefusalOf(target, artifact, locale));
+    let resolvedInputList: Promise<IInput[]> | undefined;
+    const readResolvedInputs = () => (resolvedInputList ??= resolveInputs(workspace, target, artifact));
 
     // One of its Versions by number, refused when it has none
     function versionOf(number: number): Version {
@@ -244,9 +276,11 @@ export function createArtifacts({
     // The Prompt a run started now would receive, or why it is refused: exactly one is set
     async function readRun() {
       const refusal = await findRunRefusal();
-      return refusal === null
-        ? { refusal, prompt: await previewPrompt(workspace, target, artifact, candidate) }
-        : { refusal, prompt: null };
+      if (refusal !== null) {
+        return { refusal, prompt: null };
+      }
+      const { checkedList } = checkInputs(target, await readResolvedInputs(), null);
+      return { refusal, prompt: previewPrompt(workspace, target, artifact, candidate, checkedList) };
     }
 
     // The state follows the last job, unless a Version came after it: a job refused before creating its
@@ -290,6 +324,17 @@ export function createArtifacts({
       readRun,
       readState,
 
+      // The Inputs of a run started now, each checked as the panel opens: a regeneration as the latest
+      // Version read them
+      async readInputs() {
+        const previousVersion = versionList.at(-1);
+        const inputList = await readResolvedInputs();
+        return inputList.map((input) => ({
+          ...input,
+          isChecked: isInitiallyChecked(input, previousVersion),
+        }));
+      },
+
       // The folder of one of its Versions, where its module's own reads look
       directoryOf(version: Version): string {
         return workspace.versionDirectoryOf(posting, version);
@@ -318,10 +363,20 @@ export function createArtifacts({
         };
       },
 
-      // Only queues the job: the worker runs it, so restarting the front never stops a session (ADR-0003)
-      async queueRun({ isAutomatic = false }: { isAutomatic?: boolean } = {}): Promise<Job> {
+      // Only queues the job: the worker runs it, so restarting the front never stops a session (ADR-0003),
+      // with the checked Inputs, refused before queueing; without any, the type's default Inputs
+      async queueRun({
+        isAutomatic = false,
+        inputKeyList = null,
+      }: { isAutomatic?: boolean; inputKeyList?: readonly string[] | null } = {}): Promise<Job> {
         refuse(await findRunRefusal(), locale);
-        return workspace.createJob(posting, artifact, { interview, isAutomatic });
+        const { checkedList, refusal } = checkInputs(target, await readResolvedInputs(), inputKeyList);
+        refuse(refusal, locale);
+        return workspace.createJob(posting, artifact, {
+          interview,
+          isAutomatic,
+          inputKeyList: checkedList.map(({ key }) => key),
+        });
       },
 
       async choose(number: number): Promise<void> {
@@ -399,15 +454,24 @@ export function createArtifacts({
       );
     },
 
-    // The worker's only call for an Artifact job. A job queued before its Posting changed is refused before
-    // anything is written; a session or output problem comes back as the job's failure.
+    // The worker's only call for an Artifact job. A job queued before its Posting or its Inputs changed is
+    // refused before anything is written; a session or output problem comes back as the job's failure.
     async run(
       job: Job & { module: Artifact },
     ): Promise<{ job: Job; version: Version; failure: JobFailure | undefined }> {
-      const { posting, interview, module } = job;
+      const { posting, interview, module, inputKeyList } = job;
       const candidate = await candidateOf(posting);
-      refuse(await findRunRefusalOf({ posting, interview }, module, candidate.locale), candidate.locale);
-      return runSession({ workspace, aiSession }, job, candidate);
+      const target = { posting, interview };
+      refuse(await findRunRefusalOf(target, module, candidate.locale), candidate.locale);
+      // An Input checked at queueing may be gone since, such as an Annex deleted; a job queued before the
+      // Inputs were recorded reads the default ones
+      const { checkedList, refusal } = checkInputs(
+        target,
+        await resolveInputs(workspace, target, module),
+        inputKeyList,
+      );
+      refuse(refusal, candidate.locale);
+      return runSession({ workspace, aiSession }, job, candidate, checkedList);
     },
   };
 }
