@@ -67,6 +67,10 @@ export const ERROR_FR: typeof ERROR_EN = {
     "L'Offre {{reference}} n'a pas de {{missingLabel}} retenue, sur laquelle s'appuie la {{moduleLabel}} : lancez d'abord la {{missingLabel}}.",
   missingArtifactForCli:
     "L'Offre {{reference}} n'a pas de {{missingLabel}} retenue, sur laquelle s'appuie la {{moduleLabel}}. La produire d'abord : {{command}}.",
+  unknownInput:
+    "L'Offre {{reference}} n'a pas d'entrée « {{key}} » pour cette génération : rouvrir le panneau pour voir ses entrées.",
+  requiredInputUnchecked:
+    "L'entrée « {{key}} » de l'Offre {{reference}} est requise : cette génération ne peut pas s'en passer.",
   missingOutput: 'Le fichier attendu {{outputPath}} est absent.',
   emptyOutput: 'Le fichier attendu {{outputPath}} est vide.',
   malformedOutput: 'Le fichier {{outputPath}} est mal formé : {{formatError}}.',

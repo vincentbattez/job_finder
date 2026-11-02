@@ -213,8 +213,15 @@ describe('the Repost of a Posting not Applied', () => {
         state: 'done',
         version: {
           inputList: [
-            { artifact: 'research', number: 1, posting: { reference: REFERENCE } },
-            { artifact: 'letter', number: 1, posting: { reference: REFERENCE } },
+            { key: 'job_description' },
+            {
+              key: `posting:${REFERENCE}/research`,
+              readVersion: { artifact: 'research', number: 1, posting: { reference: REFERENCE } },
+            },
+            {
+              key: `posting:${REFERENCE}/letter`,
+              readVersion: { artifact: 'letter', number: 1, posting: { reference: REFERENCE } },
+            },
           ],
         },
       },

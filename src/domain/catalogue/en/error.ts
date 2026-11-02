@@ -87,6 +87,8 @@ export const ERROR_EN = {
     'Posting {{reference}} has no Chosen {{missingLabel}}, which the {{moduleLabel}} relies on: start the {{missingLabel}} first.',
   missingArtifactForCli:
     'Posting {{reference}} has no Chosen {{missingLabel}}, which the {{moduleLabel}} relies on. Produce it first: {{command}}.',
+  unknownInput: 'Posting {{reference}} has no Input “{{key}}” for this run: reopen the panel to see its Inputs.',
+  requiredInputUnchecked: 'The Input “{{key}}” of Posting {{reference}} is required: this run cannot leave it out.',
   missingOutput: 'The expected file {{outputPath}} is missing.',
   emptyOutput: 'The expected file {{outputPath}} is empty.',
   malformedOutput: 'The file {{outputPath}} is malformed: {{formatError}}.',
