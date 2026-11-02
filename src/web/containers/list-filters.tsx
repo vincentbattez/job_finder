@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
@@ -27,6 +28,15 @@ export function useListFilters<T extends IPlacedItem>(
   const { t } = useTranslation('lists');
   const [searchParameters, setSearchParameters] = useSearchParams();
   const filters = readListFilters(searchParameters);
+  // The URLs written and not yet shown, oldest first: a change made before the last one shows builds on
+  // it, so that two Cities ticked faster than the page follows both count
+  const pendingSearchList = useRef<string[]>([]);
+  const search = searchParameters.toString();
+  useEffect(() => {
+    const index = pendingSearchList.current.indexOf(search);
+    // A URL not written here, such as Back, drops them all
+    pendingSearchList.current = index === -1 ? [] : pendingSearchList.current.slice(index + 1);
+  }, [search]);
   const filteredList = itemList.filter(({ posting }) => isInPlace(posting, filters));
   // The list's own empty message, unless a filter is why it is empty
   let empty = null;
@@ -47,11 +57,11 @@ export function useListFilters<T extends IPlacedItem>(
             filters.region === null ? [] : [filters.region],
           ).toSorted((first, second) => first.value.localeCompare(second.value, 'fr'))}
           archivedCount={archivedCount}
-          onChange={(nextFilters) => {
-            setSearchParameters(writeListFilters(searchParameters, nextFilters), {
-              replace: true,
-              preventScrollReset: true,
-            });
+          onChange={(change) => {
+            const base = new URLSearchParams(pendingSearchList.current.at(-1) ?? search);
+            const next = writeListFilters(base, change(readListFilters(base)));
+            pendingSearchList.current.push(next.toString());
+            setSearchParameters(next, { replace: true, preventScrollReset: true });
           }}
         />
       ),

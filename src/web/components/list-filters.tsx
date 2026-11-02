@@ -28,7 +28,9 @@ interface IListFiltersProperties {
   cityList: ITally[];
   regionList: ITally[];
   archivedCount: number;
-  onChange: (filters: IListFilters) => void;
+  // Each change derives from the filters as they are then, not as this render saw them: two Cities
+  // ticked faster than a render both count
+  onChange: (change: (filters: IListFilters) => IListFilters) => void;
 }
 
 // A filter that narrows the list takes the accent on its border
@@ -37,8 +39,8 @@ const ACTIVE_CLASS = 'border-primary/40';
 function CityFilter({
   selectedList,
   cityList,
-  onChange,
-}: Readonly<{ selectedList: string[]; cityList: ITally[]; onChange: (cityList: string[]) => void }>) {
+  onToggle,
+}: Readonly<{ selectedList: string[]; cityList: ITally[]; onToggle: (city: string) => void }>) {
   const { t } = useTranslation('lists');
   const [isOpen, setIsOpen] = useState(false);
   let summary = t('filters.allCities');
@@ -46,9 +48,6 @@ function CityFilter({
     summary = selectedList[0] ?? summary;
   } else if (selectedList.length > 1) {
     summary = t('filters.someCities', { count: selectedList.length });
-  }
-  function toggle(city: string) {
-    onChange(selectedList.includes(city) ? selectedList.filter((other) => other !== city) : [...selectedList, city]);
   }
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -82,7 +81,7 @@ function CityFilter({
                     value={value}
                     data-checked={isSelected}
                     onSelect={() => {
-                      toggle(value);
+                      onToggle(value);
                     }}
                   >
                     <CheckIcon aria-hidden className={cn('text-primary', !isSelected && 'invisible')} />
@@ -118,8 +117,13 @@ export function ListFilters({
         <CityFilter
           selectedList={filters.cityList}
           cityList={cityList}
-          onChange={(selectedList) => {
-            onChange({ ...filters, cityList: selectedList });
+          onToggle={(city) => {
+            onChange((current) => ({
+              ...current,
+              cityList: current.cityList.includes(city)
+                ? current.cityList.filter((other) => other !== city)
+                : [...current.cityList, city],
+            }));
           }}
         />
         <div className="min-w-0 flex-1">
@@ -127,7 +131,8 @@ export function ListFilters({
             aria-label={t('filters.region')}
             value={filters.region ?? ''}
             onChange={(event) => {
-              onChange({ ...filters, region: event.target.value === '' ? null : event.target.value });
+              const region = event.target.value === '' ? null : event.target.value;
+              onChange((current) => ({ ...current, region }));
             }}
             className={cn('h-8', filters.region !== null && ACTIVE_CLASS)}
           >
@@ -147,7 +152,7 @@ export function ListFilters({
           pressed={filters.isArchived}
           // The Archived hold other Cities and Regions: those chosen among the followed ones go
           onPressedChange={(isArchived) => {
-            onChange({ cityList: [], region: null, isArchived });
+            onChange(() => ({ cityList: [], region: null, isArchived }));
           }}
           className="gap-1.5 font-normal aria-pressed:border-primary/40 aria-pressed:bg-primary/[0.07]"
         >
@@ -161,7 +166,7 @@ export function ListFilters({
             size="sm"
             className="text-muted-foreground"
             onClick={() => {
-              onChange({ cityList: [], region: null, isArchived: false });
+              onChange(() => ({ cityList: [], region: null, isArchived: false }));
             }}
           >
             <XIcon aria-hidden />
