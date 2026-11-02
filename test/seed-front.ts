@@ -315,6 +315,24 @@ for (const { id, name } of [
 }
 await actions.runQueuedJobs();
 
+// Sia, Ivo and Gus open the Sheet of e2e/posting-sheet.test.ts, which places and resets their Postings
+// first: Sia browses two, Ivo acts on one, Gus's New one opens from its marker
+for (const { id, name, cityList } of [
+  { id: 'sia', name: 'Sia', cityList: ['arras', 'caen'] },
+  { id: 'ivo', name: 'Ivo', cityList: ['dijon'] },
+  { id: 'gus', name: 'Gus', cityList: ['brest'] },
+]) {
+  await actions.createCandidate({ id, name });
+  for (const city of cityList) {
+    await actions.importJobDescription({
+      candidateId: id,
+      fileName: `greffier-${city}.md`,
+      markdown: `# Greffier – ${city}\n\n## Missions\n\nTenir les audiences du tribunal.\n`,
+    });
+  }
+}
+await actions.runQueuedJobs();
+
 // Paul, without Watch, has one imported Posting per journey of e2e/posting-page.test.ts, which finds
 // each by the reference its Markdown gives (e2e/paul.ts): one Interviewed, its Interview past, one
 // Invited, its Interview to come

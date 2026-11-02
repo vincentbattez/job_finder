@@ -29,7 +29,7 @@ export const LISTS_FR: typeof LISTS_EN = {
   },
   count: '{{label}} · {{count}}',
   fold: 'Replier la liste',
-  showOnMap: 'Voir sur la carte',
+  openSheet: 'Aperçu de cette Offre',
   mapLabel: 'Carte des Offres',
   legendLabel: 'Légende',
   unlocated_one: '{{count}} Offre sans lieu connu',

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
+import type { ISheetSelection } from '#/web/components/map-list.tsx';
 import { NewList, SortButtons, type NewItem, type SortDecision } from '#/web/components/new-list.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
@@ -62,7 +63,12 @@ function SortRequest({
 
 // New and its sorting (spec #125 « Sorting New »): Keep and Dismiss on each row; a sorted
 // Posting leaves the list at once and comes back only if the sorting was refused
-export function NewSorting({ itemList, now }: Readonly<{ itemList: NewItem[]; now: Date }>) {
+export function NewSorting({
+  itemList,
+  now,
+  selectedReference,
+  onSelect,
+}: Readonly<{ itemList: NewItem[]; now: Date } & ISheetSelection>) {
   const { t } = useTranslation('lists');
   const [sortList, setSortList] = useState<ISort[]>([]);
   const undoFetcher = useFetcher<IRefusal | null>();
@@ -81,6 +87,8 @@ export function NewSorting({ itemList, now }: Readonly<{ itemList: NewItem[]; no
       <NewList
         itemList={itemList.filter(({ posting }) => !sortingSet.has(posting.reference))}
         now={now}
+        selectedReference={selectedReference}
+        onSelect={onSelect}
         renderActions={({ reference }) => (
           <SortButtons
             onSort={(decision) => {

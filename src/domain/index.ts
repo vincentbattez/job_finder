@@ -511,6 +511,8 @@ export type ArtifactState = z.infer<typeof ARTIFACT_STATE_SCHEMA>;
 const ARTIFACT_VERSIONS_SCHEMA = z.object({
   artifact: ARTIFACT_SCHEMA,
   ...ARTIFACT_STATE_SHAPE,
+  // Where it stands for the Candidate, as the lists and the Sheet tell it (ADR-0019)
+  validation: VALIDATION_SCHEMA,
   // The module that produces it: why it cannot run now, null when it can; else the Prompt a run started
   // now would receive, with the Chosen Versions it reads, null while it is refused
   module: z.object({ refusal: z.string().nullable(), prompt: PROMPT_SCHEMA.nullable() }),
