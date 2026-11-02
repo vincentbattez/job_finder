@@ -20,6 +20,7 @@ export const COMMON_FR: typeof COMMON_EN = {
     letter: 'Lettre de motivation',
     portrait: 'Portrait',
     interview_brief: 'Fiche d’entretien',
+    custom: 'Document',
   },
   date: '{{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
   dateTime: '{{date, datetime(dateStyle: medium; timeStyle: short; timeZone: Europe/Paris)}}',

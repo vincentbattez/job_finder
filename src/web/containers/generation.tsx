@@ -5,9 +5,16 @@ import { toast } from 'sonner';
 
 import { isPending } from '#/actions/state.ts';
 import type { Generation, IArtifactVersions } from '#/web/components/artifact.ts';
-import { GenerateButton, GenerationPanel, RunFailure, type IRunView } from '#/web/components/generation-panel.tsx';
+import {
+  AddInputButton,
+  GenerateButton,
+  GenerationPanel,
+  RunFailure,
+  type IRunView,
+} from '#/web/components/generation-panel.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
+import { AddDocumentDialog } from './add-document.tsx';
 import { useFeedback } from './use-feedback.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
 
@@ -49,9 +56,18 @@ export function useGeneration({ reference, title, interviewNumber, artifactVersi
   const [step, setStep] = useState(0);
   const [checkOverride, setCheckOverride] = useState<Record<string, boolean>>({});
   const [launchedNumber, setLaunchedNumber] = useState<number | null>(null);
+  const [isAddOpen, setIsAddOpen] = useState(false);
   const inputFetcher = useFetcher<Generation>();
   const promptFetcher = useFetcher<Generation>();
   const runFetcher = useFetcher<IRefusal>();
+  // Until the Inputs of this opening are read; read again afterwards, as a document added or any
+  // submission revalidates the fetcher, the Inputs stay shown
+  const [isReadingInputs, setIsReadingInputs] = useState(false);
+  useEffect(() => {
+    if (isReadingInputs && inputFetcher.state === 'idle') {
+      setIsReadingInputs(false);
+    }
+  }, [isReadingInputs, inputFetcher.state]);
   useFeedback(runFetcher, () => t('generation.launched', { context: artifact, artifactLabel }));
 
   const isRegeneration = versionList.length > 0;
@@ -124,6 +140,7 @@ export function useGeneration({ reference, title, interviewNumber, artifactVersi
         setStep(0);
         setCheckOverride({});
         setLaunchedNumber(null);
+        setIsReadingInputs(true);
         void inputFetcher.load(urlOf());
       }}
     />
@@ -137,7 +154,7 @@ export function useGeneration({ reference, title, interviewNumber, artifactVersi
         interviewNumber === null ? title : t('generation.subtitleOfInterview', { title, number: interviewNumber })
       }
       isRegeneration={isRegeneration}
-      generation={inputFetcher.state === 'idle' ? (inputFetcher.data ?? null) : null}
+      generation={isReadingInputs ? null : (inputFetcher.data ?? null)}
       checkOverride={checkOverride}
       step={step}
       prompt={promptFetcher.state === 'idle' ? (promptFetcher.data?.prompt?.prompt ?? null) : null}
@@ -146,6 +163,28 @@ export function useGeneration({ reference, title, interviewNumber, artifactVersi
         runState === null || launchedNumber === null
           ? null
           : { state: runState, number: launchedNumber, failure: failureMessage }
+      }
+      addInput={
+        <>
+          <AddInputButton
+            onClick={() => {
+              setIsAddOpen(true);
+            }}
+          />
+          <AddDocumentDialog
+            reference={reference}
+            interviewNumber={interviewNumber}
+            isAnnexAllowed={inputFetcher.data?.isReadingProfile === true}
+            isFromPanel
+            isOpen={isAddOpen}
+            onOpenChange={setIsAddOpen}
+            onAdded={(key) => {
+              // Checked at once in the panel that added it (spec #125)
+              setCheckOverride((current) => ({ ...current, [key]: true }));
+              void inputFetcher.load(urlOf());
+            }}
+          />
+        </>
       }
       onCheck={(keyList, isChecked) => {
         setCheckOverride((current) => ({

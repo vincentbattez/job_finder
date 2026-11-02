@@ -429,3 +429,15 @@ RUN_BY_VERSION[`${veraPosting.reference.slice(0, BETHUNE_REFERENCE.length)} rese
 await actions.runModule({ module: 'research', reference: veraPosting.reference });
 await actions.runQueuedJobs();
 await actions.validateVersion({ reference: veraPosting.reference, artifact: 'research', number: 1 });
+
+// Cleo, without Watch, adds documents in e2e/documents.test.ts: to one imported Posting from its Documents
+// section, to the other from the generation panel of its Research
+await actions.createCandidate({ id: 'cleo', name: 'Cleo' });
+for (const city of ['Douai', 'Laval']) {
+  await actions.importJobDescription({
+    candidateId: 'cleo',
+    fileName: `greffier-cleo-${city.toLowerCase()}.md`,
+    markdown: `# Greffier – ${city}\n\nTenir les audiences du tribunal judiciaire de ${city}.\n`,
+  });
+}
+await actions.runQueuedJobs();

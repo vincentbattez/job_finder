@@ -58,6 +58,7 @@ const APPLIED_MIGRATION_LIST_SCHEMA = z.array(z.object({ migration_name: z.strin
 const VERSION_INTERVIEW_SELECT = { select: { number: true } };
 const VERSION_INCLUDE = {
   interview: VERSION_INTERVIEW_SELECT,
+  customArtifact: { select: { id: true, title: true } },
   inputList: {
     select: {
       key: true,
@@ -617,6 +618,44 @@ export function openDatabase(databasePath: string) {
         await prisma.version.findMany({
           where: { postingId: posting.id, interviewId: interview?.id ?? null, artifact },
           orderBy: { number: 'asc' },
+          include: VERSION_INCLUDE,
+        }),
+      );
+    },
+
+    // A Custom Artifact and its single Version, Validated and Chosen from creation: the Candidate wrote it
+    // (spec #125)
+    async createCustomArtifact(posting: Posting, interview: Interview | null, title: string): Promise<Version> {
+      const { version } = await prisma.customArtifact.create({
+        data: {
+          postingId: posting.id,
+          interviewId: interview?.id ?? null,
+          title,
+          version: {
+            create: {
+              postingId: posting.id,
+              interviewId: interview?.id ?? null,
+              artifact: 'custom',
+              number: 1,
+              state: 'ready',
+              validation: 'validated',
+              isChosen: true,
+              origin: 'candidate',
+              instructions: '',
+            },
+          },
+        },
+        include: { version: { include: VERSION_INCLUDE } },
+      });
+      return VERSION_SCHEMA.parse(version);
+    },
+
+    // The single Version of each Custom Artifact of a Posting and of its Interviews, in the order they were added
+    async listCustomVersions(posting: Posting): Promise<Version[]> {
+      return z.array(VERSION_SCHEMA).parse(
+        await prisma.version.findMany({
+          where: { postingId: posting.id, artifact: 'custom' },
+          orderBy: { customArtifactId: 'asc' },
           include: VERSION_INCLUDE,
         }),
       );

@@ -58,6 +58,8 @@ const INPUT_BY_ACTION: Record<string, object> = {
   // The Posting is Applied by changeStatus first, which runs before: an Interview needs an Application
   addInterview: { start: '2026-11-19T14:00', place: 'Béthune', interviewers: 'Mme Durand' },
   readIcalFile: { origin: 'https://10.8.0.1:5180' },
+  addCustomArtifact: { title: 'Appel', text: 'Rappeler lundi.' },
+  addAnnex: { title: 'Relevé de notes', markdown: 'Licence.' },
   // The Posting of the check was kept before it was Applied: another one, still New
   keep: { reference: '2026-2445609' },
 };

@@ -8,6 +8,7 @@ import {
   ClipboardCopyIcon,
   EyeIcon,
   FileCheck2Icon,
+  FileTextIcon,
   LoaderIcon,
   LockIcon,
   PlusIcon,
@@ -41,6 +42,7 @@ const BUNDLE_MIN_COUNT = 3;
 const ICON_BY_KIND: Record<GenerationInput['kind'], LucideIcon> = {
   job_description: BriefcaseIcon,
   artifact: FileCheck2Icon,
+  custom_artifact: FileTextIcon,
   notes: StickyNoteIcon,
   profile_document: UserRoundIcon,
   past_letter: SendIcon,
@@ -103,6 +105,9 @@ function labelOf(t: TFunction<'posting'>, reference: string, input: GenerationIn
     }
     case 'artifact': {
       return artifactLabelOf(t, reference, input);
+    }
+    case 'custom_artifact': {
+      return t('generation.inputLabel.customArtifact', { title: input.title });
     }
   }
 }
@@ -364,8 +369,9 @@ function Blockers({ blockerList }: Readonly<{ blockerList: string[] }>) {
 function ReadStep({
   inputList,
   blockerList,
+  addInput,
   onCheck,
-}: Readonly<{ inputList: IPanelInput[]; blockerList: string[] } & IChecks>) {
+}: Readonly<{ inputList: IPanelInput[]; blockerList: string[]; addInput: ReactNode } & IChecks>) {
   const { t } = useTranslation('posting');
   const listOf = (group: InputGroup) => inputList.filter((input) => groupOf(input) === group);
   const annexList = listOf('annex');
@@ -391,6 +397,7 @@ function ReadStep({
           </ul>
         </section>
       )}
+      {addInput}
     </div>
   );
 }
@@ -655,6 +662,8 @@ interface IGenerationPanelProperties {
   prompt: string | null;
   isLaunching: boolean;
   run: IRunView | null;
+  // Add a text or a file, at the foot of what Claude reads
+  addInput?: ReactNode;
   onCheck: (keyList: string[], isChecked: boolean) => void;
   onStep: (step: number, readKeyList: string[]) => void;
   onCopy: (prompt: string) => void;
@@ -677,6 +686,7 @@ export function GenerationPanel({
   prompt,
   isLaunching,
   run,
+  addInput,
   onCheck,
   onStep,
   onCopy,
@@ -745,7 +755,9 @@ export function GenerationPanel({
         {run === null && generation !== null && (
           <>
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-              {step === 0 && <ReadStep inputList={inputList} blockerList={blockerList} onCheck={onCheck} />}
+              {step === 0 && (
+                <ReadStep inputList={inputList} blockerList={blockerList} addInput={addInput} onCheck={onCheck} />
+              )}
               {step === 1 && <WriteStep artifact={artifact} prompt={generation.prompt} />}
               {isLast && (
                 <RecapStep
@@ -806,6 +818,17 @@ export function GenerationPanel({
 }
 
 // Generate or Regenerate, which opens the panel, with beside it why a run is refused now (spec #125)
+// The dashed button at the foot of the Inputs that opens Add a text or a file
+export function AddInputButton({ onClick }: Readonly<{ onClick: () => void }>) {
+  const { t } = useTranslation('posting');
+  return (
+    <Button variant="outline" size="sm" className="w-full border-dashed text-muted-foreground" onClick={onClick}>
+      <PlusIcon aria-hidden />
+      {t('documents.addFromPanel')}
+    </Button>
+  );
+}
+
 export function GenerateButton({
   isRegeneration,
   refusal,

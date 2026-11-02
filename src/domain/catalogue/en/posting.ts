@@ -203,6 +203,7 @@ export const POSTING_EN = {
       artifactOfPosting: '{{artifactLabel}} v{{number}} of Posting {{reference}}',
       cv: 'CV',
       facts: 'Facts',
+      customArtifact: 'Document · {{title}}',
       annex: 'Annex · {{name}}',
       pastLetter: 'Past Letter · {{name}}',
       sentLetter: 'Letter sent · {{title}}',
@@ -344,6 +345,43 @@ export const POSTING_EN = {
 
   // The Interviews tab (spec #125, « Interviews »): the Interviews by date beside the selected one, its
   // Interview Brief and Portrait as tabs, added and edited in a Dialog, deleted after confirming
+  // The Custom Artifacts of a Posting and the Annexes the Candidate adds (spec #125)
+  documents: {
+    heading: 'Documents',
+    add: 'Add',
+    addLabel: 'Add a document',
+    empty: 'No documents yet. Add a text or a file that the Research, the Letter or the Interview Briefs will read.',
+    ofInterview: 'Interview {{number}}',
+    open: 'Read {{title}}',
+    readDescription:
+      'Document of the Posting · validated · added {{date, datetime(dateStyle: long; timeZone: Europe/Paris)}}',
+    readDescriptionOfInterview:
+      'Document of Interview {{number}} · validated · added {{date, datetime(dateStyle: long; timeZone: Europe/Paris)}}',
+    dialogTitle: 'Add a document',
+    dialogTitleFromPanel: 'Add a text or a file',
+    dialogDescription: 'A text of your own or a file, which the runs will read. It is validated at once.',
+    dialogDescriptionFromPanel: 'Claude reads it with the rest. It is checked for this run.',
+    addFromPanel: 'Add a text or a file',
+    titleLabel: 'Title',
+    titlePlaceholder: 'Notes from a call, activity report…',
+    textLabel: 'Text',
+    textPlaceholder: 'What Claude should know, in Markdown or plain text.',
+    filePrompt: 'or choose a file (.md, .txt)',
+    scopeLegend: 'Where to keep it',
+    scopePosting: 'For this Posting',
+    scopePostingHint: 'A document of the Posting, read by its next runs.',
+    scopeInterview: 'For Interview {{number}}',
+    scopeInterviewHint: 'A document of this Interview, read by its next Portrait and Interview Brief.',
+    scopeProfile: 'In my Profile (Annex)',
+    scopeProfileHint: 'An Annex, reusable for your other Postings.',
+    scopeProfileUnavailable: 'This run does not read your Profile: keep it for this Posting.',
+    cancel: 'Cancel',
+    submit: 'Add',
+    submitFromPanel: 'Add and check',
+    added: 'Document added: {{title}}',
+    annexAdded: 'Annex added to your Profile: {{title}}',
+  },
+
   interviews: {
     heading: 'Interviews',
     listLabel: 'Interviews of the Application',

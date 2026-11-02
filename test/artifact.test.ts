@@ -739,3 +739,95 @@ describe('the Inputs of a run', () => {
     expect(opened.aiSession.headlessSessionList).toHaveLength(1);
   });
 });
+
+describe('Custom Artifacts', () => {
+  const CALL_NOTES = { title: 'Appel avec la greffière', text: 'Elle cherche une personne rigoureuse.\n' };
+
+  it('creates one with a single Version, Validated and Chosen from creation, brought by the Candidate', async () => {
+    const opened = await openArtifacts();
+    const posting = await opened.context.findPosting(REFERENCE);
+
+    const custom = await opened.artifacts.createCustom({ posting, ...CALL_NOTES });
+
+    expect(custom.key).toMatch(/^custom:\d+$/);
+    expect(custom).toMatchObject({ interviewNumber: null, ...CALL_NOTES });
+    expect(await opened.artifacts.listCustomOf(posting)).toEqual([custom]);
+    const research = await opened.artifacts.find({ reference: REFERENCE, artifact: 'research' });
+    const inputList = await research.readInputs();
+    expect(inputList.find(({ key }) => key === custom.key)?.readVersion?.version).toMatchObject({
+      artifact: 'custom',
+      number: 1,
+      state: 'ready',
+      validation: 'validated',
+      isChosen: true,
+      origin: 'candidate',
+    });
+  });
+
+  it('is read by default by every run of its Posting, and one of an Interview by that Interview’s runs only', async () => {
+    const { context, artifacts } = await openPreparedInterview();
+    await createInterviewActions(context).addInterview({
+      reference: REFERENCE,
+      ...INTERVIEW,
+      start: '2026-11-26T14:00',
+    });
+    const posting = await context.findPosting(REFERENCE);
+    const ofPosting = await artifacts.createCustom({ posting, ...CALL_NOTES });
+    const ofInterview = await artifacts.createCustom({
+      posting,
+      interview: 1,
+      title: 'Organigramme',
+      text: 'La cour.',
+    });
+    const customInputsOf = async (name: Parameters<typeof artifacts.find>[0]) => {
+      const handle = await artifacts.find(name);
+      const inputList = await handle.readInputs();
+      return inputList
+        .filter(({ kind }) => kind === 'custom_artifact')
+        .map(({ key, mode, isChecked, title }) => ({ key, mode, isChecked, title }));
+    };
+
+    expect(await customInputsOf({ reference: REFERENCE, artifact: 'letter' })).toEqual([
+      { key: ofPosting.key, mode: 'default', isChecked: true, title: CALL_NOTES.title },
+    ]);
+    expect(await customInputsOf({ reference: REFERENCE, artifact: 'portrait', interview: 1 })).toEqual([
+      { key: ofPosting.key, mode: 'default', isChecked: true, title: CALL_NOTES.title },
+      { key: ofInterview.key, mode: 'default', isChecked: true, title: 'Organigramme' },
+    ]);
+    expect(await customInputsOf({ reference: REFERENCE, artifact: 'interview_brief', interview: 2 })).toEqual([
+      { key: ofPosting.key, mode: 'default', isChecked: true, title: CALL_NOTES.title },
+    ]);
+  });
+
+  it('is inlined in the Prompt under its title, and recorded by the Version that read it', async () => {
+    const opened = await openArtifacts(RESEARCH_RUN, RESEARCH_RUN);
+    await opened.draft({ reference: REFERENCE, artifact: 'research' });
+    const posting = await opened.context.findPosting(REFERENCE);
+    const custom = await opened.artifacts.createCustom({ posting, ...CALL_NOTES });
+
+    const research = await opened.artifacts.find({ reference: REFERENCE, artifact: 'research' });
+    const inputList = await research.readInputs();
+    await research.queueRun({ inputKeyList: inputList.filter(({ isChecked }) => isChecked).map(({ key }) => key) });
+    await opened.runNextJob();
+
+    expect(inputList.find(({ key }) => key === custom.key)?.isChecked).toBe(true);
+    expect(opened.aiSession.headlessSessionList.at(-1)?.message).toContain(
+      `## Input: Custom Artifact: ${CALL_NOTES.title}\n\n${CALL_NOTES.text.trim()}`,
+    );
+    const { versionList } = await opened.artifacts.find({ reference: REFERENCE, artifact: 'research' });
+    expect(versionList.at(-1)?.version.inputList).toContainEqual({
+      key: custom.key,
+      readVersion: { artifact: 'custom', number: 1, posting: { reference: REFERENCE }, interview: null },
+    });
+  });
+
+  it('refuses one for an Interview the Posting does not have', async () => {
+    const opened = await openArtifacts();
+    const posting = await opened.context.findPosting(REFERENCE);
+
+    await expect(opened.artifacts.createCustom({ posting, interview: 3, ...CALL_NOTES })).rejects.toMatchObject({
+      code: 'unknown_interview',
+    });
+    expect(await opened.artifacts.listCustomOf(posting)).toEqual([]);
+  });
+});
