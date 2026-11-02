@@ -5,6 +5,7 @@ import { useFetcher } from 'react-router';
 
 import { ArtifactView as ArtifactViewView, type ArtifactMode } from '#/web/components/artifact-view.tsx';
 import type { IArtifactVersions, IVersionDetail } from '#/web/components/artifact.ts';
+import type { IRecipients } from '#/web/components/recipients.tsx';
 import { Button } from '#/web/components/ui/button.tsx';
 import { Textarea } from '#/web/components/ui/textarea.tsx';
 import type { IRefusal } from '#/web/failure.ts';
@@ -114,8 +115,16 @@ export function ArtifactView({
   reference,
   title,
   interviewNumber = null,
+  recipients = null,
   ...artifactVersions
-}: Readonly<IArtifactVersions & { reference: string; title: string; interviewNumber?: number | null }>) {
+}: Readonly<
+  IArtifactVersions & {
+    reference: string;
+    title: string;
+    interviewNumber?: number | null;
+    recipients?: IRecipients | null;
+  }
+>) {
   const { artifact, versionList, fileName } = artifactVersions;
   const generation = useGeneration({ reference, title, interviewNumber, artifactVersions });
   const latestNumber = versionList.at(-1)?.version.number ?? null;
@@ -133,6 +142,7 @@ export function ArtifactView({
       {generation.panel}
       <ArtifactViewView
         {...artifactVersions}
+        recipients={recipients}
         selectedNumber={current.number}
         mode={current.mode}
         onSelect={(number) => {

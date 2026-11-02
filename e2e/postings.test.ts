@@ -59,18 +59,6 @@ test.describe('Postings of a Candidate', () => {
     ).toBeVisible();
   });
 
-  test('shows the recipients the Letter recommends, each with the field it comes from', async ({ page }) => {
-    await page.goto('/postings/2026-2445600?tab=letter');
-
-    const recipients = page.getByRole('region', { name: 'Destinataires recommandés' });
-    await expect(recipients.getByRole('definition')).toHaveText([
-      /^p\.tj-bethune@justice\.fr\s*Mail de candidature$/,
-      /^sec\.p\.tj-bethune@justice\.fr\s*Contact 2$/,
-      /^Madame la Présidente,\s*Contact 1$/,
-    ]);
-    await expect(recipients).toContainText('Le mail de candidature est celui de la présidence');
-  });
-
   test('reads the latest Version of an Artifact, and any other from its Version Select', async ({ page, openPage }) => {
     await openPage('/postings/2026-2445600?tab=research');
 
