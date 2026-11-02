@@ -100,7 +100,6 @@ describe('research', () => {
     expect(aiSession.headlessSessionList[0]).toMatchObject({
       message: `# Inputs\n\n## Input: Job Description\n\n${jobDescription.trim()}\n\n# Instructions\n\n${RESEARCH_DEFAULT_INSTRUCTIONS.trim()}`,
       directory: postingDirectory,
-      readDirectoryList: [],
       outputDirectory: path.join(postingDirectory, 'research/v1'),
     });
     expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain('Never invent a fact.');
