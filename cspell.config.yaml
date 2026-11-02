@@ -46,6 +46,10 @@ overrides:
       [src/domain/artifact-rename.ts, src/web/redirects.ts, src/workspace/layout.ts, src/workspace/acl/config.ts]
     ignoreRegExpList:
       - "/\\bfrom: *(['\"`])(?:\\\\.|(?!\\1)[^\\\\\\n])*\\1/gu"
+  # The names API Géo gives the Regions, the keys of the table of their extent
+  - filename: src/web/region-bounds.ts
+    ignoreRegExpList:
+      - "/^ +(?:(['\"])(?:(?!\\1).)*\\1|[\\p{L}-]+)(?=:)/gmu"
   # The glossary keeps each former French term, so that older issues and commits stay readable
   - filename: GLOSSARY.md
     ignoreRegExpList:

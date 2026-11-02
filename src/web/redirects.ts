@@ -21,7 +21,7 @@ export const REDIRECT_LIST = [
 ];
 
 // The query parameters of the French filters of the Posting list and their English names: a filter Léa
-// saved keeps filtering. Their values are English already, or the Candidate's own (a city, a region).
+// saved keeps filtering, now New's (`/`). Their values are English already, or the Candidate's own (a city, a region).
 const QUERY_PARAMETER_RENAME_LIST = [
   { from: 'ville', to: 'city' },
   { from: 'archivees', to: 'archived' },

@@ -71,6 +71,12 @@ describe('the Applications list', () => {
     ]);
   });
 
+  it('lists the Archived Applications apart, under Archived', async () => {
+    const itemList = await actions.listApplications({ candidateId: 'lea', isArchived: true });
+
+    expect(itemList.map(({ posting }) => posting.reference)).toEqual(['2026-2350473']);
+  });
+
   it('is refused for an unknown Candidate', async () => {
     await expect(actions.listApplications({ candidateId: 'nobody' })).rejects.toThrow(/nobody/);
   });

@@ -84,6 +84,86 @@ export function groupNew<T extends IDated & { isFound: boolean }>(
   return foundList.length === 0 ? groupList : [{ key: 'found', itemList: foundList }, ...groupList];
 }
 
+// The filters common to every list (spec #125 « Lists »): several Cities, one Region, and Archived,
+// which shows the list's Archived Postings instead of the followed ones. They live in the URL.
+export interface IListFilters {
+  cityList: string[];
+  region: string | null;
+  isArchived: boolean;
+}
+
+const CITY_PARAMETER = 'city';
+const REGION_PARAMETER = 'region';
+// Any value turns it on: « on » is what the POC's checkbox sent, which saved links still carry
+const ARCHIVED_PARAMETER = 'archived';
+const ARCHIVED_VALUE = 'on';
+
+export function readListFilters(searchParameters: URLSearchParams): IListFilters {
+  const region = searchParameters.get(REGION_PARAMETER) ?? '';
+  return {
+    cityList: searchParameters.getAll(CITY_PARAMETER).filter((city) => city !== ''),
+    region: region === '' ? null : region,
+    isArchived: searchParameters.has(ARCHIVED_PARAMETER),
+  };
+}
+
+// The URL's parameters with these filters, its others kept, such as the open Sheet
+export function writeListFilters(searchParameters: URLSearchParams, filters: IListFilters): URLSearchParams {
+  const written = new URLSearchParams(searchParameters);
+  for (const name of [CITY_PARAMETER, REGION_PARAMETER, ARCHIVED_PARAMETER]) {
+    written.delete(name);
+  }
+  for (const city of filters.cityList) {
+    written.append(CITY_PARAMETER, city);
+  }
+  if (filters.region !== null) {
+    written.set(REGION_PARAMETER, filters.region);
+  }
+  if (filters.isArchived) {
+    written.set(ARCHIVED_PARAMETER, ARCHIVED_VALUE);
+  }
+  return written;
+}
+
+interface IPlaced {
+  city: string | null;
+  region: string | null;
+}
+
+// Whether a Posting is in one of the chosen Cities, if any, and in the chosen Region, if any
+export function isInPlace({ city, region }: IPlaced, filters: Pick<IListFilters, 'cityList' | 'region'>): boolean {
+  return (
+    (filters.cityList.length === 0 || (city !== null && filters.cityList.includes(city))) &&
+    (filters.region === null || region === filters.region)
+  );
+}
+
+// Whether a move from one URL to the other changes only the City or the Region: the list filters what it
+// holds, without asking the server again
+export function isPlaceChangeOnly(currentUrl: URL, nextUrl: URL): boolean {
+  const withoutPlace = (url: URL) => {
+    const parameters = new URLSearchParams(url.search);
+    parameters.delete(CITY_PARAMETER);
+    parameters.delete(REGION_PARAMETER);
+    return `${url.pathname}?${parameters.toString()}`;
+  };
+  return currentUrl.search !== nextUrl.search && withoutPlace(currentUrl) === withoutPlace(nextUrl);
+}
+
+// The values a filter offers, each with how many Postings hold it, the most frequent first, then
+// alphabetically; an unknown value left out
+export function tally(valueList: (string | null)[]): { value: string; count: number }[] {
+  const countByValue = new Map<string, number>();
+  for (const value of valueList) {
+    if (value !== null) {
+      countByValue.set(value, (countByValue.get(value) ?? 0) + 1);
+    }
+  }
+  return [...countByValue]
+    .map(([value, count]) => ({ value, count }))
+    .toSorted((first, second) => second.count - first.count || first.value.localeCompare(second.value, 'fr'));
+}
+
 // The Applications tabs: Hired and Rejected by their Status, everything else In progress (spec #125)
 export type ApplicationTab = 'in_progress' | 'hired' | 'rejected';
 

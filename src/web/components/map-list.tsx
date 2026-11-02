@@ -26,6 +26,16 @@ interface IMapListGroup<T extends IMapListItem> {
   itemList: T[];
 }
 
+// What the list's filters bring (containers/list-filters.tsx): their bar, at the head of the panel; the
+// extent the map fits to, a Region's, rather than the markers'; a key that fits the view again when it
+// changes; and what the list says when a filter empties it
+export interface IMapListFiltering {
+  toolbar: ReactNode;
+  fitCornerList: [[number, number], [number, number]] | undefined;
+  fitKey: string;
+  empty: ReactNode;
+}
+
 // The Posting whose Sheet is open, which the URL names, and how a row or a marker opens another
 export interface ISheetSelection {
   selectedReference: string | null;
@@ -40,10 +50,11 @@ interface IMapListProperties<T extends IMapListItem> extends ISheetSelection {
   // The third line of a row: the facts of its list
   renderFacts: (item: T) => ReactNode;
   // What a row offers on its right, such as New's Dismiss and Keep, over the row's own button
-  renderActions?: (item: T) => ReactNode;
+  renderActions?: ((item: T) => ReactNode) | undefined;
   // What the panel's head holds under the list's name, such as the Applications tabs
   controls?: ReactNode;
   empty: ReactNode;
+  filtering?: IMapListFiltering | undefined;
 }
 
 // The panel's width and its inset from the map's edges (DESIGN.md « Layout »)
@@ -72,6 +83,7 @@ export function MapList<T extends IMapListItem>({
   renderActions,
   controls,
   empty,
+  filtering,
   selectedReference,
   onSelect,
 }: Readonly<IMapListProperties<T>>) {
@@ -129,6 +141,8 @@ export function MapList<T extends IMapListItem>({
         activeReference={active.reference}
         focusNonce={active.nonce}
         coveredLeft={isPanelOpen ? PANEL_WIDTH + PANEL_INSET : 0}
+        fitCornerList={filtering?.fitCornerList}
+        fitKey={filtering?.fitKey ?? ''}
         coveredRight={active.reference === null ? 0 : SHEET_WIDTH}
         onHover={hoverFromMap}
         onSelect={selectFromMap}
@@ -149,26 +163,29 @@ export function MapList<T extends IMapListItem>({
           aria-label={label}
           className="absolute top-3 bottom-3 left-3 z-10 flex w-[400px] max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-xl border bg-background/95 shadow-float backdrop-blur supports-[backdrop-filter]:bg-background/85"
         >
-          <div className="flex items-center justify-between gap-2 border-b px-4 py-2.5">
-            <p className="text-body font-semibold">
-              {label} <span className="font-normal text-muted-foreground tabular-nums">· {count}</span>
-            </p>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => {
-                setIsPanelOpen(false);
-              }}
-              aria-label={t('fold')}
-            >
-              <PanelLeftCloseIcon />
-            </Button>
+          <div className="flex flex-col gap-2.5 border-b px-4 py-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-body font-semibold">
+                {label} <span className="font-normal text-muted-foreground tabular-nums">· {count}</span>
+              </p>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => {
+                  setIsPanelOpen(false);
+                }}
+                aria-label={t('fold')}
+              >
+                <PanelLeftCloseIcon />
+              </Button>
+            </div>
+            {controls}
+            {filtering?.toolbar}
           </div>
-          {controls !== undefined && <div className="border-b px-3 py-2.5">{controls}</div>}
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {groupList.length === 0 ? (
               <p className="m-4 rounded-2xl border border-dashed p-6 text-center text-body text-muted-foreground">
-                {empty}
+                {filtering?.empty ?? empty}
               </p>
             ) : (
               groupList.map((group) => (
