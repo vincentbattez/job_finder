@@ -10,6 +10,7 @@ import {
   Columns2Icon,
   FileUpIcon,
   LoaderIcon,
+  LockIcon,
   Maximize2Icon,
   Minimize2Icon,
   MoreHorizontalIcon,
@@ -54,7 +55,7 @@ import {
   type IPostingDetail,
   type IVersion,
 } from '../model.ts';
-import { useActions, useRuns } from '../store.ts';
+import { isLetterFrozen, LETTER_FROZEN_REASON, useActions, useRuns } from '../store.ts';
 import { AddVersionDialog } from './add-version-dialog.tsx';
 import { CompareView } from './compare.tsx';
 import { ArtifactEditor } from './editor.tsx';
@@ -272,7 +273,7 @@ export function ArtifactView({
   const versionList = artifact?.versions ?? [];
   const latest = versionList.at(-1);
   const [selectedNumber, setSelectedNumber] = useState<number | null>(latest?.number ?? null);
-  const [mode, setMode] = useState<Mode>('read');
+  const [requestedMode, setMode] = useState<Mode>('read');
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
@@ -287,6 +288,10 @@ export function ArtifactView({
   const version = versionList.find(({ number }) => number === selectedNumber) ?? latest;
   const chosen = artifact === undefined ? undefined : chosenVersionOf(artifact);
   const refusal = artifact?.refusal ?? null;
+  // A frozen Letter is read-only: no correction, no Version of the Candidate, no validation
+  const frozenReason = isLetterFrozen(type, posting) ? LETTER_FROZEN_REASON : null;
+  const isFrozen = frozenReason !== null;
+  const mode: Mode = isFrozen && requestedMode === 'edit' ? 'read' : requestedMode;
   const articleLabel = ARTICLE_LABEL[type];
   const resolved = artifact ?? emptyArtifactOf(artifactKey, type, interview?.number ?? null);
   const format = resolved.format;
@@ -352,10 +357,12 @@ export function ArtifactView({
             <p className="mt-1.5 max-w-md text-sm text-balance text-muted-foreground">{EMPTY_PITCH[type]}</p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
               {generateButton}
-              <Button variant="outline" size="sm" onClick={() => setIsAddOpen(true)}>
-                <FileUpIcon />
-                Ajouter la mienne
-              </Button>
+              <WithReason reason={frozenReason}>
+                <Button variant="outline" size="sm" disabled={isFrozen} onClick={() => setIsAddOpen(true)}>
+                  <FileUpIcon />
+                  Ajouter la mienne
+                </Button>
+              </WithReason>
             </div>
             {refusal === null ? null : <p className="mt-3 max-w-md text-xs text-muted-foreground">{refusal}</p>}
           </div>
@@ -412,14 +419,21 @@ export function ArtifactView({
                 className="hidden @xl:flex"
               >
                 {MODE_LIST.map(({ mode: itemMode, label, icon: Icon }) => {
-                  const isDisabled = itemMode === 'compare' && !hasOriginal;
+                  const isNoOriginal = itemMode === 'compare' && !hasOriginal;
+                  const isFrozenEdit = itemMode === 'edit' && isFrozen;
                   return (
                     <ToggleGroupItem
                       key={itemMode}
                       value={itemMode}
-                      disabled={isDisabled}
+                      disabled={isNoOriginal || isFrozenEdit}
                       aria-label={label}
-                      title={isDisabled ? 'Version apportée par toi : pas d’Original' : label}
+                      title={
+                        isNoOriginal
+                          ? 'Version apportée par toi : pas d’Original'
+                          : isFrozenEdit
+                            ? (frozenReason ?? label)
+                            : label
+                      }
                       className="gap-1.5 px-2.5"
                     >
                       <Icon />
@@ -430,15 +444,18 @@ export function ArtifactView({
                   );
                 })}
               </ToggleGroup>
-              <Button
-                variant="outline"
-                size="sm"
-                className="hidden @4xl:inline-flex"
-                onClick={() => setIsAddOpen(true)}
-              >
-                <FileUpIcon />
-                Ajouter la mienne
-              </Button>
+              <WithReason reason={frozenReason}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hidden @4xl:inline-flex"
+                  disabled={isFrozen}
+                  onClick={() => setIsAddOpen(true)}
+                >
+                  <FileUpIcon />
+                  Ajouter la mienne
+                </Button>
+              </WithReason>
               {generateButton}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -450,7 +467,7 @@ export function ArtifactView({
                   {MODE_LIST.map(({ mode: itemMode, label, icon: Icon }) => (
                     <DropdownMenuItem
                       key={itemMode}
-                      disabled={itemMode === 'compare' && !hasOriginal}
+                      disabled={(itemMode === 'compare' && !hasOriginal) || (itemMode === 'edit' && isFrozen)}
                       onSelect={() => setMode(itemMode)}
                       className="md:hidden"
                     >
@@ -459,7 +476,7 @@ export function ArtifactView({
                     </DropdownMenuItem>
                   ))}
                   <DropdownMenuSeparator className="md:hidden" />
-                  <DropdownMenuItem onSelect={() => setIsAddOpen(true)}>
+                  <DropdownMenuItem disabled={isFrozen} onSelect={() => setIsAddOpen(true)}>
                     <FileUpIcon />
                     Ajouter la mienne
                   </DropdownMenuItem>
@@ -470,6 +487,13 @@ export function ArtifactView({
           </div>
           <ProducedFrom version={version} />
         </div>
+
+        {frozenReason === null ? null : (
+          <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+            <LockIcon className="size-4 shrink-0" />
+            {frozenReason}
+          </div>
+        )}
 
         <RunProgress reference={posting.reference} artifactKey={artifactKey} />
 
@@ -486,10 +510,16 @@ export function ArtifactView({
                   : `En attendant, la Version ${String(chosen.number)} reste la Version retenue.`}
               </p>
             </div>
-            <Button className="shrink-0" disabled={isValidating} onClick={() => void validate(version.number)}>
-              <CheckIcon />
-              {isValidating ? 'Validation…' : `Valider la Version ${String(version.number)}`}
-            </Button>
+            <WithReason reason={frozenReason}>
+              <Button
+                className="shrink-0"
+                disabled={isValidating || isFrozen}
+                onClick={() => void validate(version.number)}
+              >
+                <CheckIcon />
+                {isValidating ? 'Validation…' : `Valider la Version ${String(version.number)}`}
+              </Button>
+            </WithReason>
           </div>
         ) : null}
         {!isDraft && !version.isChosen && chosen !== undefined ? (

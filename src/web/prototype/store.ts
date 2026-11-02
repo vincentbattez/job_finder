@@ -395,6 +395,16 @@ function applyPosting(posting: IPosting, overlay: ICandidateOverlay, now: Date):
   };
 }
 
+export const LETTER_FROZEN_REASON =
+  'Lettre figée : tu as marqué l’Offre Postulée, la Lettre envoyée ne change plus. Tu peux seulement la relire.';
+
+// Once the Posting was Applied, what the Candidate sent stays as it was (the real module's freeze)
+export function isLetterFrozen(type: ArtifactType, posting: IPosting): boolean {
+  return (
+    type === 'letter' && (posting.appliedAt !== null || (posting.status !== 'to_apply' && posting.status !== 'new'))
+  );
+}
+
 // Why a run is refused now, from the overlaid state rather than the snapshot's: the real module's two
 // rules, the Letter frozen once Applied and a required Artifact without a Chosen Version
 function refusalOf(
@@ -411,7 +421,7 @@ function refusalOf(
     posting !== undefined &&
     (posting.appliedAt !== null || (posting.status !== 'to_apply' && posting.status !== 'new'))
   ) {
-    return 'La Lettre est figée : l’Offre est déjà Postulée, la Lettre envoyée ne change plus.';
+    return LETTER_FROZEN_REASON;
   }
   for (const required of inputRules[artifact.type].requiredList) {
     const key = artifactKeyOf(required, inputRules[required].isAttachedToInterview ? artifact.interviewNumber : null);
