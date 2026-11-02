@@ -15,11 +15,12 @@ import {
   TrophyIcon,
   XIcon,
 } from 'lucide-react';
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useFetcher } from 'react-router';
 
 import type { Status, Step } from '#/web/components/badge.tsx';
+import { HeaderActionLabel } from '#/web/components/page-header.tsx';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -114,11 +115,6 @@ const IN_PROGRESS_STEP_LIST: Set<Step> = new Set(['applied', 'invited', 'intervi
 
 const OUTCOME_ICON_BY_STATUS = { hired: <TrophyIcon />, rejected: <ThumbsDownIcon /> };
 
-// On a phone the header's actions keep their icon only (DESIGN.md « Layout »), their name for a screen reader
-function ButtonLabel({ children }: Readonly<{ children: ReactNode }>) {
-  return <span className="sr-only sm:not-sr-only">{children}</span>;
-}
-
 // The head of the Posting page (spec #125, « The Posting page »): ONE primary action that follows the
 // Step, the rest in a ⋯ menu. The Status goes through its route, which refuses what the Status rules
 // forbid; archiving acts at once and offers its undo in the toast. A New Posting is kept, or dismissed
@@ -210,7 +206,7 @@ export function PostingActions({
           }}
         >
           <ArchiveRestoreIcon />
-          <ButtonLabel>{t('unarchive')}</ButtonLabel>
+          <HeaderActionLabel>{t('unarchive')}</HeaderActionLabel>
         </Button>
       );
     }
@@ -228,7 +224,7 @@ export function PostingActions({
             }}
           >
             <CheckIcon />
-            <ButtonLabel>{t('page.keep')}</ButtonLabel>
+            <HeaderActionLabel>{t('page.keep')}</HeaderActionLabel>
           </Button>
         );
       }
@@ -236,7 +232,7 @@ export function PostingActions({
         return (
           <Button size="sm" isPending={isApplying} onClick={markApplied}>
             <SendIcon />
-            <ButtonLabel>{t('page.markApplied')}</ButtonLabel>
+            <HeaderActionLabel>{t('page.markApplied')}</HeaderActionLabel>
           </Button>
         );
       }
@@ -244,7 +240,7 @@ export function PostingActions({
         return (
           <Button size="sm" onClick={openInterviewDialog}>
             <CalendarPlusIcon />
-            <ButtonLabel>{t('page.addInterview')}</ButtonLabel>
+            <HeaderActionLabel>{t('page.addInterview')}</HeaderActionLabel>
           </Button>
         );
       }
@@ -253,7 +249,7 @@ export function PostingActions({
           <Button size="sm" asChild>
             <Link to={{ search: `?tab=interviews&interview=${String(nextInterviewNumber)}` }} preventScrollReset>
               <CalendarClockIcon />
-              <ButtonLabel>{t('page.seeInterview', { number: nextInterviewNumber })}</ButtonLabel>
+              <HeaderActionLabel>{t('page.seeInterview', { number: nextInterviewNumber })}</HeaderActionLabel>
             </Link>
           </Button>
         );
@@ -264,7 +260,7 @@ export function PostingActions({
             <DropdownMenuTrigger asChild>
               <Button size="sm" isPending={statusFetcher.state !== 'idle'}>
                 <FlagIcon />
-                <ButtonLabel>{t('page.recordOutcome')}</ButtonLabel>
+                <HeaderActionLabel>{t('page.recordOutcome')}</HeaderActionLabel>
                 <ChevronDownIcon />
               </Button>
             </DropdownMenuTrigger>
@@ -296,7 +292,7 @@ export function PostingActions({
             }}
           >
             <RotateCcwIcon />
-            <ButtonLabel>{t('backInProgress')}</ButtonLabel>
+            <HeaderActionLabel>{t('backInProgress')}</HeaderActionLabel>
           </Button>
         );
       }

@@ -3,6 +3,12 @@ import type { ReactNode } from 'react';
 import { Separator } from '#/web/components/ui/separator.tsx';
 import { SidebarTrigger } from '#/web/components/ui/sidebar.tsx';
 
+// The label of a header action: on a phone the action keeps its icon only (DESIGN.md « Layout »), its
+// name for a screen reader
+export function HeaderActionLabel({ children }: Readonly<{ children: ReactNode }>) {
+  return <span className="sr-only md:not-sr-only">{children}</span>;
+}
+
 // The head of a page in the shell (DESIGN.md « Layout »): the Sidebar trigger, the title and its
 // one-line description, then the page's actions on the right; sticky and translucent
 export function PageHeader({

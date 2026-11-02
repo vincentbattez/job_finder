@@ -285,7 +285,7 @@ export function PostingSheet({
     >
       <SheetContent
         side="right"
-        className="gap-0 bg-background shadow-sheet data-[side=right]:w-full data-[side=right]:sm:max-w-[30rem]"
+        className="gap-0 bg-background shadow-sheet data-[side=right]:w-full data-[side=right]:max-sm:border-l-0 data-[side=right]:sm:max-w-[30rem]"
         // The list keeps the focus, so that the Candidate goes on browsing it
         onOpenAutoFocus={(event) => {
           event.preventDefault();

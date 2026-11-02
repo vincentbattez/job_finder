@@ -379,6 +379,18 @@ await actions.importJobDescription({
 });
 await actions.runQueuedJobs();
 
+// Max reads his To Apply list on a phone in e2e/phone.test.ts, which places and dates his three
+// imported Postings first
+await actions.createCandidate({ id: 'max', name: 'Max' });
+for (const city of ['arras', 'caen', 'tours']) {
+  await actions.importJobDescription({
+    candidateId: 'max',
+    fileName: `greffier-max-${city}.md`,
+    markdown: `# Greffier – Max ${city}\n`,
+  });
+}
+await actions.runQueuedJobs();
+
 // Paul, without Watch, has one imported Posting per journey of e2e/posting-page.test.ts, which finds
 // each by the reference its Markdown gives (e2e/paul.ts): one Interviewed, its Interview past, one
 // Invited, its Interview to come
