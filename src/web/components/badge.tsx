@@ -1,4 +1,3 @@
-import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Actions } from '#/actions/index.ts';
@@ -69,9 +68,4 @@ export function StateBadge({ state }: Readonly<{ state: State }>) {
       {t(`stateLabelByState.${state}`)}
     </span>
   );
-}
-
-// Any other badge, such as whose Instructions a module follows: its data attributes give its tint
-export function Badge(properties: Readonly<Omit<ComponentProps<'span'>, 'className'>>) {
-  return <span {...properties} className="badge" />;
 }

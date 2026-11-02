@@ -24,7 +24,6 @@ export default [
   route('notification-channel', 'routes/notification-channel.ts'),
   route('watch', 'routes/watch.ts'),
   route('settings', 'routes/settings.tsx'),
-  route('instructions', 'routes/instructions.tsx'),
   route('run', 'routes/run.ts'),
   route('detect', 'routes/detect.ts'),
   route('import', 'routes/import.ts'),

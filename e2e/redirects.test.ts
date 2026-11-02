@@ -4,7 +4,8 @@ import { expect, test } from '@playwright/test';
 test.describe('French routes', () => {
   for (const { frenchPath, englishPath } of [
     { frenchPath: '/profil', englishPath: '/profile' },
-    { frenchPath: '/consignes', englishPath: '/instructions' },
+    { frenchPath: '/consignes', englishPath: '/settings' },
+    { frenchPath: '/instructions', englishPath: '/settings' },
     { frenchPath: '/candidats', englishPath: '/settings' },
     { frenchPath: '/candidates', englishPath: '/settings' },
     { frenchPath: '/candidat', englishPath: '/candidate' },

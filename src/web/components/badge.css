@@ -110,10 +110,4 @@
     --badge-ink: var(--color-accent-ink);
     --badge-soft: var(--color-accent);
   }
-
-  /* The Candidate's own Instructions of a module, on the same full accent */
-  .badge[data-instructions='candidate'] {
-    --badge-ink: var(--color-accent-ink);
-    --badge-soft: var(--color-accent);
-  }
 }

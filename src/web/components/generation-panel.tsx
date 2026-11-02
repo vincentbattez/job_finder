@@ -23,6 +23,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Artifact } from '#/actions/index.ts';
+import { segmentsOf } from '#/actions/substitution.ts';
 import { Alert, AlertDescription, AlertTitle } from '#/web/components/ui/alert.tsx';
 import { Button } from '#/web/components/ui/button.tsx';
 import { Checkbox } from '#/web/components/ui/checkbox.tsx';
@@ -402,8 +403,42 @@ function ReadStep({
   );
 }
 
-// Step 2, how it writes: the Instructions in effect and the Fixed Part, both read-only here
-function WriteStep({ artifact, prompt }: Readonly<{ artifact: Artifact; prompt: Generation['prompt'] }>) {
+// A value the tool substituted in the Fixed Part: fuchsia, never Invited's violet (DESIGN.md « Substituted values »)
+const SUBSTITUTED_CLASS =
+  'rounded-[3px] bg-substituted/12 px-0.5 text-substituted-foreground ring-1 ring-substituted/30 ring-inset';
+
+// The Fixed Part's exact text, each value the tool substituted for this Posting or Interview highlighted
+function FixedPart({ marked }: Readonly<{ marked: string }>) {
+  const { t } = useTranslation('posting');
+  return (
+    <div className="space-y-2">
+      <p className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span className={cn(SUBSTITUTED_CLASS, 'shrink-0')}>{t('generation.substitutedChip')}</span>
+        <span>{t('generation.substitutedLegend')}</span>
+      </p>
+      <pre className="font-sans text-[13px] leading-relaxed wrap-anywhere whitespace-pre-wrap text-muted-foreground">
+        {segmentsOf(marked).map(({ text, isSubstituted }, index) =>
+          isSubstituted ? (
+            // The segments of one text never move: their index keys them
+            <mark key={index} className={SUBSTITUTED_CLASS} title={t('generation.substituted')}>
+              {text}
+            </mark>
+          ) : (
+            text
+          ),
+        )}
+      </pre>
+    </div>
+  );
+}
+
+// Step 2, how it writes: the Instructions in effect, in the editor its Container hands in, then the Fixed
+// Part, folded and read-only
+function WriteStep({
+  artifact,
+  prompt,
+  instructions,
+}: Readonly<{ artifact: Artifact; prompt: Generation['prompt']; instructions: ReactNode }>) {
   const { t } = useTranslation('posting');
   return (
     <div className="space-y-4">
@@ -413,30 +448,30 @@ function WriteStep({ artifact, prompt }: Readonly<{ artifact: Artifact; prompt: 
           artifactLabel: t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' }),
         })}
       </p>
+      <section className="space-y-2">
+        <h3 className="max-w-none text-sm font-medium">{t('generation.instructions')}</h3>
+        {instructions ?? (
+          <p className="rounded-lg bg-muted/50 px-3 py-2 text-[13px] leading-relaxed whitespace-pre-wrap">
+            {prompt?.instructions}
+          </p>
+        )}
+      </section>
       {prompt !== null && (
-        <>
-          <section className="space-y-2">
-            <h3 className="max-w-none text-sm font-medium">{t('generation.instructions')}</h3>
-            <p className="rounded-lg bg-muted/50 px-3 py-2 text-[13px] leading-relaxed whitespace-pre-wrap">
-              {prompt.instructions}
-            </p>
-          </section>
-          <Collapsible className="rounded-lg border">
-            <CollapsibleTrigger className="group flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-              <ChevronRightIcon
-                aria-hidden
-                className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-90"
-              />
-              <span className="font-medium">{t('generation.fixedPart')}</span>
-              <span className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <LockIcon aria-hidden className="size-3" /> {t('generation.notEditable')}
-              </span>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="border-t px-3 py-3">
-              <InputContent content={prompt.fixedPart} />
-            </CollapsibleContent>
-          </Collapsible>
-        </>
+        <Collapsible className="rounded-lg border">
+          <CollapsibleTrigger className="group flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+            <ChevronRightIcon
+              aria-hidden
+              className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-90"
+            />
+            <span className="font-medium">{t('generation.fixedPart')}</span>
+            <span className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <LockIcon aria-hidden className="size-3" /> {t('generation.notEditable')}
+            </span>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="border-t px-3 py-3">
+            <FixedPart marked={prompt.markedFixedPart} />
+          </CollapsibleContent>
+        </Collapsible>
       )}
     </div>
   );
@@ -655,6 +690,9 @@ interface IGenerationPanelProperties {
   isRegeneration: boolean;
   // null while the panel reads the Inputs
   generation: Generation | null;
+  // The Instructions editor its Container hands in, and whether it holds an unsaved edit, which blocks Launch
+  instructions: ReactNode;
+  isInstructionsDirty: boolean;
   // The keys the Candidate checked or unchecked since the panel opened, over the initial checks
   checkOverride: Readonly<Record<string, boolean>>;
   step: number;
@@ -681,6 +719,8 @@ export function GenerationPanel({
   subtitle,
   isRegeneration,
   generation,
+  instructions,
+  isInstructionsDirty,
   checkOverride,
   step,
   prompt,
@@ -704,7 +744,10 @@ export function GenerationPanel({
   const readList = inputList.filter(({ isRead }) => isRead);
   const readKeyList = readList.map(({ key }) => key);
   const totalWords = readList.reduce((total, { wordCount }) => total + wordCount, 0);
-  const blockerList = generation?.refusal == null ? [] : [generation.refusal];
+  const blockerList = [
+    ...(generation?.refusal == null ? [] : [generation.refusal]),
+    ...(isInstructionsDirty ? [t('instructions.unsavedBlocker', { ns: 'settings' })] : []),
+  ];
   const isLast = step === STEP_LIST.length - 1;
   return (
     <Dialog
@@ -758,7 +801,7 @@ export function GenerationPanel({
               {step === 0 && (
                 <ReadStep inputList={inputList} blockerList={blockerList} addInput={addInput} onCheck={onCheck} />
               )}
-              {step === 1 && <WriteStep artifact={artifact} prompt={generation.prompt} />}
+              {step === 1 && <WriteStep artifact={artifact} prompt={generation.prompt} instructions={instructions} />}
               {isLast && (
                 <RecapStep
                   generation={generation}

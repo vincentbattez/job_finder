@@ -15,6 +15,7 @@ import {
 import type { IRefusal } from '#/web/failure.ts';
 
 import { AddDocumentDialog } from './add-document.tsx';
+import { useInstructions, type ModuleInstructions } from './instructions.tsx';
 import { useFeedback } from './use-feedback.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
 
@@ -48,6 +49,8 @@ function runViewOf(
 // queues the job (ADR-0003), which the panel follows, and a toast tells its Draft ready even once the
 // panel is closed. A hook, so that its state outlives the button moving from the empty state to the toolbar.
 export function useGeneration({ reference, title, interviewNumber, artifactVersions }: IGenerationOption) {
+  // What the panel reads as it opens: the generation, and the Instructions its editor changes
+  type PanelRead = Generation & { instructions: ModuleInstructions | null };
   const { t } = useTranslation('posting');
   const navigate = useNavigate();
   const { artifact, state, versionList, module, isFrozen } = artifactVersions;
@@ -57,17 +60,16 @@ export function useGeneration({ reference, title, interviewNumber, artifactVersi
   const [checkOverride, setCheckOverride] = useState<Record<string, boolean>>({});
   const [launchedNumber, setLaunchedNumber] = useState<number | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const inputFetcher = useFetcher<Generation>();
+  // One fetcher per opening: it starts empty, then keeps its Inputs shown while a save of the Instructions
+  // or the polling reads them again
+  const [openCount, setOpenCount] = useState(0);
+  const inputFetcher = useFetcher<PanelRead>({
+    key: `generation:${reference}:${artifact}:${String(interviewNumber)}:${String(openCount)}`,
+  });
+  const loadedCount = useRef(0);
+  const instructions = useInstructions(inputFetcher.data?.instructions ?? null);
   const promptFetcher = useFetcher<Generation>();
   const runFetcher = useFetcher<IRefusal>();
-  // Until the Inputs of this opening are read; read again afterwards, as a document added or any
-  // submission revalidates the fetcher, the Inputs stay shown
-  const [isReadingInputs, setIsReadingInputs] = useState(false);
-  useEffect(() => {
-    if (isReadingInputs && inputFetcher.state === 'idle') {
-      setIsReadingInputs(false);
-    }
-  }, [isReadingInputs, inputFetcher.state]);
   useFeedback(runFetcher, () => t('generation.launched', { context: artifact, artifactLabel }));
 
   const isRegeneration = versionList.length > 0;
@@ -131,6 +133,15 @@ export function useGeneration({ reference, title, interviewNumber, artifactVersi
     });
   });
 
+  // The new opening's fetcher exists from this render on
+  useEffect(() => {
+    if (openCount <= loadedCount.current) {
+      return;
+    }
+    loadedCount.current = openCount;
+    void inputFetcher.load(urlOf());
+  });
+
   const launch = isFrozen ? null : (
     <GenerateButton
       isRegeneration={isRegeneration}
@@ -140,8 +151,8 @@ export function useGeneration({ reference, title, interviewNumber, artifactVersi
         setStep(0);
         setCheckOverride({});
         setLaunchedNumber(null);
-        setIsReadingInputs(true);
-        void inputFetcher.load(urlOf());
+        setOpenCount((count) => count + 1);
+        instructions.discard();
       }}
     />
   );
@@ -154,7 +165,9 @@ export function useGeneration({ reference, title, interviewNumber, artifactVersi
         interviewNumber === null ? title : t('generation.subtitleOfInterview', { title, number: interviewNumber })
       }
       isRegeneration={isRegeneration}
-      generation={isReadingInputs ? null : (inputFetcher.data ?? null)}
+      generation={inputFetcher.data ?? null}
+      instructions={instructions.editor}
+      isInstructionsDirty={instructions.isDirty}
       checkOverride={checkOverride}
       step={step}
       prompt={promptFetcher.state === 'idle' ? (promptFetcher.data?.prompt?.prompt ?? null) : null}
