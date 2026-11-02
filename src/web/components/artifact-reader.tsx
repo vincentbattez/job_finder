@@ -1,10 +1,19 @@
 import { cn } from 'cn';
-import { CheckIcon, ClockIcon } from 'lucide-react';
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { CheckIcon, ClockIcon, NotebookPenIcon } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ArtifactText, type ArtifactTextFormat } from '#/web/components/mdx/artifact-text.tsx';
+import { Button } from '#/web/components/ui/button.tsx';
 import { Progress } from '#/web/components/ui/progress.tsx';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '#/web/components/ui/sheet.tsx';
 
 import { Recipients, type IRecipients } from './recipients.tsx';
 
@@ -154,15 +163,55 @@ function Rail({
   );
 }
 
+// What the Revision writes beside the text: its margin, given the titles of the sections and the one being
+// read, and told of those titles once the text is in the page
+interface IReaderMargin {
+  render: (reading: { titleList: string[]; activeIndex: number }) => ReactNode;
+  onTitleListChange: (titleList: string[]) => void;
+}
+
+// The margin below `@6xl`: a Sheet the reading-time line opens
+function MarginSheet({ children }: Readonly<{ children: ReactNode }>) {
+  const { t } = useTranslation('posting');
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="outline" size="xs" className="@6xl:hidden">
+          <NotebookPenIcon />
+          {t('reader.margin')}
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="right" className="w-80 overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{t('reader.margin')}</SheetTitle>
+          <SheetDescription>{t('reader.marginDescription')}</SheetDescription>
+        </SheetHeader>
+        <div className="px-4 pb-6">{children}</div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 // An Artifact in reading mode (spec #125, « Reading and Revision »): the rail beside a column set for
-// reading, which folds into a sticky progress line on a narrow container. Notes in the margin belong to
-// the Revision only.
-export function ArtifactReader({ text, format }: Readonly<{ text: string; format: ArtifactTextFormat }>) {
+// reading, which folds into a sticky progress line on a narrow container. Only the Revision gives it a
+// margin, a third column from `@6xl`, a Sheet below.
+export function ArtifactReader({
+  text,
+  format,
+  margin,
+}: Readonly<{ text: string; format: ArtifactTextFormat; margin?: IReaderMargin }>) {
   const { t } = useTranslation('posting');
   const articleReference = useRef<HTMLElement>(null);
   const sectionList = useSections(articleReference, text);
   const { activeIndex, percent } = useReadingPosition(articleReference, sectionList);
   const minutes = Math.max(1, Math.round(text.split(/\s+/u).length / WORDS_PER_MINUTE));
+  const titleList = sectionList.map(({ title }) => title);
+  const titleKey = titleList.join('\n');
+  const onTitleListChange = margin?.onTitleListChange;
+  useEffect(() => {
+    onTitleListChange?.(titleKey === '' ? [] : titleKey.split('\n'));
+  }, [onTitleListChange, titleKey]);
+  const marginContent = margin?.render({ titleList, activeIndex });
   return (
     <div className="@container">
       <div
@@ -177,12 +226,17 @@ export function ArtifactReader({ text, format }: Readonly<{ text: string; format
         </div>
         <ReadingProgress percent={percent} className="mt-1.5" />
       </div>
-      <div className="grid gap-8 @3xl:grid-cols-[12rem_minmax(0,1fr)]">
+      <div
+        className={cn(
+          'grid gap-8 @3xl:grid-cols-[12rem_minmax(0,1fr)]',
+          margin !== undefined && '@6xl:grid-cols-[12rem_minmax(0,1fr)_16rem]',
+        )}
+      >
         <aside className="hidden @3xl:block">
           <Rail sectionList={sectionList} activeIndex={activeIndex} percent={percent} />
         </aside>
         <div className="min-w-0">
-          <p className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
               <ClockIcon aria-hidden className="size-3.5" />
               {t('reader.readingTime', { count: minutes })}
@@ -193,11 +247,19 @@ export function ArtifactReader({ text, format }: Readonly<{ text: string; format
                 <span className="tabular-nums">{t('reader.sectionCount', { count: sectionList.length })}</span>
               </>
             )}
-          </p>
+            {marginContent !== undefined && <MarginSheet>{marginContent}</MarginSheet>}
+          </div>
           <article ref={articleReference}>
             <ArtifactText text={text} format={format} className={READING_PROSE} />
           </article>
         </div>
+        {marginContent !== undefined && (
+          <aside aria-label={t('reader.margin')} className="hidden @6xl:block">
+            <div data-reader-margin className="sticky top-[85px] max-h-[calc(100svh-109px)] overflow-y-auto pb-6">
+              {marginContent}
+            </div>
+          </aside>
+        )}
       </div>
     </div>
   );

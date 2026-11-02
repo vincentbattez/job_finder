@@ -1,7 +1,7 @@
-import { CalendarPlusIcon, DownloadIcon, PencilIcon, Trash2Icon } from 'lucide-react';
+import { CalendarPlusIcon, DownloadIcon, GraduationCapIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useFetcher, useSearchParams } from 'react-router';
+import { Link, useFetcher, useSearchParams } from 'react-router';
 
 import { summaryOf, type IArtifactVersions } from '#/web/components/artifact.ts';
 import {
@@ -10,6 +10,7 @@ import {
   InterviewsEmpty,
   InterviewSummary,
   isPast,
+  revisionPathOf,
   type IInterview,
   type InterviewDocument,
 } from '#/web/components/interviews.tsx';
@@ -157,6 +158,12 @@ export function Interviews({
             now={now}
             actions={
               <>
+                <Button asChild size="sm">
+                  <Link to={revisionPathOf(posting.reference, selected.number)}>
+                    <GraduationCapIcon />
+                    {t('interviews.revise')}
+                  </Link>
+                </Button>
                 <Button asChild variant="outline" size="sm">
                   <a href={icalHrefOf(posting.reference, selected.number)} download>
                     <DownloadIcon />

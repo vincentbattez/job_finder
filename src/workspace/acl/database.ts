@@ -18,6 +18,7 @@ import {
   PROFILE_JOB_SCHEMA,
   QUEUED_JOB_SCHEMA,
   RECORDED_DETECTION_SCHEMA,
+  REVISION_SECTION_SCHEMA,
   SAVED_NOTIFICATION_CHANNEL_SCHEMA,
   STATUS_SCHEMA,
   VERSION_SCHEMA,
@@ -39,6 +40,7 @@ import {
   type ProfileJob,
   type QueuedJob,
   type RecordedDetection,
+  type RevisionSection,
   type SavedNotificationChannel,
   type Status,
   type UploadFileName,
@@ -786,6 +788,30 @@ export function openDatabase(databasePath: string) {
     // Its Versions and their jobs go with it
     async deleteInterview({ id }: Interview): Promise<void> {
       await prisma.interview.delete({ where: { id } });
+    },
+
+    // In the order the Candidate first wrote them
+    async listRevisionSections({ id }: Interview): Promise<RevisionSection[]> {
+      return z.array(REVISION_SECTION_SCHEMA).parse(
+        await prisma.revisionSection.findMany({
+          where: { interviewId: id },
+          orderBy: { id: 'asc' },
+          select: { title: true, note: true, isMastered: true },
+        }),
+      );
+    },
+
+    // Created at its first note or mark, then kept by its title whatever Version is Chosen
+    async saveRevisionSection(
+      { id }: Interview,
+      title: string,
+      fields: { note: string } | { isMastered: boolean },
+    ): Promise<void> {
+      await prisma.revisionSection.upsert({
+        where: { interviewId_title: { interviewId: id, title } },
+        create: { interviewId: id, title, ...fields },
+        update: fields,
+      });
     },
 
     async createPosting({
