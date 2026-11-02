@@ -54,6 +54,7 @@ export const POSTING_FR: typeof POSTING_EN = {
       notes: 'Notes',
     },
     tabState: ' ({{stateLabel}})',
+    tabStateLabelBySummary: { none: 'Aucune', draft: 'Brouillon', validated: 'Validée', pending: 'En cours' },
     markApplied: 'Marquer Postulée',
     addInterview: 'Ajouter un Entretien',
     seeInterview: 'Voir l’Entretien {{number}}',
@@ -96,10 +97,69 @@ export const POSTING_FR: typeof POSTING_EN = {
 
   versionNumber: 'v{{versionNumber}}',
   noVersion: 'Aucune Version pour l’instant.',
-  chosenBadge: 'Retenue',
+  validationLabelByValidation: { draft: 'Brouillon', validated: 'Validée' },
   versionInstructions: 'Consignes de cette Version',
   noFile: 'Aucun fichier dans cette Version.',
-  chooseVersion: 'Retenir cette Version',
+  validateVersion: 'Valider cette Version',
+
+  artifactView: {
+    versionSelect: 'Version',
+    versionValue: 'Version {{number}} · {{stateLabel}}',
+    versionNumber: 'Version {{number}}',
+    versionOption: '{{stateLabel}} · {{originLabel}} · {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    versionOptionChosen:
+      '{{stateLabel}} · retenue · {{originLabel}} · {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    stateLabelByState: { draft: 'Brouillon', validated: 'Validée', running: 'En cours', failed: 'En échec' },
+    originLabelByOrigin: { ai: 'IA', candidate: 'toi' },
+    chosenBadge: 'Validée · retenue',
+    draftHeading: 'Version {{number}} en Brouillon : relis-la, puis valide-la',
+    draftNoteLetter: 'Seule la Version retenue part chez l’employeur.',
+    draftNote: 'Tant qu’elle n’est pas validée, aucun autre Artefact ne la lit.',
+    draftChosenNote: 'En attendant, la Version {{number}} reste la Version retenue.',
+    draftNoChosenNote: 'Aucune Version n’est retenue pour l’instant.',
+    validate: 'Valider la Version {{number}}',
+    validated: 'Version {{number}} validée et retenue',
+    olderVersion: 'Ancienne Version. La Version retenue est la {{number}}.',
+    seeChosen: 'La voir',
+    chooseAgain: 'La retenir à nouveau',
+    frozen: 'Offre Postulée : cette Lettre de motivation est figée telle qu’envoyée.',
+    running: 'Génération en cours',
+    queued: 'En attente du worker',
+    runningNote: 'La nouvelle Version arrivera en Brouillon ; la Version retenue ne change pas d’ici là.',
+    runningVersion: 'Cette Version est en cours de génération.',
+    failedVersion: 'Cette Version a échoué : elle n’a pas de texte à lire.',
+    emptyHeading: 'Pas encore de {{artifactLabel}}',
+    emptyPitchByArtifact: {
+      research:
+        'La Recherche établit, sources à l’appui, ce que les recruteurs attendent pour cette Offre et dans quel contexte.',
+      letter:
+        'La Lettre de motivation de cette Offre. Elle a besoin d’une Recherche validée ; sa Version retenue est celle qui part.',
+      portrait: 'Le Portrait établit ce que l’on sait publiquement des Interlocuteurs de cet Entretien.',
+      interview_brief:
+        'La Fiche d’entretien prépare cet Entretien : quoi leur dire, quoi réviser, comment s’entraîner.',
+    },
+    modes: 'Mode',
+    modeRead: 'Lire',
+    modeEdit: 'Modifier',
+    producedOn: 'Produite par l’IA le {{date, datetime(dateStyle: long; timeZone: Europe/Paris)}}',
+    broughtOn: 'Apportée par toi le {{date, datetime(dateStyle: long; timeZone: Europe/Paris)}} · pas d’Original',
+    textLabel: 'Texte de la Version {{number}}',
+    instructionsSummary: '{{originLabel}} · Consignes de cette Version',
+    save: 'Enregistrer',
+    cancel: 'Annuler',
+    saved: 'Version {{number}} enregistrée',
+  },
+
+  appliedDialog: {
+    title: 'Marquer l’Offre Postulée ?',
+    draftDescription:
+      'Ta Lettre de motivation est encore un Brouillon (Version {{number}}). Valide-la pour garder trace de celle que tu as envoyée.',
+    noLetterDescription:
+      'Cette Offre n’a pas de Lettre de motivation validée. Marque-la Postulée quand même si tu as postulé autrement.',
+    validateAndApply: 'Valider la Lettre de motivation et marquer Postulée',
+    applyWithoutLetter: 'Marquer Postulée sans Lettre de motivation',
+    cancel: 'Annuler',
+  },
 
   prompt: {
     toggle: 'Prompt',

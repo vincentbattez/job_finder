@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { runAndValidate } from './run-module.ts';
 
 // The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -32,13 +33,14 @@ describe('the Posting page', () => {
     );
   });
 
-  it('reads every Version of each Artifact with its files, and tells the Chosen Version', async () => {
+  it('reads every Version of each Artifact with its text and Original, and tells the Chosen Version', async () => {
     const { actions } = await detectPostings(
       createFakeAiSession({ fileByName: { 'research.md': RESEARCH } }, { isSuccess: false }),
     );
     await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runQueuedJobs();
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: 1 });
 
     const { artifactList } = await actions.readPosting({ reference: REFERENCE });
 
@@ -46,10 +48,12 @@ describe('the Posting page', () => {
     expect(artifactList.map(({ artifact }) => artifact)).toEqual(['research', 'letter']);
     expect(artifactList[0]?.versionList).toMatchObject([
       {
-        version: { number: 1, state: 'ready', isChosen: true },
-        documentList: [{ fileName: 'research.md', markdown: RESEARCH }],
+        version: { number: 1, state: 'ready', validation: 'validated', isChosen: true },
+        text: RESEARCH,
+        original: RESEARCH,
+        isValidatable: false,
       },
-      { version: { number: 2, state: 'failed', isChosen: false }, documentList: [] },
+      { version: { number: 2, state: 'failed', isChosen: false }, text: null, original: null, isValidatable: false },
     ]);
     expect(artifactList[1]?.versionList).toEqual([]);
   });
@@ -58,14 +62,12 @@ describe('the Posting page', () => {
     const { actions } = await detectPostings(
       createFakeAiSession(
         { fileByName: { 'research.md': RESEARCH } },
-        { fileByName: { 'draft.md': 'Madame la Présidente,\n', 'recipients.json': JSON.stringify(RECIPIENTS) } },
+        { fileByName: { 'letter.md': 'Madame la Présidente,\n', 'recipients.json': JSON.stringify(RECIPIENTS) } },
       ),
     );
-    await actions.runModule({ module: 'research', reference: REFERENCE });
-    await actions.runQueuedJobs();
+    await runAndValidate(actions, { module: 'research', reference: REFERENCE });
     const before = await actions.readPosting({ reference: REFERENCE });
-    await actions.runModule({ module: 'letter', reference: REFERENCE });
-    await actions.runQueuedJobs();
+    await runAndValidate(actions, { module: 'letter', reference: REFERENCE });
 
     const { recipients } = await actions.readPosting({ reference: REFERENCE });
 

@@ -12,6 +12,7 @@ import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './d
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { markedValuesOf } from './marked-values.ts';
 import { readVersionsOf } from './read-versions.ts';
+import { runAndValidate } from './run-module.ts';
 
 // The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -49,11 +50,8 @@ function portraitRun(markdown = PORTRAIT) {
 
 const BRIEF_RUN = { fileByName: { 'interview-brief.md': "# Fiche d'entretien\n\n## À réviser\n\n- Le CJPM.\n" } };
 
-// Launching a module queues its job, which the worker runs (ADR-0003)
 async function runModule(actions: Actions, module: string, interview?: number) {
-  const { id } = await actions.runModule({ module, reference: REFERENCE, interview });
-  await actions.runQueuedJobs();
-  return actions.followJob({ jobId: id });
+  return runAndValidate(actions, { module, reference: REFERENCE, interview });
 }
 
 // Léa's Postings, her Béthune Posting kept then Applied, with its Interview with the judge. The Research
@@ -62,6 +60,11 @@ async function applyWithInterview(aiSession: ReturnType<typeof createFakeAiSessi
   const { actions, dataDirectory } = await detectRecordedPostings(aiSession);
   await applyTo(actions, REFERENCE);
   await actions.runQueuedJobs();
+  // The Research that keeping the Posting queued, validated when it is ready, as the Candidate would
+  const [research] = await actions.listVersions({ reference: REFERENCE, artifact: 'research' });
+  if (research?.state === 'ready') {
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: research.number });
+  }
   await actions.addInterview({ reference: REFERENCE, ...JUDGE_INTERVIEW });
   return {
     actions,
@@ -90,11 +93,12 @@ describe('portrait', () => {
     await runModule(actions, 'portrait', 1);
     await runModule(actions, 'portrait', 1);
 
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'portrait', interview: 1, number: 1 });
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'portrait', interview: 1, number: 1 });
     await actions.saveDocument({
       reference: REFERENCE,
       artifact: 'portrait',
       interview: '1',
+      number: '1',
       fileName: 'portrait.md',
       markdown: corrected,
     });
@@ -106,9 +110,7 @@ describe('portrait', () => {
     ]);
     const { interviewList } = await actions.readPosting({ reference: REFERENCE });
     const portrait = interviewList[0]?.artifactList.find(({ artifact }) => artifact === 'portrait');
-    expect(portrait?.versionList[0]?.documentList).toEqual([
-      { fileName: 'portrait.md', markdown: corrected, isModifiable: true },
-    ]);
+    expect(portrait?.versionList[0]).toMatchObject({ text: corrected, isCorrectable: true });
   });
 
   it('fails the Version of a Portrait without a title', async () => {
@@ -218,7 +220,7 @@ describe('the Interview Brief and the Portrait', () => {
     const { actions } = await applyWithInterview(aiSession);
     await runModule(actions, 'portrait', 1);
     await runModule(actions, 'portrait', 1);
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'portrait', interview: 1, number: 1 });
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'portrait', interview: 1, number: 1 });
 
     const { version } = await runModule(actions, 'brief', 1);
 

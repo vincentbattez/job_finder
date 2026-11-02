@@ -15,7 +15,7 @@ export default [
   route('postings/:reference/interviews', 'routes/interviews.ts'),
   route('postings/:reference/interviews/:number/ical', 'routes/ical.ts'),
   route('postings/:reference/:artifact/document', 'routes/document.ts'),
-  route('postings/:reference/:artifact/chosen', 'routes/chosen-version.ts'),
+  route('postings/:reference/:artifact/validate', 'routes/validate.ts'),
   route('candidate', 'routes/candidate.ts'),
   route('locale', 'routes/locale.ts'),
   route('profile', 'routes/profile.tsx'),

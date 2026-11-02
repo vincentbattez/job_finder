@@ -499,7 +499,7 @@ export function openDatabase(databasePath: string) {
       { job, version }: { job: Job; version: Version },
       { errorCode, log, sessionId }: { errorCode: ErrorCode | null; log: string; sessionId: string | null },
     ): Promise<{ job: Job; version: Version }> {
-      // Ready unless it failed under a code
+      // Ready unless it failed under a code; a ready Version stays a Draft until the Candidate validates it (ADR-0019)
       const isReady = errorCode === null;
       await prisma.$transaction([
         prisma.version.updateMany({ where: { id: version.id }, data: { state: isReady ? 'ready' : 'failed' } }),
@@ -507,7 +507,6 @@ export function openDatabase(databasePath: string) {
           where: { id: job.id },
           data: { state: isReady ? 'done' : 'failed', log, errorCode, sessionId },
         }),
-        ...(isReady ? chooseStatementList(version) : []),
       ]);
       return {
         job: JOB_READ_SCHEMA.parse(await prisma.job.findUniqueOrThrow({ where: { id: job.id }, include: JOB_INCLUDE })),
@@ -623,8 +622,12 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    async chooseVersion(version: Version): Promise<void> {
-      await prisma.$transaction(chooseStatementList(version));
+    // Validated and Chosen at once, the previous Chosen Version staying Validated (ADR-0019)
+    async validateVersion(version: Version): Promise<void> {
+      await prisma.$transaction([
+        prisma.version.update({ where: { id: version.id }, data: { validation: 'validated' } }),
+        ...chooseStatementList(version),
+      ]);
     },
 
     claimDetection,

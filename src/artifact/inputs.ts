@@ -3,6 +3,7 @@ import path from 'node:path';
 import {
   ARTIFACT_SCHEMA,
   JOB_DESCRIPTION_FILE_NAME,
+  ORIGINAL_FILE_NAME,
   type Artifact,
   type Interview,
   type Posting,
@@ -94,25 +95,19 @@ export async function findChosenVersion(workspace: Workspace, { posting, intervi
   return versionList.find(({ isChosen }) => isChosen);
 }
 
-function readVersionContent(
-  workspace: Workspace,
-  posting: Posting,
-  version: Version,
-  fileName = AI_MODULE_BY_ARTIFACT[version.artifact].fileName,
-): string {
-  return workspace.readTextFile(path.join(workspace.versionDirectoryOf(posting, version), fileName)) ?? '';
+function readVersionContent(workspace: Workspace, posting: Posting, version: Version): string {
+  return workspace.readVersionFile(posting, version, AI_MODULE_BY_ARTIFACT[version.artifact].fileName) ?? '';
 }
 
 // A Letter as sent, then its Original as the AI wrote it, for a run that learns from the Candidate's
-// corrections; the Original costs its full length in the Prompt too (ADR-0021)
+// corrections; the Original costs its full length in the Prompt too (ADR-0021). A Letter the Candidate
+// brought has none.
 function sentWithOriginalOf(workspace: Workspace, posting: Posting, version: Version): string {
-  const { originalFileName } = AI_MODULE_BY_ARTIFACT[version.artifact];
   const sent = readVersionContent(workspace, posting, version);
-  if (originalFileName === undefined) {
-    return sent;
-  }
-  const original = readVersionContent(workspace, posting, version, originalFileName);
-  return `### As sent\n\n${sent.trim()}\n\n### Its Original, as the AI wrote it\n\n${original.trim()}`;
+  const original = workspace.readVersionFile(posting, version, ORIGINAL_FILE_NAME);
+  return original === null
+    ? sent
+    : `### As sent\n\n${sent.trim()}\n\n### Its Original, as the AI wrote it\n\n${original.trim()}`;
 }
 
 // The Chosen Version of an Artifact as an Input; one not chosen yet is an Input only when required

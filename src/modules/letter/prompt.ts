@@ -4,8 +4,7 @@ import { describeProfile } from '#/profile/prompt.ts';
 
 import { RECIPIENTS_FILE_NAME } from './acl/recipients.ts';
 
-// The Draft the session writes, never modified, and the Letter the Candidate corrects, its copy
-export const DRAFT_FILE_NAME = 'draft.md';
+// The Letter the session writes, which the Candidate corrects; the Artifact module keeps its Original
 export const LETTER_FILE_NAME = 'letter.md';
 
 function quote(field: string | null, mark: IPromptInput['mark']): string {
@@ -26,9 +25,9 @@ function describeSentLetters({ posting, readVersionList }: IPromptInput): string
 // lift (ADR-0003). It runs in the folder of the Posting; its Inputs follow it, inlined (ADR-0021).
 export function composeLetterPrompt(input: IPromptInput): string {
   const { posting, outputDirectory, mark } = input;
-  const draftPath = mark(`${outputDirectory}/${DRAFT_FILE_NAME}`);
+  const letterPath = mark(`${outputDirectory}/${LETTER_FILE_NAME}`);
   const recipientsPath = mark(`${outputDirectory}/${RECIPIENTS_FILE_NAME}`);
-  return `You write the Draft of a Candidate's cover letter for a job Posting, and you recommend whom to send it to. ${describeArtifactLanguage('Draft')}
+  return `You write a Candidate's cover letter for a job Posting, and you recommend whom to send it to. ${describeArtifactLanguage('Letter')}
 
 ## The Posting
 
@@ -55,7 +54,7 @@ These are free-text fields: an address may be mixed with a name, a function, a p
 
 ## What you produce
 
-1. \`${draftPath}\`: the Draft, the whole letter in Markdown, from the salutation to the signature, ready to be corrected then pasted into an email.
+1. \`${letterPath}\`: the Letter, the whole letter in Markdown, from the salutation to the signature, ready to be corrected then pasted into an email.
 2. \`${recipientsPath}\`: the recommended recipients, as JSON, exactly in this shape:
 
 \`\`\`json
@@ -69,7 +68,7 @@ These are free-text fields: an address may be mixed with a name, a function, a p
 
 - \`to\`: the address to send the application to, or \`null\` if no field gives one.
 - \`ccList\`: the addresses to copy, possibly none (\`[]\`).
-- \`salutation\`: the salutation of the letter, the same as the Draft's.
+- \`salutation\`: the salutation of the letter, the same as the Letter's.
 - \`source\`: the field the information comes from, \`applicationEmail\`, \`contact1\` or \`contact2\`. For the salutation, the field that names the person or the function the letter is addressed to, or \`null\` for a generic salutation.
 - \`email\`: the address alone, copied as it appears in the \`source\` field, with no name or text around it.
 - \`justification\`: why this recipient, these copies and this salutation, based on the fields.

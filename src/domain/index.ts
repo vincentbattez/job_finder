@@ -76,6 +76,8 @@ export type JobDescription = z.infer<typeof JOB_DESCRIPTION_SCHEMA>;
 // The file of the Job Description in the folder of its Posting, where every session runs
 export const JOB_DESCRIPTION_FILE_NAME = 'job-description.md';
 
+export { ORIGINAL_FILE_NAME } from './original.ts';
+
 // Where a Posting is: its city, and the region and coordinates API Géo gives its commune. The city
 // stays as read, without region nor coordinates, while API Géo knows no commune by that name.
 const LOCATION_SHAPE = {
@@ -304,6 +306,10 @@ export const VERSION_SCHEMA = z
     number: z.int(),
     isChosen: z.boolean(),
     state: z.enum(['running', 'ready', 'failed']),
+    // A Draft until the Candidate validates it, which makes it the Chosen Version (ADR-0019)
+    validation: z.enum(['draft', 'validated']),
+    // The AI's, which keeps its Original, or the Candidate's own, with none
+    origin: z.enum(['ai', 'candidate']),
     instructions: z.string(),
     hasCandidateInstructions: z.boolean(),
     // The Inputs its run read, by key, with the Version read for an Artifact Input (ADR-0021)
@@ -368,8 +374,7 @@ export const RECIPIENTS_SCHEMA = z
 
 export type Recipients = z.infer<typeof RECIPIENTS_SCHEMA>;
 
-// A Markdown file of the data folder: of the Profile of a Candidate, such as facts.md or cv.md, or of a
-// Version, such as the Draft or the Letter of a Letter Version
+// A Markdown file of the data folder: of the Profile of a Candidate, such as facts.md or cv.md
 const MARKDOWN_FILE_SHAPE = { fileName: z.string(), markdown: z.string() };
 
 export const MARKDOWN_FILE_SCHEMA = z.object(MARKDOWN_FILE_SHAPE).brand<'Domain'>();
@@ -433,14 +438,15 @@ const PROMPT_SCHEMA = z
   })
   .brand<'Domain'>();
 
-// A Markdown file of a Version, and whether the Candidate may correct it by hand
-const DOCUMENT_SCHEMA = z.object({ ...MARKDOWN_FILE_SHAPE, isModifiable: z.boolean() });
-
-// isChoosable: whether the Candidate may make it the Chosen Version
-const VERSION_DOCUMENTS_SCHEMA = z.object({
+// A Version with its text and its Original (ADR-0019): whether the Candidate may validate it, making it the
+// Chosen Version, and correct its text; the text is null while it runs or once it failed, the Original null
+// for a Version the Candidate brought
+const VERSION_DETAIL_SCHEMA = z.object({
   version: VERSION_SCHEMA,
-  isChoosable: z.boolean(),
-  documentList: z.array(DOCUMENT_SCHEMA),
+  isValidatable: z.boolean(),
+  isCorrectable: z.boolean(),
+  text: z.string().nullable(),
+  original: z.string().nullable(),
 });
 
 // What the front shows of an Artifact at a glance: queued while its job waits for the worker, in
@@ -488,7 +494,13 @@ const ARTIFACT_VERSIONS_SCHEMA = z.object({
   module: z.object({ refusal: z.string().nullable(), prompt: PROMPT_SCHEMA.nullable() }),
   // Whether jf edit opens it now: it has a Chosen Version, and is not the Letter of an Applied Posting
   isEditable: z.boolean(),
-  versionList: z.array(VERSION_DOCUMENTS_SCHEMA),
+  // The file of a Version the Candidate reads and corrects
+  fileName: z.string(),
+  // MDX through the closed catalogue, or plain Markdown for the Letter (ADR-0020)
+  format: z.enum(['mdx', 'markdown']),
+  // The Letter of an Applied Posting: read-only, never validated, corrected, brought or regenerated
+  isFrozen: z.boolean(),
+  versionList: z.array(VERSION_DETAIL_SCHEMA),
 });
 
 // An Interview on the Posting page, with every Version of each Artifact attached to it

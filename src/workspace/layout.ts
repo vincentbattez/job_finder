@@ -32,6 +32,8 @@ const LAYOUT_STEP_LIST: ILayoutStep[] = [
   ]),
   { from: 'candidates/*/postings/*/research/*/recherche.md', to: 'candidates/*/postings/*/research/*/research.md' },
   { from: 'candidates/*/postings/*/letter/*/brouillon.md', to: 'candidates/*/postings/*/letter/*/draft.md' },
+  // A Letter's first draft is its Original, as every AI Version keeps one (ADR-0019)
+  { from: 'candidates/*/postings/*/letter/*/draft.md', to: 'candidates/*/postings/*/letter/*/original.md' },
   { from: 'candidates/*/postings/*/letter/*/lettre.md', to: 'candidates/*/postings/*/letter/*/letter.md' },
   {
     from: 'candidates/*/postings/*/letter/*/destinataires.json',

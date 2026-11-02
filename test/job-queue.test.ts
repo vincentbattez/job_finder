@@ -43,7 +43,7 @@ describe('the job queue', () => {
       {
         id: queuedJob.id,
         state: 'done',
-        version: { artifact: 'research', number: 1, state: 'ready', isChosen: true },
+        version: { artifact: 'research', number: 1, state: 'ready', validation: 'draft', isChosen: false },
       },
     ]);
     expect(aiSession.headlessSessionList).toHaveLength(1);
@@ -186,6 +186,7 @@ describe('the job queue', () => {
     const { actions } = await detectPostings(aiSession);
     await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runQueuedJobs();
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: 1 });
     await applyTo(actions, REFERENCE);
     await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: '', interviewers: '' });
     await actions.runModule({ module: 'interview_brief', reference: REFERENCE, interview: 1 });
@@ -252,9 +253,9 @@ describe('the job queue', () => {
     ]);
     expect(failedJobList[0]?.log).toMatch(/worker s'est arrêté/);
     const versionList = await restartedWorker.listVersions({ reference: REFERENCE, artifact: 'research' });
-    expect(versionList.map(({ number, state, isChosen }) => ({ number, state, isChosen }))).toEqual([
-      { number: 1, state: 'failed', isChosen: false },
-      { number: 2, state: 'ready', isChosen: true },
+    expect(versionList.map(({ number, state }) => ({ number, state }))).toEqual([
+      { number: 1, state: 'failed' },
+      { number: 2, state: 'ready' },
     ]);
   });
 });

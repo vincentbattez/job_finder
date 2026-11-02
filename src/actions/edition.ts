@@ -5,7 +5,7 @@ import type { Version } from '#/domain/index.ts';
 import { ARTIFACT_INPUT_SCHEMA, REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
 
 const VERSION_INPUT_SCHEMA = ARTIFACT_INPUT_SCHEMA.extend({ number: z.coerce.number().int() });
-const DOCUMENT_INPUT_SCHEMA = ARTIFACT_INPUT_SCHEMA.extend({ fileName: z.string(), markdown: z.string() });
+const DOCUMENT_INPUT_SCHEMA = VERSION_INPUT_SCHEMA.extend({ fileName: z.string(), markdown: z.string() });
 
 // Each act checks its own verdict in the Artifact module (ADR-0016)
 export function createEditionActions({ artifacts, findPosting }: ActionContext) {
@@ -25,15 +25,15 @@ export function createEditionActions({ artifacts, findPosting }: ActionContext) 
     },
 
     async saveDocument(rawInput: unknown): Promise<void> {
-      const { fileName, markdown, ...name } = DOCUMENT_INPUT_SCHEMA.parse(rawInput);
+      const { number, fileName, markdown, ...name } = DOCUMENT_INPUT_SCHEMA.parse(rawInput);
       const handle = await artifacts.find(name);
-      handle.saveDocument(fileName, markdown);
+      handle.saveDocument(number, fileName, markdown);
     },
 
-    async chooseVersion(rawInput: unknown): Promise<void> {
+    async validateVersion(rawInput: unknown): Promise<void> {
       const { number, ...name } = VERSION_INPUT_SCHEMA.parse(rawInput);
       const handle = await artifacts.find(name);
-      await handle.choose(number);
+      await handle.validate(number);
     },
   };
 }

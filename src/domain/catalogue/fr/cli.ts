@@ -66,7 +66,7 @@ export const CLI_FR: typeof CLI_EN = {
   runQueued: 'Le worker la produira. « {{versionsCommand}} » suit ses Versions.\n',
   runWaiting: 'Attente du worker (service lpm worker) : Claude Code peut prendre plusieurs minutes…\n',
   runFailed: '{{name}} en échec ({{errorCode}}) :\n{{log}}\nRelancer : {{command}}',
-  runReady: '{{name}} prête et retenue. « {{versionsCommand}} » liste ses Versions.\n',
+  runReady: '{{name}} prête, en Brouillon jusqu’à sa validation. « {{versionsCommand}} » liste ses Versions.\n',
 
   recipientsDescription: 'Affiche à qui adresser la candidature, selon la Lettre retenue : jf recipients <offre>',
   recipientsUsage: 'Usage : jf recipients <offre>, par exemple jf recipients 2026-2445600.',
@@ -85,15 +85,16 @@ export const CLI_FR: typeof CLI_EN = {
   versionStateLabelByState: { running: 'en cours', ready: 'prête', failed: 'en échec' },
   lastJobFailed: 'Dernier lancement en échec ({{errorCode}}) :\n{{log}}\n',
   lastJobStalled: "Dernier lancement à l'arrêt ({{errorCode}}) :\n{{message}}\n",
+  validationLabelByValidation: { draft: 'Brouillon', validated: 'Validée' },
   chosenVersion: 'retenue',
   candidateInstructions: 'Consignes du Candidat',
   defaultInstructions: 'Consignes par défaut',
   createdAt: '{{createdAt, datetime(dateStyle: short; timeStyle: medium; timeZone: Europe/Paris)}}',
-  chooseDescription:
-    "Change la Version retenue d'un Artefact : jf choose <offre> research <version>, ou jf choose <offre> brief <version> <entretien>",
-  chooseUsage:
-    'Usage : jf choose <offre> <artifact> <version> [<entretien>], par exemple jf choose 2026-2445600 research 2, ou jf choose 2026-2445600 brief 2 1.',
-  versionChosen: "{{artifact}} {{version}} retenue pour l'Offre {{reference}}.\n",
+  validateDescription:
+    "Valide une Version d'un Artefact, qui devient sa Version retenue : jf validate <offre> research <version>, ou jf validate <offre> brief <version> <entretien>",
+  validateUsage:
+    'Usage : jf validate <offre> <artifact> <version> [<entretien>], par exemple jf validate 2026-2445600 research 2, ou jf validate 2026-2445600 brief 2 1.',
+  versionValidated: "{{artifact}} {{version}} validée et retenue pour l'Offre {{reference}}.\n",
 
   statusCommandDescription: '{{description}} : jf {{name}} <offre>',
   statusUsage: 'Usage : jf {{name}} <offre>. « jf list <candidat> » liste les Offres.',
@@ -148,7 +149,7 @@ export const CLI_FR: typeof CLI_EN = {
   jobFailed: 'en échec : {{firstLine}}',
   conversionDone: 'rangée dans le Profil',
   conversionJob: 'job {{jobId}}, conversion de la Pièce {{upload}} de {{candidateId}} : {{outcome}}\n',
-  artifactDone: 'prête et retenue',
+  artifactDone: 'prête, en Brouillon',
   artifactJob: "job {{jobId}}, {{artifact}} de l'Offre {{reference}} : {{outcome}}\n",
   sessionGreeting: 'Bonjour !',
 };

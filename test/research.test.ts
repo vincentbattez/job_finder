@@ -8,6 +8,7 @@ import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructi
 
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { runAndValidate } from './run-module.ts';
 
 // Léa's, in French
 const RESEARCH_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.research;
@@ -35,11 +36,8 @@ async function detectPostings(aiSession: ReturnType<typeof createFakeAiSession>)
   };
 }
 
-// Launching a module queues its job, which the worker runs (ADR-0003)
 async function runResearch(actions: Actions) {
-  const { id } = await actions.runModule({ module: 'research', reference: REFERENCE });
-  await actions.runQueuedJobs();
-  return actions.followJob({ jobId: id });
+  return runAndValidate(actions, { module: 'research', reference: REFERENCE });
 }
 
 describe('research', () => {
@@ -80,7 +78,7 @@ describe('research', () => {
     await runResearch(actions);
     await runResearch(actions);
 
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: '1' });
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: '1' });
 
     const versionList = await actions.listVersions({ reference: REFERENCE, artifact: 'research' });
     expect(versionList.map(({ number, isChosen }) => ({ number, isChosen }))).toEqual([
@@ -197,7 +195,7 @@ describe('a Research that fails', () => {
     const { actions } = await detectPostings(createFakeAiSession({}));
     await runResearch(actions);
 
-    await expect(actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: 1 })).rejects.toThrow(
+    await expect(actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: 1 })).rejects.toThrow(
       /research v1 de l'Offre 2026-2445600 est en échec/,
     );
   });

@@ -2,6 +2,7 @@ import { Fragment, useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { interviewSectionIdOf } from '#/actions/interview-section.ts';
+import { ORIGINAL_FILE_NAME } from '#/actions/original.ts';
 
 import { ArtifactPrompt } from './artifact-prompt.tsx';
 import { STATE_BY_VERSION_STATE, type IArtifactVersions } from './artifact.ts';
@@ -13,28 +14,34 @@ import { InstructionsOrigin } from './module-instructions.tsx';
 
 import './artifact-versions.css';
 
-type VersionDocuments = IArtifactVersions['versionList'][number];
-type VersionDocument = VersionDocuments['documentList'][number];
+type VersionDetail = IArtifactVersions['versionList'][number];
+type VersionDocument = { fileName: string; markdown: string; isModifiable: boolean };
 
-// What its Container hands in: the launch of the module, and for a Version its choice and its files
+// What its Container hands in: the launch of the module, and for a Version its validation and its files
 interface IArtifactVersionsSlots {
   launch: ReactNode;
-  renderChooseButton: (number: number) => ReactNode;
-  renderDocument: (document: VersionDocument) => ReactNode;
+  renderValidateButton: (number: number) => ReactNode;
+  renderDocument: (number: number, document: VersionDocument) => ReactNode;
 }
 
+// Its text, corrected in place, then its Original, read-only (ADR-0019)
 function VersionFiles({
-  documentList,
+  fileName,
+  detail: { version, text, original, isCorrectable },
   renderDocument,
-}: Readonly<Pick<VersionDocuments, 'documentList'> & Pick<IArtifactVersionsSlots, 'renderDocument'>>) {
+}: Readonly<{ fileName: string; detail: VersionDetail } & Pick<IArtifactVersionsSlots, 'renderDocument'>>) {
   const { t } = useTranslation('posting');
+  const documentList = [
+    ...(text === null ? [] : [{ fileName, markdown: text, isModifiable: isCorrectable }]),
+    ...(original === null ? [] : [{ fileName: ORIGINAL_FILE_NAME, markdown: original, isModifiable: false }]),
+  ];
   if (documentList.length === 0) {
     return <p className="artifact-versions__missing">{t('noFile')}</p>;
   }
   return (
     <>
       {documentList.map((document) => (
-        <Fragment key={document.fileName}>{renderDocument(document)}</Fragment>
+        <Fragment key={document.fileName}>{renderDocument(version.number, document)}</Fragment>
       ))}
     </>
   );
@@ -47,13 +54,14 @@ export function ArtifactVersions({
   interviewNumber = null,
   artifact,
   isEditable,
+  fileName,
   prompt,
   versionList,
   launch,
-  renderChooseButton,
+  renderValidateButton,
   renderDocument,
 }: Readonly<
-  Pick<IArtifactVersions, 'artifact' | 'isEditable' | 'versionList'> & {
+  Pick<IArtifactVersions, 'artifact' | 'isEditable' | 'fileName' | 'versionList'> & {
     prompt: IArtifactVersions['module']['prompt'];
   } & IArtifactVersionsSlots & { reference: string; interviewNumber?: number | null }
 >) {
@@ -80,29 +88,40 @@ export function ArtifactVersions({
         <p className="artifact-versions__missing">{t('noVersion')}</p>
       ) : (
         <ol className="artifact-versions__list">
-          {versionList.map(({ version, isChoosable, documentList }) => (
-            <li key={version.number}>
-              <details className="artifact-versions__version">
-                <summary>
-                  <span className="artifact-versions__reference">
-                    {t('versionNumber', { versionNumber: version.number })}
-                  </span>
-                  <StateBadge state={STATE_BY_VERSION_STATE[version.state]} />
-                  {version.isChosen && <Badge data-chosen>{t('chosenBadge')}</Badge>}
-                  <InstructionsOrigin hasCandidateInstructions={version.hasCandidateInstructions} />
-                  <span className="artifact-versions__date">
-                    <DateText date={version.createdAt} />
-                  </span>
-                </summary>
-                {isChoosable && renderChooseButton(version.number)}
-                <details className="artifact-versions__instructions">
-                  <summary>{t('versionInstructions')}</summary>
-                  <Markdown markdown={version.instructions} />
+          {versionList.map((detail) => {
+            const { version, isValidatable } = detail;
+            return (
+              <li key={version.number}>
+                <details className="artifact-versions__version">
+                  <summary>
+                    <span className="artifact-versions__reference">
+                      {t('versionNumber', { versionNumber: version.number })}
+                    </span>
+                    <StateBadge state={STATE_BY_VERSION_STATE[version.state]} />
+                    {version.isChosen ? (
+                      <Badge data-chosen>{t('artifactView.chosenBadge')}</Badge>
+                    ) : (
+                      version.state === 'ready' && (
+                        <Badge data-validation={version.validation}>
+                          {t(`validationLabelByValidation.${version.validation}`)}
+                        </Badge>
+                      )
+                    )}
+                    <InstructionsOrigin hasCandidateInstructions={version.hasCandidateInstructions} />
+                    <span className="artifact-versions__date">
+                      <DateText date={version.createdAt} />
+                    </span>
+                  </summary>
+                  {isValidatable && renderValidateButton(version.number)}
+                  <details className="artifact-versions__instructions">
+                    <summary>{t('versionInstructions')}</summary>
+                    <Markdown markdown={version.instructions} />
+                  </details>
+                  <VersionFiles fileName={fileName} detail={detail} renderDocument={renderDocument} />
                 </details>
-                <VersionFiles documentList={documentList} renderDocument={renderDocument} />
-              </details>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ol>
       )}
     </section>

@@ -16,7 +16,7 @@ export const REDIRECT_LIST = [
   { from: 'offres/:reference/statut', to: 'postings/:reference/status' },
   ...ARTIFACT_RENAME_LIST.flatMap(({ from, to }) => [
     { from: `offres/:reference/${from}/document`, to: `postings/:reference/${to}/document` },
-    { from: `offres/:reference/${from}/retenue`, to: `postings/:reference/${to}/chosen` },
+    { from: `offres/:reference/${from}/retenue`, to: `postings/:reference/${to}/validate` },
   ]),
 ];
 

@@ -6,12 +6,13 @@ import { localeOf, tFor } from '#/actions/i18n.ts';
 import { interviewIdOf, interviewSectionIdOf } from '#/actions/interview-section.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
+import { summaryOf, type IArtifactVersions } from '#/web/components/artifact.ts';
 import { PageHeader } from '#/web/components/page-header.tsx';
 import { PostingFacts } from '#/web/components/posting-facts.tsx';
-import { POSTING_TAB_LIST, PostingTabs, type PostingTab } from '#/web/components/posting-tabs.tsx';
+import { POSTING_TAB_LIST, PostingTabs, type PostingTab, type TabSummary } from '#/web/components/posting-tabs.tsx';
 import { Recipients } from '#/web/components/recipients.tsx';
 import { StepBadge } from '#/web/components/step-badge.tsx';
-import { ArtifactVersions } from '#/web/containers/artifact-versions.tsx';
+import { ArtifactView } from '#/web/containers/artifact-view.tsx';
 import { ExtractionLaunch } from '#/web/containers/extraction-launch.tsx';
 import { Interviews } from '#/web/containers/interviews.tsx';
 import { Notes } from '#/web/containers/notes.tsx';
@@ -33,6 +34,14 @@ export function loader({ params, request }: LoaderFunctionArgs) {
 export function meta({ loaderData }: MetaArgs<typeof loader>) {
   const t = tFor(localeOf(loaderData), 'posting');
   return [{ title: t('pageTitle', { postingTitle: loaderData?.detail.posting.title ?? t('unreadPosting') }) }];
+}
+
+// A generation under way, else the latest Version's validation (spec #125, « IArtifact »)
+function tabSummaryOf(artifact: IArtifactVersions | undefined): TabSummary | undefined {
+  if (artifact === undefined) {
+    return undefined;
+  }
+  return artifact.state === 'queued' || artifact.state === 'in_progress' ? 'pending' : summaryOf(artifact);
 }
 
 function isPostingTab(value: string | null): value is PostingTab {
@@ -79,6 +88,8 @@ export default function Posting() {
   const artifactOf = (artifact: string) => detail.artifactList.find((entry) => entry.artifact === artifact);
   const research = artifactOf('research');
   const letter = artifactOf('letter');
+  const letterList = letter?.versionList ?? [];
+  const latestLetter = letterList.findLast(({ version }) => version.state === 'ready');
   const now = Date.now();
   const nextInterview =
     interviewList.find(({ startAt, durationMinutes }) => startAt.getTime() + durationMinutes * MINUTE_MS > now) ??
@@ -101,7 +112,7 @@ export default function Posting() {
         );
       }
       case 'research': {
-        return research === undefined ? null : <ArtifactVersions reference={posting.reference} {...research} />;
+        return research === undefined ? null : <ArtifactView reference={posting.reference} {...research} />;
       }
       case 'letter': {
         return (
@@ -114,7 +125,7 @@ export default function Posting() {
                 <Recipients recipients={detail.recipients} />
               </section>
             )}
-            {letter !== undefined && <ArtifactVersions reference={posting.reference} {...letter} />}
+            {letter !== undefined && <ArtifactView reference={posting.reference} {...letter} />}
           </div>
         );
       }
@@ -150,6 +161,13 @@ export default function Posting() {
               url={posting.url}
               repostOf={posting.repostOf}
               nextInterviewNumber={nextInterview?.number ?? null}
+              letter={{
+                draftNumber:
+                  latestLetter?.version.validation === 'draft' && latestLetter.isValidatable
+                    ? latestLetter.version.number
+                    : null,
+                hasChosen: letterList.some(({ version }) => version.isChosen),
+              }}
             />
           </>
         }
@@ -158,7 +176,7 @@ export default function Posting() {
         <PostingTabs
           tab={tab}
           onTabChange={changeTab}
-          stateByTab={{ research: research?.state, letter: letter?.state }}
+          stateByTab={{ research: tabSummaryOf(research), letter: tabSummaryOf(letter) }}
           interviewCount={interviewList.length}
         >
           {renderPanel()}

@@ -78,7 +78,7 @@ function research(title: string): string {
 // Bastia publishes no address the Letter could recommend as is: it falls back on a generic salutation
 const BASTIA_LETTER = {
   fileByName: {
-    'draft.md': 'Madame la Première présidente,\n\nTitulaire d’un [à compléter : diplôme et année d’obtention].\n',
+    'letter.md': 'Madame la Première présidente,\n\nTitulaire d’un [à compléter : diplôme et année d’obtention].\n',
     'recipients.json': JSON.stringify({
       to: null,
       ccList: [],
@@ -98,7 +98,7 @@ const RUN_BY_VERSION: Record<string, Parameters<typeof createFakeAiSession>[numb
   [`${BETHUNE_REFERENCE} research v1`]: { fileByName: { 'research.md': research('Recherche retenue') } },
   [`${BETHUNE_REFERENCE} research v2`]: { fileByName: { 'research.md': research('Recherche relancée') } },
   [`${BETHUNE_REFERENCE} letter v1`]: {
-    fileByName: { 'draft.md': 'Madame la Présidente,\n', 'recipients.json': JSON.stringify(RECIPIENTS) },
+    fileByName: { 'letter.md': 'Madame la Présidente,\n', 'recipients.json': JSON.stringify(RECIPIENTS) },
   },
   [`${BASTIA_REFERENCE} research v1`]: researchRun('Recherche : la cour d’appel de Bastia'),
   [`${BASTIA_REFERENCE} letter v1`]: BASTIA_LETTER,
@@ -174,18 +174,23 @@ await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
 await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
 // The worker's turn, which the e2e tests take here rather than in a worker process
 await actions.runQueuedJobs();
-await actions.chooseVersion({ reference: BETHUNE_REFERENCE, artifact: 'research', number: 1 });
+await actions.validateVersion({ reference: BETHUNE_REFERENCE, artifact: 'research', number: 1 });
 await actions.runModule({ module: 'letter', reference: BETHUNE_REFERENCE });
 await actions.runQueuedJobs();
 await actions.runModule({ module: 'research', reference: BASTIA_REFERENCE });
 await actions.runModule({ module: 'research', reference: VERSAILLES_REFERENCE });
 await actions.runModule({ module: 'research', reference: VERSAILLES_REFERENCE });
 await actions.runQueuedJobs();
+// Each Version is a Draft until validated (ADR-0019): Versailles keeps its v2 a Draft beside its Chosen v1, and
+// Bastia's Letter, a Draft, builds on its Validated Research (e2e/artifact-view.test.ts)
+await actions.validateVersion({ reference: VERSAILLES_REFERENCE, artifact: 'research', number: 1 });
+await actions.validateVersion({ reference: BASTIA_REFERENCE, artifact: 'research', number: 1 });
 await actions.runModule({ module: 'letter', reference: BASTIA_REFERENCE });
 await actions.runQueuedJobs();
 await actions.runModule({ module: 'research', reference: RENNES_REFERENCE });
 await actions.runModule({ module: 'research', reference: NARBONNE_REFERENCE });
 await actions.runQueuedJobs();
+await actions.validateVersion({ reference: RENNES_REFERENCE, artifact: 'research', number: 1 });
 
 // Ready while Home Assistant refused the token Léa saved for a while: its notification failed
 // (e2e/launch.test.ts)
@@ -194,6 +199,7 @@ const leaParameters = { url: FAKE_HOME_ASSISTANT_URL, service: 'notify.mobile_ap
 await actions.saveNotificationChannel({ ...leaChannel, parameters: { ...leaParameters, token: 'jeton-refusé' } });
 await actions.runModule({ module: 'research', reference: NOTIFICATION_FAILED_REFERENCE });
 await actions.runQueuedJobs();
+await actions.validateVersion({ reference: NOTIFICATION_FAILED_REFERENCE, artifact: 'research', number: 1 });
 await actions.saveNotificationChannel({
   ...leaChannel,
   parameters: { ...leaParameters, token: FAKE_HOME_ASSISTANT_TOKEN },
