@@ -6,7 +6,7 @@ The V1 is designed desktop-first, with mobile kept usable for occasional consult
 
 ## Considered Options
 
-- **shadcn for behaviour only, restyled in BEM.** Rejected: it fights the library, and throws away the very consistency it is chosen for.
+- **shadcn for behavior only, restyled in BEM.** Rejected: it fights the library, and throws away the very consistency it is chosen for.
 - **Strict progressive enhancement, using only the components that degrade cleanly.** Rejected: it forbids half of the catalogue for a guarantee no user of this front needs.
 - **Page-by-page delivery on `main`, Tailwind and the BEM stylesheets coexisting.** Rejected: two styling systems at once, for a live app with two users who can wait for one switch.
 
