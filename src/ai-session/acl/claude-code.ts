@@ -18,11 +18,11 @@ export interface IInteractiveSession {
   locale: Locale;
 }
 
-// The fixed part of a module's prompt, then its Instructions (ADR-0003); the session writes only in
-// its output folder
+// The fixed part of a module's prompt, then its message: its Instructions, after the Inputs inlined by a module
+// (ADR-0003, ADR-0021); the session writes only in its output folder
 export interface IHeadlessSession {
   fixedPrompt: string;
-  instructions: string;
+  message: string;
   directory: string;
   readDirectoryList: string[];
   outputDirectory: string;
@@ -166,7 +166,7 @@ export function createClaudeCode(sessionTimeoutMs: number, killGraceMs = KILL_GR
     // The fixed part goes into the system prompt so that no Instructions can lift its rules (ADR-0003);
     // cspell:words dontAsk
     // dontAsk refuses any tool not listed. A session that cannot run is a failed one, never a throw.
-    async runHeadless({ fixedPrompt, instructions, directory, readDirectoryList, outputDirectory, locale }) {
+    async runHeadless({ fixedPrompt, message, directory, readDirectoryList, outputDirectory, locale }) {
       const argumentList = [
         '-p',
         '--output-format',
@@ -212,7 +212,7 @@ export function createClaudeCode(sessionTimeoutMs: number, killGraceMs = KILL_GR
         .on('error', () => {
           // its exit says it
         })
-        .end(instructions);
+        .end(message);
       let output = '';
       let stderr = '';
       child.stdout.setEncoding('utf8').on('data', (chunk: string) => {

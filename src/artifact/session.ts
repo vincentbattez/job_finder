@@ -7,14 +7,16 @@ import { type Artifact, type Candidate, type Job, type Locale, type Posting, typ
 import type { Workspace } from '#/workspace/index.ts';
 
 import type { IInput, ITarget } from './inputs.ts';
+import { composeMessage, leaveUnmarked, markSubstitution, promptOf } from './prompt.ts';
 import { AI_MODULE_BY_ARTIFACT, findDefaultInstructions, isAttachedToInterview } from './registry.ts';
 
 // Why a job failed, which the notification of an automatic job tells: an Error Code and its message
 export type JobFailure = Pick<CodedError, 'code' | 'message'>;
 
 // What a module's session receives, shared by the run and the preview so the preview never drifts; the
-// Fixed Part waits for the folder of the Version, which the run creates after reading the inputs (ADR-0003);
-// it reads only the Versions of its checked Inputs, which the path-based Prompt names until each module writes them into it
+// Fixed Part waits for the folder of the Version, which the run creates after reading the inputs (ADR-0003).
+// A module whose Inputs are inlined receives them in its message (ADR-0021); the others still name the
+// files of the Versions they read, and read the Profile folder
 function composeSession(
   workspace: Workspace,
   { posting, interview }: ITarget,
@@ -23,9 +25,11 @@ function composeSession(
   checkedList: IInput[],
 ) {
   const aiModule = AI_MODULE_BY_ARTIFACT[module];
+  const isInliningInputs = aiModule.isInliningInputs === true;
   const inputList = checkedList.flatMap(({ readVersion }) => (readVersion === null ? [] : [readVersion]));
   const directoryList = aiModule.isReadingProfile === true ? [workspace.profileDirectoryOf(posting.candidateId)] : [];
   const candidateInstructions = workspace.readInstructions(posting.candidateId, module);
+  const instructions = candidateInstructions ?? findDefaultInstructions(module, candidate);
   const postingDirectory = workspace.postingDirectoryOf(posting);
   const readVersionList = inputList.map((input): IPromptReadVersion => {
     const directory = workspace.versionDirectoryOf(input.posting, input.version);
@@ -40,17 +44,20 @@ function composeSession(
   });
   return {
     inputList,
-    instructions: candidateInstructions ?? findDefaultInstructions(module, candidate),
+    instructions,
     hasCandidateInstructions: candidateInstructions !== null,
     postingDirectory,
+    message: isInliningInputs ? composeMessage(posting, checkedList, instructions) : instructions,
     // The session runs in the folder of the Posting: only the folders outside it are added
-    readDirectoryList: [
-      ...directoryList,
-      ...readVersionList
-        .map(({ directory }) => directory)
-        .filter((directory) => path.relative(postingDirectory, directory).startsWith('..')),
-    ],
-    composeFixedPart: (outputDirectory: string): string =>
+    readDirectoryList: isInliningInputs
+      ? []
+      : [
+          ...directoryList,
+          ...readVersionList
+            .map(({ directory }) => directory)
+            .filter((directory) => path.relative(postingDirectory, directory).startsWith('..')),
+        ],
+    composeFixedPart: (outputDirectory: string, mark = leaveUnmarked): string =>
       aiModule.composePrompt({
         posting,
         interview,
@@ -58,6 +65,7 @@ function composeSession(
         outputDirectory: path.relative(postingDirectory, outputDirectory),
         readVersionList,
         profileDirectory: workspace.profileDirectoryOf(posting.candidateId),
+        mark,
       }),
   };
 }
@@ -65,7 +73,8 @@ function composeSession(
 // The number of the Version still to be created, which the preview cannot know before the run
 const NEXT_VERSION_PLACEHOLDER = '<next>';
 
-// The Prompt a run started now would receive, with the Versions it reads
+// The Prompt a run started now would receive, with the Versions it reads; its Fixed Part also comes with
+// the values the composer substituted marked, for the panel to highlight
 export function previewPrompt(
   workspace: Workspace,
   target: ITarget,
@@ -79,9 +88,12 @@ export function previewPrompt(
     artifact: module,
     number: NEXT_VERSION_PLACEHOLDER,
   });
+  const fixedPart = session.composeFixedPart(outputDirectory);
   return {
-    fixedPart: session.composeFixedPart(outputDirectory),
+    fixedPart,
+    markedFixedPart: session.composeFixedPart(outputDirectory, markSubstitution),
     instructions: session.instructions,
+    prompt: promptOf({ fixedPrompt: fixedPart, message: session.message }),
     readVersionList: session.inputList.map(({ posting, version }) => ({
       reference: posting.reference,
       artifact: version.artifact,
@@ -125,7 +137,7 @@ export async function runSession(
   const { posting, interview, module } = job;
   const { locale } = candidate;
   const aiModule = AI_MODULE_BY_ARTIFACT[module];
-  const { instructions, hasCandidateInstructions, postingDirectory, readDirectoryList, composeFixedPart } =
+  const { instructions, hasCandidateInstructions, postingDirectory, message, readDirectoryList, composeFixedPart } =
     composeSession(workspace, { posting, interview }, module, candidate, checkedList);
   // The Version records the Inputs its run read, each read Version linked
   const version = await workspace.startJob(job, {
@@ -136,7 +148,7 @@ export async function runSession(
   const outputDirectory = workspace.createVersionDirectory(posting, version);
   const session = await aiSession.runHeadless({
     fixedPrompt: composeFixedPart(outputDirectory),
-    instructions,
+    message,
     directory: postingDirectory,
     readDirectoryList,
     outputDirectory,

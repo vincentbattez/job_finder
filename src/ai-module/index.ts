@@ -1,10 +1,21 @@
 import type { ErrorCode } from '#/domain/error.ts';
-import { JOB_DESCRIPTION_FILE_NAME, type Artifact, type Interview, type Locale, type Posting } from '#/domain/index.ts';
+import type { Artifact, Interview, Locale, Posting } from '#/domain/index.ts';
 
 // An Artifact is written for the employer: in the language of the Job Description, whatever the
 // Candidate's locale and the language of their Instructions (spec #65). Each fixed part states it.
 export function describeArtifactLanguage(artifactName: string): string {
-  return `Write the ${artifactName} in the language of the Job Description, \`${JOB_DESCRIPTION_FILE_NAME}\`, whatever the language of this prompt and of the Candidate's Instructions.`;
+  return `Write the ${artifactName} in the language of the Job Description, whatever the language of this prompt and of the Candidate's Instructions.`;
+}
+
+// The headings of the message that follows the Fixed Part, for a module whose Inputs are inlined (ADR-0021);
+// each Input's own starts with its prefix, which the headings inside its content do not
+export const INPUTS_HEADING = 'Inputs';
+export const INPUT_HEADING_PREFIX = 'Input: ';
+export const INSTRUCTIONS_HEADING = 'Instructions';
+
+// What a Fixed Part says of the message that follows it, its Inputs inlined: the session reads nothing from disk
+export function describeMessage(): string {
+  return `The next message holds everything you read, under \`# ${INPUTS_HEADING}\`: each Input under its own heading, \`## ${INPUT_HEADING_PREFIX}…\`, with its full content. Look for no other file to read. Then come the Candidate's Instructions, under \`# ${INSTRUCTIONS_HEADING}\`.`;
 }
 
 // A Chosen Version the module reads: of its Posting, of its Interview or of a previous one (interviewNumber),
@@ -29,6 +40,9 @@ export interface IPromptInput {
   outputDirectory: string;
   readVersionList: IReadVersion[];
   profileDirectory: string;
+  // Wraps each value the composer substitutes, where it puts it, so that the preview highlights it; the
+  // run's leaves it as is (spec #125)
+  mark: (value: string) => string;
 }
 
 interface IOutputFile {
@@ -47,6 +61,9 @@ export interface IAiModule {
   // The files the session writes in the folder of the Version
   outputFileList: IOutputFile[];
   composePrompt(input: IPromptInput): string;
+  // Whether its Prompt carries its checked Inputs, rather than its Fixed Part naming files to read (ADR-0021);
+  // true for every module once the Letter and the Interview Brief are migrated
+  isInliningInputs?: boolean;
   // Runs once the files are valid, before the Version is ready
   completeVersion?(versionDirectory: string): void;
   // Whether its Versions are attached to an Interview, numbered and chosen per Interview, rather than

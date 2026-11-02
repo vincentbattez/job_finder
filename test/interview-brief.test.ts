@@ -269,7 +269,7 @@ describe('the prompt of the Interview Brief', () => {
 
     const { version } = await runModule(actions, 'brief', 1);
 
-    const { fixedPrompt, instructions } = aiSession.headlessSessionList[1] ?? {};
+    const { fixedPrompt, message: instructions } = aiSession.headlessSessionList[1] ?? {};
     // The plan is the default Instructions': the Candidate's own may organize the Interview Brief otherwise
     for (const section of ['À réviser', 'Moyens mnémotechniques', 'Présentez-vous', 'Questions probables']) {
       expect(instructions).toContain(`## ${section}`);
@@ -292,7 +292,7 @@ describe('the prompt of the Interview Brief', () => {
 
     const { version } = await runModule(actions, 'brief', 1);
 
-    expect(aiSession.headlessSessionList[1]?.instructions).toBe(instructions);
+    expect(aiSession.headlessSessionList[1]?.message).toBe(instructions);
     expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain('Never invent a fact about the Candidate');
     expect(version?.instructions).toBe(instructions);
   });

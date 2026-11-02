@@ -170,7 +170,7 @@ describe('the prompt of the Letter', () => {
 
     const { version } = await runModule(actions, 'letter', REFERENCE);
 
-    const { fixedPrompt, instructions } = aiSession.headlessSessionList[1] ?? {};
+    const { fixedPrompt, message: instructions } = aiSession.headlessSessionList[1] ?? {};
     expect(fixedPrompt).toContain('Never invent a fact about the Candidate');
     expect(fixedPrompt).toContain('`[à compléter : …]`');
     expect(instructions).toBe(LETTER_DEFAULT_INSTRUCTIONS);
@@ -187,7 +187,7 @@ describe('the prompt of the Letter', () => {
 
     const { version } = await runModule(actions, 'letter', REFERENCE);
 
-    expect(aiSession.headlessSessionList[1]?.instructions).toBe(instructions);
+    expect(aiSession.headlessSessionList[1]?.message).toBe(instructions);
     expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain('Never invent a fact about the Candidate');
     expect(version?.instructions).toBe(instructions);
   });

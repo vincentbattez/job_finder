@@ -10,7 +10,7 @@ const FAKE_CLAUDE_DIRECTORY = path.join(import.meta.dirname, 'fixtures', 'claude
 
 const SESSION: Omit<IHeadlessSession, 'directory' | 'outputDirectory'> = {
   fixedPrompt: "Tu produis la Recherche d'une Offre.\nN'invente jamais un fait.",
-  instructions: 'Va droit au but.\n',
+  message: 'Va droit au but.\n',
   readDirectoryList: [],
   locale: 'fr',
 };
@@ -72,7 +72,7 @@ describe('the headless launch of Claude Code', () => {
     expect(argumentList).toEqual(expect.arrayContaining(['-p', 'dontAsk', 'Edit(//donnees/research/v1/**)']));
     expect(argumentList).not.toContain('--add-dir');
     expect(argumentList[argumentList.indexOf('--append-system-prompt') + 1]).toBe(SESSION.fixedPrompt);
-    expect(readRecord(recordDirectory, 'message')).toBe(SESSION.instructions);
+    expect(readRecord(recordDirectory, 'message')).toBe(SESSION.message);
     expect(readRecord(recordDirectory, 'directory').trim()).toBe(realpathSync(directory));
     expect(readRecord(recordDirectory, 'environment')).not.toMatch(/^(?:ANTHROPIC_API_KEY|CLAUDECODE)=/m);
   });

@@ -1,5 +1,3 @@
-import path from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
 import { createActions, type Actions } from '#/actions/index.ts';
@@ -14,8 +12,6 @@ import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.
 // Zone (responses recorded on 2026-10-29)
 const REFERENCE = '2026-2231960';
 const REPOST_REFERENCE = '2026-2338409';
-const POSTING_DIRECTORY_NAME =
-  '2026-2231960-attache-de-justice-affecte-aupres-des-magistrats-du-parquet-tj-boulogne-sur-mer';
 
 const RESEARCH_RUN = {
   fileByName: {
@@ -198,7 +194,7 @@ describe('the Repost of a Posting not Applied', () => {
 
   it('launches its Research, which reads the Chosen Artifacts of the Posting it publishes again', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, LETTER_RUN, RESEARCH_RUN);
-    const { actions, dataDirectory } = await detectBeforeRepost(aiSession);
+    const { actions } = await detectBeforeRepost(aiSession);
     await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runQueuedJobs();
     await actions.runModule({ module: 'letter', reference: REFERENCE });
@@ -226,15 +222,14 @@ describe('the Repost of a Posting not Applied', () => {
         },
       },
     ]);
-    const postingDirectory = path.join(dataDirectory, 'candidates/lea/postings', POSTING_DIRECTORY_NAME);
     const session = aiSession.headlessSessionList[2];
-    expect(session?.readDirectoryList).toEqual([
-      path.join(postingDirectory, 'research/v1'),
-      path.join(postingDirectory, 'letter/v1'),
-    ]);
-    expect(session?.fixedPrompt).toContain(REFERENCE);
-    expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'research/v1')}\``);
-    expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'letter/v1')}\``);
+    // The session reads no Input from disk: they are inlined in its message (ADR-0021)
+    expect(session?.readDirectoryList).toEqual([]);
+    expect(session?.fixedPrompt).toContain(`This Posting is the Repost of Posting ${REFERENCE}`);
+    expect(session?.message).toContain(
+      `## Input: Chosen Research of Posting ${REFERENCE}\n\n${RESEARCH_RUN.fileByName['research.md'].trim()}\n\n`,
+    );
+    expect(session?.message).toContain(`## Input: Chosen Letter of Posting ${REFERENCE}\n\nMadame la Procureure,\n\n`);
   });
 
   // The Prompt the Posting page shows beside the Research of the Repost
