@@ -66,7 +66,7 @@ describe('To Apply list', () => {
     await actions.runQueuedJobs();
     await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
     await actions.runQueuedJobs();
-    await actions.chooseVersion({ reference: BETHUNE_REFERENCE, artifact: 'research', number: 1 });
+    await actions.validateVersion({ reference: BETHUNE_REFERENCE, artifact: 'research', number: 1 });
 
     const { artifactList } = await actions.readPosting({ reference: BETHUNE_REFERENCE });
 
