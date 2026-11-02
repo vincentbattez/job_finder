@@ -14,8 +14,6 @@ const COPY_EN = {
   unreadablePage: 'The detail page of Posting {{reference}} is unreadable ({{url}}): the format of the page changed.',
   titleLabel: 'Searched title',
   titlePlaceholder: 'attaché de justice',
-  courtOfAppealListLabel: 'Courts of appeal of the Zone',
-  courtOfAppealListPlaceholder: 'Douai',
 };
 
 const COPY_FR: typeof COPY_EN = {
@@ -30,8 +28,6 @@ const COPY_FR: typeof COPY_EN = {
     "La fiche détaillée de l'Offre {{reference}} est illisible ({{url}}) : le format de la page a changé.",
   titleLabel: 'Titre recherché',
   titlePlaceholder: 'attaché de justice',
-  courtOfAppealListLabel: 'Cours d’appel de la Zone',
-  courtOfAppealListPlaceholder: 'Douai',
 };
 
 export const COPY_NAMESPACE = 'sourcePep';

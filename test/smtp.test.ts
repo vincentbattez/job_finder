@@ -8,7 +8,7 @@ import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.
 
 const LEA_ADDRESS = 'lea.durand@example.org';
 
-// Two Béthune Postings in Léa's Zone, from the responses recorded on 2026-10-29
+// Two Béthune Postings, from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 const OTHER_REFERENCE = '2026-2445609';
 

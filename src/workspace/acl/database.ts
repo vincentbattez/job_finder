@@ -155,7 +155,6 @@ export interface INewPosting {
   jobDescription: JobDescription;
   // New when detected, To Apply when imported (ADR-0018)
   status: Extract<Status, 'new' | 'to_apply'>;
-  isInZone: boolean;
   repostOf: Posting | undefined;
   location: Location;
 }
@@ -670,25 +669,6 @@ export function openDatabase(databasePath: string) {
       await prisma.watch.update({ where: { id }, data: { detectedAt: new Date() } });
     },
 
-    // The Postings of its Candidate and Source that another Watch stored out of its own Zone since this
-    // one last went through, all of them on its first launch: they may be in the Zone of this one
-    async listOutOfZonePostingsSince({ candidateId, source, detectedAt }: Watch): Promise<Posting[]> {
-      const since = detectedAt === null ? {} : { detectedAt: { gt: detectedAt } };
-      return z.array(POSTING_READ_SCHEMA).parse(
-        await prisma.posting.findMany({
-          where: { candidateId, source, isInZone: false, ...since },
-          include: POSTING_INCLUDE,
-        }),
-      );
-    },
-
-    // A Posting is in the Zone as soon as it is in that of one of its Candidate's Watches
-    async setInZone({ id }: Posting): Promise<Posting> {
-      return POSTING_READ_SCHEMA.parse(
-        await prisma.posting.update({ where: { id }, data: { isInZone: true }, include: POSTING_INCLUDE }),
-      );
-    },
-
     async findPostings(reference: string): Promise<Posting[]> {
       return z
         .array(POSTING_READ_SCHEMA)
@@ -791,7 +771,6 @@ export function openDatabase(databasePath: string) {
       listedPosting,
       jobDescription,
       status,
-      isInZone,
       repostOf,
       location,
     }: INewPosting): Promise<Posting> {
@@ -818,7 +797,6 @@ export function openDatabase(databasePath: string) {
             contact1,
             contact2,
             status,
-            isInZone,
             repostOfId: repostOf?.id ?? null,
           },
           include: POSTING_INCLUDE,

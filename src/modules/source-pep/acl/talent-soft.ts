@@ -146,13 +146,12 @@ function readField(html: string, id: string): string | null {
   return toText(value) === '' ? null : toText(value);
 }
 
-// The fields are read by their element ids, stable across offers (ADR-0001). The employing court of
-// appeal tells the Zone, a Parameter of this Source only: it stays out of the Job Description.
+// The fields are read by their element ids, stable across offers (ADR-0001)
 export async function readJobDescription(
   reference: string,
   locale: Locale,
   httpFetch: typeof fetch = fetch,
-): Promise<{ jobDescription: JobDescription; courtOfAppeal: string | null }> {
+): Promise<JobDescription> {
   // cspell:disable-next-line
   const url = `${ORIGIN}/offre-de-emploi/emploi_${reference.slice('AAAA-'.length)}.aspx`;
   const html = await get(httpFetch, url, locale);
@@ -167,10 +166,8 @@ export async function readJobDescription(
   }
   // cspell:disable
   const deadline = readField(content, 'fldoffer_date1');
-  // The employing court of appeal is the offer's entity, such as « Direction des services judiciaires - CA DOUAI »
-  const entity = toText(/_divEntityDesc"[^>]*>[\s\S]*?<\/h3>([\s\S]*?)<\/div>/.exec(content)?.[1] ?? '');
   const markdown = toMarkdown(content);
-  const jobDescription = JOB_DESCRIPTION_SCHEMA.parse({
+  return JOB_DESCRIPTION_SCHEMA.parse({
     deadline: deadline === null ? null : dayOf(deadline),
     startDate: readStartDate(markdown),
     employer: readField(content, 'fldoffer_longtext2'),
@@ -181,5 +178,4 @@ export async function readJobDescription(
     markdown,
   });
   // cspell:enable
-  return { jobDescription, courtOfAppeal: / - CA (.+)$/.exec(entity)?.[1] ?? null };
 }
