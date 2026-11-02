@@ -20,13 +20,17 @@ Control of the front's top bar that sets the Locale: that of the chosen Candidat
 _Avoid_: language button, language picker
 
 **Profile**:
-What the tool knows about a Candidate in order to write on their behalf: their CV, the Facts they validated, their past letters and their Annexes.
+What the tool knows about a Candidate in order to write on their behalf: their CV, the Facts they validated, their Past Letters and their Annexes.
 _Avoid_: file, record, CV
 _Formerly_: Profil
 
 **Annex**:
-Document of the Profile beyond the CV, the Facts and the past letters, such as a recommendation letter, a transcript or a thesis; it comes from an Upload or is written by the Candidate, and a Custom Artifact can be made into one to reuse it for other Postings.
+Document of the Profile beyond the CV, the Facts and the Past Letters, such as a recommendation letter, a transcript or a thesis; it comes from an Upload or is written by the Candidate, and a Custom Artifact can be made into one to reuse it for other Postings.
 _Avoid_: attachment, appendix, supporting document
+
+**Past Letter**:
+Cover letter the Candidate already sent, whether they put it in their Profile or it is the Letter of a Posting they Applied to with the tool; the two kinds form one set, dated by the day each was sent or added to the Profile.
+_Avoid_: old letter, previous letter, letter sample
 
 **Facts**:
 Part of the Profile that lists, by section, what the Candidate validated about themselves: identity, contact details, degrees, experience, skills, motivations, mobility.
@@ -39,7 +43,7 @@ _Avoid_: heading, category, field
 _Formerly_: Rubrique
 
 **Upload**:
-Original document, such as a CV, a past letter or an Annex as a PDF, that the Candidate drops into their Profile; it is kept as is, and the Profile holds its Markdown conversion.
+Original document, such as a CV, a Past Letter or an Annex as a PDF, that the Candidate drops into their Profile; it is kept as is, and the Profile holds its Markdown conversion.
 _Avoid_: attachment, file, source file
 _Formerly_: Pièce
 
@@ -241,6 +245,7 @@ _Avoid_: approved, accepted, final
 **Original**:
 Text of a Version as the AI produced it, kept so the Candidate can compare their corrections with it; a Version the Candidate brought has none.
 _Avoid_: draft, AI version, initial text
+
 **Instructions**:
 Directions that tell the AI how to produce a type of Artifact; each type has default Instructions in each Locale, which a Candidate reads in theirs and can replace with their own. Whatever their language, the Artifact is written in the language of the Job Description.
 _Avoid_: prompt, template, guidelines
@@ -275,7 +280,7 @@ _Avoid_: review sheet, cheat sheet, study notes
 _Formerly_: Fiche d'entretien
 
 **Revision**:
-The Candidate's study of the Chosen Version of an Interview Brief before its Interview, section by section; it keeps, for each section, a note of theirs and whether they marked it Mastered.
+The Candidate's study of the Chosen Version of an Interview Brief before its Interview, section by section; it keeps, for each section, a note of theirs and whether they marked it Mastered. When a newer Version becomes Chosen, the Revision follows it in each section whose title it still has, and keeps the others apart as vanished sections.
 _Avoid_: review, study session, rehearsal
 
 **Mastered**:
@@ -287,5 +292,5 @@ Artifact the Candidate writes or drops for one Posting, or one of its Interviews
 _Avoid_: note, attachment, extra input
 
 **Input**:
-What a run producing an Artifact reads: the Job Description, the Chosen Version of another Artifact of the Posting, Custom Artifacts included, or a document of the Profile; each type of Artifact checks some by default and requires some, which cannot be unchecked, the Candidate adds the others, and each Version keeps the Inputs it was produced from. An Artifact that reads the Profile requires the CV and the Facts, checks the five most recent past letters, and leaves the older ones and the Annexes to add.
+What a run producing an Artifact reads: the Job Description, the Chosen Version of another Artifact of the Posting, Custom Artifacts included, or a document of the Profile; each type of Artifact checks some by default and requires some, which cannot be unchecked, the Candidate adds the others, and each Version keeps the Inputs it was produced from. An Artifact that reads the Profile requires the CV and the Facts, checks the five most recent Past Letters, and leaves the older ones and the Annexes to add.
 _Avoid_: source, context, data
