@@ -195,10 +195,12 @@ async function listProfileInputs(workspace: Workspace, posting: Posting): Promis
     ...documentList.filter(({ kind }) => kind === 'past_letter'),
     ...sentList.filter((input) => input !== null),
   ];
-  const recentKeyList = new Set(pastLetterList
-    .toSorted((first, second) => (second.datedAt?.getTime() ?? 0) - (first.datedAt?.getTime() ?? 0))
-    .slice(0, RECENT_PAST_LETTER_COUNT)
-    .map(({ key }) => key));
+  const recentKeyList = new Set(
+    pastLetterList
+      .toSorted((first, second) => (second.datedAt?.getTime() ?? 0) - (first.datedAt?.getTime() ?? 0))
+      .slice(0, RECENT_PAST_LETTER_COUNT)
+      .map(({ key }) => key),
+  );
   return [
     ...documentList.filter(({ mode }) => mode === 'required'),
     ...pastLetterList.map((input): IInput => ({
