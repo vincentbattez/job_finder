@@ -62,6 +62,11 @@ test('collapses the Sidebar into an icon rail with tooltips', async ({ page, asC
   await page.getByRole('main').getByRole('button', { name: 'Replier ou déplier le menu' }).click();
 
   await expect(sidebar).toHaveAttribute('data-state', 'collapsed');
+  // The rail narrows over 200 ms, and Playwright may find the link stable before it starts: hovered then,
+  // the pointer is left beside the shrunk link, which takes its tooltip away. The hover waits for the end.
+  await sidebar.evaluate(async (element) => {
+    await Promise.all(element.getAnimations({ subtree: true }).map(async ({ finished }) => finished));
+  });
   await findPages(page).getByRole('link', { name: 'Candidatures' }).hover();
   await expect(page.getByRole('tooltip', { name: 'Candidatures' })).toBeVisible();
 });
