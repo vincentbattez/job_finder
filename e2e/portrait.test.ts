@@ -35,7 +35,8 @@ test('launches the Portrait of an Interview without a Research, then corrects it
   await expect(textbox).toBeEnabled();
   await textbox.fill(CORRECTED_PORTRAIT);
   await portrait.getByRole('button', { name: 'Enregistrer' }).click();
-  await expect(page.getByText('Version 1 enregistrée')).toBeVisible();
+  // Saved, the view goes back to reading
+  await expect(textbox).toBeHidden();
   await page.reload();
   await expect(portrait.getByText('Mme Durand, juge des enfants à Paris depuis 2021.')).toBeVisible();
 });

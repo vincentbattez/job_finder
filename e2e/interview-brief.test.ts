@@ -50,7 +50,8 @@ test('launches the Interview Brief of an Interview once the Posting has a Chosen
   await expect(textbox).toBeEnabled();
   await textbox.fill(CORRECTED_BRIEF);
   await brief.getByRole('button', { name: 'Enregistrer' }).click();
-  await expect(page.getByText('Version 1 enregistrée')).toBeVisible();
+  // Saved, the view goes back to reading
+  await expect(textbox).toBeHidden();
   await page.reload();
   await expect(brief.getByRole('heading', { name: 'Présentez-vous' })).toBeVisible();
   await expect(brief.getByText('Validée · retenue')).toBeVisible();
