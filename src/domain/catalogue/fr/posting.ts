@@ -150,6 +150,19 @@ export const POSTING_FR: typeof POSTING_EN = {
     saved: 'Version {{number}} enregistrée',
   },
 
+  reader: {
+    sections: 'Sections',
+    progress: 'Progression',
+    progressLabel: 'Progression de la lecture',
+    percent: '{{percent}} %',
+    read: '(lue)',
+    readingTime_one: '≈ {{count}} min de lecture',
+    readingTime_other: '≈ {{count}} min de lecture',
+    sectionCount_one: '{{count}} section',
+    sectionCount_other: '{{count}} sections',
+    focusMode: 'Mode focus',
+  },
+
   appliedDialog: {
     title: 'Marquer l’Offre Postulée ?',
     draftDescription:

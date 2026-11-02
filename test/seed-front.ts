@@ -88,6 +88,17 @@ const BASTIA_LETTER = {
   },
 };
 
+// A Research long enough to scroll, in five sections and its Sources, which e2e/reading.test.ts reads
+// with its rail
+const SECTION_TITLE_LIST = ['Le ressort', 'La juridiction', 'Le poste', 'Les attentes', 'Les questions'];
+const PARAGRAPH =
+  'La juridiction interrégionale spécialisée traite les affaires de criminalité organisée et de délinquance financière les plus complexes du ressort, avec des magistrats dédiés, des greffiers formés à ces procédures et des assistants spécialisés venus des administrations partenaires, qui travaillent ensemble sur des dossiers longs et sensibles.';
+const LONG_RESEARCH = [
+  '# Recherche : la JIRS du TJ de Rennes',
+  ...SECTION_TITLE_LIST.flatMap((title) => [`## ${title}`, PARAGRAPH, PARAGRAPH, PARAGRAPH]),
+  '## Sources\n\n- https://www.justice.fr/',
+].join('\n\n');
+
 function researchRun(title: string) {
   return { fileByName: { 'research.md': `# ${title}\n\n## Sources\n\n- https://www.justice.fr/\n` } };
 }
@@ -104,7 +115,7 @@ const RUN_BY_VERSION: Record<string, Parameters<typeof createFakeAiSession>[numb
   [`${BASTIA_REFERENCE} letter v1`]: BASTIA_LETTER,
   [`${VERSAILLES_REFERENCE} research v1`]: researchRun('Recherche première : le pôle civil du TJ de Versailles'),
   [`${VERSAILLES_REFERENCE} research v2`]: researchRun('Recherche relancée : le pôle civil du TJ de Versailles'),
-  [`${RENNES_REFERENCE} research v1`]: researchRun('Recherche : la JIRS du TJ de Rennes'),
+  [`${RENNES_REFERENCE} research v1`]: { fileByName: { 'research.md': `${LONG_RESEARCH}\n` } },
   // The reason e2e/launch.test.ts reads beside the Relaunch button
   [`${NARBONNE_REFERENCE} research v1`]: {
     isSuccess: false,

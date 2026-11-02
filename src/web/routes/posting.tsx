@@ -1,4 +1,4 @@
-import { useEffect, useId } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLoaderData, useSearchParams, type LoaderFunctionArgs, type MetaArgs } from 'react-router';
 
@@ -10,7 +10,6 @@ import { summaryOf, type IArtifactVersions } from '#/web/components/artifact.ts'
 import { PageHeader } from '#/web/components/page-header.tsx';
 import { PostingFacts } from '#/web/components/posting-facts.tsx';
 import { POSTING_TAB_LIST, PostingTabs, type PostingTab, type TabSummary } from '#/web/components/posting-tabs.tsx';
-import { Recipients } from '#/web/components/recipients.tsx';
 import { StepBadge } from '#/web/components/step-badge.tsx';
 import { ArtifactView } from '#/web/containers/artifact-view.tsx';
 import { ExtractionLaunch } from '#/web/containers/extraction-launch.tsx';
@@ -54,7 +53,6 @@ export default function Posting() {
   const { detail } = useLoaderData<typeof loader>();
   const { posting, interviewList } = detail;
   const { t } = useTranslation('posting');
-  const recipientsId = useId();
   const [searchParameters, setSearchParameters] = useSearchParams();
   const requestedTab = searchParameters.get('tab');
   const tab = isPostingTab(requestedTab) ? requestedTab : 'posting';
@@ -115,18 +113,8 @@ export default function Posting() {
         return research === undefined ? null : <ArtifactView reference={posting.reference} {...research} />;
       }
       case 'letter': {
-        return (
-          <div className="space-y-6">
-            {detail.recipients !== null && (
-              <section aria-labelledby={recipientsId} className="space-y-3">
-                <h2 id={recipientsId} className="max-w-none text-label text-muted-foreground uppercase">
-                  {t('recipientsHeading')}
-                </h2>
-                <Recipients recipients={detail.recipients} />
-              </section>
-            )}
-            {letter !== undefined && <ArtifactView reference={posting.reference} {...letter} />}
-          </div>
+        return letter === undefined ? null : (
+          <ArtifactView reference={posting.reference} recipients={detail.recipients} {...letter} />
         );
       }
       case 'interviews': {

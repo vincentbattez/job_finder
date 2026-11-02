@@ -1,15 +1,17 @@
 import { cn } from 'cn';
-import { BookOpenIcon, CheckIcon, LoaderIcon, LockIcon, PencilLineIcon, SparklesIcon } from 'lucide-react';
+import { BookOpenIcon, CheckIcon, FocusIcon, LoaderIcon, LockIcon, PencilLineIcon, SparklesIcon } from 'lucide-react';
 import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Artifact } from '#/actions/index.ts';
-import { ArtifactText } from '#/web/components/mdx/artifact-text.tsx';
 import { Badge } from '#/web/components/ui/badge.tsx';
 import { Button } from '#/web/components/ui/button.tsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#/web/components/ui/select.tsx';
+import { useSidebar } from '#/web/components/ui/sidebar.tsx';
 
+import { ArtifactReader, LetterPage } from './artifact-reader.tsx';
 import type { IArtifactVersions, IVersionDetail } from './artifact.ts';
+import type { IRecipients } from './recipients.tsx';
 
 export type ArtifactMode = 'read' | 'edit';
 
@@ -129,6 +131,26 @@ function ModeSwitch({
   );
 }
 
+// Focus mode collapses the Sidebar, so the document takes the whole width (spec #125, user story 11)
+function FocusModeButton() {
+  const { t } = useTranslation('posting');
+  const { state, toggleSidebar } = useSidebar();
+  const isFocused = state === 'collapsed';
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant={isFocused ? 'secondary' : 'ghost'}
+      aria-pressed={isFocused}
+      className="hidden md:inline-flex"
+      onClick={toggleSidebar}
+    >
+      <FocusIcon aria-hidden />
+      {t('reader.focusMode')}
+    </Button>
+  );
+}
+
 // The Instructions its run had, folded until asked, so that two Versions compare
 function VersionInstructions({ version }: Readonly<{ version: ShownVersion }>) {
   const { t } = useTranslation('posting');
@@ -208,12 +230,18 @@ function EmptyArtifact({ artifact, launch }: Readonly<{ artifact: Artifact; laun
   );
 }
 
-// The Letter reads as a page, the way the employer receives it
+// The Letter reads as a page, the way the employer receives it; every other Artifact, along its rail
 function VersionBody({
   artifact,
   format,
   detail,
-}: Readonly<{ artifact: Artifact; format: IArtifactVersions['format']; detail: IVersionDetail }>) {
+  recipients,
+}: Readonly<{
+  artifact: Artifact;
+  format: IArtifactVersions['format'];
+  detail: IVersionDetail;
+  recipients: IRecipients | null;
+}>) {
   const { t } = useTranslation('posting');
   if (detail.text === null) {
     return (
@@ -223,13 +251,9 @@ function VersionBody({
     );
   }
   if (artifact === 'letter') {
-    return (
-      <div className="mx-auto max-w-[72ch] rounded-xl border bg-card px-6 py-8 shadow-xs sm:px-12 sm:py-12">
-        <ArtifactText text={detail.text} format={format} className="prose-p:my-3" />
-      </div>
-    );
+    return <LetterPage text={detail.text} recipients={recipients} />;
   }
-  return <ArtifactText text={detail.text} format={format} className="max-w-[72ch] prose-headings:max-w-none" />;
+  return <ArtifactReader text={detail.text} format={format} />;
 }
 
 interface IArtifactViewSlots {
@@ -256,11 +280,14 @@ export function ArtifactView({
   launch,
   validateButton,
   editor,
+  recipients = null,
 }: Readonly<
   Pick<IArtifactVersions, 'artifact' | 'state' | 'format' | 'isFrozen' | 'versionList'> &
     IArtifactViewSlots & {
       selectedNumber: number | null;
       mode: ArtifactMode;
+      // The Letter's recommended To and Cc, shown above its page
+      recipients?: IRecipients | null;
       onSelect: (number: number) => void;
       onModeChange: (mode: ArtifactMode) => void;
     }
@@ -286,7 +313,8 @@ export function ArtifactView({
             <div className="flex flex-wrap items-center gap-2">
               <VersionSelect versionList={versionList} version={detail.version} onSelect={onSelect} />
               <VersionStateBadge version={detail.version} />
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-2">
+                <FocusModeButton />
                 <ModeSwitch
                   mode={mode}
                   isEditable={detail.isCorrectable && detail.text !== null}
@@ -338,7 +366,7 @@ export function ArtifactView({
             {mode === 'edit' && detail.isCorrectable && detail.text !== null ? (
               editor(detail)
             ) : (
-              <VersionBody artifact={artifact} format={format} detail={detail} />
+              <VersionBody artifact={artifact} format={format} detail={detail} recipients={recipients} />
             )}
           </div>
         </>

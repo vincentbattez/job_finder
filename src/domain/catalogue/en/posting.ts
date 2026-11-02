@@ -163,6 +163,19 @@ export const POSTING_EN = {
   },
 
   // Marking Applied while the Letter is not validated (spec #125, « The Posting page »)
+  reader: {
+    sections: 'Sections',
+    progress: 'Progress',
+    progressLabel: 'Reading progress',
+    percent: '{{percent}}%',
+    read: '(read)',
+    readingTime_one: '≈ {{count}} min read',
+    readingTime_other: '≈ {{count}} min read',
+    sectionCount_one: '{{count}} section',
+    sectionCount_other: '{{count}} sections',
+    focusMode: 'Focus mode',
+  },
+
   appliedDialog: {
     title: 'Mark the Posting Applied?',
     draftDescription:
