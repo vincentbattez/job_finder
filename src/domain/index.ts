@@ -495,6 +495,13 @@ const ARTIFACT_VERSIONS_SCHEMA = z.object({
 // An Interview on the Posting page, with every Version of each Artifact attached to it
 const INTERVIEW_DETAIL_SCHEMA = z.object({ ...INTERVIEW_SHAPE, artifactList: z.array(ARTIFACT_VERSIONS_SCHEMA) });
 
+// The Application to an earlier Posting of a Position, which its Repost tells
+const EARLIER_APPLICATION_SCHEMA = z.object({
+  reference: z.string(),
+  appliedAt: z.date().nullable(),
+  step: STEP_SCHEMA,
+});
+
 // What the Posting page shows: the Posting with its raw contacts, its Job Description, every
 // Version of each Artifact with its files, and the recipients its Chosen Letter recommends
 export const POSTING_DETAIL_SCHEMA = z
@@ -507,6 +514,13 @@ export const POSTING_DETAIL_SCHEMA = z
     hasApplication: z.boolean(),
     interviewList: z.array(INTERVIEW_DETAIL_SCHEMA),
     jobDescription: z.string(),
+    // Its Position across its Reposts: how many times it was published, since when, and the latest
+    // Application the Candidate made to an earlier Posting of it
+    repost: z.object({
+      publicationNumber: z.int(),
+      firstPublishedAt: z.date().nullable(),
+      earlierApplication: EARLIER_APPLICATION_SCHEMA.nullable(),
+    }),
     // The Artifacts attached to the Posting
     artifactList: z.array(ARTIFACT_VERSIONS_SCHEMA),
     recipients: RECIPIENTS_SCHEMA.nullable(),

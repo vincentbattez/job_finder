@@ -68,7 +68,7 @@ test.describe('Instructions of a Candidate', () => {
     openPage,
   }) => {
     // Once React runs the page: hydration would fold back a Version unfolded before it
-    await openPage('/postings/2026-2409247');
+    await openPage('/postings/2026-2409247?tab=research');
 
     const research = page.getByRole('region', { name: 'Recherche' });
     await expect(research.locator('li > details > summary')).toHaveText([

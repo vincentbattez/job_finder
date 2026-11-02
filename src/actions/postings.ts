@@ -26,6 +26,23 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
     return version === undefined ? null : LETTER_MODULE.readRecipients(handle.directoryOf(version));
   }
 
+  // The earlier Postings of its Position, the latest first, each the one the next publishes again
+  async function listEarlierPostings(posting: Posting): Promise<Posting[]> {
+    const earlierPostingList: Posting[] = [];
+    let { repostOf } = posting;
+    while (repostOf !== null) {
+      const { reference } = repostOf;
+      const postingList = await workspace.findPostings(reference);
+      const earlierPosting = postingList.find(({ candidateId }) => candidateId === posting.candidateId);
+      if (earlierPosting === undefined) {
+        break;
+      }
+      earlierPostingList.push(earlierPosting);
+      repostOf = earlierPosting.repostOf;
+    }
+    return earlierPostingList;
+  }
+
   return {
     listCandidates(): Promise<Candidate[]> {
       return workspace.listCandidates();
@@ -57,6 +74,8 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
       const extractionJob = jobList.findLast(({ module }) => module === 'extraction');
       const interviewList = await workspace.listInterviews(posting);
       const handleList = await artifacts.listOf(posting);
+      const earlierPostingList = await listEarlierPostings(posting);
+      const earlierApplication = earlierPostingList.find((earlierPosting) => hasBeenApplied(earlierPosting));
       const describedList = await Promise.all(
         handleList.map(async (handle) => ({
           interviewId: handle.interview?.id ?? null,
@@ -72,6 +91,18 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
         hasApplication: hasBeenApplied(posting),
         interviewList: interviewList.map((interview) => ({ ...interview, artifactList: artifactListOf(interview.id) })),
         jobDescription: workspace.readJobDescription(posting, locale),
+        repost: {
+          publicationNumber: earlierPostingList.length + 1,
+          firstPublishedAt: (earlierPostingList.at(-1) ?? posting).publishedAt,
+          earlierApplication:
+            earlierApplication === undefined
+              ? null
+              : {
+                  reference: earlierApplication.reference,
+                  appliedAt: earlierApplication.appliedAt,
+                  step: earlierApplication.step,
+                },
+        },
         artifactList: artifactListOf(null),
         recipients: await findRecipients(posting),
         extraction:

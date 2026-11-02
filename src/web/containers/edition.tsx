@@ -59,20 +59,3 @@ export function ChooseButton({
     </fetcher.Form>
   );
 }
-
-// Archived is a mark beside the Status, so its button stands apart from the outcome selector and
-// leaves the Status as it is (ADR-0007)
-export function ArchiveButton({ reference, isArchived }: Readonly<{ reference: string; isArchived: boolean }>) {
-  const { t } = useTranslation('posting');
-  const fetcher = useFetcher<IRefusal>();
-  return (
-    <fetcher.Form method="post" action={`/postings/${reference}/archive`} preventScrollReset>
-      <ButtonRow>
-        <button className="button" type="submit" name="intent" value={isArchived ? 'unarchive' : 'archive'}>
-          {isArchived ? t('unarchive') : t('archive')}
-        </button>
-        <Refusal data={fetcher.data} />
-      </ButtonRow>
-    </fetcher.Form>
-  );
-}

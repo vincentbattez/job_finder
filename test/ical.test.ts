@@ -104,10 +104,10 @@ describe('the iCal file of an Interview', () => {
     expect(valueOf(text, 'DESCRIPTION')?.split(String.raw`\n`)).toEqual([
       'Annonce officielle : https://choisirleservicepublic.gouv.fr/offre-emploi/2026-2350473/?tracking=1&idOrigine=502',
       'Page Job Finder : https://job-finder.example.org/postings/2026-2350473',
-      'Recherche : https://job-finder.example.org/postings/2026-2350473#research',
-      'Lettre : https://job-finder.example.org/postings/2026-2350473#letter',
-      'Fiche d’entretien : https://job-finder.example.org/postings/2026-2350473#interview-1-interview_brief',
-      'Entretien 1 : https://job-finder.example.org/postings/2026-2350473#interview-1',
+      'Recherche : https://job-finder.example.org/postings/2026-2350473?tab=research',
+      'Lettre : https://job-finder.example.org/postings/2026-2350473?tab=letter',
+      'Fiche d’entretien : https://job-finder.example.org/postings/2026-2350473?tab=interviews&interview=1&doc=interview_brief',
+      'Entretien 1 : https://job-finder.example.org/postings/2026-2350473?tab=interviews&interview=1',
     ]);
     expect(valueOf(text, 'URL')).toBe('https://job-finder.example.org/postings/2026-2350473');
   });

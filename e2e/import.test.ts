@@ -52,6 +52,7 @@ test('imports a Job Description dropped on the Postings: it shows at once, then 
   const extraction = page.getByRole('form', { name: 'Champs relevés par Claude' });
   await expect(extraction.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(TITLE);
+  await page.getByRole('tab', { name: /^Recherche/ }).click();
   await expect(page.getByRole('region', { name: 'Recherche' }).getByRole('status')).toHaveText('Prêt', {
     timeout: READY_TIMEOUT_MS,
   });

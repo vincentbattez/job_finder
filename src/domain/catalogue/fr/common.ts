@@ -10,6 +10,7 @@ export const COMMON_FR: typeof COMMON_EN = {
     rejected: 'Refusée',
   },
   archived: 'Archivée',
+  stepArchived: '{{stepLabel}} · archivée',
   // cspell:ignore Dépubliée
   unpublished: 'Dépubliée',
   expired: 'Expirée',

@@ -4,12 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { interviewSectionIdOf } from '#/actions/interview-section.ts';
 
 import { ArtifactPrompt } from './artifact-prompt.tsx';
+import { STATE_BY_VERSION_STATE, type IArtifactVersions } from './artifact.ts';
 import { Badge, StateBadge } from './badge.tsx';
 import { CopyCommand } from './copy-command.tsx';
 import { DateText } from './date.tsx';
 import { Markdown } from './markdown.tsx';
 import { InstructionsOrigin } from './module-instructions.tsx';
-import { STATE_BY_VERSION_STATE, type IArtifactVersions } from './posting-detail.tsx';
 
 import './artifact-versions.css';
 
@@ -72,9 +72,7 @@ export function ArtifactVersions({
         <HEADING_TAG id={headingId} className="artifact-versions__title">
           {t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' })}
         </HEADING_TAG>
-        {prompt !== null && (
-          <ArtifactPrompt reference={reference} prompt={prompt} isUnderInterview={interviewNumber !== null} />
-        )}
+        {prompt !== null && <ArtifactPrompt prompt={prompt} isUnderInterview={interviewNumber !== null} />}
       </div>
       {launch}
       {isEditable && <CopyCommand command={`jf edit ${editArgumentList.join(' ')}`} />}
