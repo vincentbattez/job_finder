@@ -301,7 +301,7 @@ export function PostingTab({ posting, detail }: { posting: IPosting; detail: IPo
             />
           </div>
         </article>
-        <aside className="space-y-4 @4xl:sticky @4xl:top-20 @4xl:self-start">
+        <aside className="order-first space-y-4 @4xl:sticky @4xl:top-20 @4xl:order-none @4xl:self-start">
           <AsideCard title="Repères" icon={<CalendarClockIcon />}>
             <dl className="divide-y">
               <Fact label="Date limite">

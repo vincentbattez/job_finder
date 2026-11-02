@@ -11,18 +11,29 @@ interface ILineScan {
   isTopLevel: boolean;
 }
 
+// An opening tag whose attributes go on the next lines, as MDXEditor writes them
+const OPEN_TAG_START_PATTERN = /<[A-Z][\w.]*(?:\s[^<>]*)?$/u;
+
 function scanLines(source: string): ILineScan[] {
   let depth = 0;
   let fence: string | null = null;
+  let isInOpeningTag = false;
   return source.split('\n').map((line) => {
-    const isTopLevel = depth === 0 && fence === null;
-    const fenceMatch = FENCE_PATTERN.exec(line);
+    const isTopLevel = depth === 0 && fence === null && !isInOpeningTag;
+    const fenceMatch = isInOpeningTag ? null : FENCE_PATTERN.exec(line);
     if (fenceMatch !== null) {
       const marker = fenceMatch[1] ?? '';
       if (fence === null) {
         fence = marker.charAt(0);
       } else if (marker.startsWith(fence)) {
         fence = null;
+      }
+    } else if (isInOpeningTag) {
+      if (/\/>\s*$/u.test(line)) {
+        isInOpeningTag = false;
+      } else if (/>\s*$/u.test(line)) {
+        isInOpeningTag = false;
+        depth += 1;
       }
     } else if (fence === null) {
       for (const match of line.matchAll(JSX_TAG_PATTERN)) {
@@ -32,6 +43,7 @@ function scanLines(source: string): ILineScan[] {
           depth += 1;
         }
       }
+      isInOpeningTag = OPEN_TAG_START_PATTERN.test(line);
     }
     return { line, isTopLevel };
   });
@@ -66,13 +78,21 @@ export interface ISection {
 
 // The document cut at its top-level `## ` headings; what comes before is the introduction, titled by
 // the `# ` heading when there is one
-export function splitSections(source: string): ISection[] {
+const SHORT_INTRODUCTION_CHARS = 600;
+
+// The document cut at its top-level `## ` headings, its `# ` title apart; a short introduction joins the
+// first section, a long one is a section of its own
+export function splitSections(source: string): { title: string | null; sections: ISection[] } {
   const sectionList: ISection[] = [];
-  let title = 'Introduction';
+  let documentTitle: string | null = null;
+  let introduction = '';
+  let title: string | null = null;
   let lineList: string[] = [];
   const push = () => {
     const text = lineList.join('\n').trim();
-    if (text !== '' && !/^#\s[^\n]*$/u.test(text)) {
+    if (title === null) {
+      introduction = text;
+    } else if (text !== '') {
       sectionList.push({ id: `${String(sectionList.length)}-${slugify(title)}`, title, source: text });
     }
   };
@@ -83,13 +103,30 @@ export function splitSections(source: string): ISection[] {
       lineList = [line];
       continue;
     }
-    if (isTopLevel && sectionList.length === 0 && lineList.length === 0 && /^#\s/u.test(line)) {
-      title = plainText(line.replace(/^#\s+/u, ''));
+    if (isTopLevel && title === null && documentTitle === null && /^#\s/u.test(line)) {
+      documentTitle = plainText(line.replace(/^#\s+/u, ''));
+      continue;
     }
     lineList.push(line);
   }
   push();
-  return sectionList;
+  const [first, ...rest] = sectionList;
+  if (introduction === '' || first === undefined) {
+    return {
+      title: documentTitle,
+      sections:
+        first === undefined && introduction !== ''
+          ? [{ id: '0-introduction', title: 'Introduction', source: introduction }]
+          : sectionList,
+    };
+  }
+  if (introduction.length < SHORT_INTRODUCTION_CHARS) {
+    return { title: documentTitle, sections: [{ ...first, source: `${introduction}\n\n${first.source}` }, ...rest] };
+  }
+  return {
+    title: documentTitle,
+    sections: [{ id: 'intro-en-bref', title: 'En bref', source: introduction }, ...sectionList],
+  };
 }
 
 // Top-level blocks: separated by blank lines, a component or a fence kept whole

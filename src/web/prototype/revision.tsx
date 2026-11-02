@@ -281,18 +281,26 @@ export default function RevisionPage() {
                   <ArtifactContent
                     source={portraitVersion.text}
                     format={portrait?.format ?? 'mdx'}
-                    className="prose-sm"
+                    className="prose-sm prose-h1:text-xl prose-h2:text-lg"
                   />
                 )}
               </TabsContent>
               <TabsContent value="posting">
-                <ArtifactContent source={posting?.jobDescription ?? ''} format="markdown" className="prose-sm" />
+                <ArtifactContent
+                  source={posting?.jobDescription ?? ''}
+                  format="markdown"
+                  className="prose-sm prose-h1:text-xl prose-h2:text-lg"
+                />
               </TabsContent>
               <TabsContent value="letter">
                 {letterVersion === undefined ? (
                   <SideEmpty>Pas de Lettre pour cette Offre.</SideEmpty>
                 ) : (
-                  <ArtifactContent source={letterVersion.text} format="markdown" className="prose-sm" />
+                  <ArtifactContent
+                    source={letterVersion.text}
+                    format="markdown"
+                    className="prose-sm prose-h1:text-xl prose-h2:text-lg"
+                  />
                 )}
               </TabsContent>
             </div>

@@ -17,7 +17,7 @@ import { Tabs, TabsList, TabsTrigger } from '#/web/prototype/components/ui/tabs.
 import { cn } from '#/web/prototype/lib/utils.ts';
 
 import { loadPostingDetail } from './data.server.ts';
-import { formatCountdown, formatDate, type ArtifactState } from './model.ts';
+import { formatCountdown, formatDate, summaryOf, type ArtifactState } from './model.ts';
 import { PageHeader } from './page-header.tsx';
 import { ArtifactView } from './posting/artifact-view.tsx';
 import { PostingActions } from './posting/header-actions.tsx';
@@ -119,8 +119,12 @@ export default function PostingPage() {
           >
             {TAB_LIST.map((value) => (
               <TabsTrigger key={value} value={value} className="flex-none gap-2 px-3 py-2">
-                {value === 'research' ? <StateDot state={posting.research.state} /> : null}
-                {value === 'letter' ? <StateDot state={posting.letter.state} /> : null}
+                {value === 'research' ? (
+                  <StateDot state={summaryOf(detail.artifacts.find(({ key }) => key === 'research')).state} />
+                ) : null}
+                {value === 'letter' ? (
+                  <StateDot state={summaryOf(detail.artifacts.find(({ key }) => key === 'letter')).state} />
+                ) : null}
                 {TAB_LABEL[value]}
                 {value === 'interviews' && posting.interviews.length > 0 ? (
                   <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[10px] tabular-nums">

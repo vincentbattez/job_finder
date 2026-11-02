@@ -36,6 +36,10 @@ function MermaidRender({ code }: { code: string }) {
         theme: isDark ? 'dark' : 'neutral',
         fontFamily: 'Inter Variable, ui-sans-serif, system-ui, sans-serif',
         flowchart: { curve: 'basis', padding: 12 },
+        xyChart: { width: 560, height: 260 },
+        themeVariables: {
+          xyChart: { plotColorPalette: isDark ? '#7d93ff' : '#3a57d6', backgroundColor: 'transparent' },
+        },
       });
       try {
         const result = await mermaid.render(`mermaid-${id}-${isDark ? 'dark' : 'light'}`, code);
@@ -62,7 +66,7 @@ function MermaidRender({ code }: { code: string }) {
   }
   return (
     <div
-      className="flex justify-center overflow-x-auto [&_svg]:h-auto [&_svg]:max-w-full"
+      className="flex justify-center overflow-x-auto [&_svg]:h-auto [&_svg]:max-h-[28rem] [&_svg]:max-w-full"
       // Mermaid's own SVG, rendered with securityLevel strict
       dangerouslySetInnerHTML={{ __html: svg }}
     />

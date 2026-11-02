@@ -190,7 +190,11 @@ function VisualEditor({
   return (
     <MDXEditor
       markdown={text}
-      onChange={(markdown) => onChange(markdown)}
+      onChange={(markdown, isInitialNormalize) => {
+        if (!isInitialNormalize) {
+          onChange(markdown);
+        }
+      }}
       onError={({ error }) => onError(error)}
       className={cn(resolvedTheme === 'dark' && 'dark-theme')}
       contentEditableClassName={cn(PROSE, 'min-h-[60vh] px-1 py-6')}

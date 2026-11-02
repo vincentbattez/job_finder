@@ -4,7 +4,8 @@
 // it as the newest Version, a Draft produced by the AI, whose Original differs from its text by a few
 // corrections of the Candidate (so « Comparer à l'Original » has something to show). The store then
 // overlays it like any other Version: validating, correcting or regenerating it works as usual.
-import type { IInputRef, IPostingDetail, IVersion } from '../model.ts';
+import type { IArtifact, IInputRef, IPostingDetail, IVersion } from '../model.ts';
+import { RESEARCH_SHOWCASE } from './research-showcase.server.ts';
 
 export const SHOWCASE_REFERENCE = '2026-2417004';
 const SHOWCASE_ARTIFACT_KEY = 'interview_brief@1';
@@ -465,7 +466,19 @@ function briefOf(pick: 'original' | 'corrected'): string {
   );
 }
 
-// The detail with the showcase Version on top, as a new object: the loader's snapshot is shared
+function appended(artifact: IArtifact, version: Omit<IVersion, 'number' | 'instructions'>): IArtifact {
+  const previous = artifact.versions.at(-1);
+  return {
+    ...artifact,
+    format: 'mdx',
+    versions: [
+      ...artifact.versions,
+      { ...version, number: (previous?.number ?? 0) + 1, instructions: previous?.instructions ?? '' },
+    ],
+  };
+}
+
+// The detail with the showcase Versions on top, as a new object: the loader's snapshot is shared
 export function withShowcase(detail: IPostingDetail | null): IPostingDetail | null {
   if (detail?.reference !== SHOWCASE_REFERENCE) {
     return detail;
@@ -473,23 +486,34 @@ export function withShowcase(detail: IPostingDetail | null): IPostingDetail | nu
   return {
     ...detail,
     artifacts: detail.artifacts.map((artifact) => {
-      if (artifact.key !== SHOWCASE_ARTIFACT_KEY) {
-        return artifact;
+      if (artifact.key === SHOWCASE_ARTIFACT_KEY) {
+        return appended(artifact, {
+          state: 'draft',
+          isChosen: false,
+          origin: 'ai',
+          createdAt: SHOWCASE_CREATED_AT,
+          fileName: 'interview-brief.mdx',
+          text: briefOf('corrected'),
+          original: briefOf('original'),
+          inputs: SHOWCASE_INPUT_LIST,
+        });
       }
-      const previous = artifact.versions.at(-1);
-      const version: IVersion = {
-        number: (previous?.number ?? 0) + 1,
-        state: 'draft',
-        isChosen: false,
-        origin: 'ai',
-        createdAt: SHOWCASE_CREATED_AT,
-        fileName: 'interview-brief.mdx',
-        text: briefOf('corrected'),
-        original: briefOf('original'),
-        inputs: SHOWCASE_INPUT_LIST,
-        instructions: previous?.instructions ?? '',
-      };
-      return { ...artifact, format: 'mdx', versions: [...artifact.versions, version] };
+      if (artifact.key === 'research') {
+        return appended(artifact, {
+          state: 'draft',
+          isChosen: false,
+          origin: 'ai',
+          createdAt: '2026-11-02T07:40:00.000Z',
+          fileName: 'research.mdx',
+          text: RESEARCH_SHOWCASE,
+          original: RESEARCH_SHOWCASE,
+          inputs: [
+            { key: 'job_description', label: 'Fiche de poste' },
+            { key: 'notes', label: 'Notes' },
+          ],
+        });
+      }
+      return artifact;
     }),
   };
 }

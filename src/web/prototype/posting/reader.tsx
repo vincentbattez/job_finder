@@ -513,7 +513,7 @@ function RailReader({ source, format, memoryKey, headerOffset = DEFAULT_HEADER_O
 // ——— C · Étude ———
 
 function StudyReader({ source, format, memoryKey, headerOffset = DEFAULT_HEADER_OFFSET_PX }: IReaderProps) {
-  const sectionList = useMemo(() => splitSections(source), [source]);
+  const { title: documentTitle, sections: sectionList } = useMemo(() => splitSections(source), [source]);
   const [index, setIndex] = useMemory<number>(`study-index:${memoryKey}`, 0);
   const [masteredList, setMasteredList] = useMemory<string[]>(`study-mastered:${memoryKey}`, []);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -573,6 +573,11 @@ function StudyReader({ source, format, memoryKey, headerOffset = DEFAULT_HEADER_
   const position = Math.min(index, total - 1);
   return (
     <div className="@container">
+      {documentTitle === null ? null : (
+        <p className="mb-4 text-xl leading-snug font-semibold tracking-tight text-balance @2xl:text-2xl">
+          {documentTitle}
+        </p>
+      )}
       <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="min-w-48 flex-1">
           <div className="mb-1.5 flex items-baseline justify-between text-xs">
