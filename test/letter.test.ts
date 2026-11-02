@@ -4,11 +4,13 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
+import { promptOf } from '#/artifact/prompt.ts';
 import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructions.ts';
 
 import { applyTo } from './apply.ts';
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { markedValuesOf } from './marked-values.ts';
 
 // Léa's, in French
 const LETTER_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.letter;
@@ -54,8 +56,6 @@ const AVESNES_RECIPIENTS = {
 
 // Two other Postings of Léa: the second Béthune bench Posting and the Béthune prosecution one
 const SENT_REFERENCE = '2026-2445609';
-const SENT_DIRECTORY_NAME =
-  '2026-2445609-attache-de-justice-affecte-aupres-des-magistrats-du-siege-service-de-l-instruction-tj-bethune';
 const UNSENT_REFERENCE = '2026-2445183';
 const UNSENT_RECIPIENTS = {
   to: { email: 'chcab.pr.tj-bethune@justice.fr', source: 'applicationEmail' },
@@ -63,6 +63,23 @@ const UNSENT_RECIPIENTS = {
   salutation: { text: 'Monsieur le Procureur de la République,', source: null },
   justification: 'Le mail de candidature est celui du cabinet du procureur.',
 };
+
+// Léa's Profile: her CV, a past letter and an Annex, which a run reads only once checked
+const CV = '# Léa Martin\n\nMaster 2 de droit privé, Université de Lille, 2025.\n';
+const PAST_LETTER = 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal judiciaire de Lille.\n';
+
+function writeProfile(dataDirectory: string): void {
+  const profileDirectory = path.join(dataDirectory, 'candidates/lea/profile');
+  writeFileSync(path.join(profileDirectory, 'cv.md'), CV);
+  writeFileSync(path.join(profileDirectory, 'letter-tj-lille-2025.md'), PAST_LETTER);
+  writeFileSync(path.join(profileDirectory, 'annex-memoire.md'), '# Mémoire\n\nLa justice des mineurs.\n');
+}
+
+// The Letter as Léa corrected then sent it, its Draft kept as the Original
+const SENT = `Madame la Présidente,
+
+Titulaire d'un master 2 de droit privé, je souhaite rejoindre le service de l'instruction de Béthune.
+`;
 
 async function detectPostings(aiSession: ReturnType<typeof createFakeAiSession>) {
   const { actions, dataDirectory } = await detectRecordedPostings(aiSession);
@@ -114,7 +131,7 @@ describe('letter', () => {
     }
   });
 
-  it('reads the Job Description, the Chosen Research, the Profile and the pairs of the Postings already Applied', async () => {
+  it('receives inlined the Job Description, the Chosen Research, the Profile and each Letter sent with its Original', async () => {
     const aiSession = createFakeAiSession(
       RESEARCH_RUN,
       letterRun(),
@@ -125,8 +142,15 @@ describe('letter', () => {
       letterRun(),
     );
     const { actions, dataDirectory, postingDirectory } = await detectPostings(aiSession);
+    writeProfile(dataDirectory);
     await runModule(actions, 'research', SENT_REFERENCE);
     await runModule(actions, 'letter', SENT_REFERENCE);
+    await actions.saveDocument({
+      reference: SENT_REFERENCE,
+      artifact: 'letter',
+      fileName: 'letter.md',
+      markdown: SENT,
+    });
     await applyTo(actions, SENT_REFERENCE);
     await runModule(actions, 'research', UNSENT_REFERENCE);
     await runModule(actions, 'letter', UNSENT_REFERENCE);
@@ -136,18 +160,24 @@ describe('letter', () => {
 
     const { version } = await runModule(actions, 'letter', REFERENCE);
 
-    const profileDirectory = path.join(dataDirectory, 'candidates/lea/profile');
-    const sentDirectory = path.join(dataDirectory, 'candidates/lea/postings', SENT_DIRECTORY_NAME, 'letter/v1');
     const session = aiSession.headlessSessionList.at(-1);
-    // The folder of the Posting is the session's own: only the folders outside it are added
-    expect(session?.readDirectoryList).toEqual([profileDirectory, sentDirectory]);
-    expect(session?.fixedPrompt).toContain('`job-description.md`');
-    expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'research/v1/research.md')}\``);
-    expect(session?.fixedPrompt).toContain(`\`${profileDirectory}\``);
-    // Its core is read in full, its Annexes as far as the Posting calls for them, never the originals
-    expect(session?.fixedPrompt).toContain('`annex-*.md`');
-    expect(session?.fixedPrompt).toContain('`uploads/`');
-    expect(session?.fixedPrompt).toContain(`\`${sentDirectory}\``);
+    const jobDescription = readFileSync(path.join(postingDirectory, 'job-description.md'), 'utf8');
+    expect(session?.message).toBe(
+      [
+        '# Inputs',
+        `## Input: Job Description\n\n${jobDescription.trim()}`,
+        `## Input: Chosen Research\n\n${RESEARCH_RUN.fileByName['research.md'].trim()}`,
+        `## Input: Profile: cv.md\n\n${CV.trim()}`,
+        `## Input: Past Letter: letter-tj-lille-2025.md\n\n${PAST_LETTER.trim()}`,
+        `## Input: Letter sent for Posting ${SENT_REFERENCE}\n\n### As sent\n\n${SENT.trim()}\n\n### Its Original, as the AI wrote it\n\n${DRAFT.trim()}`,
+        '# Instructions',
+        LETTER_DEFAULT_INSTRUCTIONS.trim(),
+      ].join('\n\n'),
+    );
+    // The session reads no Input from disk (ADR-0021): no path, no folder, an Annex only once checked
+    expect(session?.fixedPrompt).not.toMatch(/job-description\.md|research\.md|profile|annex|uploads/);
+    // It writes its Version only: no folder to read, no web to search
+    expect(session).toMatchObject({ isReadingDirectory: false, isSearchingWeb: false });
     expect(session?.fixedPrompt).not.toContain(UNSENT_REFERENCE);
     expect(version?.inputList).toEqual([
       { key: 'job_description', readVersion: null },
@@ -155,10 +185,37 @@ describe('letter', () => {
         key: 'artifact:research',
         readVersion: { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
       },
+      { key: 'profile:cv.md', readVersion: null },
+      { key: 'profile:letter-tj-lille-2025.md', readVersion: null },
       {
         key: `posting:${SENT_REFERENCE}/letter`,
         readVersion: { artifact: 'letter', number: 1, posting: { reference: SENT_REFERENCE }, interview: null },
       },
+    ]);
+  });
+
+  it('is the one its preview composes, with the Posting and its contacts marked where they are substituted', async () => {
+    const aiSession = createFakeAiSession(RESEARCH_RUN, letterRun(AVESNES_RECIPIENTS));
+    const { actions, dataDirectory } = await detectPostings(aiSession);
+    writeProfile(dataDirectory);
+    await runModule(actions, 'research', AVESNES_REFERENCE);
+    const { artifactList } = await actions.readPosting({ reference: AVESNES_REFERENCE });
+    const prompt = artifactList.find(({ artifact }) => artifact === 'letter')?.module.prompt;
+
+    await runModule(actions, 'letter', AVESNES_REFERENCE);
+
+    const session = aiSession.headlessSessionList.at(-1);
+    expect(prompt?.prompt.replaceAll('letter/v<next>', 'letter/v1')).toBe(session && promptOf(session));
+    expect(markedValuesOf(prompt?.markedFixedPart)).toEqual([
+      AVESNES_REFERENCE,
+      "Attaché de justice affecté auprès des magistrats du parquet - TJ d'Avesnes-sur-Helpe",
+      "Tribunal judiciaire d'Avesnes sur Helpe / Cour d'appel de Douai",
+      "11 rue du Maréchal Joffre, 59440 - TJ d'Avesnes-sur-Helpe",
+      `"${AVESNES_APPLICATION_EMAIL}"`,
+      '"Secrétariat du Procureur : sec.pr.tj-avesnes-sur-helpe@justice.fr"',
+      'not given',
+      'letter/v<next>/draft.md',
+      'letter/v<next>/recipients.json',
     ]);
   });
 });
@@ -171,10 +228,10 @@ describe('the prompt of the Letter', () => {
 
     const { version } = await runModule(actions, 'letter', REFERENCE);
 
-    const { fixedPrompt, message: instructions } = aiSession.headlessSessionList[1] ?? {};
+    const { fixedPrompt, message } = aiSession.headlessSessionList[1] ?? {};
     expect(fixedPrompt).toContain('Never invent a fact about the Candidate');
     expect(fixedPrompt).toContain('`[à compléter : …]`');
-    expect(instructions).toBe(LETTER_DEFAULT_INSTRUCTIONS);
+    expect(message?.endsWith(`# Instructions\n\n${LETTER_DEFAULT_INSTRUCTIONS.trim()}`)).toBe(true);
     expect(version?.instructions).toBe(LETTER_DEFAULT_INSTRUCTIONS);
   });
 
@@ -188,7 +245,9 @@ describe('the prompt of the Letter', () => {
 
     const { version } = await runModule(actions, 'letter', REFERENCE);
 
-    expect(aiSession.headlessSessionList[1]?.message).toBe(instructions);
+    expect(aiSession.headlessSessionList[1]?.message).toMatch(
+      /# Instructions\n\nUne lettre courte, trois paragraphes au plus\.$/,
+    );
     expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain('Never invent a fact about the Candidate');
     expect(version?.instructions).toBe(instructions);
   });

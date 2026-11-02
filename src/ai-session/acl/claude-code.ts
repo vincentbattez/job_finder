@@ -24,8 +24,12 @@ export interface IHeadlessSession {
   fixedPrompt: string;
   message: string;
   directory: string;
-  readDirectoryList: string[];
   outputDirectory: string;
+  // Whether it reads the files of its directory, as a conversion or an extraction; an Artifact's session reads
+  // nothing from disk, its Inputs inlined in its message (ADR-0021)
+  isReadingDirectory: boolean;
+  // Whether it searches the web, as the Research and the Portrait
+  isSearchingWeb: boolean;
   // That of the Candidate, for the log of a session that failed
   locale: Locale;
 }
@@ -75,6 +79,12 @@ const REFUSAL_LIST: { code: ErrorCode; pattern: RegExp }[] = [
     pattern: /Please run \/login|Invalid API key|OAuth token (?:has )?expired|Not logged in/i,
   },
 ];
+
+// The tools of a headless session: it writes, and only in its output folder; it reads its directory or
+// searches the web only when told to
+const READ_TOOL_LIST = ['Read', 'Glob', 'Grep'];
+const WEB_TOOL_LIST = ['WebSearch', 'WebFetch'];
+const WRITE_TOOL_LIST = ['Write', 'Edit'];
 
 // A session past its maximum duration gets SIGTERM; one still alive this long after gets SIGKILL
 const KILL_GRACE_MS = 10_000;
@@ -166,7 +176,16 @@ export function createClaudeCode(sessionTimeoutMs: number, killGraceMs = KILL_GR
     // The fixed part goes into the system prompt so that no Instructions can lift its rules (ADR-0003);
     // cspell:words dontAsk
     // dontAsk refuses any tool not listed. A session that cannot run is a failed one, never a throw.
-    async runHeadless({ fixedPrompt, message, directory, readDirectoryList, outputDirectory, locale }) {
+    async runHeadless({
+      fixedPrompt,
+      message,
+      directory,
+      outputDirectory,
+      isReadingDirectory,
+      isSearchingWeb,
+      locale,
+    }) {
+      const allowedToolList = [...(isReadingDirectory ? READ_TOOL_LIST : []), ...(isSearchingWeb ? WEB_TOOL_LIST : [])];
       const argumentList = [
         '-p',
         '--output-format',
@@ -175,18 +194,11 @@ export function createClaudeCode(sessionTimeoutMs: number, killGraceMs = KILL_GR
         '--permission-mode',
         'dontAsk',
         '--tools',
-        'Read,Glob,Grep,Write,Edit,WebSearch,WebFetch,Agent',
+        [...allowedToolList, ...WRITE_TOOL_LIST].join(','),
         '--allowedTools',
-        'Read',
-        'Glob',
-        'Grep',
-        'WebSearch',
-        'WebFetch',
-        // A subagent reads a long Annex for the session and reports only what serves (ADR-0003)
-        'Agent',
-        // An absolute path takes a double slash in a permission rule
+        ...allowedToolList,
+        // Its writes are confined to its output folder; an absolute path takes a double slash in a permission rule
         `Edit(/${outputDirectory}/**)`,
-        ...readDirectoryList.flatMap((readDirectory) => ['--add-dir', readDirectory]),
         '--append-system-prompt',
         fixedPrompt,
       ];

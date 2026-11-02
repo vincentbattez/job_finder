@@ -100,8 +100,10 @@ describe('research', () => {
     expect(aiSession.headlessSessionList[0]).toMatchObject({
       message: `# Inputs\n\n## Input: Job Description\n\n${jobDescription.trim()}\n\n# Instructions\n\n${RESEARCH_DEFAULT_INSTRUCTIONS.trim()}`,
       directory: postingDirectory,
-      readDirectoryList: [],
       outputDirectory: path.join(postingDirectory, 'research/v1'),
+      // It writes its Version and searches the web, and reads nothing from disk (ADR-0021)
+      isReadingDirectory: false,
+      isSearchingWeb: true,
     });
     expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain('Never invent a fact.');
     expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain('`research/v1/research.md`');

@@ -227,8 +227,7 @@ describe('the Repost of a Posting not Applied', () => {
       },
     ]);
     const session = aiSession.headlessSessionList[2];
-    // The session reads no Input from disk: they are inlined in its message (ADR-0021)
-    expect(session?.readDirectoryList).toEqual([]);
+    // Its Inputs are inlined in its message (ADR-0021)
     expect(session?.fixedPrompt).toContain(`This Posting is the Repost of Posting ${REFERENCE}`);
     expect(session?.message).toContain(
       `## Input: Chosen Research of Posting ${REFERENCE}\n\n${RESEARCH_RUN.fileByName['research.md'].trim()}\n\n`,

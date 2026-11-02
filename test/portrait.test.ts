@@ -143,7 +143,7 @@ describe('the prompt of the Portrait', () => {
     );
     // The session reads no Input from disk (ADR-0021), and nothing about the Candidate portrays the Interviewers
     expect(session?.fixedPrompt).not.toMatch(/research\.md|job-description\.md/);
-    expect(session?.readDirectoryList).toEqual([]);
+    expect(session).toMatchObject({ isReadingDirectory: false, isSearchingWeb: true });
     expect(readVersionsOf(version)).toEqual([
       { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
     ]);
@@ -214,19 +214,18 @@ describe('the prompt of the Portrait', () => {
 // The Interview Brief adapts the pitch to the Interviewers as the Portrait establishes them
 describe('the Interview Brief and the Portrait', () => {
   it('reads the Chosen Portrait of its Interview', async () => {
-    const aiSession = createFakeAiSession(RESEARCH_RUN, portraitRun(), portraitRun(), BRIEF_RUN);
-    const { actions, postingDirectory } = await applyWithInterview(aiSession);
+    const aiSession = createFakeAiSession(RESEARCH_RUN, portraitRun(), portraitRun('# Autre portrait\n'), BRIEF_RUN);
+    const { actions } = await applyWithInterview(aiSession);
     await runModule(actions, 'portrait', 1);
     await runModule(actions, 'portrait', 1);
     await actions.chooseVersion({ reference: REFERENCE, artifact: 'portrait', interview: 1, number: 1 });
 
     const { version } = await runModule(actions, 'brief', 1);
 
-    const fixedPrompt = aiSession.headlessSessionList.at(-1)?.fixedPrompt;
-    expect(fixedPrompt).toContain(
-      `The Chosen Portrait of the Interviewers: \`${path.join(postingDirectory, 'interviews/1/portrait/v1/portrait.md')}\``,
-    );
-    expect(fixedPrompt).not.toContain('portrait/v2');
+    const { fixedPrompt, message } = aiSession.headlessSessionList.at(-1) ?? {};
+    expect(fixedPrompt).toContain('The Inputs hold the Chosen Portrait of the Interviewers');
+    expect(message).toContain(`## Input: Chosen Portrait of Interview 1\n\n${PORTRAIT.trim()}\n\n`);
+    expect(message).not.toContain('# Autre portrait');
     expect(readVersionsOf(version)).toEqual([
       { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
       { artifact: 'portrait', number: 1, posting: { reference: REFERENCE }, interview: { number: 1 } },

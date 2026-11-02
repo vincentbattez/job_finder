@@ -45,7 +45,7 @@ describe('conversion of an Upload', () => {
     expect(await conversionOf(actions)).toEqual({ state: 'in_progress', log: '' });
     await actions.runQueuedJobs();
     const [session] = aiSession.headlessSessionList;
-    expect(session?.directory).toBe(profileDirectory);
+    expect(session).toMatchObject({ directory: profileDirectory, isReadingDirectory: true, isSearchingWeb: false });
     expect(session?.fixedPrompt).toContain('uploads/cv.pdf');
     expect(session?.fixedPrompt).toContain('convert it faithfully into Markdown, without rewriting or translating it');
     expect(session?.fixedPrompt).toContain('letter-<employer>-<year>.md');
