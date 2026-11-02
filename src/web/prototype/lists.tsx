@@ -55,7 +55,7 @@ function ListPage() {
       {!isMobile && variant === 'A' ? <VariantA /> : null}
       {!isMobile && variant === 'B' ? <VariantB /> : null}
       {!isMobile && variant === 'C' ? <VariantC /> : null}
-      <PostingSheet />
+      <PostingSheet side={!isMobile && (variant === 'A' || variant === 'C') ? 'left' : 'right'} />
     </div>
   );
 }

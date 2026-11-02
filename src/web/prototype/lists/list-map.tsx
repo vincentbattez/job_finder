@@ -29,7 +29,7 @@ const TILE_CLASS =
 const POINT_CLASS =
   'block size-full rounded-full border-2 border-white shadow-[0_1px_3px_rgb(0_0_0/0.45)] transition-[transform,box-shadow] duration-150 ease-out group-data-[highlight=hover]/marker:scale-150 group-data-[highlight=hover]/marker:shadow-[0_0_0_4px_color-mix(in_oklch,var(--foreground)_22%,transparent)] group-data-[highlight=active]/marker:scale-[1.7] group-data-[highlight=active]/marker:shadow-[0_0_0_5px_color-mix(in_oklch,var(--primary)_40%,transparent)] dark:border-neutral-900 data-archived:opacity-50';
 const TOOLTIP_CLASS =
-  'w-max max-w-64 rounded-md border-border bg-popover px-2 py-1 font-sans whitespace-normal text-xs font-medium text-popover-foreground shadow-md before:hidden';
+  'w-max min-w-24 max-w-72 rounded-md border-border bg-popover px-2 py-1 font-sans whitespace-normal text-xs font-medium text-popover-foreground shadow-md before:hidden';
 const CONTROL_CLASS =
   'bg-muted font-sans [&_.leaflet-bar]:border-border [&_.leaflet-bar]:shadow-sm [&_.leaflet-bar_a]:border-border [&_.leaflet-bar_a]:bg-background [&_.leaflet-bar_a]:text-foreground [&_.leaflet-bar_a:hover]:bg-muted [&_.leaflet-control-attribution]:bg-background/70 [&_.leaflet-control-attribution]:text-[10px] [&_.leaflet-control-attribution]:text-muted-foreground [&_.leaflet-control-attribution_a]:text-muted-foreground';
 
@@ -68,8 +68,9 @@ interface IListMapProps {
 
 export function ListMap({
   className,
-  paddingTopLeft = [32, 32],
-  paddingBottomRight = [32, 32],
+  // More room on top: a label opens above its point
+  paddingTopLeft = [24, 64],
+  paddingBottomRight = [24, 24],
   zoomPosition = 'topright',
   toneOf = (posting) => STEP_TONE[posting.step].dot,
 }: IListMapProps) {
@@ -79,6 +80,9 @@ export function ListMap({
   const mapReference = useRef<{ leaflet: Leaflet; map: LeafletMap; layer: LayerGroup } | null>(null);
   const markerByReference = useRef(new Map<string, Marker>());
   const [isReady, setIsReady] = useState(false);
+  // Whether the Candidate moved the view, and the fit of the view to the shown points (below)
+  const isUserMoved = useRef(false);
+  const fitView = useRef(() => {});
   // The handlers of the points read the latest callbacks without rebuilding the points
   const latest = useRef({ hover, activate, toneOf, paddingTopLeft, paddingBottomRight, postings });
   latest.current = { hover, activate, toneOf, paddingTopLeft, paddingBottomRight, postings };
@@ -92,14 +96,27 @@ export function ListMap({
       if (isUnmounted || container === null) {
         return;
       }
-      map = leaflet.map(container, { zoomSnap: 0.5, zoomControl: false });
+      // Fine zoom steps, so a fit fills the map instead of rounding down to a whole level
+      map = leaflet.map(container, { zoomSnap: 0.1, zoomDelta: 0.5, zoomControl: false });
       leaflet.control.zoom({ position: zoomPosition, zoomInTitle: 'Zoomer', zoomOutTitle: 'Dézoomer' }).addTo(map);
       leaflet.tileLayer(TILE_URL, { attribution: ATTRIBUTION, className: TILE_CLASS }).addTo(map);
       map.fitBounds(MAINLAND_BOUNDS);
       const layer = leaflet.layerGroup().addTo(map);
       mapReference.current = { leaflet, map, layer };
       const currentMap = map;
-      observer = new ResizeObserver(() => currentMap.invalidateSize());
+      // A drag or a wheel is the Candidate's own view: a resize no longer refits it
+      currentMap.on('dragstart', () => {
+        isUserMoved.current = true;
+      });
+      container.addEventListener('wheel', () => {
+        isUserMoved.current = true;
+      });
+      observer = new ResizeObserver(() => {
+        currentMap.invalidateSize();
+        if (!isUserMoved.current) {
+          fitView.current();
+        }
+      });
       observer.observe(container);
       setIsReady(true);
     });
@@ -148,10 +165,11 @@ export function ListMap({
     }
   }, [isReady, pointKey]);
 
-  // The view, fitted again when the list, its tab or its filters change (not when a row leaves)
-  useEffect(() => {
+  // The view fits the shown points (mainland France first, the overseas ones when alone), again when
+  // the list, its tab or its filters change (not when a row leaves) and when the map is resized
+  fitView.current = () => {
     const current = mapReference.current;
-    if (!isReady || current === null) {
+    if (current === null) {
       return;
     }
     const { leaflet, map } = current;
@@ -164,9 +182,16 @@ export function ListMap({
     const bounds: LatLngBoundsExpression = shownList.length > 0 ? leaflet.latLngBounds(shownList) : mainland;
     map.fitBounds(bounds, {
       maxZoom: 11,
+      animate: false,
       paddingTopLeft: latest.current.paddingTopLeft,
       paddingBottomRight: latest.current.paddingBottomRight,
     });
+  };
+  useEffect(() => {
+    if (isReady) {
+      isUserMoved.current = false;
+      fitView.current();
+    }
   }, [isReady, fitKey]);
 
   // The highlight: hovered, active (its Sheet open or its point clicked), or none

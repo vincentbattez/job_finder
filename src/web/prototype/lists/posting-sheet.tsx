@@ -520,7 +520,9 @@ function SheetBody({ posting }: { posting: IPosting }) {
 // Clicks on a row, a point, a toast or the variant switcher keep the Sheet open
 const KEEP_OPEN_SELECTOR = '[data-posting-row], .leaflet-container, [data-sonner-toaster], [data-prototype-switcher]';
 
-export function PostingSheet() {
+// On the side away from the map: over the list when the map is on the right (A, C), on the right
+// when the list floats on the left (B) and on mobile
+export function PostingSheet({ side = 'right' }: { side?: 'left' | 'right' }) {
   const { sheetReference, closeSheet } = useListController();
   const posting = usePosting(sheetReference ?? '');
   return (
@@ -530,8 +532,8 @@ export function PostingSheet() {
       modal={false}
     >
       <SheetContent
-        side="right"
-        className="gap-0 shadow-2xl data-[side=right]:w-full data-[side=right]:sm:max-w-[30rem]"
+        side={side}
+        className="gap-0 shadow-2xl data-[side=left]:w-full data-[side=right]:w-full data-[side=left]:sm:max-w-[30rem] data-[side=right]:sm:max-w-[30rem]"
         onOpenAutoFocus={(event) => event.preventDefault()}
         onInteractOutside={(event) => {
           if (event.target instanceof Element && event.target.closest(KEEP_OPEN_SELECTOR) !== null) {
