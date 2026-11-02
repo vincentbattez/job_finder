@@ -63,8 +63,12 @@ test.describe('Instructions of a Candidate', () => {
     await expect(letter.getByRole('textbox')).toHaveValue(/^Écris une lettre de motivation d'une page/);
   });
 
-  test('tells which Instructions produced each Version, and shows them folded to compare', async ({ page }) => {
-    await page.goto('/postings/2026-2409247');
+  test('tells which Instructions produced each Version, and shows them folded to compare', async ({
+    page,
+    openPage,
+  }) => {
+    // Once React runs the page: hydration would fold back a Version unfolded before it
+    await openPage('/postings/2026-2409247');
 
     const research = page.getByRole('region', { name: 'Recherche' });
     await expect(research.locator('li > details > summary')).toHaveText([
