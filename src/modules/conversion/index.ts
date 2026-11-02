@@ -39,6 +39,9 @@ export function createUploadConversion(aiSession: IAiSession) {
         directory: profileDirectory,
         // Inside the Profile, where the session runs: nothing to add
         outputDirectory,
+        // It reads the Upload in the Profile, and searches nothing on the web
+        isReadingDirectory: true,
+        isSearchingWeb: false,
         locale: candidate.locale,
       });
       if (!session.isSuccess) {

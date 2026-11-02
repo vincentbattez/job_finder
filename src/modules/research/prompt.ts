@@ -48,7 +48,7 @@ A single Markdown file: \`${outputPath}\`.
 
 ## Research discipline
 
-Carry out the research yourself, in the foreground, without handing it to a background agent.
+Carry out the research yourself.
 - Rely on primary sources: the website of the employer or of the court, official texts, the reports and press releases of institutions, and for the news the articles that report it directly. Trace each claim back to the source that holds it, rather than citing a second-hand summary.
 - Each claim is sourced. What you cannot source, do not write as a fact: present it as a hypothesis or an open question.
 

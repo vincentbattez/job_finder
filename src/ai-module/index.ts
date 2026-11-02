@@ -69,6 +69,8 @@ export interface IAiModule {
   optionalArtifactList?: readonly Artifact[];
   // The Artifacts whose Chosen Version it reads on each Interview of the Posting before its own
   previousInterviewArtifactList?: readonly Artifact[];
+  // Whether its session searches the web; it reads nothing from disk either way, its Inputs inlined (ADR-0021)
+  isSearchingWeb?: boolean;
   // Whether it reads the Notes of the Posting
   isReadingNotes?: boolean;
   // Whether the module reads the Profile of the Candidate, its Past Letters included: those of the Profile

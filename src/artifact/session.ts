@@ -135,6 +135,8 @@ export async function runSession(
     message,
     directory: postingDirectory,
     outputDirectory,
+    isReadingDirectory: false,
+    isSearchingWeb: aiModule.isSearchingWeb === true,
     locale,
   });
   // The log starts with the message of the failure's code, which the Posting page and jf versions show;

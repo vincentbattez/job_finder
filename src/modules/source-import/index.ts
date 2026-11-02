@@ -44,6 +44,9 @@ export function createImportSource(aiSession: IAiSession) {
         message: EXTRACTION_REQUEST,
         directory: postingDirectory,
         outputDirectory,
+        // It reads the Job Description in the Posting's folder, and searches nothing on the web
+        isReadingDirectory: true,
+        isSearchingWeb: false,
         locale,
       });
       if (!session.isSuccess) {

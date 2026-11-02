@@ -215,6 +215,7 @@ describe('interview brief', () => {
     );
     // The session reads no Input from disk (ADR-0021)
     expect(session?.fixedPrompt).not.toMatch(/job-description\.md|research\.md|letter\.md|profile|uploads/);
+    expect(session).toMatchObject({ isReadingDirectory: false, isSearchingWeb: false });
     expect(session?.fixedPrompt).toContain('The Inputs hold the Chosen Letter');
     expect(readVersionsOf(version)).toEqual([
       { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
