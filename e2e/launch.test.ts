@@ -1,5 +1,6 @@
-import { expect, test } from '@playwright/test';
 import { z } from 'zod/v4';
+
+import { expect, test } from './candidate.ts';
 
 // Each test launches modules on a Posting of its own, which test/seed-front.ts prepares: the data
 // folder is shared by the whole run. The e2e worker runs the queued jobs with the fake Claude, whose
@@ -17,8 +18,8 @@ const RECEIVED_NOTIFICATION_LIST_SCHEMA = z.array(
 );
 
 test.describe('launching the modules of a Posting', () => {
-  test('launches the Letter, then shows it turn ready without a reload', async ({ page }) => {
-    await page.goto(`/postings/${LETTER_REFERENCE}?tab=letter`);
+  test('launches the Letter, then shows it turn ready without a reload', async ({ page, openPage }) => {
+    await openPage(`/postings/${LETTER_REFERENCE}?tab=letter`);
     const letter = page.getByRole('region', { name: 'Lettre de motivation' });
     await expect(letter.getByRole('status')).toHaveText('Absent');
     await expect(letter.getByText('Pas encore de Lettre de motivation')).toBeVisible();
@@ -34,8 +35,12 @@ test.describe('launching the modules of a Posting', () => {
     await expect(page.getByRole('tab', { name: 'Lettre de motivation (Brouillon)' })).toBeVisible();
   });
 
-  test('relaunches a failed Research, which lets the Letter run and notifies it ready', async ({ page, request }) => {
-    await page.goto(`/postings/${FAILED_RESEARCH_REFERENCE}?tab=letter`);
+  test('relaunches a failed Research, which lets the Letter run and notifies it ready', async ({
+    page,
+    request,
+    openPage,
+  }) => {
+    await openPage(`/postings/${FAILED_RESEARCH_REFERENCE}?tab=letter`);
     const research = page.getByRole('region', { name: 'Recherche' });
     const letter = page.getByRole('region', { name: 'Lettre de motivation' });
     await expect(letter).toContainText(`L'Offre ${FAILED_RESEARCH_REFERENCE} n'a pas de Recherche validée`);
