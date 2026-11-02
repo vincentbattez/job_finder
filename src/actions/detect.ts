@@ -9,6 +9,7 @@ import {
   type Detection,
   type DetectionOrigin,
   type DetectionOverview,
+  type JobDescription,
   type ListedPosting,
   type Locale,
   type Location,
@@ -20,7 +21,6 @@ import {
 import { readCity } from '#/geo/city.ts';
 import { composeDetectionSummary, type ISummarizedPosting, type ISummarizedWatch } from '#/notification/index.ts';
 import { findRepostedPosting } from '#/repost/index.ts';
-import type { ISourceReadResult } from '#/source/index.ts';
 import { hasBeenApplied } from '#/status/index.ts';
 
 import type { ActionContext } from './context.ts';
@@ -127,7 +127,7 @@ export function createDetectActions({
   async function saveNewPosting(
     { watch: { candidateId, source }, isFirstLaunch, postingList, locale, locate: locateCity }: IWatchRun,
     listedPosting: ListedPosting,
-    { jobDescription, isInZone }: ISourceReadResult,
+    jobDescription: JobDescription,
   ): Promise<{ posting: Posting; summarized: ISummarizedPosting | undefined }> {
     const repostOf = findRepostedPosting({ ...listedPosting, ...jobDescription }, postingList);
     const location = await locateCity(readCity(jobDescription.workplace), locale);
@@ -137,7 +137,6 @@ export function createDetectActions({
       listedPosting,
       jobDescription,
       status: 'new',
-      isInZone,
       repostOf,
       location,
     });
@@ -163,8 +162,7 @@ export function createDetectActions({
   }
 
   // A Posting is known by its reference, never by its publication date, which the site changes
-  // (ADR-0001). Each Watch has its own Zone: a Posting stored out of the Zone of one is read again
-  // by each other Watch that has not read it yet.
+  // (ADR-0001). A Posting another Watch of the Candidate already stored is not read again.
   // Each Posting to tell goes into summarizedList as soon as it is saved, so that a Detection cut off
   // still tells it
   async function detectWatch(
@@ -175,7 +173,6 @@ export function createDetectActions({
   ): Promise<IFoundPostings> {
     const { candidateId, source } = watch;
     await workspace.updateDetectionWatch(detection, watch.id, { step: 'searching' });
-    const outOfZonePostingList = await workspace.listOutOfZonePostingsSince(watch);
     const locale = await findLocale(candidateId);
     const sourceModule = findSource(source, locale, watch.id);
     const { matchingList, nearMissList, publishedReferenceList } = await sourceModule.search(watch, locale);
@@ -195,10 +192,8 @@ export function createDetectActions({
     const isSame = (posting: Posting, { reference }: ListedPosting) =>
       posting.source === source && posting.reference === reference;
     // Counted before reading, so the front shows how many Job Descriptions are left
-    const toReadList = oldestFirstList.filter(
-      (listedPosting) =>
-        outOfZonePostingList.some((posting) => isSame(posting, listedPosting)) ||
-        run.postingList.every((posting) => !isSame(posting, listedPosting)),
+    const toReadList = oldestFirstList.filter((listedPosting) =>
+      run.postingList.every((posting) => !isSame(posting, listedPosting)),
     );
     await workspace.updateDetectionWatch(detection, watch.id, {
       step: 'reading',
@@ -207,16 +202,10 @@ export function createDetectActions({
       nearMissList: nearMissList.map((posting) => referenceAndTitle(posting)),
     });
     for (const [index, listedPosting] of toReadList.entries()) {
-      const outOfZonePosting = outOfZonePostingList.find((posting) => isSame(posting, listedPosting));
-      const readResult = await sourceModule.readJobDescription(listedPosting.reference, watch, locale);
-      if (outOfZonePosting === undefined) {
-        const { posting, summarized } = await saveNewPosting(run, listedPosting, readResult);
-        newPostingList.push(posting);
-        summarizedList.push(...(summarized === undefined ? [] : [summarized]));
-      } else if (readResult.isInZone) {
-        // Told when it was saved: the Zone no longer starts anything (ADR-0018)
-        await workspace.setInZone(outOfZonePosting);
-      }
+      const jobDescription = await sourceModule.readJobDescription(listedPosting.reference, watch, locale);
+      const { posting, summarized } = await saveNewPosting(run, listedPosting, jobDescription);
+      newPostingList.push(posting);
+      summarizedList.push(...(summarized === undefined ? [] : [summarized]));
       await workspace.updateDetectionWatch(detection, watch.id, {
         readCount: index + 1,
         newPostingList: newPostingList.map((posting) => referenceAndTitle(posting)),

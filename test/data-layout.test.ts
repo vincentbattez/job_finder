@@ -20,6 +20,8 @@ const BEFORE_VISUALIZATION_REMOVAL_MIGRATION = '20261031110442_posting_unpublish
 const BEFORE_VERSION_INPUT_MIGRATION = '20261102182655_remove_visualization';
 // The last migration before a detected Posting started New (ADR-0018)
 const BEFORE_NEW_STATUS_MIGRATION = '20261102184315_version_input';
+// The last migration before the Zone went away (ADR-0018)
+const BEFORE_ZONE_REMOVAL_MIGRATION = '20261102194517_posting_status_new';
 
 const FACTS = '# Faits\n\n## Mobilité\n\n- Lille et alentours\n';
 const CV = '# CV de Léa\n';
@@ -157,7 +159,14 @@ describe('the French data folder', () => {
       expect.objectContaining({ isChosen: true, instructions: LETTER_INSTRUCTIONS, hasCandidateInstructions: true }),
     ]);
     expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([
-      { id: 'lea-1', candidateId: 'lea', source: 'pep', parameters: WATCH_PARAMETERS, detectedAt: DETECTED_AT },
+      // Its Zone gone since (ADR-0018)
+      {
+        id: 'lea-1',
+        candidateId: 'lea',
+        source: 'pep',
+        parameters: { title: 'attaché de justice' },
+        detectedAt: DETECTED_AT,
+      },
     ]);
     expect(await actions.readDefaultDeadlinePeriod()).toEqual({ months: 6 });
     expect(listSorted(dataDirectory)).toEqual([
@@ -330,8 +339,8 @@ describe('the French data folder', () => {
     });
   });
 
-  // Her daily Detection goes on after the update: no first launch, so a new Posting in her Zone gets
-  // its Research and her phone hears of it, through the Notification Channel she had saved
+  // Her daily Detection goes on after the update: no first launch, so a new Posting is saved New and
+  // her phone hears of it, through the Notification Channel she had saved
   it('keeps the next Detection from being a first launch', async () => {
     const dataDirectory = writeFrenchDataDirectory();
     const notificationChannel = createFakeNotificationChannel();
@@ -600,6 +609,50 @@ describe('the unsorted Postings of an older database', () => {
       { reference: '2026-4', status: 'new' },
       { reference: '2026-5', status: 'new' },
       { reference: '2026-6', status: 'applied' },
+    ]);
+  });
+});
+
+// Léa's Watches as the jf with a Zone left them: the PEP one with its courts of appeal, one of
+// another Source whose Parameters hold none, beside a Posting in the Zone and one out of it
+function writeZonedDataDirectory(): string {
+  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+  const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_ZONE_REMOVAL_MIGRATION));
+  database.exec(`INSERT INTO Candidate (id, name) VALUES ('lea', 'Léa');
+    INSERT INTO DefaultDeadlinePeriod (id, months) VALUES (1, 6);
+    INSERT INTO Watch (id, candidateId, source, parameters, detectedAt) VALUES
+      ('hauts-de-france', 'lea', 'pep', '{"title":"attaché de justice","courtOfAppealList":["Douai","Amiens"]}',
+        '2026-10-30T10:44:22.500+00:00'),
+      ('other', 'lea', 'other', '{"title":"greffier"}', NULL);
+    INSERT INTO Posting (id, candidateId, source, reference, title, status, isInZone) VALUES
+      (1, 'lea', 'pep', '2026-1', 'Greffier', 'new', 1),
+      (2, 'lea', 'pep', '2026-2', 'Greffier', 'to_apply', 0);`);
+  database.close();
+  return dataDirectory;
+}
+
+// The main checkout migrates Léa's real data/: the Candidate's sorting replaces the Zone (ADR-0018)
+describe('the Zone of an older database', () => {
+  it('leaves the Parameters of each Watch and its Postings, idempotently', async () => {
+    const dataDirectory = writeZonedDataDirectory();
+
+    await createActions({ dataDirectory });
+    await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'SELECT id, parameters, detectedAt FROM Watch ORDER BY id')).toEqual([
+      {
+        id: 'hauts-de-france',
+        parameters: '{"title":"attaché de justice"}',
+        detectedAt: '2026-10-30T10:44:22.500+00:00',
+      },
+      { id: 'other', parameters: '{"title":"greffier"}', detectedAt: null },
+    ]);
+    expect(selectAll(dataDirectory, "SELECT name FROM pragma_table_info('Posting') WHERE name = 'isInZone'")).toEqual(
+      [],
+    );
+    expect(selectAll(dataDirectory, 'SELECT reference, status FROM Posting ORDER BY id')).toEqual([
+      { reference: '2026-1', status: 'new' },
+      { reference: '2026-2', status: 'to_apply' },
     ]);
   });
 });

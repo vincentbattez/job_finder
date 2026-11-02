@@ -8,11 +8,11 @@ import { createFakeNotificationChannel, LEA_TARGET } from './fake-notification-c
 import { LEA_WATCH } from './lea.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
-// The two Béthune Postings, both in the Zone, and an attaché de justice Posting outside it, from the
-// responses recorded on 2026-10-29
+// The two Béthune Postings and an attaché de justice Posting near Paris, from the responses recorded on
+// 2026-10-29
 const REFERENCE = '2026-2445600';
 const OTHER_REFERENCE = '2026-2445609';
-const OUT_OF_ZONE_REFERENCE = '2026-2215099';
+const PARIS_AREA_REFERENCE = '2026-2215099';
 
 const RESEARCH = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
 
@@ -44,7 +44,7 @@ function linkOf(reference: string): string {
 }
 
 const BETHUNE_TITLE = 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE';
-const OUT_OF_ZONE_TITLE =
+const PARIS_AREA_TITLE =
   'Attaché(e) de justice affecté auprès des magistrats au parquet du tribunal judiciaire de Créteil';
 const OTHER_BETHUNE_TITLE =
   "Attaché de justice affecté auprès des magistrats du siège - Service de l'instruction - TJ BETHUNE";
@@ -54,9 +54,9 @@ describe('the Detection Summary', () => {
     vi.useRealTimers();
   });
 
-  // Every Posting it saved New, with no Zone to filter them (ADR-0018)
+  // Every Posting it saved New, wherever its court of appeal: the Candidate sorts them (ADR-0018)
   it('tells the Candidate, once per Detection, every Posting found New, when it ran, its Watches and its Near Misses', async () => {
-    const { actions, notificationChannel } = await detectBefore([REFERENCE, OTHER_REFERENCE, OUT_OF_ZONE_REFERENCE]);
+    const { actions, notificationChannel } = await detectBefore([REFERENCE, OTHER_REFERENCE, PARIS_AREA_REFERENCE]);
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-11-01T06:00:00Z'));
 
@@ -67,7 +67,7 @@ describe('the Detection Summary', () => {
         target: LEA_TARGET,
         title: '3 nouvelles Offres',
         message:
-          `• ${OUT_OF_ZONE_TITLE} — Parquet Tribunal judiciaire de Créteil\n` +
+          `• ${PARIS_AREA_TITLE} — Parquet Tribunal judiciaire de Créteil\n` +
           `• ${BETHUNE_TITLE} — Tribunal Judiciaire de Béthune\n` +
           `• ${OTHER_BETHUNE_TITLE} — Tribunal Judiciaire de Béthune\n` +
           'Détection du 01/11/2026 07:00 · 4 titres écartés de peu',
@@ -76,9 +76,9 @@ describe('the Detection Summary', () => {
             heading: 'Nouvelles Offres',
             lineList: [
               {
-                text: OUT_OF_ZONE_TITLE,
+                text: PARIS_AREA_TITLE,
                 detail: 'Parquet Tribunal judiciaire de Créteil · Date limite : 05/04/2026 · Réf. 2026-2215099',
-                url: linkOf(OUT_OF_ZONE_REFERENCE),
+                url: linkOf(PARIS_AREA_REFERENCE),
               },
               {
                 text: BETHUNE_TITLE,
@@ -140,16 +140,16 @@ describe('the Detection Summary', () => {
   it('lists 5 Postings on the phone and counts the others, all of them in its sections', async () => {
     const { actions: detectedActions } = await detectPostings();
     const postingList = await detectedActions.listPostings({ candidateId: 'lea' });
-    const inZoneList = postingList.filter(({ isInZone }) => isInZone);
-    const { actions, notificationChannel } = await detectBefore(inZoneList.map(({ reference }) => reference));
+    const newList = postingList.slice(0, 9);
+    const { actions, notificationChannel } = await detectBefore(newList.map(({ reference }) => reference));
 
     await actions.detect();
 
     const [summary] = notificationChannel.sentList;
-    expect(inZoneList.length).toBeGreaterThan(5);
+    expect(newList.length).toBeGreaterThan(5);
     expect(summary?.message.split('\n')).toHaveLength(7);
-    expect(summary?.message).toContain(`\n+${String(inZoneList.length - 5)} autres Offres\nDétection du `);
-    expect(summary?.sectionList?.[0]?.lineList).toHaveLength(inZoneList.length);
+    expect(summary?.message).toContain(`\n+${String(newList.length - 5)} autres Offres\nDétection du `);
+    expect(summary?.sectionList?.[0]?.lineList).toHaveLength(newList.length);
   });
 
   it('sends nothing on the first launch, which imports the Postings already online', async () => {

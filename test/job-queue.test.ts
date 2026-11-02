@@ -8,7 +8,7 @@ import { applyTo } from './apply.ts';
 import { detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
-// The two Béthune Postings, both in the Zone, detected from the responses recorded on 2026-10-29
+// The two Béthune Postings, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 const OTHER_REFERENCE = '2026-2445609';
 

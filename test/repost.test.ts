@@ -6,11 +6,10 @@ import { applyTo } from './apply.ts';
 import { createDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
-import { LEA_WATCH, LEA_WATCH_ID } from './lea.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
-// The Boulogne parquet Position, published as 2026-2231960 then again as 2026-2338409, both in Léa's
-// Zone (responses recorded on 2026-10-29)
+// The Boulogne parquet Position, published as 2026-2231960 then again as 2026-2338409 (responses
+// recorded on 2026-10-29)
 const REFERENCE = '2026-2231960';
 const REPOST_REFERENCE = '2026-2338409';
 
@@ -32,9 +31,8 @@ const LETTER_RUN = {
 };
 
 // A first Detection on the feed as it was before the Repost, then the actions for the next
-// one, on the feed as recorded. Out of the Zone, the Zone of Léa's Watch leaves out the court of
-// appeal of Douai, that of Boulogne.
-async function detectBeforeRepost(aiSession = createFakeAiSession(), { isOutOfZone = false } = {}) {
+// one, on the feed as recorded
+async function detectBeforeRepost(aiSession = createFakeAiSession()) {
   const dataDirectory = createDataDirectory();
   const notificationChannel = createFakeNotificationChannel();
   const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout([REPOST_REFERENCE]) } });
@@ -44,14 +42,6 @@ async function detectBeforeRepost(aiSession = createFakeAiSession(), { isOutOfZo
     fetch: earlierFetch.fetch,
     notificationChannelList: notificationChannel.notificationChannelList,
   });
-  if (isOutOfZone) {
-    await earlierActions.saveWatch({
-      candidateId: 'lea',
-      watchId: LEA_WATCH_ID,
-      source: 'pep',
-      parameters: { ...LEA_WATCH.parameters, courtOfAppealList: ['Amiens'] },
-    });
-  }
   await notificationChannel.saveFor(earlierActions);
   await earlierActions.detect();
   const actions = await createActions({
@@ -129,28 +119,10 @@ describe('the Repost of an Applied Posting', () => {
       },
     ]);
   });
-});
-
-describe('the Repost of an Applied Posting out of the Zone', () => {
-  it('tells the Candidate all the same, who already applied to the Position', async () => {
-    const { actions, notificationChannel } = await detectBeforeRepost(createFakeAiSession(), {
-      isOutOfZone: true,
-    });
-    await applyTo(actions, REFERENCE);
-
-    await actions.detect();
-
-    expect(await findPosting(actions, REPOST_REFERENCE)).toMatchObject({ isInZone: false });
-    expect(notificationChannel.sentList.map(({ message }) => message)).toEqual([
-      expect.stringContaining('· Republication, déjà Postulée\n'),
-    ]);
-  });
 
   // Archived since, the Posting was Applied all the same
   it('tells the Candidate once the Applied Posting is Archived', async () => {
-    const { actions, notificationChannel } = await detectBeforeRepost(createFakeAiSession(), {
-      isOutOfZone: true,
-    });
+    const { actions, notificationChannel } = await detectBeforeRepost();
     await applyTo(actions, REFERENCE);
     await actions.archive({ reference: REFERENCE });
 
@@ -179,19 +151,6 @@ describe('the Repost of a Posting not Applied', () => {
         detail: `Tribunal Judiciaire de Boulogne-sur-mer · Date limite : 03/08/2026 · Réf. ${REPOST_REFERENCE} · Republication de l'Offre ${REFERENCE} : gardée, sa Recherche partira de celle de cette Offre`,
         url: `https://choisirleservicepublic.gouv.fr/offre-emploi/${REPOST_REFERENCE}/?tracking=1&idOrigine=502`,
       },
-    ]);
-  });
-
-  // The Zone no longer filters what the Detection Summary tells (ADR-0018)
-  it('tells it out of the Zone too', async () => {
-    const { actions, notificationChannel } = await detectBeforeRepost(createFakeAiSession(), {
-      isOutOfZone: true,
-    });
-
-    await actions.detect();
-
-    expect(notificationChannel.sentList.map(({ message }) => message)).toEqual([
-      expect.stringContaining('· Republication\n'),
     ]);
   });
 

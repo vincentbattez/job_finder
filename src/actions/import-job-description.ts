@@ -65,9 +65,6 @@ export function createImportActions({ workspace, importSource, findCandidate, lo
         location: await locate(null, candidate.locale),
         // Importing it is already the decision to pursue it: it skips New (ADR-0018)
         status: 'to_apply',
-        // No Watch detected it, so no Zone holds it; chosen by the Candidate, it gets its Research
-        // once extracted, whatever the Zone (ADR-0003)
-        isInZone: false,
         repostOf: undefined,
       });
       return workspace.createJob(posting, 'extraction');

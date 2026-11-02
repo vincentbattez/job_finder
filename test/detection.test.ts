@@ -138,22 +138,6 @@ describe('detection on the responses recorded on 2026-10-29', () => {
     ).toEqual(ATTACHE_DE_JUSTICE_REFERENCE_LIST);
   });
 
-  it('places in the Zone the Postings of the courts of appeal of Douai and Amiens, whatever department they show', async () => {
-    const postingList = await actions.listPostings({ candidateId: 'lea' });
-
-    expect(postingList.filter((posting) => posting.isInZone).map((posting) => posting.reference)).toEqual([
-      '2026-2445609',
-      '2026-2445600',
-      '2026-2445183',
-      '2026-2360445',
-      '2026-2360411',
-      '2026-2350473',
-      '2026-2338409',
-      '2026-2231960',
-      '2026-2199164',
-    ]);
-  });
-
   it('records the fields of the detail page as published', async () => {
     expect(await findPosting('2026-2445600')).toMatchObject({
       candidateId: 'lea',
@@ -170,7 +154,6 @@ describe('detection on the responses recorded on 2026-10-29', () => {
       contact2: 'secrétariat en copie : sec.p.tj-bethune@justice.fr',
       // Not sorted yet (ADR-0018)
       status: 'new',
-      isInZone: true,
       isExpired: false,
     });
   });
@@ -186,12 +169,11 @@ describe('detection on the responses recorded on 2026-10-29', () => {
     expect(await findPosting('2026-2350473')).toMatchObject({ city: 'Boulogne-sur-Mer', region: 'Hauts-de-France' });
   });
 
-  it('locates every Posting, those out of the Zone too', async () => {
+  it('locates every Posting, overseas too', async () => {
     const postingList = await actions.listPostings({ candidateId: 'lea' });
 
     expect(postingList.filter(({ latitude, longitude }) => latitude === null || longitude === null)).toEqual([]);
     expect(await findPosting('2026-2430337')).toMatchObject({
-      isInZone: false,
       city: 'Nouméa',
       region: 'Nouvelle-Calédonie',
       latitude: -22.3363,
@@ -333,7 +315,7 @@ describe('a Posting its Source no longer publishes', () => {
       candidateId: 'lea',
       watchId: LEA_WATCH_ID,
       source: 'pep',
-      parameters: { title: 'astronaute', courtOfAppealList: ['Douai'] },
+      parameters: { title: 'astronaute' },
     });
 
     await actions.detect();
@@ -370,7 +352,7 @@ describe('a first launch cut off mid-way', () => {
   });
 });
 
-// The two Béthune Postings, both in the Zone, read in this order: the second one's page fails
+// The two Béthune Postings, read in this order: the second one's page fails
 const SAVED_BEFORE_CUT_REFERENCE = '2026-2445600';
 const CUT_REFERENCE = '2026-2445609';
 
@@ -437,10 +419,10 @@ describe('a city API Géo does not know', () => {
   });
 });
 
-// The two Béthune Postings, both in the Zone, published after a first Detection
+// The two Béthune Postings, published after a first Detection
 const BETHUNE_REFERENCE_LIST = ['2026-2445600', '2026-2445609'];
 
-// A Béthune Posting in the Zone and an overseas one outside it
+// A Béthune Posting and an overseas one
 const NEW_REFERENCE_LIST = ['2026-2445600', '2026-2430337'];
 
 describe('a detection while API Géo is down', () => {
@@ -510,7 +492,8 @@ describe('a detection while API Géo is down', () => {
 
 // The Candidate sorts what the Detection found (ADR-0018): keeping a Posting starts its Research
 describe('a Detection after the first launch', () => {
-  it('saves its Postings New and queues no Research, in the Zone or not', async () => {
+  // The Zone is gone: a Posting of the courts of appeal Léa once chose and one overseas alike
+  it('saves its Postings New and queues no Research, whatever their court of appeal', async () => {
     const dataDirectory = createDataDirectory();
     const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout(NEW_REFERENCE_LIST) } });
     const earlierActions = await createActions({ dataDirectory, fetch: earlierFetch.fetch });
@@ -522,10 +505,7 @@ describe('a Detection after the first launch', () => {
     const postingList = await actions.listPostings({ candidateId: 'lea' });
     expect(
       NEW_REFERENCE_LIST.map((reference) => postingList.find((posting) => posting.reference === reference)),
-    ).toMatchObject([
-      { status: 'new', isInZone: true },
-      { status: 'new', isInZone: false },
-    ]);
+    ).toMatchObject([{ status: 'new' }, { status: 'new' }]);
     expect(await actions.runQueuedJobs()).toEqual([]);
   });
 });

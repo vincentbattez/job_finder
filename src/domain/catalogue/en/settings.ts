@@ -98,7 +98,7 @@ export const SETTINGS_EN = {
   watches: {
     heading: 'Watches',
     intro:
-      'Each Watch keeps looking for the new Postings of a Source. A Watch created or modified first imports the Postings already online, without launching anything; then each new Posting of its Zone launches its Research and is notified to you. Deleting a Watch keeps its Postings.',
+      'Each Watch keeps looking for the new Postings of a Source. A Watch created or modified first imports the Postings already online, without launching anything; then each new Posting is notified to you, to sort. Deleting a Watch keeps its Postings.',
     newWatch: 'New Watch',
     watch: 'Watch {{watchId}}',
     source: 'Source',
@@ -128,7 +128,6 @@ export const SETTINGS_EN = {
   parameter: {
     configured: 'configured',
     keepSaved: 'Leave empty to keep the saved value',
-    onePerLine: '{{label}}, one per line',
   },
 
   instructions: {

@@ -30,7 +30,6 @@ describe('the copy of the registered modules', () => {
 
     expect(pep?.parameterList.map(({ label }) => [textOf('fr', label), textOf('en', label)])).toEqual([
       ['Titre recherché', 'Searched title'],
-      ['Cours d’appel de la Zone', 'Courts of appeal of the Zone'],
     ]);
   });
 });

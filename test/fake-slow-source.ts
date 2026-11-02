@@ -52,8 +52,7 @@ interface ISlowSourceDelays {
 
 // Stands in for a Source, an external boundary, in the e2e tests: a slow module of the family, without
 // network, declared as a real one (ADR-0010). Each search lists Postings never seen before, or always
-// the same ones given referencePrefix, and one near-miss Posting, out of the Zone so that nothing is
-// queued nor notified; given failAfter, reading fails once that many Job Descriptions are read.
+// the same ones given referencePrefix, and one near-miss Posting; given failAfter, reading fails once that many Job Descriptions are read.
 export function defineSlowSource({ searchMs, readMs }: ISlowSourceDelays): SourceFactory {
   return defineSource({
     id: 'slow',
@@ -100,19 +99,16 @@ export function defineSlowSource({ searchMs, readMs }: ISlowSourceDelays): Sourc
       if (failAfter !== undefined && Number(reference.slice(-3)) > Number(failAfter)) {
         throw new Error(`The slow Source failed on ${reference}.`);
       }
-      return {
-        jobDescription: JOB_DESCRIPTION_SCHEMA.parse({
-          deadline: null,
-          startDate: null,
-          employer: null,
-          workplace: null,
-          applicationEmail: null,
-          contact1: null,
-          contact2: null,
-          markdown: `# ${reference}\n`,
-        }),
-        isInZone: false,
-      };
+      return JOB_DESCRIPTION_SCHEMA.parse({
+        deadline: null,
+        startDate: null,
+        employer: null,
+        workplace: null,
+        applicationEmail: null,
+        contact1: null,
+        contact2: null,
+        markdown: `# ${reference}\n`,
+      });
     },
 
     readStartDate: () => null,
