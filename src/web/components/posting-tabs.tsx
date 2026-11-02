@@ -23,11 +23,11 @@ const DOT_BY_SUMMARY: Record<TabSummary, string> = {
 };
 
 // The dot leads the tab; its label follows the tab's name, for a screen reader
-function StateDot({ summary }: Readonly<{ summary: TabSummary }>) {
+export function StateDot({ summary }: Readonly<{ summary: TabSummary }>) {
   return <span aria-hidden className={cn('inline-block size-1.5 rounded-full', DOT_BY_SUMMARY[summary])} />;
 }
 
-function StateLabel({ summary }: Readonly<{ summary: TabSummary }>) {
+export function StateLabel({ summary }: Readonly<{ summary: TabSummary }>) {
   const { t } = useTranslation('posting');
   return (
     <span className="sr-only">{t('page.tabState', { stateLabel: t(`page.tabStateLabelBySummary.${summary}`) })}</span>

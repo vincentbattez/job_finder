@@ -5,6 +5,9 @@ import {
   JOB_DESCRIPTION_FILE_NAME,
   ORIGINAL_FILE_NAME,
   type Artifact,
+  type InputKind,
+  type InputMode,
+  type InputReason,
   type Interview,
   type Posting,
   type Version,
@@ -21,15 +24,6 @@ export interface ITarget {
   interview: Interview | null;
 }
 
-// required: locked and checked; default: checked, can be unchecked; optional: unchecked, added on demand
-type InputMode = 'required' | 'default' | 'optional';
-
-// Why an Input cannot be unchecked, which the front words
-type InputReason = 'job_description' | 'required_artifact' | 'profile_core';
-
-// A Past Letter is one of the Profile's or the Chosen Letter of another Applied Posting: one set either way
-type InputKind = 'job_description' | 'artifact' | 'notes' | 'profile_document' | 'past_letter';
-
 // What a run reads, resolved from its AI module's declarations (ADR-0021)
 export interface IInput {
   // Unique among the Inputs of a run, and recorded by the Version that read it: `job_description`,
@@ -43,7 +37,8 @@ export interface IInput {
   // Its exact content
   content: string;
   wordCount: number;
-  // The Chosen Version read, for an Artifact Input, and its Posting
+  // The Artifact read, even one without a Chosen Version yet, then that Chosen Version and its Posting
+  artifact: Artifact | null;
   readVersion: { posting: Posting; version: Version } | null;
   // The file of the Profile, for a document of the Profile
   fileName: string | null;
@@ -71,6 +66,7 @@ function inputOf(
   return {
     reason: null,
     isAvailable: true,
+    artifact: null,
     readVersion: null,
     fileName: null,
     datedAt: null,
@@ -128,6 +124,7 @@ async function artifactInputOf(
     reason: mode === 'required' ? 'required_artifact' : null,
     isAvailable: version !== undefined,
     content: version === undefined ? '' : readVersionContent(workspace, target.posting, version),
+    artifact,
     readVersion: version === undefined ? null : { posting: target.posting, version },
   });
 }
@@ -151,6 +148,7 @@ async function otherPostingInputOf(
         content: isWithOriginal
           ? sentWithOriginalOf(workspace, posting, version)
           : readVersionContent(workspace, posting, version),
+        artifact,
         readVersion: { posting, version },
         datedAt: kind === 'past_letter' ? posting.appliedAt : null,
       });

@@ -7,51 +7,78 @@ import { z } from 'zod/v4';
 // How long a raw write waits for the server's own writes to release the database
 const BUSY_TIMEOUT_MS = 5000;
 
+// The dev server compiles a route on its first request: the first page of a worker hydrates late in CI
+const HYDRATION_TIMEOUT_MS = 15_000;
+
 export function findInterviews(page: Page): Locator {
   return page.getByRole('region', { name: 'Entretiens' });
 }
 
-// Each test starts from an Application without any Interview, whatever a previous run left: deleting an
-// Interview deletes its Interview Brief too
-export async function deleteEveryInterview(page: Page): Promise<void> {
-  const interviews = findInterviews(page);
-  const interviewList = interviews.getByRole('article');
-  while ((await interviewList.count()) > 0) {
-    const count = await interviewList.count();
-    const first = interviewList.first();
-    await first.getByText(/^Supprimer l’Entretien \d+…$/).click();
-    await first.getByRole('button', { name: /^Supprimer définitivement/ }).click();
-    await expect(interviewList).toHaveCount(count - 1);
-  }
+function openDatabase(): DatabaseSync {
+  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
+  return new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
 }
 
 // A detected Posting of the seed is New: put To Apply as keeping it would, without the Research keeping
 // queues, which these tests produce themselves or go without (ADR-0018)
 function putToApply(reference: string): void {
-  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
-  const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
+  const database = openDatabase();
   database
     .prepare(`UPDATE "Posting" SET "status" = 'to_apply' WHERE "reference" = ? AND "status" = 'new'`)
     .run(reference);
   database.close();
 }
 
-// The Posting page open, the Posting Applied if it was not yet, with a single Interview, freshly added:
-// what an Interview Brief prepares. Gives the article of that Interview.
-export async function prepareInterview(page: Page, reference: string): Promise<Locator> {
+function listInterviewNumbers(reference: string): number[] {
+  const database = openDatabase();
+  const rowList = database
+    .prepare(
+      `SELECT "Interview"."number" AS "number" FROM "Interview"
+       JOIN "Posting" ON "Posting"."id" = "Interview"."postingId" WHERE "Posting"."reference" = ?`,
+    )
+    .all(reference);
+  database.close();
+  return z
+    .array(z.object({ number: z.number() }))
+    .parse(rowList)
+    .map(({ number }) => number);
+}
+
+// Each test starts from an Application without any Interview, whatever a previous run left: deleted
+// through the route, which deletes their Artifacts, files included
+async function deleteEveryInterview(page: Page, reference: string): Promise<void> {
+  for (const number of listInterviewNumbers(reference)) {
+    const response = await page.request.post(`/postings/${reference}/interviews`, {
+      form: { intent: 'delete', number: String(number) },
+    });
+    expect(response.ok()).toBe(true);
+  }
+}
+
+// The Posting Applied, as the header would without the dialog a Letter not validated opens, and without
+// any Interview
+export async function prepareApplication(page: Page, reference: string): Promise<void> {
   putToApply(reference);
-  // Applied as the header would, without the dialog a Letter not validated opens: Applied again keeps it
   const response = await page.request.post(`/postings/${reference}/status`, { form: { status: 'applied' } });
   expect(response.ok()).toBe(true);
-  await page.goto(`/postings/${reference}?tab=interviews`);
-  // A form typed in before React runs the page would be reset: wait for it
-  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true', { timeout: 15_000 });
-  await deleteEveryInterview(page);
-  const newInterview = findInterviews(page).getByRole('group', { name: 'Nouvel Entretien' });
-  await newInterview.getByLabel('Début').fill('2099-11-19T14:00');
-  await newInterview.getByRole('textbox', { name: 'Interlocuteurs' }).fill('Mme Durand, juge des enfants');
-  await newInterview.getByRole('button', { name: 'Ajouter l’Entretien' }).click();
-  const interview = findInterviews(page).getByRole('article', { name: 'Entretien 1' });
-  await expect(interview).toBeVisible();
-  return interview;
+  await deleteEveryInterview(page, reference);
+}
+
+// The Posting page open on a single Interview, freshly added: what a Portrait and an Interview Brief
+// prepare
+export async function prepareInterview(page: Page, reference: string): Promise<void> {
+  await prepareApplication(page, reference);
+  const response = await page.request.post(`/postings/${reference}/interviews`, {
+    form: {
+      intent: 'add',
+      start: '2099-11-19T14:00',
+      durationMinutes: '60',
+      place: '',
+      interviewers: 'Mme Durand, juge des enfants',
+    },
+  });
+  expect(response.ok()).toBe(true);
+  await page.goto(`/postings/${reference}?tab=interviews&interview=1`);
+  // A click before React runs the page would go nowhere: wait for it
+  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true', { timeout: HYDRATION_TIMEOUT_MS });
 }

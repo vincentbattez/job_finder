@@ -22,7 +22,7 @@ describe('the Interviews of an Application', () => {
   }
 
   async function addInterview(reference: string, start: string, other: Record<string, unknown> = {}) {
-    await actions.addInterview({ reference, start, place: PLACE, interviewers: INTERVIEWERS, ...other });
+    return actions.addInterview({ reference, start, place: PLACE, interviewers: INTERVIEWERS, ...other });
   }
 
   async function readStep(reference: string): Promise<string> {
@@ -136,6 +136,18 @@ describe('the Interviews of an Application', () => {
     expect(await actions.listInterviews({ reference: '2026-2231960' })).toEqual([
       expect.objectContaining({ number: 2, startAt: new Date('2030-01-17T08:00:00Z') }),
     ]);
+  });
+
+  // The front lands on the Interview just added (spec #125, « Interviews »)
+  it('give the Interview just added, numbered after the last one', async () => {
+    await apply('2026-2315264');
+    await addInterview('2026-2315264', '2030-01-10T09:00');
+    await addInterview('2026-2315264', '2030-01-17T09:00');
+    await actions.deleteInterview({ reference: '2026-2315264', number: 1 });
+
+    const added = await addInterview('2026-2315264', '2030-01-24T09:00');
+
+    expect(added).toMatchObject({ number: 3, startAt: new Date('2030-01-24T08:00:00Z'), place: PLACE });
   });
 
   it.each([

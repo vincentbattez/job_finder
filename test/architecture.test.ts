@@ -270,7 +270,7 @@ const CONTAINER_ONLY_ACCESS_LIST = [
   {
     name: 'a Container',
     pattern: /['"][^'"]*\/containers\/[^'"]*['"]/,
-    exampleList: ["import { ModuleLaunch } from '#/web/containers/module-launch.tsx';"],
+    exampleList: ["import { useGeneration } from '#/web/containers/generation.tsx';"],
   },
   ...['useLoaderData', 'useRouteLoaderData', 'useActionData', 'useFetcher', 'useSubmit', 'useRevalidator'].map(
     (hook) => ({

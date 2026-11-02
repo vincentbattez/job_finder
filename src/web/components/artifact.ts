@@ -1,4 +1,4 @@
-import type { Artifact, ErrorCode } from '#/actions/index.ts';
+import type { Actions, Artifact, ErrorCode } from '#/actions/index.ts';
 
 import type { State } from './badge.tsx';
 
@@ -7,19 +7,10 @@ type VersionState = 'running' | 'ready' | 'failed';
 
 export type Validation = 'draft' | 'validated';
 
-export const STATE_BY_VERSION_STATE: Record<VersionState, State> = {
-  running: 'in_progress',
-  ready: 'ready',
-  failed: 'failed',
-};
-
-// Its Fixed Part and its Instructions as raw text, and the Chosen Versions it reads, of this Posting or
-// of another one
-export interface IPrompt {
-  fixedPart: string;
-  instructions: string;
-  readVersionList: { reference: string; artifact: Artifact; interviewNumber: number | null; number: number }[];
-}
+// What the generation panel shows before a run: each Input with its exact content, the refusal, the Prompt
+// of the checked Inputs (spec #125, « Inputs and the generation panel »)
+export type Generation = Awaited<ReturnType<Actions['readGeneration']>>;
+export type GenerationInput = Generation['inputList'][number];
 
 // A Version with its text, null while it runs or once it failed, and the AI's Original, null for a Version
 // the Candidate brought (ADR-0019)
@@ -50,9 +41,8 @@ export interface IArtifactVersions {
   notificationFailure: { errorCode: ErrorCode; message: string } | null;
   // Why its last job, queued or running, does not move: the worker is stopped or stuck
   workerFailure: { errorCode: ErrorCode; message: string } | null;
-  // The module that produces the Artifact, and why it cannot run now; else the Prompt a run started now
-  // would receive
-  module: { refusal: string | null; prompt: IPrompt | null };
+  // The module that produces the Artifact, and why it cannot run now
+  module: { refusal: string | null };
   // Given by the action: jf edit opens its Chosen Version
   isEditable: boolean;
   // The file of a Version the Candidate reads and corrects, and how its text is written (ADR-0020)

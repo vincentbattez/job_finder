@@ -98,22 +98,13 @@ export const POSTING_EN = {
     earlierApplicationUndated: 'You applied · {{stepLabel}}',
   },
 
-  // The launch of a module or of the extraction
-  // The context is the Artifact: French names some of them in the masculine, such as the Portrait
-  launchArtifact: 'Run the {{artifactLabel}}',
-  relaunchArtifact: 'Run the {{artifactLabel}} again',
-  launchArtifact_portrait: 'Run the {{artifactLabel}}',
-  relaunchArtifact_portrait: 'Run the {{artifactLabel}} again',
+  // The relaunch of the extraction
   extractionLabel: 'Fields read by Claude',
   relaunchExtraction: 'Run the extraction again',
 
   // The Versions of an Artifact
   versionNumber: 'v{{versionNumber}}',
-  noVersion: 'No Version yet.',
   validationLabelByValidation: { draft: 'Draft', validated: 'Validated' },
-  versionInstructions: 'Instructions of this Version',
-  noFile: 'No file in this Version.',
-  validateVersion: 'Validate this Version',
 
   // The Artifact view of the Research and Letter tabs (spec #125, « Versions: Draft, Validated, Original »)
   artifactView: {
@@ -173,27 +164,127 @@ export const POSTING_EN = {
     cancel: 'Cancel',
   },
 
-  // The Prompt a run started now would receive, beside the title of its Artifact
-  prompt: {
-    toggle: 'Prompt',
-    fixedPart: 'Fixed Part',
-    instructions: 'Instructions',
-    readVersions: 'Artifacts this Prompt reads',
-    noReadVersion: 'None: it reads only the Job Description and, for some, the Profile.',
-    readVersion: '{{reference}} · {{artifactLabel}} v{{versionNumber}}',
-    readVersionOfInterview: '{{reference}} · Interview {{interviewNumber}} · {{artifactLabel}} v{{versionNumber}}',
+  // The generation panel Generate opens (spec #125, « Inputs and the generation panel »). The context
+  // is the Artifact: French names some of them in the masculine, such as the Portrait.
+  generation: {
+    generate: 'Generate',
+    regenerate: 'Regenerate',
+    title: 'Generate the {{artifactLabel}}',
+    title_portrait: 'Generate the {{artifactLabel}}',
+    titleAgain: 'Regenerate the {{artifactLabel}}',
+    titleAgain_portrait: 'Regenerate the {{artifactLabel}}',
+    subtitleOfInterview: '{{title}} · Interview {{number}}',
+    loading: 'Reading what Claude would read…',
+    steps: 'Steps',
+    stepLabelByStep: { read: 'What Claude reads', write: 'How it writes', recap: 'Recap & launch' },
+    readIntro:
+      'Claude reads these documents word for word, nothing else. The locked ones are always read; uncheck what does not serve this time.',
+    groupLabelByGroup: { posting: 'From the Posting', profile: 'From your Profile', annex: 'Annexes of your Profile' },
+    annexHint: 'Not read by default: add those that serve this Posting.',
+    inputLabel: {
+      jobDescription: 'Job Description',
+      notes: 'Notes',
+      artifact: '{{artifactLabel}} v{{number}}',
+      artifactOfInterview: '{{artifactLabel}} of Interview {{interviewNumber}} v{{number}}',
+      artifactMissing: '{{artifactLabel}}',
+      artifactOfPosting: '{{artifactLabel}} v{{number}} of Posting {{reference}}',
+      cv: 'CV',
+      facts: 'Facts',
+      annex: 'Annex · {{name}}',
+      pastLetter: 'Past Letter · {{name}}',
+      sentLetter: 'Letter sent · {{title}}',
+    },
+    words_one: '{{count, number}} word',
+    words_other: '{{count, number}} words',
+    documents_one: '{{count, number}} document',
+    documents_other: '{{count, number}} documents',
+    required: 'required',
+    noValidatedVersion: 'No Validated Version yet',
+    alwaysRead: 'Always read',
+    lockedLabel: 'Always read: {{reason}}',
+    reasonByReason: {
+      job_description: 'Claude always starts from the Job Description.',
+      required_artifact: 'this run builds on its Chosen Version.',
+      profile_core: 'your CV and your Facts are read by every run that reads your Profile.',
+    },
+    preview: 'Preview: {{label}}',
+    emptyContent: 'Empty for now.',
+    pastLetterBundle: 'Past Letters',
+    pastLetterHint:
+      'Your past letters, those of your Profile and those sent from the tool, as one set: the five most recent are checked.',
+    checkAll: 'Check all: {{label}}',
+    bundleAllRead: 'All read · {{words}}',
+    bundleNoneRead: 'None read',
+    bundleSomeRead: '{{checked}} of {{count}} read · {{words}}',
+    unfold: 'Details',
+    fold: 'Fold',
+    writeIntro:
+      'Claude follows the Fixed Part of the {{artifactLabel}} first, then these Instructions. You can edit them from the Instructions page.',
+    writeIntro_portrait:
+      'Claude follows the Fixed Part of the {{artifactLabel}} first, then these Instructions. You can edit them from the Instructions page.',
+    instructions: 'Instructions in effect',
+    fixedPart: 'Fixed Part of the Prompt',
+    notEditable: 'not editable',
+    doesByArtifact: {
+      research:
+        'Claude searches the web for what the employer, the department and the place expect of this position, and cites each source.',
+      letter:
+        'Claude writes your Letter from the Validated Research and your Profile, in the language of the Job Description.',
+      portrait: 'Claude searches the web for what is public on the Interviewers, and cites each source.',
+      interview_brief:
+        'Claude crosses the Posting, the Research, your Letter and the Portrait to prepare this Interview: what to tell them, what to revise, how to train.',
+    },
+    recapReads: 'It reads {{documents}}, {{words}}, and writes {{writes}}.',
+    writes: 'a new Version, {{artifactLabel}} v{{number}}, as a Draft',
+    afterTerm: 'After',
+    keepsChosen: 'Your Chosen Version (v{{number}}) stays the one other Artifacts read until you validate the Draft.',
+    keepsNone: 'No other Artifact reads this Version until you validate it.',
+    durationTerm: 'Duration',
+    durationValue: 'About {{duration}}; you can close the panel, the generation goes on.',
+    durationByArtifact: {
+      research: '5 to 10 min',
+      letter: '2 to 4 min',
+      portrait: '3 to 6 min',
+      interview_brief: '5 to 10 min',
+    },
+    webTerm: 'Web',
+    webYes: 'Yes: each fact found is cited with its source.',
+    webNo: 'No: only the documents above.',
+    breakdown: 'What Claude reads, by weight',
+    total: 'Total · {{documents}}',
+    percent: '{{value, number(style: percent; maximumFractionDigits: 0)}}',
+    copyHint:
+      'Everything Claude will receive, word for word: the Fixed Part, the checked documents, then the Instructions.',
+    copyPrompt: 'Copy the Prompt',
+    promptCopied: 'Prompt copied',
+    copyFailed: 'The browser refused access to the clipboard.',
+    blockersTitle: 'Cannot launch for now',
+    cancel: 'Cancel',
+    back: 'Back',
+    next: 'Continue',
+    launch: 'Launch',
+    launched: 'Generation of the {{artifactLabel}} launched',
+    launched_portrait: 'Generation of the {{artifactLabel}} launched',
+    queued: 'Waiting for the worker…',
+    running: 'Claude is writing the {{artifactLabel}}…',
+    running_portrait: 'Claude is writing the {{artifactLabel}}…',
+    runningNote: 'You can close: the generation goes on, and a notice tells you when its Draft is ready.',
+    ready: 'Version {{number}} is ready, as a Draft',
+    readyNote: 'Read it, then validate it so it becomes the Chosen Version.',
+    failed: 'The generation failed',
+    closeRunning: 'Close, keep it running',
+    close: 'Close',
+    viewDraft: 'View the Draft',
+    draftReady: '{{artifactLabel}}: Version {{number}} is ready, as a Draft',
+    draftFailed: '{{artifactLabel}}: the generation failed',
   },
 
   // The editor of a file of the Chosen Version
-  documentLabel: 'Markdown',
-  documentPlaceholder: '# Title\n\nThe text of the document, in Markdown',
   save: 'Save',
   unsavedChanges: 'Unsaved changes',
   preview: 'Preview',
   copy: 'Copy',
   copiedCommand: 'Copied',
-  copyMarkdown: 'Copy the Markdown',
-  copiedMarkdown: 'Copied',
 
   // The Sheet a list opens on a Posting (spec #125 « The Sheet »)
   sheet: {
@@ -238,27 +329,55 @@ export const POSTING_EN = {
     saved: 'Notes saved',
   },
 
-  // The Interviews of an Application, one per round, by date
+  // The Interviews tab (spec #125, « Interviews »): the Interviews by date beside the selected one, its
+  // Interview Brief and Portrait as tabs, added and edited in a Dialog, deleted after confirming
   interviews: {
     heading: 'Interviews',
+    listLabel: 'Interviews of the Application',
+    count_one: '{{count}} Interview',
+    count_other: '{{count}} Interviews',
     applyFirst: 'An Interview belongs to an Application: mark the Posting Applied to add one.',
-    noInterview: 'No Interview yet.',
+    emptyTitle: 'No Interview yet',
+    emptyDescription:
+      'When the employer invites you, add the Interview: its Portrait and its Interview Brief are prepared here.',
+    add: 'Add an Interview',
+    addShort: 'Add',
     title: 'Interview {{number}}',
-    start: 'Start',
-    duration: 'Duration (minutes)',
+    when: '{{date, datetime(dateStyle: full; timeStyle: short; timeZone: Europe/Paris)}}',
+    shortWhen: '{{date, datetime(dateStyle: medium; timeStyle: short; timeZone: Europe/Paris)}}',
+    facts: 'Interview {{number}} · {{minutes}} min',
     minutes: '{{minutes}} min',
+    past: 'Past',
+    documents: 'Documents of Interview {{number}}',
+    day: 'Day',
+    time: 'Time (Paris)',
+    duration: 'Duration (min)',
     place: 'Place',
     interviewers: 'Interviewers',
-    interviewersPlaceholder: 'Name, role, what you know about them',
-    startPlaceholder: '2026-11-19T14:00',
     placePlaceholder: 'Room 3 of the court, or by video',
-    newInterview: 'New Interview',
-    add: 'Add the Interview',
+    interviewersPlaceholder: 'Name, role, all you know about them: the Portrait starts from there.',
+    dialogDescription: 'The Application is Invited while an Interview is to come, then Interviewed.',
+    editTitle: 'Edit Interview {{number}}',
+    submitAdd: 'Add the Interview',
+    submitEdit: 'Save',
+    cancel: 'Cancel',
+    addedToast: 'Interview {{number}} added',
+    savedToast: 'Interview {{number}} saved',
+    deletedToast: 'Interview {{number}} deleted',
+    addedTitle: 'Interview added',
+    addedDescription:
+      'Add it to your calendar: the iCal file opens in Calendar, Google Calendar or Outlook, with a reminder the day before and an hour before.',
+    downloadIcal: 'Download the iCal file (.ics)',
+    later: 'Later',
+    seeInterview: 'See the Interview',
     edit: 'Edit Interview {{number}}',
-    save: 'Save the Interview',
     delete: 'Delete Interview {{number}}',
-    deleteForGood: 'Delete Interview {{number}} for good',
     ical: 'Add to calendar (iCal)',
+    deleteTitle: 'Delete Interview {{number}}?',
+    deleteDescription:
+      'Its Portrait and its Interview Brief go with it. The Application is Applied again if no Interview is left.',
+    keep: 'Keep',
+    confirmDelete: 'Delete',
   },
 
   // The iCal file of an Interview: the event in the calendar and the links its description gives
@@ -267,6 +386,7 @@ export const POSTING_EN = {
     summaryWithoutEmployer: 'Interview · {{title}}',
     officialAd: 'Official ad',
     postingPage: 'Job Finder page',
+    interviewers: 'Interviewers: {{interviewers}}',
     link: '{{label}}: {{url}}',
   },
 
