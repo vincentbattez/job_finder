@@ -37,6 +37,7 @@ import {
 import { AI_MODULE_BY_ARTIFACT, commandOf, isAttachedToInterview, parseArtifactName } from './registry.ts';
 import { previewPrompt, runSession, type JobFailure } from './session.ts';
 
+export { keepMissingOriginals } from './original.ts';
 export { findDefaultInstructions, parseModule } from './registry.ts';
 export type { JobFailure } from './session.ts';
 

@@ -671,6 +671,24 @@ export function openDatabase(databasePath: string) {
       ]);
     },
 
+    // Every ready Version the AI produced, with its Posting, which keeps an Original (ADR-0019)
+    async listReadyAiVersions(): Promise<{ posting: Posting; version: Version }[]> {
+      const versionList = await prisma.version.findMany({
+        where: { state: 'ready', origin: 'ai' },
+        orderBy: { id: 'asc' },
+        include: { ...VERSION_INCLUDE, posting: { include: POSTING_INCLUDE } },
+      });
+      return versionList.map(({ posting, ...version }) => ({
+        posting: POSTING_READ_SCHEMA.parse(posting),
+        version: VERSION_SCHEMA.parse(version),
+      }));
+    },
+
+    // Brought by the Candidate rather than produced by the AI: it has no Original
+    async setBrought({ id }: Version): Promise<void> {
+      await prisma.version.update({ where: { id }, data: { origin: 'candidate' } });
+    },
+
     claimDetection,
 
     failStaleDetections,
