@@ -137,6 +137,38 @@ export const POSTING_EN = {
   copyMarkdown: 'Copy the Markdown',
   copiedMarkdown: 'Copied',
 
+  // The Sheet a list opens on a Posting (spec #125 « The Sheet »)
+  sheet: {
+    noEmployer: 'Employer not given',
+    deadline: 'Deadline {{date, datetime(dateStyle: medium; timeZone: Europe/Paris)}}',
+    noDeadline: 'No Deadline',
+    startDate: 'Starts {{date, datetime(dateStyle: medium; timeZone: Europe/Paris)}}',
+    noStartDate: 'Start date not given',
+    publication_ordinal_one: '{{count}}st publication of this Position',
+    publication_ordinal_two: '{{count}}nd publication of this Position',
+    publication_ordinal_few: '{{count}}rd publication of this Position',
+    publication_ordinal_other: '{{count}}th publication of this Position',
+    publicationSince_ordinal_one:
+      '{{count}}st publication of this Position since {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    publicationSince_ordinal_two:
+      '{{count}}nd publication of this Position since {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    publicationSince_ordinal_few:
+      '{{count}}rd publication of this Position since {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    publicationSince_ordinal_other:
+      '{{count}}th publication of this Position since {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    documentsHeading: 'Documents',
+    artifactState: {
+      running: 'Being written',
+      draft: 'Draft · to validate',
+      validated: 'Validated',
+      failed: 'Failed',
+      none: 'Not yet',
+    },
+    interviewCount_one: '{{count}} Interview',
+    interviewCount_other: '{{count}} Interviews',
+    openPage: 'Open the full page',
+  },
+
   // The Notes of the Posting, whatever its Status
   notes: {
     heading: 'Notes',

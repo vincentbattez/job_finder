@@ -6,6 +6,8 @@ import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { PageHeader } from '#/web/components/page-header.tsx';
 import { NewSorting } from '#/web/containers/new-sorting.tsx';
+import { PostingSheet, useSheetSelection } from '#/web/containers/posting-sheet.tsx';
+import { readSheetPosting } from '#/web/posting-sheet.server.ts';
 import { relayLoader } from '#/web/relay-action.server.ts';
 
 // The filters of the Posting list, which lived on the home before it moved to /postings
@@ -25,6 +27,8 @@ export function loader({ request }: LoaderFunctionArgs) {
       // meta runs outside React: it translates in the locale the loader gives it (ADR-0012)
       locale,
       itemList: candidate === null ? [] : await ACTIONS.listNew({ candidateId: candidate.id }),
+      // The Posting of the Sheet the URL opens
+      sheetPosting: await readSheetPosting(request, candidate?.id ?? null),
       // The day the groups are counted from, the same for the server's render and the browser's
       now: new Date(),
     };
@@ -36,8 +40,9 @@ export function meta({ loaderData }: MetaArgs<typeof loader>) {
 }
 
 export default function New() {
-  const { candidate, itemList, now } = useLoaderData<typeof loader>();
+  const { candidate, itemList, now, sheetPosting } = useLoaderData<typeof loader>();
   const { t } = useTranslation('lists');
+  const { selectedReference, onSelect, onClose } = useSheetSelection();
   return (
     <main className="flex h-svh min-h-0 flex-col">
       <PageHeader
@@ -50,8 +55,9 @@ export default function New() {
           <p className="text-body text-muted-foreground">{t('noCandidateHint', { ns: 'postingList' })}</p>
         </div>
       ) : (
-        <NewSorting itemList={itemList} now={now} />
+        <NewSorting itemList={itemList} now={now} selectedReference={selectedReference} onSelect={onSelect} />
       )}
+      <PostingSheet detail={sheetPosting} onClose={onClose} />
     </main>
   );
 }

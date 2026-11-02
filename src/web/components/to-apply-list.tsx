@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { Actions } from '#/actions/index.ts';
 import { daysUntil, groupByDeadline, type DeadlineGroupKey } from '#/web/list-model.ts';
 
-import { MapList } from './map-list.tsx';
+import { MapList, type ISheetSelection } from './map-list.tsx';
 
 // The color of each Deadline group, the same on its markers, its header and the legend (DESIGN.md
 // « State hues »): red within the week, amber within the month, then neutral, faded once none or passed
@@ -86,7 +86,12 @@ function MarkBadge({ children }: Readonly<{ children: string }>) {
 
 // To Apply over the map (spec #125 « Lists »): grouped by the urgency of the Deadline, each row telling
 // its Deadline and countdown, its Start Date, and where its Research and Letter stand
-export function ToApplyList({ itemList, now }: Readonly<{ itemList: ListItem[]; now: Date }>) {
+export function ToApplyList({
+  itemList,
+  now,
+  selectedReference,
+  onSelect,
+}: Readonly<{ itemList: ListItem[]; now: Date } & ISheetSelection>) {
   type Row = ListItem['posting'] & { research: Validation; letter: Validation };
   const { t } = useTranslation('lists');
   const shortDate = useShortDate();
@@ -112,6 +117,8 @@ export function ToApplyList({ itemList, now }: Readonly<{ itemList: ListItem[]; 
         { label: t('legend.closed'), toneClass: TONE_CLASS_BY_GROUP.passed },
       ]}
       empty={t('toApply.empty')}
+      selectedReference={selectedReference}
+      onSelect={onSelect}
       renderFacts={(row) => (
         <>
           {row.deadline !== null && (
