@@ -1,4 +1,4 @@
-@layer components {
+@layer poc {
   /* jf edit, a line to type in a terminal: DM Mono on the paper tray */
   .copy-command {
     display: flex;

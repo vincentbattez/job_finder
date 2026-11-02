@@ -1,5 +1,5 @@
 /* A file of a Version, its name in DM Mono above its text or its editor */
-@layer components {
+@layer poc {
   .edition__document {
     display: grid;
     gap: var(--space-xs);

@@ -46,29 +46,15 @@ The generic rules of the code. The why of a decision is in its ADR (`docs/adr/`)
 - Spelling is checked by cspell (`scripts/spellcheck.sh`, its English pass `cspell.config.yaml`) with an English dictionary, on the staged files and on the whole repo. French is only allowed in the French resources (`src/domain/catalogue/fr/`), checked with the French dictionary, and in recorded fixtures; narrowly besides, in the string literals of a module's copy file (ADR-0010), checked with the French dictionary by the second pass (`cspell.fr.config.yaml`), in the literals of a test, which drive the French locale, and in the former names that the data migration and the redirects match. A proper noun or a tool name goes in `cspell-words.txt`. **(hook)** **(CI)**
 - A comment gives, in one or two lines, the why that the code does not show, and cites the relevant ADR.
 
-## CSS (ADR-0013)
+## Styles (ADR-0017)
 
-The front's styles are one stylesheet per component, in BEM, ordered by cascade layers. `stylelint.config.ts` and the CSS part of `test/architecture.test.ts` are the reference.
+The front is an orchestration of shadcn components on Tailwind v4; `DESIGN.md` is the visual reference.
 
-- **Layers.** `src/web/app.css` keeps the Hallmark stamp at its head, declares the order once, `@layer vendor, tokens, base, layout, components, utilities;`, and imports each global stylesheet into its layer, Leaflet into `vendor`. `root.tsx` imports `app.css` first, so its `@layer` comes before any other. A rule wins by its layer, never by its line or by force.
-- **Global stylesheets** sit beside the root, for what belongs to no component: `tokens.css` (palette, spacing, type and z-index scales), `base.css` (reset, HTML elements, focus, reduced motion), `layout.css` (the frame of every page), `controls.css` (the shared `.button` and the `.field` form controls, one control box for both), `utilities.css`. A look several components share is a Dumb of its own, with its stylesheet, that they render (`ButtonRow`, `WorkerTask`, `SettingsPanel`, `Deletion`, `EmptyState`), never a copy in each stylesheet nor a component layout in `controls.css`.
-- **Component stylesheets.** A Dumb of `src/web/components/` that has styles gets a `.css` named like it, beside its `.tsx`, which alone imports it; its `@media` rules sit with its rules. Containers and routes carry no stylesheet: a route-specific look becomes a Dumb or goes in `layout.css`.
-- **States** go through `data-*` and ARIA attributes (`[data-status]`, `[data-new]`, `[aria-current]`, `:disabled`), never a state class.
-- A stylesheet sits beside the root (a global one) or in `src/web/components/` (a component's), never beside a route or a container. **(CI)**
-- Every rule of a component stylesheet, `@keyframes` included, sits in `@layer components`. **(CI)**
-- A stylesheet has at most 200 lines: past that, it is split. **(CI)**
-- A component stylesheet has a same-named `.tsx` beside it that imports it, and no other file imports it. **(CI)**
-- A component stylesheet only styles its block, named like the file: `.badge`, `.badge__x`, `.badge--y` in `badge.css`. A library's class (Leaflet's) only appears in the same compound as the block, and never another component's block. **(CI)**
-- A global stylesheet never styles a component's block, even a component without a stylesheet. **(CI)**
-- A Dumb renders in its `className`s only the classes of its own block and of `controls.css` and `utilities.css`: never another component's block (render that component instead), nor the layout's classes, which belong to the routes and the root. **(CI)**
-- A class of `controls.css` is rendered by at least two files: one rendered by a single file is that component's look, in its own stylesheet. **(CI)**
-- Only `app.css` has `@import`. **(CI)**
-- Class names are kebab-case BEM: `block`, `block__element`, `block--modifier`. **(hook)** **(CI)**
-- A color comes from a token: no hex, no named color, no color function outside `tokens.css`; `color-mix()` and relative colors over a token pass. **(hook)** **(CI)**
-- Selectors stay flat: no ID, at most two compound selectors, specificity at most 0,2,1; a guard that must not weigh goes in `:where()`. **(hook)** **(CI)**
-- No `!important`, except in `base.css` and `utilities.css`, which must beat every layer. **(hook)** **(CI)**
-- A selector and a property are written once in a block; a base selector comes before its higher-specificity variants. **(hook)** **(CI)**
-- `stylelint-config-standard` applies too; the hook fixes what Stylelint can, then Prettier formats. **(hook)** **(CI)**
+- **Tokens.** Colors, radii, shadows and the type scale are CSS variables of `src/web/app.css`, light and dark (`.dark`, set by `next-themes`), mapped to Tailwind by `@theme inline`. A color is a token (`bg-primary`, `text-validated-foreground`), never a palette class nor a raw value; a state hue always comes with its label or icon.
+- **Components.** shadcn's live in `src/web/components/ui/`, as its CLI writes them (`components.json`), outside ESLint but under the typecheck; a Dumb composes them with `cn()` and variants. A custom component is written only where shadcn covers nothing.
+- **Feedback.** Every mutation ends in a toast, success or its Error Code's message (`useFeedback`), and its button shows `isPending` meanwhile.
+- **Client dependencies.** Each one the browser loads is listed in `optimizeDeps.include` of `vite.config.ts`, so the first e2e page hydrates.
+- **The POC stylesheets** (BEM, one per POC component) sit in the `poc` cascade layer, below every Tailwind layer, until the ticket that replaces each page deletes them; no new one is written.
 
 ## Data
 

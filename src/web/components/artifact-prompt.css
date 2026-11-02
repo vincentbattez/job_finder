@@ -1,6 +1,6 @@
 /* The Prompt beside the title of its Artifact: the title floats at the start of the header row, so the
    button sits beside it and the open body clears it to span the whole section */
-@layer components {
+@layer poc {
   .artifact-prompt summary {
     display: inline-flex;
     align-items: center;

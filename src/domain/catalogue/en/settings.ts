@@ -1,26 +1,13 @@
-// The Profile, the Instructions, the Notification Channel, the Candidates, the menu and the design
-// page (#73)
+// The Profile, the Instructions, the Notification Channel, the Candidates and the error page (#73)
 export const SETTINGS_EN = {
-  // The top bar and the page shown when another fails
+  // The page shown when another fails
   layout: {
-    navigationLabel: 'Pages',
-    homeLink: 'Home',
-    applicationsLink: 'Applications',
-    postingsLink: 'Postings',
-    profileLink: 'Profile',
-    instructionsLink: 'Instructions',
-    candidatesLink: 'Candidates',
     notFoundHeading: 'Page not found',
     notFoundHint: 'This address leads to no page of the front.',
     errorHeading: 'This page could not be shown',
     errorHint: 'Reload the page. If the error comes back, the logs of the front say what failed.',
     // Beside the message of a failure, what to quote when reporting it
     errorCode: 'Error Code: {{errorCode}}',
-  },
-  menu: {
-    candidateLabel: 'Candidate',
-    namePlaceholder: 'Your name',
-    choose: 'Choose',
   },
   unsavedChanges: 'Unsaved changes',
   candidates: {
@@ -52,7 +39,7 @@ export const SETTINGS_EN = {
     noCandidateHeading: 'Who is looking at their Profile?',
     // Around the link to the Candidates page
     noCandidateHintStart:
-      'Pick your name in the menu at the top of the page. The front will remember it. Not in the menu yet? The',
+      'Pick your name at the head of the menu. The front will remember it. Not in the menu yet? The',
     noCandidateHintLink: 'Candidates',
     noCandidateHintEnd: 'page adds you to it.',
     heading: '{{candidateName}}’s Profile',
@@ -139,7 +126,7 @@ export const SETTINGS_EN = {
   instructions: {
     pageTitle: 'Instructions · Job Finder',
     noCandidateHeading: 'Who is looking at their Instructions?',
-    noCandidateHint: 'Pick your name in the menu at the top of the page. The front will remember it.',
+    noCandidateHint: 'Pick your name at the head of the menu. The front will remember it.',
     heading: '{{candidateName}}’s Instructions',
     intro:
       'The Instructions tell each module how to produce its Artifact. Yours replace the default ones for its next Versions. Its fixed rules, such as never making up a fact, always apply.',
@@ -152,18 +139,5 @@ export const SETTINGS_EN = {
     save: 'Save my Instructions',
     backToDefault: 'Go back to the default Instructions',
     showDefault: 'See the default Instructions',
-  },
-  design: {
-    pageTitle: 'Job Finder design system',
-    description: 'The components of the Job Finder front, shown with sample Postings.',
-    heading: 'Design system',
-    intro: 'The components of the front, shown with sample Postings.',
-    statuses: 'Statuses of a Posting',
-    states: 'States of an Artifact',
-    postingList: 'List of Postings',
-    detection: 'Detection: its progress, then each verdict',
-    emptyList: 'Empty list',
-    postingDetail: 'Detail of a Posting',
-    editor: 'Markdown editor',
   },
 };

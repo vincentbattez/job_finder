@@ -1,5 +1,5 @@
 /* The text on the left, its preview on the right; stacked on a narrow screen */
-@layer components {
+@layer poc {
   .markdown-editor {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

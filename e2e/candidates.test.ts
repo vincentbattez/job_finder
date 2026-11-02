@@ -1,21 +1,20 @@
-import { expect, test } from '@playwright/test';
+import { expect, switchCandidate, test } from './candidate.ts';
 
 // Any visitor of the front creates or renames a Candidate, and sets the Default Deadline Period (ADR-0011)
 test.describe('Candidates', () => {
-  test('creates a Candidate, who joins the menu, then renames them', async ({ page }) => {
+  test('creates a Candidate, who joins the switcher, then renames them', async ({ page, openPage }) => {
     // A Candidate of its own on each run, since none is ever deleted
     const suffix = `${String(Date.now())}-${String(test.info().repeatEachIndex)}`;
     const id = `ambre-${suffix}`;
-    await page.goto('/');
-    await page.getByRole('link', { name: 'Candidats', exact: true }).click();
+    await openPage('/');
+    await page.getByRole('button', { name: 'Changer de Candidat' }).click();
+    await page.getByRole('menuitem', { name: 'Gérer les Candidats' }).click();
     const creation = page.getByRole('region', { name: 'Nouveau Candidat' });
 
     await creation.getByRole('textbox', { name: 'Nom', exact: true }).fill(`Ambre ${suffix}`);
     await creation.getByRole('textbox', { name: /^Identifiant/ }).fill(id);
     await creation.getByRole('button', { name: 'Créer le Candidat' }).click();
 
-    const menu = page.getByRole('combobox', { name: 'Candidat' });
-    await expect(menu.getByRole('option', { name: `Ambre ${suffix}` })).toHaveCount(1);
     const renaming = page.getByRole('region', { name: 'Renommer un Candidat' });
     const nameBox = renaming.getByRole('textbox', { name: `Nom de ${id}` });
     // Typed once the page shows the Candidate created and is editable: a render still on its way would
@@ -26,9 +25,9 @@ test.describe('Candidates', () => {
     await nameBox.fill(`Ambre Martin ${suffix}`);
     await renaming.getByRole('button', { name: `Renommer ${id}` }).click();
     await expect(nameBox).toHaveValue(`Ambre Martin ${suffix}`);
-    await menu.selectOption({ label: `Ambre Martin ${suffix}` });
-    await page.getByRole('button', { name: 'Choisir' }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Bonjour Ambre Martin ${suffix}`);
+    await switchCandidate(page, `Ambre Martin ${suffix}`);
+    await expect(page).toHaveURL('/candidates');
+    await expect(page.getByRole('button', { name: 'Changer de Candidat' })).toContainText(`Ambre Martin ${suffix}`);
   });
 
   test('refuses an identifier another Candidate has, in the words of the action', async ({ page }) => {

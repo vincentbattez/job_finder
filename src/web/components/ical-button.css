@@ -1,5 +1,5 @@
 /* A link that looks like the other buttons, as wide as its words */
-@layer components {
+@layer poc {
   .ical-button {
     display: inline-flex;
     align-items: center;

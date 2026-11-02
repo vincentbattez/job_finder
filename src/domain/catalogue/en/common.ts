@@ -30,6 +30,7 @@ export const COMMON_EN = {
   // A date the Posting does not give
   missingDate: 'Not specified',
   // The Locale Switcher of the top bar (GLOSSARY.md)
+  close: 'Close',
   localeSwitcherLabel: 'Language',
   localeLabelByLocale: {
     fr: 'French',

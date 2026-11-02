@@ -1,5 +1,5 @@
 /* The tiles beside the map on a wide screen, above it on a phone */
-@layer components {
+@layer poc {
   .latest-postings {
     display: grid;
     gap: var(--space-md);

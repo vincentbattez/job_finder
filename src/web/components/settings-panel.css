@@ -1,5 +1,5 @@
 /* A part of the settings: its heading, what it does, then its fields and their steps */
-@layer components {
+@layer poc {
   .settings-panel,
   .settings-panel form {
     display: grid;

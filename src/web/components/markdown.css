@@ -1,5 +1,5 @@
 /* A Markdown text, read on the paper tray wherever it shows */
-@layer components {
+@layer poc {
   .markdown {
     max-width: none;
     padding: var(--space-md);

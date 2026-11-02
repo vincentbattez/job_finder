@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-import { expect, test } from './candidate.ts';
+import { expect, switchCandidate, test } from './candidate.ts';
 import { findOverflowing } from './overflow.ts';
 import { unfoldChosenVersion } from './version.ts';
 
@@ -9,14 +9,12 @@ import { unfoldChosenVersion } from './version.ts';
 // no Watch
 const BETHUNE_TITLE = 'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE';
 
-// The menu leads to the home of the Candidate chosen, then their Postings open at /postings: the two
-// tests of the menu go through it, the others choose with asCandidate
+// The switcher keeps the page: the two tests of the switch go through it, the others choose with
+// asCandidate
 async function chooseCandidate(page: Page, name: string) {
-  await page.goto('/');
-  await page.getByRole('combobox', { name: 'Candidat' }).selectOption(name);
-  await page.getByRole('button', { name: 'Choisir' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Bonjour ${name}`);
   await page.goto('/postings');
+  await switchCandidate(page, name);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Offres de ${name}`);
 }
 
 test.describe('Postings of a Candidate', () => {
@@ -44,7 +42,7 @@ test.describe('Postings of a Candidate', () => {
     await page.goto('/postings');
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Camille');
-    await expect(page.getByRole('combobox', { name: 'Candidat' })).toHaveValue('camille');
+    await expect(page.getByRole('button', { name: 'Changer de Candidat' })).toContainText('Camille');
     await expect(page.getByText('Aucune Offre pour l’instant')).toBeVisible();
   });
 

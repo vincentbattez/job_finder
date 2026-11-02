@@ -72,7 +72,7 @@ export default defineConfig({
       // The e2e mode serves the actions with the fakes of the external boundaries (vite.config.ts)
       command: `node test/seed-front.ts && react-router dev --mode e2e --port ${PORT} --strictPort`,
       env: ENV,
-      url: `${BASE_URL}/design`,
+      url: `${BASE_URL}/`,
       // A server already running on the port may read data/: always start the one seeded above
       reuseExistingServer: false,
       // In CI the dev server's log goes to the job's: it says when Vite re-optimizes and reloads

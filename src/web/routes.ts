@@ -25,6 +25,5 @@ export default [
   route('run', 'routes/run.ts'),
   route('detect', 'routes/detect.ts'),
   route('import', 'routes/import.ts'),
-  route('design', 'routes/design.tsx'),
   ...REDIRECT_LIST.map(({ from }) => route(from, 'routes/redirect.ts', { id: `redirect/${from}` })),
 ] satisfies RouteConfig;

@@ -1,4 +1,4 @@
-@layer components {
+@layer poc {
   /* Each Watch in its own frame, the new one last */
   .watches__watch {
     display: grid;

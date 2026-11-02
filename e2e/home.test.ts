@@ -128,7 +128,7 @@ test.describe('home', () => {
     await expect(bethune.getByText('Expirée')).toHaveCount(0);
   });
 
-  test('leads to every Posting, from the home and from the menu', async ({ page, asCandidate, openPage }) => {
+  test('leads to every Posting, from the home and from the Sidebar', async ({ page, asCandidate, openPage }) => {
     await asCandidate('lea');
     await openHomeOf({ page, openPage }, 'Léa');
 
@@ -136,9 +136,9 @@ test.describe('home', () => {
     await expect(page).toHaveURL('/postings');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Offres de Léa');
 
-    await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Accueil' }).click();
+    await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Nouvelles' }).click();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Léa');
-    await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Offres' }).click();
+    await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'À traiter' }).click();
     await expect(page).toHaveURL('/postings');
   });
 

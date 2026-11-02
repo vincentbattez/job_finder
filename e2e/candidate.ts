@@ -15,13 +15,13 @@ export interface IFront {
   openPage: OpenPage;
 }
 
-// A test whose subject is not the menu chooses its Candidate as the menu would have: through the
+// A test whose subject is not the switcher chooses its Candidate as the switcher would have: through the
 // candidate cookie, set on the browser before its first page. It spares each test a page load and a
 // form submission on a dev server that is CPU-bound in CI (#112). The value comes from the app's own
 // cookie, so it follows its encoding; were the cookie signed one day, this fixture would sign it too.
-// Only e2e/postings.test.ts and e2e/candidates.test.ts still go through the menu, which they check.
+// Only the tests of the switcher go through it, with switchCandidate.
 //
-// The menu also had every test wait for React before its first click: openPage keeps that wait, as a
+// The switcher also has every test wait for React before its first click: openPage keeps that wait, as a
 // click or a form sent before React runs the page may go nowhere. A test without JavaScript has no
 // such wait to make.
 export const test = base.extend<{ asCandidate: AsCandidate; openPage: OpenPage }>({
@@ -45,3 +45,10 @@ export const test = base.extend<{ asCandidate: AsCandidate; openPage: OpenPage }
 });
 
 export const { expect } = base;
+
+// Through the Candidate switcher at the head of the Sidebar, as the Candidate would; once React runs it
+export async function switchCandidate(page: Page, name: string): Promise<void> {
+  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true', { timeout: HYDRATION_TIMEOUT_MS });
+  await page.getByRole('button', { name: 'Changer de Candidat' }).click();
+  await page.getByRole('menuitem', { name, exact: true }).click();
+}

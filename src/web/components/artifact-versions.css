@@ -1,5 +1,5 @@
 /* Below the label, each Artifact opens like its compartment: its tint along the top edge */
-@layer components {
+@layer poc {
   .artifact-versions {
     --tint: var(--p-mon);
 

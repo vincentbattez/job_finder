@@ -28,22 +28,21 @@ async function openHomeOfEmma({ page, openPage }: IFront) {
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Emma');
 }
 
-test('shows the menu and the Profile in English to a Candidate with the en locale', async ({
+test('shows the Sidebar and the Profile in English to a Candidate with the en locale', async ({
   page,
   asCandidate,
   openPage,
 }) => {
   await asCandidate('emma');
   await openHomeOfEmma({ page, openPage });
-  await expect(page.getByRole('combobox', { name: 'Candidate' })).toHaveValue('emma');
-  await expect(page.getByRole('button', { name: 'Choose' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Switch Candidate' })).toContainText('Emma');
   await expect(page.getByRole('navigation', { name: 'Pages' }).getByRole('link')).toHaveText([
-    'Home',
+    'New',
+    'To Apply',
     'Applications',
-    'Postings',
     'Profile',
-    'Instructions',
-    'Candidates',
+    'Watches',
+    'Settings',
   ]);
 
   await page.getByRole('link', { name: 'Profile', exact: true }).click();
@@ -77,9 +76,7 @@ test('shows the Instructions and the Candidates in English to a Candidate with t
   openPage,
 }) => {
   await asCandidate('emma');
-  await openHomeOfEmma({ page, openPage });
-
-  await page.getByRole('link', { name: 'Instructions', exact: true }).click();
+  await openPage('/instructions');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Instructions');
   await expect(page).toHaveTitle('Instructions · Job Finder');
   const letter = page.getByRole('region', { name: 'Letter' });
@@ -88,7 +85,7 @@ test('shows the Instructions and the Candidates in English to a Candidate with t
   await expect(letter.getByRole('textbox')).toHaveValue(/^Write a one-page cover letter/);
   await expect(letter.getByRole('button', { name: 'Save my Instructions' })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Candidates', exact: true }).click();
+  await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Candidates');
   await expect(page).toHaveTitle('Candidates · Job Finder');
   await expect(page.getByRole('heading', { level: 2 })).toHaveText([
@@ -96,14 +93,6 @@ test('shows the Instructions and the Candidates in English to a Candidate with t
     'New Candidate',
     'Default Deadline Period',
   ]);
-});
-
-test('shows the design page in English to a Candidate with the en locale', async ({ page, asCandidate, openPage }) => {
-  await asCandidate('emma');
-  await openHomeOfEmma({ page, openPage });
-  await openPage('/design');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Design system');
-  await expect(page).toHaveTitle('Job Finder design system');
 });
 
 test('shows the tools of the Posting list in English to a Candidate with the en locale', async ({

@@ -18,6 +18,9 @@ export default defineConfig(
       'build/',
       // Each git worktree that Claude Code creates there lints itself
       '.claude/worktrees/',
+      // shadcn's components, as its CLI writes them (components.json), so a later shadcn add can update
+      // them: the typecheck still holds them (ADR-0017)
+      'src/web/components/ui/',
     ],
   },
   js.configs.recommended,

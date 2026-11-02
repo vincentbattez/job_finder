@@ -4,10 +4,15 @@ import './settings-panel.css';
 
 // A part of the settings, such as the Watches, the Notification Channel or the Candidates (ADR-0011):
 // its heading, what it does in a paragraph, then its forms
-export function SettingsPanel({ heading, children }: Readonly<{ heading: string; children: ReactNode }>) {
+// An anchor lets a link of the Sidebar land on the panel, such as the Watches of the Profile
+export function SettingsPanel({
+  heading,
+  anchor,
+  children,
+}: Readonly<{ heading: string; anchor?: string; children: ReactNode }>) {
   const headingId = useId();
   return (
-    <section className="settings-panel" aria-labelledby={headingId}>
+    <section className="settings-panel" id={anchor} aria-labelledby={headingId}>
       <h2 id={headingId}>{heading}</h2>
       {children}
     </section>

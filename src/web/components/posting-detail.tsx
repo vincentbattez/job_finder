@@ -74,7 +74,7 @@ export interface IPostingDetail {
 // A mail written in free text, as Avesnes publishes it, stays as published rather than a broken link
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 
-// A page of its own, or a sample on /design; the Job Description is folded, long as published
+// The Posting page; the Job Description is folded, long as published
 export function PostingDetail({
   detail,
   isPage = false,

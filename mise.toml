@@ -63,10 +63,6 @@ run = "node src/worker/worker.ts"
 description = "Lint with ESLint"
 run = "eslint ."
 
-[tasks."lint:css"]
-description = "Lint the front's CSS with Stylelint"
-run = "stylelint '**/*.css'"
-
 [tasks."lint:format"]
 description = "Check formatting with Prettier and prisma format"
 run = "prettier --check . && prisma format --check"
@@ -85,7 +81,7 @@ run = "prisma migrate diff --from-migrations prisma/migrations --to-schema prism
 
 [tasks.lint]
 description = "Run all linters"
-depends = ["lint:ts", "lint:css", "lint:format", "lint:dead-code", "lint:spelling", "lint:migrations"]
+depends = ["lint:ts", "lint:format", "lint:dead-code", "lint:spelling", "lint:migrations"]
 
 [tasks.typecheck]
 description = "Type-check with TypeScript"

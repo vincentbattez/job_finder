@@ -33,7 +33,7 @@ function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; source
 export function Watches({ watchList, sourceList }: Readonly<{ watchList: Watch[]; sourceList: SourceModule[] }>) {
   const { t } = useTranslation('settings');
   return (
-    <SettingsPanel heading={t('watches.heading')}>
+    <SettingsPanel heading={t('watches.heading')} anchor="watches">
       <p>{t('watches.intro')}</p>
       {watchList.map((watch) => (
         <WatchForm key={watch.id} watch={watch} sourceList={sourceList} />

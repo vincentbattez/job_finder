@@ -1,5 +1,5 @@
 /* The rows side by side on a wide screen, one under the other on a phone */
-@layer components {
+@layer poc {
   .application-list {
     display: grid;
     gap: var(--space-md);
