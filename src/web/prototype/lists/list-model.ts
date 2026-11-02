@@ -6,6 +6,7 @@ import {
   daysUntil,
   listOf,
   nextInterviewOf,
+  STEP_LABEL,
   type IPosting,
   type ListName,
   type Step,
@@ -104,7 +105,7 @@ export function sortPostings(list: ListName, postings: IPosting[], now: Date = n
   return postings.toSorted((first, second) => byDate(first.appliedAt, second.appliedAt, -1));
 }
 
-// ——— Groups (variant C): the order of work rather than a flat list ———
+// ——— Groups (variants B and C): attention first, each group in its own order ———
 
 export interface IPostingGroup {
   key: string;
@@ -113,92 +114,131 @@ export interface IPostingGroup {
   postings: IPosting[];
 }
 
+type Compare = (first: IPosting, second: IPosting) => number;
+
 interface IGroupRule {
   key: string;
   label: string;
   hint: string;
   isIn: (posting: IPosting, now: Date) => boolean;
+  compare: Compare;
 }
 
-const daysSince = (iso: string | null, now: Date) => (iso === null ? Infinity : -daysUntil(iso, now));
 const daysLeft = (iso: string | null, now: Date) => (iso === null ? null : daysUntil(iso, now));
+const byDeadline: Compare = (first, second) => byDate(first.deadline, second.deadline, 1);
+const byDeadlineLatest: Compare = (first, second) => byDate(first.deadline, second.deadline, -1);
+const byPublished: Compare = (first, second) => byDate(first.publishedAt, second.publishedAt, -1);
+const byApplied: Compare = (first, second) => byDate(first.appliedAt, second.appliedAt, -1);
+const firstInterviewAt = (posting: IPosting, now: Date) => upcomingInterviewOf(posting, now)?.startAt ?? null;
+const lastInterviewAt = (posting: IPosting) =>
+  posting.interviews
+    .map(({ startAt }) => startAt)
+    .toSorted()
+    .at(-1) ?? null;
 
-const GROUP_RULE_BY_LIST: Record<ListName, IGroupRule[]> = {
-  new: [
-    { key: 'found', label: 'Trouvées à l’instant', hint: 'Dernière Détection', isIn: (posting) => posting.isSynthetic },
-    {
-      key: 'week',
-      label: 'Cette semaine',
-      hint: 'Publiées depuis 7 jours',
-      isIn: (posting, now) => daysSince(posting.publishedAt, now) <= 7,
-    },
-    {
-      key: 'month',
-      label: 'Ce mois-ci',
-      hint: 'Publiées depuis 31 jours',
-      isIn: (posting, now) => daysSince(posting.publishedAt, now) <= 31,
-    },
-    { key: 'older', label: 'Plus anciennes', hint: 'À trier sans tarder', isIn: () => true },
-  ],
-  to_apply: [
+// The Deadline groups of New and To Apply: this week, this month, later, none, passed
+function deadlineRuleList(): IGroupRule[] {
+  const isWithin = (posting: IPosting, now: Date, from: number, to: number) => {
+    const days = daysLeft(posting.deadline, now);
+    return days !== null && days >= from && days <= to;
+  };
+  return [
     {
       key: 'week',
       label: 'Date limite cette semaine',
-      hint: 'Moins de 7 jours',
-      isIn: (posting, now) => {
-        const days = daysLeft(posting.deadline, now);
-        return days !== null && days >= 0 && days <= 7;
-      },
+      hint: '7 jours ou moins',
+      isIn: (posting, now) => isWithin(posting, now, 0, 7),
+      compare: byDeadline,
     },
     {
       key: 'month',
       label: 'Dans le mois',
       hint: '8 à 31 jours',
-      isIn: (posting, now) => {
-        const days = daysLeft(posting.deadline, now);
-        return days !== null && days >= 0 && days <= 31;
-      },
+      isIn: (posting, now) => isWithin(posting, now, 8, 31),
+      compare: byDeadline,
     },
     {
       key: 'later',
       label: 'Plus tard',
       hint: 'Au-delà d’un mois',
       isIn: (posting, now) => (daysLeft(posting.deadline, now) ?? -1) > 31,
+      compare: byDeadline,
     },
-    { key: 'none', label: 'Sans date limite', hint: '', isIn: (posting) => posting.deadline === null },
-    { key: 'passed', label: 'Date limite passée', hint: 'Encore possible ?', isIn: () => true },
-  ],
-  applications: [
     {
-      key: 'invited',
-      label: 'Convoquée',
-      hint: 'Un entretien à venir',
-      isIn: (posting) => posting.step === 'invited',
+      key: 'none',
+      label: 'Sans date limite',
+      hint: '',
+      isIn: (posting) => posting.deadline === null,
+      compare: byPublished,
     },
+    {
+      key: 'passed',
+      label: 'Date limite passée',
+      hint: 'Encore possible ?',
+      isIn: () => true,
+      compare: byDeadlineLatest,
+    },
+  ];
+}
+
+function groupRulesOf(list: ListName, now: Date): IGroupRule[] {
+  if (list === 'new') {
+    return [
+      {
+        key: 'found',
+        label: 'Trouvées à l’instant',
+        hint: 'Dernière Détection',
+        isIn: (posting) => posting.isSynthetic,
+        compare: byDeadline,
+      },
+      ...deadlineRuleList(),
+    ];
+  }
+  if (list === 'to_apply') {
+    return deadlineRuleList();
+  }
+  return [
     {
       key: 'interviewed',
       label: 'Entretien passé',
       hint: 'En attente de réponse',
       isIn: (posting) => posting.step === 'interviewed',
+      compare: (first, second) => byDate(lastInterviewAt(first), lastInterviewAt(second), -1),
     },
-    { key: 'applied', label: 'Postulée', hint: 'Sans nouvelles', isIn: (posting) => posting.step === 'applied' },
-    { key: 'hired', label: 'Poste obtenu', hint: '', isIn: (posting) => posting.step === 'hired' },
-    { key: 'rejected', label: 'Refusée', hint: '', isIn: () => true },
-  ],
-};
+    {
+      key: 'invited',
+      label: 'Convoquée',
+      hint: 'Un entretien à venir',
+      isIn: (posting) => posting.step === 'invited',
+      compare: (first, second) => byDate(firstInterviewAt(first, now), firstInterviewAt(second, now), 1),
+    },
+    {
+      key: 'applied',
+      label: 'Postulée',
+      hint: 'Date limite la plus proche d’abord',
+      isIn: (posting) => posting.step === 'applied',
+      compare: byDeadline,
+    },
+    { key: 'hired', label: 'Poste obtenu', hint: '', isIn: (posting) => posting.step === 'hired', compare: byApplied },
+    { key: 'rejected', label: 'Refusée', hint: '', isIn: () => true, compare: byApplied },
+  ];
+}
 
 export function groupPostings(list: ListName, postings: IPosting[], now: Date = new Date()): IPostingGroup[] {
-  const groupList = GROUP_RULE_BY_LIST[list].map(({ key, label, hint }) => ({
-    key,
-    label,
-    hint,
-    postings: [] as IPosting[],
-  }));
+  const ruleList = groupRulesOf(list, now);
+  const groupList = ruleList.map(({ key, label, hint }) => ({ key, label, hint, postings: [] as IPosting[] }));
   for (const posting of postings) {
-    const index = GROUP_RULE_BY_LIST[list].findIndex(({ isIn }) => isIn(posting, now));
+    const index = ruleList.findIndex(({ isIn }) => isIn(posting, now));
     groupList[index]?.postings.push(posting);
   }
-  return groupList.filter((group) => group.postings.length > 0);
+  return groupList
+    .map((group, index) => ({ ...group, postings: group.postings.toSorted(ruleList[index]?.compare) }))
+    .filter((group) => group.postings.length > 0);
+}
+
+// The group a Posting falls in, for the color of its point
+export function groupKeyOf(list: ListName, posting: IPosting, now: Date = new Date()): string {
+  return groupPostings(list, [posting], now)[0]?.key ?? '';
 }
 
 // ——— Tones: one color per Step, the same on the badges and the map ———
@@ -274,4 +314,124 @@ export function distinctivePartOf(title: string): string {
   const match = /^attach[ée](?:\(e\)|\.e|e)?\s+de\s+justice\s*[-–:,]?\s*/iu.exec(title);
   const rest = match === null ? title : title.slice(match[0].length);
   return rest.trim() === '' ? title : rest.charAt(0).toUpperCase() + rest.slice(1);
+}
+
+// ——— Map tones: the groups of the list as colors (variants B and C) ———
+
+const DEADLINE_GROUP_DOT: Record<string, string> = {
+  found: 'bg-primary',
+  week: URGENCY_TONE.soon.dot,
+  month: URGENCY_TONE.month.dot,
+  later: URGENCY_TONE.later.dot,
+  none: 'bg-zinc-400',
+  passed: 'bg-zinc-400',
+};
+
+export function mapToneOf(list: ListName): (posting: IPosting) => string {
+  if (list === 'applications') {
+    return (posting) => STEP_TONE[posting.step].dot;
+  }
+  return (posting) => DEADLINE_GROUP_DOT[groupKeyOf(list, posting)] ?? 'bg-zinc-400';
+}
+
+export function mapLegendOf(list: ListName): { dot: string; label: string }[] {
+  if (list === 'applications') {
+    return (['interviewed', 'invited', 'applied', 'hired', 'rejected'] as const).map((step) => ({
+      dot: STEP_TONE[step].dot,
+      label: STEP_LABEL[step],
+    }));
+  }
+  return [
+    ...(list === 'new' ? [{ dot: 'bg-primary', label: 'Trouvées à l’instant' }] : []),
+    { dot: URGENCY_TONE.soon.dot, label: '7 jours ou moins' },
+    { dot: URGENCY_TONE.month.dot, label: 'Dans le mois' },
+    { dot: URGENCY_TONE.later.dot, label: 'Plus tard' },
+    { dot: 'bg-zinc-400', label: 'Passée ou sans date' },
+  ];
+}
+
+// ——— Regions: their extent [[south, west], [north, east]], for the map to show a whole Region ———
+
+export const REGION_BOUNDS: Record<string, [[number, number], [number, number]]> = {
+  'Auvergne-Rhône-Alpes': [
+    [44.11, 2.06],
+    [46.81, 7.19],
+  ],
+  'Bourgogne-Franche-Comté': [
+    [46.15, 2.85],
+    [48.4, 7.15],
+  ],
+  Bretagne: [
+    [47.28, -5.14],
+    [48.9, -1.01],
+  ],
+  'Centre-Val de Loire': [
+    [46.35, 0.05],
+    [48.94, 3.13],
+  ],
+  Corse: [
+    [41.33, 8.53],
+    [43.03, 9.56],
+  ],
+  'Grand Est': [
+    [47.42, 3.38],
+    [50.17, 8.24],
+  ],
+  'Hauts-de-France': [
+    [48.83, 1.38],
+    [51.09, 4.26],
+  ],
+  'Île-de-France': [
+    [48.12, 1.44],
+    [49.24, 3.56],
+  ],
+  Normandie: [
+    [48.18, -1.95],
+    [50.07, 1.8],
+  ],
+  'Nouvelle-Aquitaine': [
+    [42.78, -1.79],
+    [47.18, 2.61],
+  ],
+  Occitanie: [
+    [42.33, -0.33],
+    [45.05, 4.85],
+  ],
+  'Pays de la Loire': [
+    [46.27, -2.56],
+    [48.57, 0.92],
+  ],
+  "Provence-Alpes-Côte d'Azur": [
+    [42.98, 4.23],
+    [45.13, 7.72],
+  ],
+  Guadeloupe: [
+    [15.83, -61.81],
+    [16.52, -61.0],
+  ],
+  Martinique: [
+    [14.39, -61.23],
+    [14.88, -60.81],
+  ],
+  Guyane: [
+    [2.11, -54.6],
+    [5.75, -51.6],
+  ],
+  'La Réunion': [
+    [-21.39, 55.21],
+    [-20.87, 55.84],
+  ],
+  Mayotte: [
+    [-13.0, 45.01],
+    [-12.63, 45.3],
+  ],
+  'Nouvelle-Calédonie': [
+    [-22.7, 163.5],
+    [-19.5, 168.2],
+  ],
+};
+
+// A Region's extent, with the typographic apostrophe or not
+export function regionBoundsOf(region: string | null) {
+  return region === null ? undefined : REGION_BOUNDS[region.replaceAll('’', "'")];
 }

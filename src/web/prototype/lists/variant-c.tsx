@@ -1,13 +1,13 @@
 // PROTOTYPE. Variant C « Par échéance » bets on the order of work: the list is a column of dense cards
-// grouped by what to do first (found just now / this week… for New; Deadline this week / this month…
-// for To Apply; Invited / Interviewed… for Applications); the map takes the same groups as its colors.
+// grouped by what to do first (Deadline this week / this month… for New and To Apply; Interviewed,
+// Invited, Applied for Applications); the map takes the same groups as its colors.
 // The split is resizable.
 import { MapPinIcon } from 'lucide-react';
 
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '#/web/prototype/components/ui/resizable.tsx';
 import { cn } from '#/web/prototype/lib/utils.ts';
 
-import { formatDateTime, type IPosting, type ListName } from '../model.ts';
+import { formatDateTime, type IPosting } from '../model.ts';
 import {
   ArtifactStates,
   Countdown,
@@ -22,63 +22,8 @@ import { useRunningKeysByReference } from './columns.tsx';
 import { ApplicationTabs, ListFilters } from './filters.tsx';
 import { useListController, useRowSync } from './list-context.tsx';
 import { ListMap, MapLegend } from './list-map.tsx';
-import {
-  formatShortDate,
-  groupPostings,
-  STEP_TONE,
-  upcomingInterviewOf,
-  URGENCY_TONE,
-  urgencyOf,
-} from './list-model.ts';
+import { formatShortDate, groupPostings, mapLegendOf, mapToneOf, upcomingInterviewOf } from './list-model.ts';
 import { EmptyList } from './variant-a.tsx';
-
-const NEW_GROUP_DOT: Record<string, string> = {
-  found: 'bg-primary',
-  week: 'bg-sky-500',
-  month: 'bg-amber-500',
-  older: 'bg-zinc-400',
-};
-
-// The map's colors: the group a Posting falls in
-function toneOf(list: ListName): (posting: IPosting) => string {
-  if (list === 'to_apply') {
-    return (posting) => URGENCY_TONE[urgencyOf(posting.deadline)].dot;
-  }
-  if (list === 'new') {
-    return (posting) => {
-      const key = groupPostings('new', [posting])[0]?.key ?? 'older';
-      return NEW_GROUP_DOT[key] ?? 'bg-zinc-400';
-    };
-  }
-  return (posting) => STEP_TONE[posting.step].dot;
-}
-
-function legendOf(list: ListName): { dot: string; label: string }[] {
-  if (list === 'to_apply') {
-    return (['soon', 'month', 'later', 'passed'] as const).map((urgency) => ({
-      dot: URGENCY_TONE[urgency].dot,
-      label: URGENCY_TONE[urgency].label,
-    }));
-  }
-  if (list === 'new') {
-    return [
-      { dot: NEW_GROUP_DOT.found ?? '', label: 'Trouvées à l’instant' },
-      { dot: NEW_GROUP_DOT.week ?? '', label: 'Cette semaine' },
-      { dot: NEW_GROUP_DOT.month ?? '', label: 'Ce mois-ci' },
-      { dot: NEW_GROUP_DOT.older ?? '', label: 'Plus anciennes' },
-    ];
-  }
-  return (['invited', 'interviewed', 'applied', 'hired', 'rejected'] as const).map((step) => ({
-    dot: STEP_TONE[step].dot,
-    label: {
-      invited: 'Convoquée',
-      interviewed: 'Entretien passé',
-      applied: 'Postulée',
-      hired: 'Obtenu',
-      rejected: 'Refusée',
-    }[step],
-  }));
-}
 
 function PostingCard({ posting, runningKeys }: { posting: IPosting; runningKeys: string[] }) {
   const { list } = useListController();
@@ -198,8 +143,8 @@ export function VariantC() {
       <ResizableHandle withHandle />
       <ResizablePanel minSize="30">
         <div className="relative isolate size-full">
-          <ListMap className="absolute inset-0" toneOf={toneOf(list)} zoomPosition="topleft" />
-          <MapLegend items={legendOf(list)} className="absolute right-3 bottom-6 max-w-[calc(100%-1.5rem)]" />
+          <ListMap className="absolute inset-0" toneOf={mapToneOf(list)} zoomPosition="topleft" />
+          <MapLegend items={mapLegendOf(list)} className="absolute right-3 bottom-6 max-w-[calc(100%-1.5rem)]" />
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>

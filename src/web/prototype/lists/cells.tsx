@@ -79,7 +79,8 @@ function ArtifactStateBadge({ label, state, isRunning }: { label: string; state:
         </Badge>
       </TooltipTrigger>
       <TooltipContent>
-        {label === 'R' ? 'Recherche' : 'Lettre'} · {isRunning ? 'génération en cours' : ARTIFACT_STATE_LABEL[state]}
+        {label === 'R' || label === 'Recherche' ? 'Recherche' : 'Lettre de motivation'} ·{' '}
+        {isRunning ? 'génération en cours' : ARTIFACT_STATE_LABEL[state]}
       </TooltipContent>
     </Tooltip>
   );
@@ -103,7 +104,7 @@ export function ArtifactStates({
         isRunning={runningKeys.includes('research')}
       />
       <ArtifactStateBadge
-        label={isCompact ? 'L' : 'Lettre'}
+        label={isCompact ? 'LM' : 'Lettre de motivation'}
         state={posting.letter.state}
         isRunning={runningKeys.includes('letter')}
       />

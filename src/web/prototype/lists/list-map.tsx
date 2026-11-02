@@ -9,7 +9,7 @@ import { cn } from '#/web/prototype/lib/utils.ts';
 
 import type { IPosting } from '../model.ts';
 import { useListController } from './list-context.tsx';
-import { distinctivePartOf, STEP_TONE } from './list-model.ts';
+import { distinctivePartOf, regionBoundsOf, STEP_TONE } from './list-model.ts';
 
 type Leaflet = typeof import('leaflet');
 
@@ -64,7 +64,22 @@ interface IListMapProps {
   zoomPosition?: 'topleft' | 'topright' | 'bottomleft' | 'bottomright';
   // The point's color class; the Step's tone by default
   toneOf?: (posting: IPosting) => string;
+  // What covers the map now (a floating panel, the open Sheet), in pixels: a Posting opened is
+  // centered in the rest
+  focusInset?: IInset;
 }
+
+interface IInset {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+const NO_INSET: IInset = { top: 0, right: 0, bottom: 0, left: 0 };
+// The zoom a Posting opened is shown at, at least, unless the Candidate zoomed in further
+const FOCUS_ZOOM_MIN = 7;
+const FOCUS_ZOOM_MAX = 10;
 
 export function ListMap({
   className,
@@ -73,9 +88,20 @@ export function ListMap({
   paddingBottomRight = [24, 24],
   zoomPosition = 'topright',
   toneOf = (posting) => STEP_TONE[posting.step].dot,
+  focusInset = NO_INSET,
 }: IListMapProps) {
-  const { postings, fitKey, hoveredReference, activeReference, activeOrigin, sheetReference, hover, activate } =
-    useListController();
+  const {
+    postings,
+    filters,
+    fitKey,
+    hoveredReference,
+    activeReference,
+    activeOrigin,
+    activeNonce,
+    sheetReference,
+    hover,
+    activate,
+  } = useListController();
   const containerReference = useRef<HTMLDivElement>(null);
   const mapReference = useRef<{ leaflet: Leaflet; map: LeafletMap; layer: LayerGroup } | null>(null);
   const markerByReference = useRef(new Map<string, Marker>());
@@ -84,8 +110,8 @@ export function ListMap({
   const isUserMoved = useRef(false);
   const fitView = useRef(() => {});
   // The handlers of the points read the latest callbacks without rebuilding the points
-  const latest = useRef({ hover, activate, toneOf, paddingTopLeft, paddingBottomRight, postings });
-  latest.current = { hover, activate, toneOf, paddingTopLeft, paddingBottomRight, postings };
+  const latest = useRef({ hover, activate, toneOf, paddingTopLeft, paddingBottomRight, postings, filters, focusInset });
+  latest.current = { hover, activate, toneOf, paddingTopLeft, paddingBottomRight, postings, filters, focusInset };
 
   useEffect(() => {
     let isUnmounted = false;
@@ -179,7 +205,10 @@ export function ListMap({
     const mainland = leaflet.latLngBounds(MAINLAND_BOUNDS);
     const mainlandPointList = pointList.filter((point) => mainland.contains(point));
     const shownList = mainlandPointList.length > 0 ? mainlandPointList : pointList;
-    const bounds: LatLngBoundsExpression = shownList.length > 0 ? leaflet.latLngBounds(shownList) : mainland;
+    // A Region filtered: the whole Region, not only its Postings
+    const regionBounds = regionBoundsOf(latest.current.filters.region);
+    const bounds: LatLngBoundsExpression =
+      regionBounds ?? (shownList.length > 0 ? leaflet.latLngBounds(shownList) : mainland);
     map.fitBounds(bounds, {
       maxZoom: 11,
       animate: false,
@@ -219,18 +248,37 @@ export function ListMap({
     }
   }, [hoveredReference, activeReference, sheetReference, pointKey, isReady]);
 
-  // A row opened from the list: its point comes into view
+  const insetKey = `${String(focusInset.left)},${String(focusInset.right)},${String(focusInset.top)},${String(focusInset.bottom)}`;
+  // A Posting opened: from the list, its point is centered in what the panel and the Sheet leave
+  // visible, at a regional zoom at least; from the map, only when the Sheet now hides it
   useEffect(() => {
     const current = mapReference.current;
     const marker = activeReference === null ? undefined : markerByReference.current.get(activeReference);
-    if (current === null || marker === undefined || activeOrigin !== 'list') {
+    if (current === null || marker === undefined) {
       return;
     }
-    current.map.panInside(marker.getLatLng(), {
-      paddingTopLeft: latest.current.paddingTopLeft,
-      paddingBottomRight: latest.current.paddingBottomRight,
-    });
-  }, [activeReference, activeOrigin]);
+    const { map } = current;
+    const inset = latest.current.focusInset;
+    const size = map.getSize();
+    const point = map.latLngToContainerPoint(marker.getLatLng());
+    const isVisible =
+      point.x > inset.left + 24 &&
+      point.x < size.x - inset.right - 24 &&
+      point.y > inset.top + 40 &&
+      point.y < size.y - inset.bottom - 24;
+    if (activeOrigin === 'map' && isVisible) {
+      return;
+    }
+    const zoom = Math.min(Math.max(map.getZoom(), FOCUS_ZOOM_MIN), FOCUS_ZOOM_MAX);
+    const center = map.unproject(
+      map.project(marker.getLatLng(), zoom).add([(inset.right - inset.left) / 2, (inset.bottom - inset.top) / 2]),
+      zoom,
+    );
+    map.flyTo(center, zoom, { duration: 0.6 });
+    isUserMoved.current = true;
+    // On an activation (its nonce), once the points exist, and when the Sheet opening then changes
+    // what covers the map (the URL, which holds it, updates a render later)
+  }, [activeNonce, isReady, insetKey]);
 
   const unlocatedCount = postings.filter((posting) => !isLocated(posting)).length;
   return (

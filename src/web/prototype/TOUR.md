@@ -8,7 +8,7 @@ Une pastille noire en bas de l'écran (sous l'en-tête sur téléphone) change d
 
 | Zone                            | Paramètre   | A               | B                          | C                   |
 | ------------------------------- | ----------- | --------------- | -------------------------- | ------------------- |
-| Listes + carte                  | `?variant=` | Tableau + carte | Carte d'abord              | Par échéance        |
+| Listes + carte                  | `?variant=` | Tableau + carte | Carte d'abord (défaut)     | Par échéance        |
 | Lecture d'un Artifact, Révision | `?variant=` | Colonne         | **Rail et marge (défaut)** | Étude               |
 | Panneau de génération           | `?panel=`   | Dialog          | Sheet + aperçu du Prompt   | **Étapes (défaut)** |
 
@@ -18,16 +18,16 @@ Exemples : <http://192.168.100.3:5182/prototype/new?variant=B>, <http://192.168.
 
 ## Le parcours
 
-1. **Nouvelles** : <http://192.168.100.3:5182/prototype/new>. Clique une ligne : la Sheet s'ouvre (Notes modifiables en place). **Garder** : l'Offre quitte la liste et sa Recherche se lance (simulée, ~9 s).
+1. **Nouvelles** : <http://192.168.100.3:5182/prototype/new>. La carte d'abord (variante B, par défaut), la liste flotte à gauche, groupée par urgence de la date limite (cette semaine, dans le mois, plus tard, passée), la ville en tête de chaque Offre. Clique une ligne ou un point : la Sheet s'ouvre à droite (Notes modifiables en place) et la carte centre l'Offre dans ce qui reste visible. Filtre **Région** : la carte montre toute la région. **Garder** : l'Offre quitte la liste et sa Recherche se lance (simulée, ~9 s).
 2. **Détection** : « Lancer une Détection » sur Nouvelles ; la progression s'affiche par Veille, puis deux Republications arrivent en tête (« Juste trouvée »), la Sheet dit « Tu as postulé le … ».
-3. **À traiter** : <http://192.168.100.3:5182/prototype/to-apply>. L'Offre gardée y est, avec ses pastilles R · L. Sheet → « Ouvrir la page complète ».
+3. **À traiter** : <http://192.168.100.3:5182/prototype/to-apply>. L'Offre gardée y est, avec ses pastilles R · LM (Recherche, Lettre de motivation). Dans la Sheet, clique « Recherche » puis reviens en arrière : la même Sheet se rouvre (elle vit dans l'URL, `?posting=`). Sheet → « Ouvrir la page complète ».
 4. **Recherche** (onglet) : « Regénérer » ouvre le panneau → « Lancer » → « Voir le Brouillon » → « Valider la Version ». Le point de l'onglet passe au vert, la liste et la Sheet suivent.
 5. **Lettre de motivation** : « Générer » (débloqué dès qu'une Recherche est validée) → « Lancer » → « Valider » → « Comparer à l'Original ».
 6. **Marquer Postulée** (en-tête). Sans Lettre de motivation validée, une AlertDialog propose « Valider la Lettre de motivation et marquer Postulée » ou « sans Lettre de motivation » : essaie-la sur une Offre d'À traiter dont la pastille L est orange. Une fois Postulée, la Lettre de motivation est figée.
-7. **Candidatures** : <http://192.168.100.3:5182/prototype/applications>. Ouvre l'Offre → « Ajouter un Entretien » (Dialog) → onglet **Entretiens** : Fiche d'entretien | Portrait → « Réviser l'Entretien » → flèche retour.
+7. **Candidatures** : <http://192.168.100.3:5182/prototype/applications>. En cours est groupé : Entretien passé (le plus récent d'abord), Convoquée (le plus proche d'abord), Postulée (date limite la plus proche d'abord). Ouvre l'Offre → « Ajouter un Entretien » (Dialog) → onglet **Entretiens** : Fiche d'entretien | Portrait → « Réviser l'Entretien » → flèche retour.
 8. **Notes** : modifie-les dans la Sheet ou dans l'onglet Notes, l'autre suit.
 9. **Changer de Candidat** (en tête de la barre latérale) : la page reste la même ; depuis une page d'Offre, retour à Nouvelles.
-10. **Téléphone** : Nouvelles en 390 px, la carte en surface, la liste dans un tiroir à tirer vers le haut.
+10. **Téléphone** : Nouvelles en 390 px, la carte en surface, la liste groupée dans un tiroir à tirer vers le haut ; un point ouvre la Sheet.
 
 ## L'exemple MDX (Béziers)
 

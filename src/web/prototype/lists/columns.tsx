@@ -36,7 +36,7 @@ const CITY_COLUMN: IColumn = {
   key: 'city',
   header: 'Ville',
   className: 'w-32',
-  cell: (posting) => <span className="block truncate">{posting.city ?? '—'}</span>,
+  cell: (posting) => <span className="block truncate font-semibold">{posting.city ?? '—'}</span>,
 };
 
 export const COLUMNS_BY_LIST: Record<ListName, IColumn[]> = {
@@ -96,7 +96,7 @@ export const COLUMNS_BY_LIST: Record<ListName, IColumn[]> = {
     },
     {
       key: 'artifacts',
-      header: 'Recherche · Lettre',
+      header: 'Recherche · LM',
       className: 'w-32',
       cell: (posting, { runningKeys }) => <ArtifactStates posting={posting} runningKeys={runningKeys} />,
     },

@@ -34,9 +34,10 @@ interface IListController {
   hoveredReference: string | null;
   activeReference: string | null;
   activeOrigin: Origin;
+  // Changes at each activation, even of the same Posting: the map centers on it again
+  activeNonce: number;
   sheetReference: string | null;
   hover: (reference: string | null, origin: Origin) => void;
-  // A row opens the Sheet; a marker highlights its row, and shows it in the Sheet when it is open
   activate: (reference: string, origin: Origin) => void;
   closeSheet: () => void;
   leavingReferences: ReadonlySet<string>;
@@ -60,11 +61,13 @@ export function ListProvider({ list, children }: { list: ListName; children: Rea
   const tab = parseApplicationTab(searchParams.get('tab'));
   const [filters, setFilters] = useState<IListFilters>(EMPTY_FILTERS);
   const [hoveredReference, setHoveredReference] = useState<string | null>(null);
-  const [active, setActive] = useState<{ reference: string | null; origin: Origin }>({
-    reference: null,
+  // The Sheet's Posting lives in the URL (?posting=), so Back from an Artifact page reopens it
+  const sheetReference = searchParams.get('posting');
+  const [active, setActive] = useState<{ reference: string | null; origin: Origin; nonce: number }>({
+    reference: sheetReference,
     origin: 'list',
+    nonce: 0,
   });
-  const [sheetReference, setSheetReference] = useState<string | null>(null);
   const [leavingReferences, setLeavingReferences] = useState<ReadonlySet<string>>(new Set());
 
   const listPostings = useMemo(
@@ -90,6 +93,24 @@ export function ListProvider({ list, children }: { list: ListName; children: Rea
     [setSearchParams],
   );
 
+  const setSheetReference = useCallback(
+    (reference: string | null) => {
+      setSearchParams(
+        (previous) => {
+          const params = new URLSearchParams(previous);
+          if (reference === null) {
+            params.delete('posting');
+          } else {
+            params.set('posting', reference);
+          }
+          return params;
+        },
+        { replace: true, preventScrollReset: true },
+      );
+    },
+    [setSearchParams],
+  );
+
   const hover = useCallback((reference: string | null, origin: Origin) => {
     setHoveredReference(reference);
     if (reference !== null && origin === 'map') {
@@ -97,20 +118,22 @@ export function ListProvider({ list, children }: { list: ListName; children: Rea
     }
   }, []);
 
-  const activate = useCallback((reference: string, origin: Origin) => {
-    setActive({ reference, origin });
-    if (origin === 'list') {
+  // A row or a point opens the Sheet; a point also brings its row into view
+  const activate = useCallback(
+    (reference: string, origin: Origin) => {
+      setActive((current) => ({ reference, origin, nonce: current.nonce + 1 }));
       setSheetReference(reference);
-      return;
-    }
-    revealRow(reference);
-    setSheetReference((current) => (current === null ? null : reference));
-  }, []);
+      if (origin === 'map') {
+        revealRow(reference);
+      }
+    },
+    [setSheetReference],
+  );
 
   const closeSheet = useCallback(() => {
     setSheetReference(null);
-    setActive({ reference: null, origin: 'list' });
-  }, []);
+    setActive((current) => ({ reference: null, origin: 'list', nonce: current.nonce }));
+  }, [setSheetReference]);
 
   const sort = useCallback(
     async (reference: string, decision: 'keep' | 'dismiss') => {
@@ -139,6 +162,7 @@ export function ListProvider({ list, children }: { list: ListName; children: Rea
       hoveredReference,
       activeReference: active.reference,
       activeOrigin: active.origin,
+      activeNonce: active.nonce,
       sheetReference,
       hover,
       activate,

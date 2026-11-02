@@ -1,32 +1,56 @@
-// PROTOTYPE. Variant B « Carte d’abord » bets on place as the first question (« où est ce poste ? »):
-// the map fills the page; the list floats over it in a panel that folds away, two lines per Posting.
+// PROTOTYPE. Variant B « Carte d’abord » (the user's pick) bets on place as the first question
+// (« où est ce poste ? »): the map fills the page; the list floats over it in a panel that folds away,
+// grouped by what needs attention first (as variant C): the Deadline's urgency for New and To Apply;
+// Interviewed, Invited, Applied for Applications. The map takes the same groups as its colors. The
+// Sheet opens on the right; a Posting opened is centered in the map that is left visible.
 import { ListIcon, PanelLeftCloseIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '#/web/prototype/components/ui/button.tsx';
-import { cn } from '#/web/prototype/lib/utils.ts';
 
 import { LIST_LABEL } from '../model.ts';
-import { useRunningKeysByReference } from './columns.tsx';
-import { CompactRow } from './compact-row.tsx';
+import { GroupedCompactList } from './compact-row.tsx';
 import { ApplicationTabs, ListFilters } from './filters.tsx';
 import { useListController } from './list-context.tsx';
-import { ListMap } from './list-map.tsx';
-import { EmptyList } from './variant-a.tsx';
+import { ListMap, MapLegend } from './list-map.tsx';
+import { mapLegendOf, mapToneOf } from './list-model.ts';
 
 const PANEL_WIDTH = 400;
+const PANEL_MARGIN = 12;
+// The Sheet's width (posting-sheet.tsx: 30rem, the whole width below sm)
+const SHEET_WIDTH = 480;
+
+function useWindowWidth(): number {
+  const [width, setWidth] = useState(1440);
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return width;
+}
 
 export function VariantB() {
-  const { list, postings } = useListController();
-  const runningKeysByReference = useRunningKeysByReference();
+  const { list, postings, sheetReference } = useListController();
   const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const windowWidth = useWindowWidth();
+  const panelInset = isPanelOpen ? PANEL_WIDTH + PANEL_MARGIN : 0;
   return (
     <div className="relative min-h-0 flex-1">
       <ListMap
         className="absolute inset-0"
-        paddingTopLeft={isPanelOpen ? [PANEL_WIDTH + 48, 48] : [48, 48]}
-        paddingBottomRight={[48, 48]}
+        paddingTopLeft={[panelInset + 40, 64]}
+        paddingBottomRight={[40, 56]}
+        toneOf={mapToneOf(list)}
+        focusInset={{
+          top: 0,
+          bottom: 0,
+          left: panelInset,
+          right: sheetReference === null ? 0 : Math.min(SHEET_WIDTH, windowWidth),
+        }}
       />
+      <MapLegend items={mapLegendOf(list)} className="absolute right-3 bottom-6 max-w-[calc(100%-28rem)]" />
       {isPanelOpen ? (
         <aside
           className="absolute top-3 bottom-3 left-3 z-10 flex flex-col overflow-hidden rounded-xl border bg-background/95 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-background/85"
@@ -50,26 +74,14 @@ export function VariantB() {
             <ApplicationTabs isFull />
             <ListFilters layout="stack" />
           </div>
-          <ul className="min-h-0 flex-1 divide-y overflow-y-auto">
-            {postings.length === 0 ? (
-              <li>
-                <EmptyList />
-              </li>
-            ) : (
-              postings.map((posting) => (
-                <CompactRow
-                  key={posting.reference}
-                  posting={posting}
-                  runningKeys={runningKeysByReference.get(posting.reference) ?? []}
-                />
-              ))
-            )}
-          </ul>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <GroupedCompactList />
+          </div>
         </aside>
       ) : (
         <Button
           variant="outline"
-          className={cn('absolute top-3 left-3 z-10 bg-background shadow-lg')}
+          className="absolute top-3 left-3 z-10 bg-background shadow-lg"
           onClick={() => setIsPanelOpen(true)}
         >
           <ListIcon />

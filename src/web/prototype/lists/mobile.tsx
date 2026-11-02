@@ -9,13 +9,11 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from '#/web/pro
 import { cn } from '#/web/prototype/lib/utils.ts';
 
 import { LIST_LABEL } from '../model.ts';
-import { useRunningKeysByReference } from './columns.tsx';
-import { CompactRow } from './compact-row.tsx';
+import { GroupedCompactList } from './compact-row.tsx';
 import { ApplicationTabs, ListFilters } from './filters.tsx';
 import { useListController } from './list-context.tsx';
 import { ListMap } from './list-map.tsx';
-import { hasFilters } from './list-model.ts';
-import { EmptyList } from './variant-a.tsx';
+import { hasFilters, mapToneOf } from './list-model.ts';
 
 // vaul measures a px snap point from the window's bottom edge to its top: the peek shows ~150px of a
 // sheet that stops under the page header (4.5rem)
@@ -24,7 +22,6 @@ const SNAP_POINT_LIST: (string | number)[] = [PEEK, 0.5, 1];
 
 export function MobileLayout() {
   const { list, postings, filters, activeReference, activeOrigin } = useListController();
-  const runningKeysByReference = useRunningKeysByReference();
   const [snapPoint, setSnapPoint] = useState<string | number | null>(PEEK);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
@@ -37,7 +34,13 @@ export function MobileLayout() {
 
   return (
     <div className="relative min-h-0 flex-1">
-      <ListMap className="absolute inset-0" paddingBottomRight={[24, 170]} paddingTopLeft={[24, 24]} />
+      <ListMap
+        className="absolute inset-0"
+        paddingBottomRight={[24, 170]}
+        paddingTopLeft={[24, 48]}
+        toneOf={mapToneOf(list)}
+        focusInset={{ top: 0, right: 0, bottom: 160, left: 0 }}
+      />
       <Drawer
         open
         modal={false}
@@ -72,23 +75,9 @@ export function MobileLayout() {
           </div>
           {list === 'applications' ? <ApplicationTabs isFull className="px-4 pb-3" /> : null}
           {isFilterOpen ? <ListFilters layout="stack" className="border-t px-4 py-3" /> : null}
-          <ul
-            className={cn('min-h-0 flex-1 divide-y border-t', snapPoint === 1 ? 'overflow-y-auto' : 'overflow-hidden')}
-          >
-            {postings.length === 0 ? (
-              <li>
-                <EmptyList />
-              </li>
-            ) : (
-              postings.map((posting) => (
-                <CompactRow
-                  key={posting.reference}
-                  posting={posting}
-                  runningKeys={runningKeysByReference.get(posting.reference) ?? []}
-                />
-              ))
-            )}
-          </ul>
+          <div className={cn('min-h-0 flex-1 border-t', snapPoint === 1 ? 'overflow-y-auto' : 'overflow-hidden')}>
+            <GroupedCompactList />
+          </div>
         </DrawerContent>
       </Drawer>
     </div>

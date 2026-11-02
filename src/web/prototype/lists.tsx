@@ -19,10 +19,11 @@ import { LIST_LABEL, type ListName } from './model.ts';
 import { PageHeader } from './page-header.tsx';
 import { PrototypeSwitcher, usePrototypeVariant } from './prototype-switcher.tsx';
 
-// The variants to compare (DECISIONS.md: list + map layout), on ?variant=
+// The variants to compare (DECISIONS.md: list + map layout), on ?variant=; B, the user's pick, first:
+// it is the default
 const VARIANT_LIST = [
-  { key: 'A', name: 'Tableau + carte' },
   { key: 'B', name: 'Carte d’abord' },
+  { key: 'A', name: 'Tableau + carte' },
   { key: 'C', name: 'Par échéance' },
 ];
 

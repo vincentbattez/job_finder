@@ -147,18 +147,20 @@ function MarkAppliedButton({ posting }: { posting: IPosting }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {letter.state === 'draft' ? 'La Lettre est encore un Brouillon' : 'Aucune Lettre pour cette Offre'}
+              {letter.state === 'draft'
+                ? 'La Lettre de motivation est encore un Brouillon'
+                : 'Aucune Lettre de motivation pour cette Offre'}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {letter.state === 'draft'
-                ? `La Version ${String(letter.latestNumber ?? 1)} n’est pas validée. Une fois Postulée, la Lettre est figée.`
-                : 'Tu peux marquer l’Offre Postulée sans Lettre ; elle ne pourra plus en avoir ensuite.'}
+                ? `La Version ${String(letter.latestNumber ?? 1)} n’est pas validée. Une fois Postulée, la Lettre de motivation est figée.`
+                : 'Tu peux marquer l’Offre Postulée sans Lettre de motivation ; elle ne pourra plus en avoir ensuite.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction variant="outline" onClick={() => void markApplied()}>
-              Marquer Postulée sans Lettre
+              Marquer Postulée sans Lettre de motivation
             </AlertDialogAction>
             {letter.state === 'draft' && letter.latestNumber !== null ? (
               <AlertDialogAction
@@ -169,7 +171,7 @@ function MarkAppliedButton({ posting }: { posting: IPosting }) {
                   })
                 }
               >
-                Valider la Lettre et marquer Postulée
+                Valider la Lettre de motivation et marquer Postulée
               </AlertDialogAction>
             ) : null}
           </AlertDialogFooter>
@@ -313,7 +315,7 @@ function ArtifactLine({
       className="group flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
       <Icon className="size-4 shrink-0 text-muted-foreground" />
-      <span className="w-24 shrink-0 font-medium">{label}</span>
+      <span className="w-40 shrink-0 font-medium">{label}</span>
       {run === undefined ? (
         <span
           className={cn(
@@ -355,7 +357,7 @@ function ArtifactLines({ posting }: { posting: IPosting }) {
       <ArtifactLine
         to={`${base}?tab=letter`}
         icon={PenLineIcon}
-        label="Lettre"
+        label="Lettre de motivation"
         summary={posting.letter}
         run={runOf('letter')}
       />

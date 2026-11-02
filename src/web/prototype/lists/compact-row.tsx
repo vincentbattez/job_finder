@@ -1,8 +1,11 @@
-// PROTOTYPE. A Posting on two lines, for the narrow lists (variant B's floating panel, the mobile
-// bottom sheet): title then the one fact that matters for its list, its actions on the right.
+// PROTOTYPE. A Posting on three short lines, for the narrow lists (variant B's floating panel, the
+// mobile bottom sheet): its City first, then its title, then the facts that matter for its list; its
+// actions on the right.
+import { MapPinIcon } from 'lucide-react';
+
 import { cn } from '#/web/prototype/lib/utils.ts';
 
-import { formatDateTime, type IPosting } from '../model.ts';
+import { formatDateTime, nextInterviewOf, type IPosting } from '../model.ts';
 import {
   ArtifactStates,
   Countdown,
@@ -11,10 +14,11 @@ import {
   RepostMark,
   rowStateClass,
   SortButtons,
-  StepBadge,
 } from './cells.tsx';
+import { useRunningKeysByReference } from './columns.tsx';
 import { useListController, useRowSync } from './list-context.tsx';
-import { formatShortDate, upcomingInterviewOf } from './list-model.ts';
+import { formatShortDate, groupPostings } from './list-model.ts';
+import { EmptyList } from './variant-a.tsx';
 
 function Meta({ posting, runningKeys }: { posting: IPosting; runningKeys: string[] }) {
   const { list } = useListController();
@@ -34,10 +38,10 @@ function Meta({ posting, runningKeys }: { posting: IPosting; runningKeys: string
       </>
     );
   }
-  const interview = upcomingInterviewOf(posting);
+  // Invited: the next Interview; Interviewed: the last one
+  const interview = nextInterviewOf(posting.interviews);
   return (
     <>
-      <StepBadge step={posting.step} />
       {interview === null ? (
         <span>Postulée le {formatShortDate(posting.appliedAt)}</span>
       ) : (
@@ -61,15 +65,16 @@ export function CompactRow({ posting, runningKeys }: { posting: IPosting; runnin
       )}
     >
       <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex items-center gap-1.5">
+        <p className="flex min-w-0 items-center gap-1.5 text-sm">
+          <MapPinIcon className="size-3.5 shrink-0 text-primary" />
+          <span className="shrink-0 font-semibold">{posting.city ?? 'Lieu inconnu'}</span>
+          {posting.employer === null ? null : (
+            <span className="truncate text-xs text-muted-foreground">· {posting.employer}</span>
+          )}
           {posting.isSynthetic ? <FoundBadge /> : null}
-          <p className="truncate text-sm font-medium" title={posting.title}>
-            {posting.title}
-          </p>
-        </div>
-        <p className="truncate text-xs text-muted-foreground">
-          {posting.city ?? '—'}
-          {posting.employer === null ? '' : ` · ${posting.employer}`}
+        </p>
+        <p className="truncate text-sm text-foreground/85" title={posting.title}>
+          {posting.title}
         </p>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
           <Meta posting={posting} runningKeys={runningKeys} />
@@ -78,4 +83,31 @@ export function CompactRow({ posting, runningKeys }: { posting: IPosting; runnin
       {list === 'new' && posting.archivedAt === null ? <SortButtons reference={posting.reference} size="icon" /> : null}
     </li>
   );
+}
+
+// The list's Postings in their groups, attention first, each under a sticky header (variant B, mobile)
+export function GroupedCompactList() {
+  const { list, postings } = useListController();
+  const runningKeysByReference = useRunningKeysByReference();
+  if (postings.length === 0) {
+    return <EmptyList />;
+  }
+  return groupPostings(list, postings).map((group) => (
+    <section key={group.key} aria-label={group.label}>
+      <h3 className="sticky top-0 z-10 flex items-baseline gap-2 border-b bg-muted/95 px-4 py-1.5 text-xs font-semibold backdrop-blur">
+        {group.label}
+        <span className="font-normal text-muted-foreground tabular-nums">{group.postings.length}</span>
+        {group.hint === '' ? null : <span className="ml-auto font-normal text-muted-foreground">{group.hint}</span>}
+      </h3>
+      <ul className="divide-y border-b">
+        {group.postings.map((posting) => (
+          <CompactRow
+            key={posting.reference}
+            posting={posting}
+            runningKeys={runningKeysByReference.get(posting.reference) ?? []}
+          />
+        ))}
+      </ul>
+    </section>
+  ));
 }
