@@ -17,6 +17,7 @@ export const CLI_EN = {
 
   // A Posting on one line. The Source gives the Deadline as a day, at midnight UTC.
   deadline: '{{deadline, datetime(timeZone: UTC)}}',
+  startDate: 'Start Date {{startDate, datetime(timeZone: UTC)}}',
   inZone: 'Zone',
   outOfZone: 'out of Zone',
   repostOf: 'Repost of {{reference}}',

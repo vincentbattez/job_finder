@@ -61,6 +61,8 @@ export type ListedPosting = z.infer<typeof LISTED_POSTING_SCHEMA>;
 export const JOB_DESCRIPTION_SCHEMA = z
   .object({
     deadline: z.date().nullable(),
+    // The day its Position is to be filled, null when the Job Description says nothing
+    startDate: z.date().nullable(),
     employer: z.string().nullable(),
     workplace: z.string().nullable(),
     applicationEmail: z.string().nullable(),
@@ -131,6 +133,8 @@ export const POSTING_SCHEMA = z
     url: z.string().nullable(),
     publishedAt: z.date().nullable(),
     deadline: z.date().nullable(),
+    // The day its Position is to be filled, null when the Job Description says nothing
+    startDate: z.date().nullable(),
     employer: z.string().nullable(),
     workplace: z.string().nullable(),
     applicationEmail: z.string().nullable(),

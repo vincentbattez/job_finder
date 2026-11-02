@@ -18,6 +18,7 @@ export const CLI_FR: typeof CLI_EN = {
     'Impossible d’écrire le fichier {{filePath}} ({{reason}}). Vérifier que son dossier est accessible en écriture.',
 
   deadline: '{{deadline, datetime(timeZone: UTC)}}',
+  startDate: 'Prise de poste le {{startDate, datetime(timeZone: UTC)}}',
   inZone: 'Zone',
   outOfZone: 'hors Zone',
   repostOf: 'Republication de {{reference}}',

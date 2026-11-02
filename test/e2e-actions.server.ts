@@ -32,6 +32,7 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
       workplace: 'Place Firmin Gautier, 38000 Grenoble',
       city: 'Grenoble',
       deadline: '2026-12-15',
+      startDate: null,
       applicationEmail: 'greffe.tj-grenoble@justice.fr',
       contact1: null,
       contact2: null,
