@@ -7,7 +7,6 @@ import { readCandidate } from '#/web/candidate.server.ts';
 import { EmptyState } from '#/web/components/empty-state.tsx';
 import { filterPostings, PostingFilters } from '#/web/components/posting-filters.tsx';
 import { PostingList } from '#/web/components/posting-list.tsx';
-import { PostingMap } from '#/web/components/posting-map.tsx';
 import { Detection } from '#/web/containers/detection.tsx';
 import { JobDescriptionImport } from '#/web/containers/job-description-import.tsx';
 import { relayLoader } from '#/web/relay-action.server.ts';
@@ -52,7 +51,6 @@ export default function Postings() {
         <JobDescriptionImport />
         {postingList.length > 0 && <PostingFilters postingList={postingList} />}
       </div>
-      {postingList.length > 0 && <PostingMap postingList={filteredPostingList} />}
       {filteredPostingList.length === 0 && postingList.length > 0 ? (
         <EmptyState>{t('noFilteredPosting')}</EmptyState>
       ) : (

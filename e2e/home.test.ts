@@ -139,7 +139,7 @@ test.describe('home', () => {
     await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Nouvelles' }).click();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Léa');
     await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'À traiter' }).click();
-    await expect(page).toHaveURL('/postings');
+    await expect(page).toHaveURL('/to-apply');
   });
 
   test('says when no Posting arrived in the Zone yet', async ({ page, asCandidate, openPage }) => {

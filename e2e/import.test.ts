@@ -57,12 +57,12 @@ test('imports a Job Description dropped on the Postings: it shows at once, then 
     timeout: READY_TIMEOUT_MS,
   });
 
-  await page.goto('/postings');
-  const row = page.getByRole('row', { name: new RegExp(TITLE) });
-  await expect(row.getByRole('cell').last()).toHaveText('15/12/2026');
-  // Located in Grenoble by API Géo's recorded answer
-  const point = page
-    .getByRole('region', { name: 'Carte des Offres' })
-    .getByRole('button', { name: new RegExp(`^${TITLE} · import-`) });
-  await expect(point).toHaveAttribute('data-status', 'to_apply');
+  await page.goto('/to-apply');
+  // Located in Grenoble by API Géo's recorded answer, with its Deadline read by Claude
+  const row = page.getByRole('listitem').filter({ hasText: TITLE });
+  await expect(row).toHaveText(/^Grenoble/);
+  await expect(row).toContainText('15 déc.');
+  await expect(
+    page.getByRole('region', { name: 'Carte des Offres' }).getByRole('button', { name: `Grenoble · ${TITLE}` }),
+  ).toHaveCount(1);
 });
