@@ -38,7 +38,6 @@ export const POSTING_EN = {
 
   // The outcome selector: Applied on a To Apply Posting, then the outcomes of its Application
   markApplied: 'Mark as Applied',
-  outcomeLabel: 'Outcome of the Application',
   outcomeLabelByStatus: {
     hired: 'Hired',
     rejected: 'Rejected',
@@ -260,16 +259,6 @@ export const POSTING_EN = {
     delete: 'Delete Interview {{number}}',
     deleteForGood: 'Delete Interview {{number}} for good',
     ical: 'Add to calendar (iCal)',
-    next: 'Next Interview',
-    last: 'Last Interview',
-    count_one: '{{count}} Interview',
-    count_other: '{{count}} Interviews',
-  },
-
-  // An Application row, on the home and on /applications
-  applicationRow: {
-    lastChangeAt: 'Last change',
-    notesExcerpt: 'Notes',
   },
 
   // The iCal file of an Interview: the event in the calendar and the links its description gives

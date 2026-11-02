@@ -44,6 +44,26 @@ export const LISTS_FR: typeof LISTS_EN = {
     noMatch: 'Aucune Offre ne correspond à ces filtres.',
     noArchived: 'Aucune Offre archivée dans cette liste.',
   },
+  applications: {
+    pageTitle: 'Candidatures · Job Finder',
+    heading: 'Candidatures',
+    tabsLabel: 'Candidatures par issue',
+    tab: { in_progress: 'En cours', hired: 'Poste obtenu', rejected: 'Refusées' },
+    empty: {
+      in_progress: 'Aucune Candidature en cours. Marque une Offre Postulée une fois sa Lettre de motivation envoyée.',
+      hired: 'Aucun Poste obtenu pour l’instant.',
+      rejected: 'Aucune Candidature Refusée.',
+    },
+    group: {
+      interviewed: { label: 'Entretien passé', hint: 'En attente de réponse' },
+      invited: { label: 'Convoquée', hint: 'Prochain Entretien d’abord' },
+      applied: { label: 'Postulée', hint: 'Date limite la plus proche d’abord' },
+      hired: { label: 'Poste obtenu', hint: 'Les plus récentes d’abord' },
+      rejected: { label: 'Refusée', hint: 'Les plus récentes d’abord' },
+    },
+    nextInterview: 'Entretien le {{date}}',
+    appliedOn: 'Postulée le {{date}}',
+  },
   count: '{{label}} · {{count}}',
   fold: 'Replier la liste',
   openSheet: 'Aperçu de cette Offre',
@@ -67,6 +87,8 @@ export const LISTS_FR: typeof LISTS_EN = {
   },
   shortDate: '{{date, datetime(day: numeric; month: short; timeZone: Europe/Paris)}}',
   shortDateWithYear: '{{date, datetime(day: numeric; month: short; year: numeric; timeZone: Europe/Paris)}}',
+  shortDateTime:
+    '{{date, datetime(day: numeric; month: short; hour: 2-digit; minute: 2-digit; hourCycle: h23; timeZone: Europe/Paris)}}',
   countdown: {
     today: 'aujourd’hui',
     future_one: 'dans {{count}} j',

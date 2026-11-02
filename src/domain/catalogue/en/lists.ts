@@ -1,4 +1,4 @@
-// The lists over the map: New and To Apply for now, Applications next (spec #125 « Lists »)
+// The lists over the map: New, To Apply and Applications (spec #125 « Lists »)
 export const LISTS_EN = {
   new: {
     pageTitle: 'New · Job Finder',
@@ -43,6 +43,26 @@ export const LISTS_EN = {
     noMatch: 'No Posting matches these filters.',
     noArchived: 'No Archived Posting in this list.',
   },
+  applications: {
+    pageTitle: 'Applications · Job Finder',
+    heading: 'Applications',
+    tabsLabel: 'Applications by outcome',
+    tab: { in_progress: 'In progress', hired: 'Hired', rejected: 'Rejected' },
+    empty: {
+      in_progress: 'No Application in progress. Mark a Posting Applied once you sent its Letter.',
+      hired: 'No Hired Application yet.',
+      rejected: 'No Rejected Application.',
+    },
+    group: {
+      interviewed: { label: 'Interviewed', hint: 'Awaiting the answer' },
+      invited: { label: 'Invited', hint: 'Next Interview first' },
+      applied: { label: 'Applied', hint: 'Nearest Deadline first' },
+      hired: { label: 'Hired', hint: 'Latest Applied first' },
+      rejected: { label: 'Rejected', hint: 'Latest Applied first' },
+    },
+    nextInterview: 'Interview {{date}}',
+    appliedOn: 'Applied {{date}}',
+  },
   count: '{{label}} · {{count}}',
   fold: 'Fold the list',
   openSheet: 'Preview this Posting',
@@ -67,6 +87,9 @@ export const LISTS_EN = {
   // A day without its year when it is this year's, « Nov 20 », else with it
   shortDate: '{{date, datetime(day: numeric; month: short; timeZone: Europe/Paris)}}',
   shortDateWithYear: '{{date, datetime(day: numeric; month: short; year: numeric; timeZone: Europe/Paris)}}',
+  // An Interview's day and time, « Nov 20, 10:00 »
+  shortDateTime:
+    '{{date, datetime(day: numeric; month: short; hour: 2-digit; minute: 2-digit; hourCycle: h23; timeZone: Europe/Paris)}}',
   countdown: {
     today: 'today',
     future_one: 'in {{count}} d',
