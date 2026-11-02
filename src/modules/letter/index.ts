@@ -42,6 +42,8 @@ export const LETTER_MODULE = {
   isReadingProfile: true,
   isReadingSentVersions: true,
   isFrozenOnceApplied: true,
+  // The Draft stays as the AI wrote it, so that the tool learns from the corrections of the Letter
+  readOnlyFileList: [{ name: DRAFT_FILE_NAME, errorCode: 'draft_not_editable' }],
 
   // The Letter starts as a copy of the Draft, which becomes read-only: no correction, in the
   // front or with jf edit, can reach it

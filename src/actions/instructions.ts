@@ -1,5 +1,6 @@
 import { z } from 'zod/v4';
 
+import { findDefaultInstructions, parseModule } from '#/artifact/index.ts';
 import {
   ARTIFACT_SCHEMA,
   MODULE_INSTRUCTIONS_SCHEMA,
@@ -9,7 +10,6 @@ import {
 } from '#/domain/index.ts';
 
 import type { ActionContext } from './context.ts';
-import { findDefaultInstructions, parseModule } from './run-job.ts';
 
 const INSTRUCTIONS_MODULE_INPUT_SCHEMA = z.object({ module: z.string() });
 const INSTRUCTIONS_INPUT_SCHEMA = INSTRUCTIONS_MODULE_INPUT_SCHEMA.extend({ instructions: z.string() });

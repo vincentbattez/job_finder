@@ -1,6 +1,7 @@
 import { z } from 'zod/v4';
 
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
+import { createArtifacts } from '#/artifact/index.ts';
 import { localeOf } from '#/domain/catalogue/i18n.ts';
 import { codedError, type CodedError } from '#/domain/coded-error.ts';
 import { LOCATION_SCHEMA, type Candidate, type Locale, type Location, type Posting } from '#/domain/index.ts';
@@ -13,7 +14,7 @@ import { messageOf } from '#/text/index.ts';
 import { openWorkspace } from '#/workspace/index.ts';
 
 import { NOTIFICATION_CHANNEL_LIST, SOURCE_LIST } from './modules.ts';
-import { createJobRunner } from './run-job.ts';
+import { findWorkerFailure } from './stalled-job.ts';
 
 const CANDIDATE_INPUT_SCHEMA = z.object({ candidateId: z.string() });
 
@@ -161,7 +162,14 @@ export async function openContext({
     findSource,
     importSource: createImportSource(aiSession),
     uploadConversion: createUploadConversion(aiSession),
-    runJob: createJobRunner(workspace, aiSession, findCandidate),
+    // The only way to an Artifact, its Versions, its verdicts and its run (ADR-0016)
+    artifacts: createArtifacts({
+      workspace,
+      aiSession,
+      findPosting,
+      findCandidate,
+      findWorkerFailure: (job, locale) => findWorkerFailure(workspace, job, locale),
+    }),
     notificationChannelList,
     notificationChannelModuleOf,
     findNotificationChannelModule,

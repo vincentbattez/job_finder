@@ -113,15 +113,3 @@ export function assertStatusChange(
   };
   throw codedError('status_change', values, { locale });
 }
-
-// Once the Posting was Applied, the Chosen Letter is the one sent, even once the Posting is Archived
-export function findLetterFreeze(posting: PostingStatus, locale: Locale): string | undefined {
-  return hasBeenApplied(posting) ? tFor(locale, 'error')('letterFrozen', { reference: posting.reference }) : undefined;
-}
-
-// Every action that would change the Chosen Letter calls this first
-export function assertLetterModifiable(posting: PostingStatus, locale: Locale): void {
-  if (hasBeenApplied(posting)) {
-    throw codedError('letter_frozen', { reference: posting.reference }, { locale });
-  }
-}

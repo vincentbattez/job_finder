@@ -32,3 +32,10 @@ export async function findJobStall(workspace: Workspace, job: Job, locale: Local
   }
   return undefined;
 }
+
+// The stall as the Posting page and jf versions show it, in the Candidate's locale; null while the job
+// moves or once it is over
+export async function findWorkerFailure(workspace: Workspace, job: Job, locale: Locale) {
+  const stall = await findJobStall(workspace, job, locale);
+  return stall === undefined ? null : { errorCode: stall.code, message: stall.message };
+}

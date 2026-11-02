@@ -101,6 +101,68 @@ function findJobsRunOutsideWorker(projectDirectory: string): string[] {
   );
 }
 
+// Only the actions reach the Artifact module: the front, the CLI and the worker relay to them, and nothing
+// else bypasses them to act on an Artifact (ADR-0016)
+function findArtifactModuleImportsOutsideActions(projectDirectory: string): string[] {
+  const filePathList = globSync('src/**/*.{ts,tsx}', {
+    cwd: projectDirectory,
+    exclude: ['src/actions/**', 'src/artifact/**', '**/*.test.{ts,tsx}'],
+  });
+  return filePathList
+    .filter((filePath) => /['"]#\/artifact\//.test(readFileSync(path.join(projectDirectory, filePath), 'utf8')))
+    .map((filePath) => `${filePath} imports the Artifact module, which only the actions call (ADR-0016)`);
+}
+
+// The writes of the workspace that would bypass the verdicts of an Artifact; creating a job counts
+// unless it is an extraction, which is no Artifact job
+const ARTIFACT_WRITE_NAME_SET = new Set([
+  'createJob',
+  'startJob',
+  'finishJob',
+  'chooseVersion',
+  'writeVersionDocument',
+]);
+
+function isArtifactWrite(node: ts.Node): node is ts.CallExpression {
+  if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression)) {
+    return false;
+  }
+  const { expression: receiver, name } = node.expression;
+  // The workspace as a variable or as the field of the context: workspace.x() or context.workspace.x()
+  const receiverName = ts.isPropertyAccessExpression(receiver) ? receiver.name.text : receiver.getText();
+  if (receiverName !== 'workspace' || !ARTIFACT_WRITE_NAME_SET.has(name.text)) {
+    return false;
+  }
+  const [, module] = node.arguments;
+  return (
+    name.text !== 'createJob' || module === undefined || !ts.isStringLiteral(module) || module.text !== 'extraction'
+  );
+}
+
+// Only the Artifact module creates an Artifact job, starts or finishes the Version of a job, chooses a
+// Version or writes its document: each act checks its verdict there first (ADR-0016)
+function findArtifactWritesOutsideModule(projectDirectory: string): string[] {
+  const filePathList = globSync('src/**/*.{ts,tsx}', {
+    cwd: projectDirectory,
+    exclude: ['src/artifact/**', 'src/workspace/**', '**/*.test.{ts,tsx}'],
+  });
+  return filePathList.flatMap((filePath) => {
+    const content = readFileSync(path.join(projectDirectory, filePath), 'utf8');
+    const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const violationList: string[] = [];
+    const visit = (node: ts.Node): void => {
+      if (isArtifactWrite(node)) {
+        violationList.push(
+          `${filePath} calls ${node.expression.getText(sourceFile)} outside the Artifact module (ADR-0016)`,
+        );
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
+    return violationList;
+  });
+}
+
 // A failure written only to a standard stream is seen by no one: the business code keeps it, on its
 // job or in its result, for the front, the CLI or a notification. The CLI and the worker display.
 function findStandardStreamWrites(projectDirectory: string): string[] {
@@ -887,6 +949,64 @@ describe('architecture', () => {
 
   it('runs the queued jobs only in the worker', () => {
     expect(findJobsRunOutsideWorker(ROOT_DIRECTORY)).toEqual([]);
+  });
+
+  it('catches the front, the CLI or the worker importing the Artifact module', () => {
+    const importLine =
+      "import { createArtifacts } from '#/artifact/index.ts';\nexport const relay = createArtifacts;\n";
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/artifact/index.ts': 'export const createArtifacts = 1;\n',
+        'src/actions/context.ts': importLine,
+        'src/web/routes/posting.tsx': importLine,
+        'src/cli/jf.ts': importLine,
+        'src/worker/worker.ts': importLine,
+      }),
+    );
+
+    expect(
+      sortedList(findArtifactModuleImportsOutsideActions(projectDirectory)).map(
+        (violation) => violation.split(' ', 1)[0],
+      ),
+    ).toEqual(['src/cli/jf.ts', 'src/web/routes/posting.tsx', 'src/worker/worker.ts']);
+  });
+
+  it('lets only the actions import the Artifact module', () => {
+    expect(findArtifactModuleImportsOutsideActions(ROOT_DIRECTORY)).toEqual([]);
+  });
+
+  it('catches an Artifact job or a Version written outside the Artifact module', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        'src/actions/postings.ts': [
+          "export const queue = (workspace, posting) => workspace.createJob(posting, 'letter', { isAutomatic: true });",
+          'export const start = (workspace, job) => workspace.startJob(job, {});',
+          'export const finish = (workspace, run) => workspace.finishJob(run, {});',
+          'export const choose = (context, version) => context.workspace.chooseVersion(version);',
+          "export const save = (workspace, posting, version) => workspace.writeVersionDocument(posting, version, 'a.md', '');",
+          // An extraction is no Artifact job, and an action named like a write is no write of the workspace
+          "export const extract = (workspace, posting) => workspace.createJob(posting, 'extraction');",
+          'export const relay = (actions, input) => actions.chooseVersion(input);',
+          '',
+        ].join('\n'),
+        'src/artifact/index.ts':
+          "export const queue = (workspace, posting) => workspace.createJob(posting, 'letter');\n",
+      }),
+    );
+
+    expect(
+      findArtifactWritesOutsideModule(projectDirectory).map((violation) => violation.split(' outside', 1)[0]),
+    ).toEqual([
+      'src/actions/postings.ts calls workspace.createJob',
+      'src/actions/postings.ts calls workspace.startJob',
+      'src/actions/postings.ts calls workspace.finishJob',
+      'src/actions/postings.ts calls context.workspace.chooseVersion',
+      'src/actions/postings.ts calls workspace.writeVersionDocument',
+    ]);
+  });
+
+  it('creates an Artifact job and writes a Version only in the Artifact module', () => {
+    expect(findArtifactWritesOutsideModule(ROOT_DIRECTORY)).toEqual([]);
   });
 
   it('catches business code writing a failure to a standard stream', () => {

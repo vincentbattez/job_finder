@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { ErrorCode } from '#/actions/index.ts';
+import type { Artifact, ErrorCode } from '#/actions/index.ts';
 
 import { StateBadge, StatusBadge, type State } from './badge.tsx';
 import { DateText } from './date.tsx';
@@ -11,8 +11,6 @@ import { Recipients, type IRecipients } from './recipients.tsx';
 import { RepostFacts, type IRepost } from './repost.tsx';
 
 import './posting-detail.css';
-
-type Artifact = 'research' | 'letter' | 'portrait' | 'interview_brief' | 'visualization';
 
 type VersionState = 'running' | 'ready' | 'failed';
 

@@ -245,19 +245,4 @@ describe('the modules the Posting page offers', () => {
       },
     });
   });
-
-  it('holds the Letter back once the Posting is Applied', async () => {
-    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
-    await actions.runModule({ module: 'research', reference: REFERENCE });
-    await actions.runQueuedJobs();
-
-    await addInterview(actions);
-
-    expect(await readModuleByArtifact(actions)).toMatchObject({
-      research: { refusal: null },
-      letter: { refusal: /a été Postulée : sa Lettre retenue est figée/ },
-      // The interview comes after the application
-      interview_brief: { refusal: null },
-    });
-  });
 });

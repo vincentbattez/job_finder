@@ -18,7 +18,6 @@ import { formatCalendar } from '#/ical/index.ts';
 import { findInterviewEnd, hasBeenApplied } from '#/status/index.ts';
 
 import { REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
-import { findChosenVersion } from './run-job.ts';
 
 // Typed in Paris time, as a datetime-local field or the CLI gives it: « 2026-11-19T14:00 »
 const START_SCHEMA = z
@@ -87,7 +86,7 @@ function summarize(posting: Posting, locale: Locale): string {
     : t('ical.summary', { title: posting.title, employer });
 }
 
-export function createInterviewActions({ workspace, findPosting, findLocale }: ActionContext) {
+export function createInterviewActions({ workspace, artifacts, findPosting, findLocale }: ActionContext) {
   async function findInterview(rawInput: unknown): Promise<{ posting: Posting; interview: Interview }> {
     const { reference, number } = INTERVIEW_INPUT_SCHEMA.parse(rawInput);
     const posting = await findPosting(reference);
@@ -135,6 +134,7 @@ export function createInterviewActions({ workspace, findPosting, findLocale }: A
       const { origin } = ICAL_INPUT_SCHEMA.parse(rawInput);
       const { posting, interview } = await findInterview(rawInput);
       const locale = await findLocale(posting.candidateId);
+      const visualization = await artifacts.find({ posting, artifact: 'visualization', interview: interview.number });
       const pageUrl = `${origin}/postings/${encodeURIComponent(posting.reference)}`;
       const text = formatCalendar({
         uid: `interview-${String(interview.id)}@job-finder`,
@@ -143,15 +143,7 @@ export function createInterviewActions({ workspace, findPosting, findLocale }: A
         endAt: findInterviewEnd(interview),
         summary: summarize(posting, locale),
         location: interview.place,
-        description: describeLinks(
-          {
-            posting,
-            interview,
-            visualization: await findChosenVersion(workspace, { posting, interview }, 'visualization'),
-          },
-          pageUrl,
-          locale,
-        ),
+        description: describeLinks({ posting, interview, visualization: visualization.chosenVersion }, pageUrl, locale),
         url: pageUrl,
         stampedAt: new Date(),
       });

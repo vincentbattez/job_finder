@@ -1,3 +1,4 @@
+import type { ErrorCode } from '#/domain/error.ts';
 import { JOB_DESCRIPTION_FILE_NAME, type Artifact, type Interview, type Locale, type Posting } from '#/domain/index.ts';
 
 // An Artifact is written for the employer: in the language of the Job Description, whatever the
@@ -36,8 +37,8 @@ interface IOutputFile {
   findFormatError?: (content: string, locale: Locale, posting: Posting) => string | undefined;
 }
 
-// What an AI module gives the job runner, from the single entry point of its folder; the runner
-// reads its inputs and its refusals from these declarations (ADR-0003)
+// What an AI module gives the Artifact module, from the single entry point of its folder, which reads
+// its inputs and its refusals from these declarations (ADR-0003, ADR-0016)
 export interface IAiModule {
   // A shorter name than its Artifact, for jf run
   alias?: string;
@@ -68,4 +69,9 @@ export interface IAiModule {
   isReadingSentVersions?: boolean;
   // Whether its Chosen Version is what the Candidate sends: frozen once the Posting is Applied
   isFrozenOnceApplied?: boolean;
+  // The code that refuses any correction by hand, for an Artifact regenerated rather than corrected
+  notEditableErrorCode?: ErrorCode;
+  // The files of a Version kept as the AI wrote them, each with the code that refuses to modify it; jf
+  // edit keeps them out of reach of its session too
+  readOnlyFileList?: readonly { name: string; errorCode: ErrorCode }[];
 }

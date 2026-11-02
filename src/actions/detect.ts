@@ -87,6 +87,7 @@ interface IWatchRun {
 // may import (ADR-0003). It knows them only through their family (ADR-0010).
 export function createDetectActions({
   workspace,
+  artifacts,
   sourceList,
   findCandidate,
   findSource,
@@ -115,7 +116,8 @@ export function createDetectActions({
 
   // In the Zone, a Posting gets its Research (ADR-0003)
   async function startInZone(posting: Posting, repostOf: Posting | undefined): Promise<ISummarizedPosting> {
-    await workspace.createJob(posting, 'research', { isAutomatic: true });
+    const research = await artifacts.find({ posting, artifact: 'research' });
+    await research.queueRun({ isAutomatic: true });
     return {
       posting,
       repost: repostOf === undefined ? null : { repostedReference: repostOf.reference, isApplied: false },
