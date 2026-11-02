@@ -20,4 +20,6 @@ export const PORTRAIT_MODULE = {
   isAttachedToInterview: true,
   // The Research situates the Interviewers in their department, when the Candidate has one
   optionalArtifactList: ['research'],
+  // What is publicly known of the Interviewers is on the web
+  isSearchingWeb: true,
 } satisfies IAiModule;

@@ -4,10 +4,12 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
+import { promptOf } from '#/artifact/prompt.ts';
 import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructions.ts';
 
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { markedValuesOf } from './marked-values.ts';
 import { readVersionsOf } from './read-versions.ts';
 import { runAndValidate } from './run-module.ts';
 
@@ -31,6 +33,11 @@ const JUDGE_INTERVIEW = {
   place: 'Visioconférence',
   interviewers: 'M. Lefebvre, juge des enfants',
 };
+
+// Another Béthune Posting of Léa, whose Letter she sent
+const SENT_REFERENCE = '2026-2445609';
+
+const CV = '# Léa Martin\n\nMaster 2 de droit privé, Université de Lille, 2025.\n';
 
 const NOTES = '# Appel du greffe\n\nLe premier tour porte sur la motivation.\n';
 
@@ -90,8 +97,8 @@ async function applyWithInterview(aiSession: ReturnType<typeof createFakeAiSessi
   };
 }
 
-async function runModule(actions: Actions, module: string, interview?: number) {
-  return runAndValidate(actions, { module, reference: REFERENCE, interview });
+async function runModule(actions: Actions, module: string, interview?: number, reference = REFERENCE) {
+  return runAndValidate(actions, { module, reference, interview });
 }
 
 describe('interview brief', () => {
@@ -172,10 +179,14 @@ describe('interview brief', () => {
   });
 
   // The interview comes once the Letter is sent: the Interview Brief prepares the questions on it
-  it('reads the Job Description, the Chosen Research, the Profile and the Chosen Letter, the one sent', async () => {
-    const aiSession = createFakeAiSession(RESEARCH_RUN, RESEARCH_RUN, LETTER_RUN, briefRun());
+  it('receives inlined the Job Description, the Chosen Research, the Chosen Letter, the one sent, and the Profile', async () => {
+    const aiSession = createFakeAiSession(RESEARCH_RUN, LETTER_RUN, RESEARCH_RUN, RESEARCH_RUN, LETTER_RUN, briefRun());
     const { actions, dataDirectory } = await detectRecordedPostings(aiSession);
     const postingDirectory = path.join(dataDirectory, LEA_POSTINGS_PATH, POSTING_DIRECTORY_NAME);
+    writeFileSync(path.join(dataDirectory, 'candidates/lea/profile/cv.md'), CV);
+    await runModule(actions, 'research', undefined, SENT_REFERENCE);
+    await runModule(actions, 'letter', undefined, SENT_REFERENCE);
+    await actions.changeStatus({ reference: SENT_REFERENCE, status: 'applied' });
     await runModule(actions, 'research');
     await runModule(actions, 'research');
     await actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: 1 });
@@ -185,34 +196,42 @@ describe('interview brief', () => {
 
     const { version } = await runModule(actions, 'brief', 1);
 
-    const profileDirectory = path.join(dataDirectory, 'candidates/lea/profile');
     const session = aiSession.headlessSessionList.at(-1);
-    // The folder of the Posting is the session's own: only the folders outside it are added
-    expect(session?.readDirectoryList).toEqual([profileDirectory]);
-    expect(session?.fixedPrompt).toContain('`job-description.md`');
-    expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'research/v1/research.md')}\``);
-    expect(session?.fixedPrompt).toContain(`\`${profileDirectory}\``);
-    // Its core is read in full, its Annexes as far as the Posting calls for them, never the originals
-    expect(session?.fixedPrompt).toContain('`annex-*.md`');
-    expect(session?.fixedPrompt).toContain('`uploads/`');
-    expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'letter/v1/letter.md')}\``);
+    const jobDescription = readFileSync(path.join(postingDirectory, 'job-description.md'), 'utf8');
+    // Its own Letter is the Chosen Letter, never also a Past Letter; a sent Letter comes without its Original
+    expect(session?.message).toBe(
+      [
+        '# Inputs',
+        `## Input: Job Description\n\n${jobDescription.trim()}`,
+        `## Input: Chosen Research\n\n${RESEARCH_RUN.fileByName['research.md'].trim()}`,
+        `## Input: Chosen Letter\n\n${LETTER_RUN.fileByName['letter.md'].trim()}`,
+        `## Input: Profile: cv.md\n\n${CV.trim()}`,
+        `## Input: Letter sent for Posting ${SENT_REFERENCE}\n\n${LETTER_RUN.fileByName['letter.md'].trim()}`,
+        '# Instructions',
+        INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS.trim(),
+      ].join('\n\n'),
+    );
+    // The session reads no Input from disk (ADR-0021)
+    expect(session?.fixedPrompt).not.toMatch(/job-description\.md|research\.md|letter\.md|profile|uploads/);
+    expect(session).toMatchObject({ isReadingDirectory: false, isSearchingWeb: false });
+    expect(session?.fixedPrompt).toContain('The Inputs hold the Chosen Letter');
     expect(readVersionsOf(version)).toEqual([
       { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
       { artifact: 'letter', number: 1, posting: { reference: REFERENCE }, interview: null },
+      { artifact: 'letter', number: 1, posting: { reference: SENT_REFERENCE }, interview: null },
     ]);
   });
 
   it('runs without a Letter, and tells the session there is none', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, briefRun());
-    const { actions, dataDirectory } = await applyWithInterview(aiSession);
+    const { actions } = await applyWithInterview(aiSession);
 
     const { state, version } = await runModule(actions, 'brief', 1);
 
     expect(state).toBe('done');
     const session = aiSession.headlessSessionList.at(-1);
-    expect(session?.readDirectoryList).toEqual([path.join(dataDirectory, 'candidates/lea/profile')]);
     expect(session?.fixedPrompt).toContain('The Candidate has no Letter for this Posting');
-    expect(session?.fixedPrompt).not.toContain('letter.md');
+    expect(session?.message).not.toContain('Letter');
     expect(readVersionsOf(version)).toEqual([
       { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
     ]);
@@ -220,9 +239,9 @@ describe('interview brief', () => {
 });
 
 describe('the prompt of the Interview Brief', () => {
-  it('holds the Interview, the Notes and the Chosen Interview Brief of the previous round', async () => {
-    const aiSession = createFakeAiSession(RESEARCH_RUN, briefRun(), briefRun(), briefRun());
-    const { actions, postingDirectory } = await applyWithInterview(aiSession);
+  it('holds the Interview, and receives by default the Notes and the Chosen Interview Brief of the previous round', async () => {
+    const aiSession = createFakeAiSession(RESEARCH_RUN, briefRun(), briefRun('# Seconde\n'), briefRun());
+    const { actions } = await applyWithInterview(aiSession);
     await actions.addInterview({ reference: REFERENCE, ...JUDGE_INTERVIEW });
     await actions.saveNotes({ reference: REFERENCE, notes: NOTES });
     await runModule(actions, 'brief', 1);
@@ -231,19 +250,53 @@ describe('the prompt of the Interview Brief', () => {
 
     const { version } = await runModule(actions, 'brief', 2);
 
-    const fixedPrompt = aiSession.headlessSessionList.at(-1)?.fixedPrompt;
+    const { fixedPrompt, message } = aiSession.headlessSessionList.at(-1) ?? {};
     expect(fixedPrompt).toContain('Interview 2 of this Posting');
     expect(fixedPrompt).toContain('2026-12-03 10:00, Paris time; duration: 60 minutes');
     expect(fixedPrompt).toContain('Visioconférence');
     expect(fixedPrompt).toContain('M. Lefebvre, juge des enfants');
-    expect(fixedPrompt).toContain('Le premier tour porte sur la motivation.');
-    expect(fixedPrompt).toContain(
-      `The Chosen Interview Brief of the previous Interview 1: \`${path.join(postingDirectory, 'interviews/1/interview_brief/v1/interview-brief.md')}\``,
+    expect(fixedPrompt).toContain('The Chosen Interview Brief of the previous Interview 1');
+    expect(fixedPrompt).not.toContain('Le premier tour porte sur la motivation.');
+    expect(message).toContain(
+      `## Input: Chosen Interview Brief of Interview 1\n\n${INTERVIEW_BRIEF.trim()}\n\n## Input: The Candidate's Notes\n\n${NOTES.trim()}\n\n`,
     );
-    expect(fixedPrompt).not.toContain('interviews/1/interview_brief/v2');
-    expect(readVersionsOf(version)).toEqual([
-      { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
-      { artifact: 'interview_brief', number: 1, posting: { reference: REFERENCE }, interview: { number: 1 } },
+    expect(message).not.toContain('# Seconde');
+    expect(version?.inputList.map(({ key }) => key)).toEqual([
+      'job_description',
+      'artifact:research',
+      'artifact:interview_brief@1',
+      'notes',
+    ]);
+  });
+
+  it('is the one its preview composes, with the Posting and the Interview marked where they are substituted', async () => {
+    const aiSession = createFakeAiSession(RESEARCH_RUN, briefRun(), briefRun());
+    const { actions } = await applyWithInterview(aiSession);
+    await actions.addInterview({ reference: REFERENCE, ...JUDGE_INTERVIEW });
+    await actions.saveNotes({ reference: REFERENCE, notes: NOTES });
+    await runModule(actions, 'brief', 1);
+    const { interviewList } = await actions.readPosting({ reference: REFERENCE });
+    const prompt = interviewList[1]?.artifactList.find(({ artifact }) => artifact === 'interview_brief')?.module.prompt;
+
+    await runModule(actions, 'brief', 2);
+
+    const session = aiSession.headlessSessionList.at(-1);
+    expect(prompt?.prompt.replaceAll('interview_brief/v<next>', 'interview_brief/v1')).toBe(
+      session && promptOf(session),
+    );
+    expect(markedValuesOf(prompt?.markedFixedPart)).toEqual([
+      REFERENCE,
+      'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE',
+      "Cour d'Appel de Douai",
+      'Tribunal Judiciaire de Béthune',
+      '2',
+      '2026-12-03 10:00',
+      '60',
+      'Visioconférence',
+      'M. Lefebvre, juge des enfants',
+      '1',
+      'interviews/2/interview_brief/v<next>/interview-brief.md',
+      'interviews/2/interview_brief/v<next>/interview-brief.md',
     ]);
   });
 
@@ -257,8 +310,8 @@ describe('the prompt of the Interview Brief', () => {
 
     const fixedPrompt = aiSession.headlessSessionList.at(-1)?.fixedPrompt;
     expect(fixedPrompt).toContain('2026-11-19 14:00, Paris time; duration: 45 minutes');
-    expect(fixedPrompt).toContain('no previous Interview Brief');
-    expect(fixedPrompt).toContain('The Candidate keeps no Notes on this Posting.');
+    expect(fixedPrompt).toContain('This is the first Interview of the Posting');
+    expect(aiSession.headlessSessionList.at(-1)?.message).not.toContain('Interview Brief');
   });
 
   it('asks for an Interview Brief organized to revise and train, without inventing a fact on the Candidate', async () => {
@@ -267,7 +320,7 @@ describe('the prompt of the Interview Brief', () => {
 
     const { version } = await runModule(actions, 'brief', 1);
 
-    const { fixedPrompt, instructions } = aiSession.headlessSessionList[1] ?? {};
+    const { fixedPrompt, message: instructions = '' } = aiSession.headlessSessionList[1] ?? {};
     // The plan is the default Instructions': the Candidate's own may organize the Interview Brief otherwise
     for (const section of ['À réviser', 'Moyens mnémotechniques', 'Présentez-vous', 'Questions probables']) {
       expect(instructions).toContain(`## ${section}`);
@@ -277,7 +330,7 @@ describe('the prompt of the Interview Brief', () => {
     expect(fixedPrompt).toContain('level 1 heading');
     expect(fixedPrompt).toContain('Never invent a fact about the Candidate');
     expect(fixedPrompt).toContain('`[à compléter : …]`');
-    expect(instructions).toBe(INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS);
+    expect(instructions.endsWith(`# Instructions\n\n${INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS.trim()}`)).toBe(true);
     expect(version?.instructions).toBe(INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS);
   });
 
@@ -290,7 +343,9 @@ describe('the prompt of the Interview Brief', () => {
 
     const { version } = await runModule(actions, 'brief', 1);
 
-    expect(aiSession.headlessSessionList[1]?.instructions).toBe(instructions);
+    expect(aiSession.headlessSessionList[1]?.message).toMatch(
+      /# Instructions\n\nDix questions au plus, sans moyens mnémotechniques en images\.$/,
+    );
     expect(aiSession.headlessSessionList[1]?.fixedPrompt).toContain('Never invent a fact about the Candidate');
     expect(version?.instructions).toBe(instructions);
   });

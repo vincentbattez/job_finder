@@ -15,6 +15,7 @@ import {
   type Job,
   type Locale,
   type Posting,
+  type Validation,
   type Version,
 } from '#/domain/index.ts';
 import { STATE_BY_JOB_STATE } from '#/domain/state.ts';
@@ -314,10 +315,14 @@ export function createArtifacts({
       });
     }
 
+    // Its latest ready Version's validation: a Draft waits for the Candidate (ADR-0019)
+    const validation: Validation = versionList.findLast(({ state }) => state === 'ready')?.validation ?? 'none';
+
     return {
       artifact,
       interview,
       chosenVersion,
+      validation,
       versionList: detailVersionList,
       editRefusal,
       readRun,

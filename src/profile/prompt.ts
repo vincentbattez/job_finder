@@ -7,10 +7,10 @@ import { SECTION_LIST } from './facts.ts';
 export const CONVERSION_INSTRUCTIONS =
   'convert it faithfully into Markdown, without rewriting or translating it: a CV into `cv.md`, a cover letter into `letter-<employer>-<year>.md`, any other document (a recommendation letter, a transcript, a thesis, an internship report) into the Annex `annex-<subject>.md`; the employer or the subject in lowercase and without accents, its words joined by hyphens, for example `letter-tj-lille-2025.md` or `annex-recommendation-tj-lille.md`';
 
-// The Profile as the Artifacts that read it describe it: its core in full, its Annexes as far as the
-// Posting calls for them, since a thesis read in full costs tens of thousands of tokens (ADR-0003)
-export function describeProfile(profileDirectory: string): string {
-  return `The Candidate's Profile, in \`${profileDirectory}\`, the only source of facts about the Candidate. Read its core in full: \`facts.md\`, the facts they validated, \`cv.md\` and their past letters, \`letter-*.md\`, when they exist. Its Annexes, \`annex-*.md\`, are further documents, sometimes long, such as a recommendation letter, a transcript or a thesis: judge from the Posting and its context which ones are worth reading and how far, from none to all of them; a long one is better searched, or read by a subagent that reports only what serves. Where a file contradicts \`facts.md\`, \`facts.md\` prevails. Never read \`uploads/\`: it holds the originals of these files.`;
+// The Profile as the Artifacts that read it describe it: its documents come among the Inputs, the core in
+// full, the Annexes the Candidate checked (ADR-0021)
+export function describeProfile(): string {
+  return "The Candidate's Profile, the only source of facts about the Candidate, comes among the Inputs: `facts.md`, the facts they validated, `cv.md`, their Past Letters, and the further documents they chose to give, such as a recommendation letter, a transcript or a thesis. Where a document contradicts `facts.md`, `facts.md` prevails.";
 }
 
 // Fixed, with no Instructions to replace it (ADR-0003); the session runs in the Profile folder, its

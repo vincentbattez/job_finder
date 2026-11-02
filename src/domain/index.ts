@@ -166,6 +166,19 @@ export const POSTING_SCHEMA = z
 
 export type Posting = z.infer<typeof POSTING_SCHEMA>;
 
+// Where an Artifact stands for a list: no ready Version yet, its latest ready Version a Draft waiting
+// for the Candidate, or that Version Validated (ADR-0019)
+const VALIDATION_SCHEMA = z.enum(['none', 'draft', 'validated']);
+
+export type Validation = z.infer<typeof VALIDATION_SCHEMA>;
+
+// A Posting as a list item shows it, with where its Research and its Letter stand
+export const LIST_ITEM_SCHEMA = z
+  .object({ posting: POSTING_SCHEMA, research: VALIDATION_SCHEMA, letter: VALIDATION_SCHEMA })
+  .brand<'Domain'>();
+
+export type ListItem = z.infer<typeof LIST_ITEM_SCHEMA>;
+
 // An Application as its row shows it, on the home and on /applications
 export const APPLICATION_SCHEMA = z
   .object({
@@ -437,8 +450,16 @@ const PROMPT_READ_VERSION_SCHEMA = z.object({
   number: z.int(),
 });
 
+// markedFixedPart: the Fixed Part with each value the tool substituted between private-use marks; prompt:
+// the whole Markdown the session receives, its checked Inputs inlined (ADR-0021)
 const PROMPT_SCHEMA = z
-  .object({ fixedPart: z.string(), instructions: z.string(), readVersionList: z.array(PROMPT_READ_VERSION_SCHEMA) })
+  .object({
+    fixedPart: z.string(),
+    markedFixedPart: z.string(),
+    instructions: z.string(),
+    prompt: z.string(),
+    readVersionList: z.array(PROMPT_READ_VERSION_SCHEMA),
+  })
   .brand<'Domain'>();
 
 // A Version with its text and its Original (ADR-0019): whether the Candidate may validate it, making it the

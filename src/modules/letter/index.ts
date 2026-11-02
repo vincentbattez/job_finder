@@ -36,6 +36,7 @@ export const LETTER_MODULE = {
   // Candidate sent: the correction of each Original shows their style
   requiredArtifactList: ['research'],
   isReadingProfile: true,
+  isReadingOriginals: true,
   isFrozenOnceApplied: true,
   readRecipients,
 } satisfies IAiModule & { readRecipients: typeof readRecipients };

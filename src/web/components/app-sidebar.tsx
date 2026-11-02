@@ -31,7 +31,7 @@ interface IEntry {
 // Until its own ticket replaces it, an entry leads to the POC page that holds its features.
 const LIST_ENTRY_LIST: IEntry[] = [
   { key: 'new', pathname: '/', hash: '', icon: <InboxIcon /> },
-  { key: 'toApply', pathname: '/postings', hash: '', icon: <ListTodoIcon /> },
+  { key: 'toApply', pathname: '/to-apply', hash: '', icon: <ListTodoIcon /> },
   { key: 'applications', pathname: '/applications', hash: '', icon: <BriefcaseIcon /> },
 ];
 

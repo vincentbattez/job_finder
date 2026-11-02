@@ -41,10 +41,12 @@ export function createImportSource(aiSession: IAiSession) {
       emptyExtractionDirectory(outputDirectory);
       const session = await aiSession.runHeadless({
         fixedPrompt: composeExtractionPrompt(path.join(EXTRACTION_DIRECTORY_NAME, EXTRACTION_FILE_NAME)),
-        instructions: EXTRACTION_REQUEST,
+        message: EXTRACTION_REQUEST,
         directory: postingDirectory,
-        readDirectoryList: [],
         outputDirectory,
+        // It reads the Job Description in the Posting's folder, and searches nothing on the web
+        isReadingDirectory: true,
+        isSearchingWeb: false,
         locale,
       });
       if (!session.isSuccess) {

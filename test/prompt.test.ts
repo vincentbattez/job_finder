@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
+import { MARK_END, MARK_START, promptOf } from '#/artifact/prompt.ts';
 import { DEFAULT_INSTRUCTIONS_EN } from '#/domain/catalogue/en/default-instructions.ts';
 import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructions.ts';
 import type { Artifact } from '#/domain/index.ts';
 
 import { detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { markedValuesOf } from './marked-values.ts';
 import { runAndValidate } from './run-module.ts';
 
 // The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
@@ -57,7 +59,25 @@ describe('the Prompt beside an Artifact', () => {
     const [session] = aiSession.headlessSessionList;
     expect(prompt?.fixedPart).toContain('`research/v<next>/research.md`');
     expect(prompt?.fixedPart.replaceAll('research/v<next>', 'research/v1')).toBe(session?.fixedPrompt);
-    expect(prompt?.instructions).toBe(session?.instructions);
+    expect(prompt?.prompt.replaceAll('research/v<next>', 'research/v1')).toBe(session && promptOf(session));
+    expect(prompt?.prompt).toContain('# Inputs\n\n## Input: Job Description\n\n## Informations générales\n');
+  });
+
+  it('marks, in its Fixed Part, each value the tool substituted, and only them', async () => {
+    const { actions } = await detectPostings(createFakeAiSession());
+
+    const prompt = await readPrompt(actions, 'research');
+
+    expect(markedValuesOf(prompt?.markedFixedPart)).toEqual([
+      REFERENCE,
+      'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE',
+      "Cour d'Appel de Douai",
+      'Tribunal Judiciaire de Béthune',
+      `https://choisirleservicepublic.gouv.fr/offre-emploi/${REFERENCE}/?tracking=1&idOrigine=502`,
+      'research/v<next>/research.md',
+      'research/v<next>/research.md',
+    ]);
+    expect(prompt?.markedFixedPart.replaceAll(MARK_START, '').replaceAll(MARK_END, '')).toBe(prompt?.fixedPart);
   });
 
   it('is, for a Letter reading a Letter sent for another Posting, the one its run receives', async () => {
@@ -73,9 +93,9 @@ describe('the Prompt beside an Artifact', () => {
     await runModule(actions, 'letter');
 
     const session = aiSession.headlessSessionList.at(-1);
-    expect(prompt?.fixedPart.replaceAll('letter/v<next>', 'letter/v1')).toBe(session?.fixedPrompt);
+    expect(prompt?.prompt.replaceAll('letter/v<next>', 'letter/v1')).toBe(session && promptOf(session));
+    expect(prompt?.prompt).toContain(`## Input: Letter sent for Posting ${SENT_REFERENCE}\n\n### As sent\n\n`);
     expect(prompt?.instructions).toBe('Une page au plus.');
-    expect(prompt?.instructions).toBe(session?.instructions);
   });
 
   it("holds the Candidate's own Instructions once they replaced the default ones of their Locale", async () => {

@@ -8,6 +8,7 @@ import { COMMON_EN } from './en/common.ts';
 import { DEFAULT_INSTRUCTIONS_EN } from './en/default-instructions.ts';
 import { ERROR_EN } from './en/error.ts';
 import { HOME_EN } from './en/home.ts';
+import { LISTS_EN } from './en/lists.ts';
 import { MDX_EN } from './en/mdx.ts';
 import { NOTIFICATION_EN } from './en/notification.ts';
 import { POSTING_LIST_EN } from './en/posting-list.ts';
@@ -20,6 +21,7 @@ import { COMMON_FR } from './fr/common.ts';
 import { DEFAULT_INSTRUCTIONS_FR } from './fr/default-instructions.ts';
 import { ERROR_FR } from './fr/error.ts';
 import { HOME_FR } from './fr/home.ts';
+import { LISTS_FR } from './fr/lists.ts';
 import { MDX_FR } from './fr/mdx.ts';
 import { NOTIFICATION_FR } from './fr/notification.ts';
 import { POSTING_LIST_FR } from './fr/posting-list.ts';
@@ -41,6 +43,7 @@ const EN = {
   posting: POSTING_EN,
   settings: SETTINGS_EN,
   shell: SHELL_EN,
+  lists: LISTS_EN,
   mdx: MDX_EN,
 };
 
@@ -60,6 +63,7 @@ const RESOURCES_BY_LOCALE: Record<Locale, Resources> = {
     posting: POSTING_FR,
     settings: SETTINGS_FR,
     shell: SHELL_FR,
+    lists: LISTS_FR,
     mdx: MDX_FR,
   },
 };

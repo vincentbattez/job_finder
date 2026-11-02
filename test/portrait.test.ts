@@ -4,10 +4,12 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
+import { promptOf } from '#/artifact/prompt.ts';
 import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructions.ts';
 
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { markedValuesOf } from './marked-values.ts';
 import { readVersionsOf } from './read-versions.ts';
 import { runAndValidate } from './run-module.ts';
 
@@ -114,9 +116,9 @@ describe('portrait', () => {
 });
 
 describe('the prompt of the Portrait', () => {
-  it('holds the Interview and the Posting, and reads the Chosen Research when there is one', async () => {
+  it('holds the Interview and the Posting, and gives the Chosen Research inlined when there is one', async () => {
     const aiSession = createFakeAiSession(RESEARCH_RUN, portraitRun());
-    const { actions, postingDirectory } = await applyWithInterview(aiSession);
+    const { actions } = await applyWithInterview(aiSession);
     await runModule(actions, 'research');
 
     const { version } = await runModule(actions, 'portrait', 1);
@@ -127,10 +129,13 @@ describe('the prompt of the Portrait', () => {
     expect(session?.fixedPrompt).toContain('Tribunal judiciaire, Béthune');
     expect(session?.fixedPrompt).toContain('M. Lefebvre, juge des enfants');
     expect(session?.fixedPrompt).toContain(REFERENCE);
-    expect(session?.fixedPrompt).toContain('`job-description.md`');
-    expect(session?.fixedPrompt).toContain(`\`${path.join(postingDirectory, 'research/v1/research.md')}\``);
-    // Nothing about the Candidate is needed to portray the Interviewers
-    expect(session?.readDirectoryList).toEqual([]);
+    expect(session?.message).toContain('## Input: Job Description\n\n');
+    expect(session?.message).toContain(
+      `## Input: Chosen Research\n\n${RESEARCH_RUN.fileByName['research.md'].trim()}\n\n# Instructions`,
+    );
+    // The session reads no Input from disk (ADR-0021), and nothing about the Candidate portrays the Interviewers
+    expect(session?.fixedPrompt).not.toMatch(/research\.md|job-description\.md/);
+    expect(session).toMatchObject({ isReadingDirectory: false, isSearchingWeb: true });
     expect(readVersionsOf(version)).toEqual([
       { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
     ]);
@@ -153,12 +158,9 @@ describe('the prompt of the Portrait', () => {
 
     const { version } = await runModule(actions, 'portrait', 1);
 
-    const { fixedPrompt, instructions } = aiSession.headlessSessionList.at(-1) ?? {};
+    const { fixedPrompt, message } = aiSession.headlessSessionList.at(-1) ?? {};
     expect(fixedPrompt).toContain('level 1 heading');
-    expect(instructions).toBe(DEFAULT_INSTRUCTIONS_FR.portrait);
-    expect(instructions).toContain('vie privée');
-    expect(instructions).toContain('sources');
-    expect(instructions).toContain('homonyme');
+    expect(message).toMatch(/# Instructions\n\n[^]*vie privée[^]*sources[^]*homonyme/);
     expect(version?.instructions).toBe(DEFAULT_INSTRUCTIONS_FR.portrait);
   });
 
@@ -172,16 +174,41 @@ describe('the prompt of the Portrait', () => {
     await runModule(actions, 'portrait', 1);
 
     const session = aiSession.headlessSessionList.at(-1);
-    expect(session?.instructions).toBe(instructions);
+    expect(session?.message).toMatch(/# Instructions\n\nSeulement leurs publications\.$/);
     expect(session?.fixedPrompt).toContain('Interview 1 of this Posting');
+  });
+
+  it('is the one its preview composes, with the Interview and the Posting marked where they are substituted', async () => {
+    const aiSession = createFakeAiSession(RESEARCH_RUN, portraitRun());
+    const { actions } = await applyWithInterview(aiSession);
+    await runModule(actions, 'research');
+    const { interviewList } = await actions.readPosting({ reference: REFERENCE });
+    const prompt = interviewList[0]?.artifactList.find(({ artifact }) => artifact === 'portrait')?.module.prompt;
+
+    await runModule(actions, 'portrait', 1);
+
+    const session = aiSession.headlessSessionList.at(-1);
+    expect(prompt?.prompt.replaceAll('portrait/v<next>', 'portrait/v1')).toBe(session && promptOf(session));
+    expect(markedValuesOf(prompt?.markedFixedPart)).toEqual([
+      REFERENCE,
+      'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE',
+      "Cour d'Appel de Douai",
+      'Tribunal Judiciaire de Béthune',
+      '1',
+      '2026-12-03 10:00',
+      'Tribunal judiciaire, Béthune',
+      'M. Lefebvre, juge des enfants',
+      'interviews/1/portrait/v<next>/portrait.md',
+      'interviews/1/portrait/v<next>/portrait.md',
+    ]);
   });
 });
 
 // The Interview Brief adapts the pitch to the Interviewers as the Portrait establishes them
 describe('the Interview Brief and the Portrait', () => {
   it('reads the Chosen Portrait of its Interview', async () => {
-    const aiSession = createFakeAiSession(RESEARCH_RUN, portraitRun(), portraitRun(), BRIEF_RUN);
-    const { actions, postingDirectory } = await applyWithInterview(aiSession);
+    const aiSession = createFakeAiSession(RESEARCH_RUN, portraitRun(), portraitRun('# Autre portrait\n'), BRIEF_RUN);
+    const { actions } = await applyWithInterview(aiSession);
     await runModule(actions, 'research');
     await runModule(actions, 'portrait', 1);
     await runModule(actions, 'portrait', 1);
@@ -189,11 +216,10 @@ describe('the Interview Brief and the Portrait', () => {
 
     const { version } = await runModule(actions, 'brief', 1);
 
-    const fixedPrompt = aiSession.headlessSessionList.at(-1)?.fixedPrompt;
-    expect(fixedPrompt).toContain(
-      `The Chosen Portrait of the Interviewers: \`${path.join(postingDirectory, 'interviews/1/portrait/v1/portrait.md')}\``,
-    );
-    expect(fixedPrompt).not.toContain('portrait/v2');
+    const { fixedPrompt, message } = aiSession.headlessSessionList.at(-1) ?? {};
+    expect(fixedPrompt).toContain('The Inputs hold the Chosen Portrait of the Interviewers');
+    expect(message).toContain(`## Input: Chosen Portrait of Interview 1\n\n${PORTRAIT.trim()}\n\n`);
+    expect(message).not.toContain('# Autre portrait');
     expect(readVersionsOf(version)).toEqual([
       { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
       { artifact: 'portrait', number: 1, posting: { reference: REFERENCE }, interview: { number: 1 } },

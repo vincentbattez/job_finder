@@ -1,8 +1,10 @@
 import { codedError } from '#/domain/coded-error.ts';
 import {
+  LIST_ITEM_SCHEMA,
   POSTING_DETAIL_SCHEMA,
   type ArtifactState,
   type Candidate,
+  type ListItem,
   type Posting,
   type PostingDetail,
   type Recipients,
@@ -60,6 +62,23 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
     async listPostings(rawInput: unknown): Promise<Posting[]> {
       const candidate = await findCandidate(rawInput);
       return workspace.listPostings(candidate.id);
+    },
+
+    // What the Candidate prepares: the To Apply Postings they still follow, the list groups them
+    async listToApply(rawInput: unknown): Promise<ListItem[]> {
+      const candidate = await findCandidate(rawInput);
+      const postingList = await workspace.listPostings(candidate.id);
+      return Promise.all(
+        postingList
+          .filter(({ status, archivedAt }) => status === 'to_apply' && archivedAt === null)
+          .map(async (posting) => {
+            const [research, letter] = await Promise.all([
+              artifacts.find({ posting, artifact: 'research' }),
+              artifacts.find({ posting, artifact: 'letter' }),
+            ]);
+            return LIST_ITEM_SCHEMA.parse({ posting, research: research.validation, letter: letter.validation });
+          }),
+      );
     },
 
     // What the home shows of what just arrived, as tiles and on the map

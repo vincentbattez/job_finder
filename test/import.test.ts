@@ -305,6 +305,8 @@ describe('import of a Job Description in Markdown', () => {
     await importThenRunWorker(actions);
 
     const [session] = aiSession.headlessSessionList;
+    // It reads the Job Description in its folder, and searches nothing on the web
+    expect(session).toMatchObject({ isReadingDirectory: true, isSearchingWeb: false });
     for (const field of Object.keys(EXTRACTION)) {
       expect(session?.fixedPrompt).toContain(`"${field}"`);
     }

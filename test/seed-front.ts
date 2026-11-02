@@ -31,7 +31,8 @@ import { createRecordedFetch } from './recorded-http.ts';
 // Watch, has her locale switched by e2e/shell.test.ts only. Lou, Jules, Iris and Théo each
 // follow the slow fake Source, for e2e/detection.test.ts only: Lou and Jules past their first launch,
 // Lou always finding the same Postings, Jules new ones; Iris and Théo never detected by the seed, the
-// Source of Théo failing after two Job Descriptions.
+// Source of Théo failing after two Job Descriptions. Mila, without Watch, has the imported Postings
+// that e2e/to-apply.test.ts places and dates.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 // The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
 if (!dataDirectory.startsWith(tmpdir())) {
@@ -276,6 +277,18 @@ RUN_BY_VERSION[`${oliverPosting.reference.slice(0, BETHUNE_REFERENCE.length)} re
   'Research: the Douai court of appeal',
 );
 await actions.runModule({ module: 'research', reference: oliverPosting.reference });
+await actions.runQueuedJobs();
+
+// Mila's To Apply list is e2e/to-apply.test.ts's own: six imported Postings, which the test gives a
+// City, coordinates and a Deadline counted from the day it runs, so that their groups never age
+await actions.createCandidate({ id: 'mila', name: 'Mila' });
+for (const city of ['lille', 'lyon', 'bordeaux', 'rennes', 'nice', 'strasbourg']) {
+  await actions.importJobDescription({
+    candidateId: 'mila',
+    fileName: `greffier-${city}.md`,
+    markdown: `# Greffier – ${city}\n`,
+  });
+}
 await actions.runQueuedJobs();
 
 // Paul, without Watch, has one imported Posting per journey of e2e/posting-page.test.ts, which finds
