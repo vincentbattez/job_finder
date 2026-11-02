@@ -64,9 +64,9 @@ export const ERROR_FR: typeof ERROR_EN = {
   unknownModule: 'Module inconnu : {{name}}. Modules : {{names}}.',
   unknownArtifact: 'Artefact inconnu : {{name}}. Artefacts : {{names}}.',
   missingArtifactForFront:
-    "L'Offre {{reference}} n'a pas de {{missingLabel}} retenue, sur laquelle s'appuie la {{moduleLabel}} : lancez d'abord la {{missingLabel}}.",
+    "L'Offre {{reference}} n'a pas de {{missingLabel}} validée, sur laquelle s'appuie la {{moduleLabel}} : produisez puis validez d'abord la {{missingLabel}}.",
   missingArtifactForCli:
-    "L'Offre {{reference}} n'a pas de {{missingLabel}} retenue, sur laquelle s'appuie la {{moduleLabel}}. La produire d'abord : {{command}}.",
+    "L'Offre {{reference}} n'a pas de {{missingLabel}} validée, sur laquelle s'appuie la {{moduleLabel}}. La produire d'abord, « {{command}} », puis valider une de ses Versions.",
   unknownInput:
     "L'Offre {{reference}} n'a pas d'entrée « {{key}} » pour cette génération : rouvrir le panneau pour voir ses entrées.",
   requiredInputUnchecked:
@@ -84,16 +84,16 @@ export const ERROR_FR: typeof ERROR_EN = {
     "Interrompu : le worker s'est arrêté pendant ce job. Relancer le module en crée une nouvelle Version.",
   noChosenVersionToEdit:
     "L'Offre {{reference}} n'a pas de Version retenue de {{artifact}} à modifier : « {{command}} » en produit une.",
-  draftNotEditable:
-    "Le Brouillon ne se modifie jamais : il garde ce que l'IA a écrit. Corrigez la Lettre de l'Offre {{reference}}.",
+  originalNotEditable:
+    "L'Original ne se modifie jamais : il garde ce que l'IA a écrit. Corrigez le texte de la Version, sur l'Offre {{reference}}.",
   unknownVersion:
     "Version inconnue : {{artifact}} v{{number}} de l'Offre {{reference}}. « {{command}} » liste ses Versions.",
   versionFailed:
-    "La Version {{artifact}} v{{number}} de l'Offre {{reference}} est en échec : seule une Version prête peut être retenue.",
+    "La Version {{artifact}} v{{number}} de l'Offre {{reference}} est en échec : seule une Version prête se valide ou se corrige.",
   versionRunning:
-    "La Version {{artifact}} v{{number}} de l'Offre {{reference}} est en cours : seule une Version prête peut être retenue.",
+    "La Version {{artifact}} v{{number}} de l'Offre {{reference}} est en cours : seule une Version prête se valide ou se corrige.",
   notAVersionFile:
-    "« {{fileName}} » n'est pas un fichier de la Version retenue de {{artifact}} de l'Offre {{reference}}.",
+    "« {{fileName}} » n'est pas un fichier modifiable d'une Version de {{artifact}} de l'Offre {{reference}}.",
   noChosenLetter: "L'Offre {{reference}} n'a pas de Lettre retenue. La produire : jf run letter {{reference}}.",
 
   invalidProfileFileName:

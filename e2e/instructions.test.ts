@@ -1,5 +1,4 @@
 import { expect, test, type IFront } from './candidate.ts';
-import { unfoldChosenVersion } from './version.ts';
 
 // Sacha's Instructions are the ones these tests change; test/seed-front.ts leaves them to the default
 // ones. Léa's Posting 2026-2409247 has a Research made with the default Instructions, then one with hers.
@@ -20,11 +19,11 @@ test.describe('Instructions of a Candidate', () => {
 
     await expect(page.getByRole('heading', { level: 2 })).toHaveText([
       'Recherche',
-      'Lettre',
+      'Lettre de motivation',
       'Portrait',
       'Fiche d’entretien',
     ]);
-    const letter = page.getByRole('region', { name: 'Lettre' });
+    const letter = page.getByRole('region', { name: 'Lettre de motivation' });
     await expect(letter.getByText('Consignes par défaut', { exact: true })).toBeVisible();
     await expect(letter.getByRole('textbox')).toHaveValue(/^Écris une lettre de motivation d'une page/);
     // The fixed part of every prompt holds this rule: no field of the page carries it
@@ -42,7 +41,7 @@ test.describe('Instructions of a Candidate', () => {
   }) => {
     await asCandidate('sacha');
     await openInstructionsOfSacha({ page, openPage });
-    const letter = page.getByRole('region', { name: 'Lettre' });
+    const letter = page.getByRole('region', { name: 'Lettre de motivation' });
 
     await letter.getByRole('textbox').fill('Une lettre courte, au ton direct.\n');
     await expect(letter.getByText('Modifications non enregistrées')).toBeVisible();
@@ -71,15 +70,14 @@ test.describe('Instructions of a Candidate', () => {
     await openPage('/postings/2026-2409247?tab=research');
 
     const research = page.getByRole('region', { name: 'Recherche' });
-    await expect(research.locator('li > details > summary')).toHaveText([
-      /^v1.*Consignes par défaut/,
-      /^v2.*Consignes du Candidat/,
-    ]);
-    // v2, the Chosen Version, unfolds like any other; its Instructions stay folded until asked
-    const v2 = research.locator('li').filter({ has: page.locator('summary', { hasText: /^v2/ }) });
-    await unfoldChosenVersion(research);
+    // v2, the latest, read first; its Instructions stay folded until asked
+    const instructions = research.getByText(/· Consignes de cette Version$/);
+    await expect(instructions).toHaveText('Consignes du Candidat · Consignes de cette Version');
     await expect(research.getByText('Creuse la ville.')).toBeHidden();
-    await v2.getByText('Consignes de cette Version').click();
-    await expect(v2.getByText('Creuse la ville.')).toBeVisible();
+    await instructions.click();
+    await expect(research.getByText('Creuse la ville.')).toBeVisible();
+    await research.getByRole('combobox', { name: 'Version' }).click();
+    await page.getByRole('option', { name: /^Version 1/ }).click();
+    await expect(instructions).toHaveText('Consignes par défaut · Consignes de cette Version');
   });
 });

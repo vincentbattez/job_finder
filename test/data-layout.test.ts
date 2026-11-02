@@ -265,7 +265,7 @@ describe('the French data folder', () => {
       '2026-1-greffier',
       'letter',
       'v1',
-      'draft.md',
+      'original.md',
     );
     expect(readFileSync(draftPath, 'utf8')).toBe(DRAFT);
     expect(statSync(draftPath).mode & 0o777).toBe(0o444);
@@ -299,13 +299,9 @@ describe('the French data folder', () => {
       letter: 'ready',
     });
     const research = artifactList.find(({ artifact }) => artifact === 'research');
-    expect(research?.versionList[1]?.documentList).toEqual([
-      expect.objectContaining({ fileName: 'research.md', markdown: RESEARCH }),
-    ]);
+    expect(research?.versionList[1]).toMatchObject({ text: RESEARCH });
     const letter = artifactList.find(({ artifact }) => artifact === 'letter');
-    expect(letter?.versionList[0]?.documentList.map(({ fileName }) => fileName)).toEqual(
-      expect.arrayContaining(['draft.md', 'letter.md']),
-    );
+    expect(letter?.versionList[0]?.original).toBe(DRAFT);
     expect(recipients).toEqual(JSON.parse(RECIPIENTS));
     expect(await actions.runQueuedJobs()).toEqual([]);
     expect(await actions.readInstructions({ candidateId: 'lea', module: 'interview_brief' })).toMatchObject({
@@ -537,6 +533,17 @@ describe('the read Versions of an older database', () => {
       { versionId: 4, key: 'artifact:portrait@1', readVersionId: 5 },
       { versionId: 6, key: 'posting:2026-1/research', readVersionId: 1 },
     ]);
+  });
+
+  // The migration version_validation adds the validation and the origin of every Version, each kept
+  it('keeps every Version, each given its validation and its origin', async () => {
+    const dataDirectory = writeReadVersionDataDirectory();
+
+    await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'SELECT id, validation, origin FROM Version ORDER BY id')).toEqual(
+      [1, 2, 3, 4, 5, 6].map((id) => ({ id, validation: 'draft', origin: 'ai' })),
+    );
   });
 
   // A migrated record only knows the Versions it read: the other Inputs open checked by default

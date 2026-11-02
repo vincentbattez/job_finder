@@ -9,6 +9,7 @@ import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructi
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { readVersionsOf } from './read-versions.ts';
+import { runAndValidate } from './run-module.ts';
 
 // Léa's, in French
 const INTERVIEW_BRIEF_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.interview_brief;
@@ -43,7 +44,7 @@ const RESEARCH_RUN = {
 // A Letter Version of the Béthune Posting, its recipients taken from the fields of the Posting
 const LETTER_RUN = {
   fileByName: {
-    'draft.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal pour enfants de Béthune.\n',
+    'letter.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal pour enfants de Béthune.\n',
     'recipients.json': JSON.stringify({
       to: { email: 'p.tj-bethune@justice.fr', source: 'applicationEmail' },
       ccList: [],
@@ -89,11 +90,8 @@ async function applyWithInterview(aiSession: ReturnType<typeof createFakeAiSessi
   };
 }
 
-// Launching a module queues its job, which the worker runs (ADR-0003)
 async function runModule(actions: Actions, module: string, interview?: number) {
-  const { id } = await actions.runModule({ module, reference: REFERENCE, interview });
-  await actions.runQueuedJobs();
-  return actions.followJob({ jobId: id });
+  return runAndValidate(actions, { module, reference: REFERENCE, interview });
 }
 
 describe('interview brief', () => {
@@ -130,7 +128,7 @@ describe('interview brief', () => {
     await runModule(actions, 'brief', 1);
     const judgeJob = await runModule(actions, 'brief', 2);
 
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'interview_brief', interview: 1, number: 1 });
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'interview_brief', interview: 1, number: 1 });
 
     expect(judgeJob.version).toMatchObject({ number: 1, interview: { number: 2 } });
     const { interviewList } = await actions.readPosting({ reference: REFERENCE });
@@ -180,7 +178,7 @@ describe('interview brief', () => {
     const postingDirectory = path.join(dataDirectory, LEA_POSTINGS_PATH, POSTING_DIRECTORY_NAME);
     await runModule(actions, 'research');
     await runModule(actions, 'research');
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: 1 });
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: 1 });
     await runModule(actions, 'letter');
     await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
     await actions.addInterview({ reference: REFERENCE, ...HR_INTERVIEW });
@@ -229,7 +227,7 @@ describe('the prompt of the Interview Brief', () => {
     await actions.saveNotes({ reference: REFERENCE, notes: NOTES });
     await runModule(actions, 'brief', 1);
     await runModule(actions, 'brief', 1);
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'interview_brief', interview: 1, number: 1 });
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'interview_brief', interview: 1, number: 1 });
 
     const { version } = await runModule(actions, 'brief', 2);
 
@@ -335,14 +333,15 @@ describe('correcting the Interview Brief', () => {
       reference: REFERENCE,
       artifact: 'interview_brief',
       interview: '1',
+      number: '1',
       fileName: 'interview-brief.md',
       markdown: corrected,
     });
 
     const { interviewList } = await actions.readPosting({ reference: REFERENCE });
     const brief = interviewList[0]?.artifactList.find(({ artifact }) => artifact === 'interview_brief');
-    expect(brief?.versionList.map(({ documentList }) => documentList)).toEqual([
-      [{ fileName: 'interview-brief.md', markdown: corrected, isModifiable: true }],
+    expect(brief?.versionList.map(({ text, isCorrectable }) => ({ text, isCorrectable }))).toEqual([
+      { text: corrected, isCorrectable: true },
     ]);
     expect(
       readFileSync(path.join(postingDirectory, 'interviews/1/interview_brief/v1/interview-brief.md'), 'utf8'),
@@ -354,7 +353,7 @@ describe('correcting the Interview Brief', () => {
     const { actions, postingDirectory } = await applyWithInterview(aiSession);
     await runModule(actions, 'brief', 1);
     await runModule(actions, 'brief', 1);
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'interview_brief', interview: 1, number: 1 });
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'interview_brief', interview: 1, number: 1 });
 
     await actions.openArtifact({ reference: REFERENCE, artifact: 'interview_brief', interview: 1 });
 

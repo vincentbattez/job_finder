@@ -142,25 +142,29 @@ enum PostingStatus {
 // of an Artifact attached to an Interview, such as the Interview Brief, are numbered and chosen per
 // Interview; the others, such as the Research, per Posting, without an Interview.
 model Version {
-  id                       Int            @id @default(autoincrement())
-  posting                  Posting        @relation(fields: [postingId], references: [id])
+  id                       Int               @id @default(autoincrement())
+  posting                  Posting           @relation(fields: [postingId], references: [id])
   postingId                Int
-  interview                Interview?     @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  interview                Interview?        @relation(fields: [interviewId], references: [id], onDelete: Cascade)
   interviewId              Int?
   artifact                 Artifact
   number                   Int
-  isChosen                 Boolean        @default(false)
+  isChosen                 Boolean           @default(false)
   state                    VersionState
+  // A Draft until the Candidate validates it, whoever produced it (ADR-0019)
+  validation               VersionValidation @default(draft)
+  // Produced by the AI, which keeps its Original, or brought by the Candidate, with none
+  origin                   VersionOrigin     @default(ai)
   instructions             String
   // Whether those Instructions are the Candidate's own rather than the module's default ones
-  hasCandidateInstructions Boolean        @default(false)
+  hasCandidateInstructions Boolean           @default(false)
   // The Inputs its run read (ADR-0021)
-  inputList                VersionInput[] @relation("Input")
-  readByList               VersionInput[] @relation("ReadVersion")
-  createdAt                DateTime       @default(now())
+  inputList                VersionInput[]    @relation("Input")
+  readByList               VersionInput[]    @relation("ReadVersion")
+  createdAt                DateTime          @default(now())
   // The job that produced this Version, so a job can be followed to its Version
-  job                      Job?           @relation(fields: [jobId], references: [id])
-  jobId                    Int?           @unique
+  job                      Job?              @relation(fields: [jobId], references: [id])
+  jobId                    Int?              @unique
 
   // SQLite tells two NULLs apart: the Versions of a Posting, without an Interview, need their own index
   @@unique([postingId, interviewId, artifact, number])
@@ -192,6 +196,16 @@ enum VersionState {
   running
   ready
   failed
+}
+
+enum VersionValidation {
+  draft
+  validated
+}
+
+enum VersionOrigin {
+  ai
+  candidate
 }
 
 // A job works on a Posting, or on the Profile of a Candidate: the conversion of one of its Uploads

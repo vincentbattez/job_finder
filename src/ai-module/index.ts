@@ -1,4 +1,3 @@
-import type { ErrorCode } from '#/domain/error.ts';
 import { JOB_DESCRIPTION_FILE_NAME, type Artifact, type Interview, type Locale, type Posting } from '#/domain/index.ts';
 
 // An Artifact is written for the employer: in the language of the Job Description, whatever the
@@ -44,11 +43,11 @@ export interface IAiModule {
   alias?: string;
   // The file of the Version the Candidate reads
   fileName: string;
+  // MDX through the closed catalogue, or plain Markdown for the Letter (ADR-0020)
+  format: 'mdx' | 'markdown';
   // The files the session writes in the folder of the Version
   outputFileList: IOutputFile[];
   composePrompt(input: IPromptInput): string;
-  // Runs once the files are valid, before the Version is ready
-  completeVersion?(versionDirectory: string): void;
   // Whether its Versions are attached to an Interview, numbered and chosen per Interview, rather than
   // to the Posting: it then runs for a given Interview
   isAttachedToInterview?: boolean;
@@ -68,7 +67,4 @@ export interface IAiModule {
   isReadingRepostedPosting?: boolean;
   // Whether its Chosen Version is what the Candidate sends: frozen once the Posting is Applied
   isFrozenOnceApplied?: boolean;
-  // The files of a Version kept as the AI wrote them, each with the code that refuses to modify it; jf
-  // edit keeps them out of reach of its session too
-  readOnlyFileList?: readonly { name: string; errorCode: ErrorCode }[];
 }

@@ -1,7 +1,8 @@
 import { ArtifactVersions as ArtifactVersionsView } from '#/web/components/artifact-versions.tsx';
 import type { IArtifactVersions } from '#/web/components/artifact.ts';
 
-import { ArtifactDocument, ChooseButton } from './edition.tsx';
+import { useValidation } from './artifact-view.tsx';
+import { ArtifactDocument } from './edition.tsx';
 import { ModuleLaunch } from './module-launch.tsx';
 
 // Every Version of an Artifact, with the launch of its module, the choice of a Version and the
@@ -15,15 +16,18 @@ export function ArtifactVersions({
   notificationFailure,
   module,
   isEditable,
+  fileName,
   versionList,
   workerFailure,
 }: Readonly<IArtifactVersions & { reference: string; interviewNumber?: number | null }>) {
+  const renderValidateButton = useValidation({ reference, interviewNumber, artifact });
   return (
     <ArtifactVersionsView
       reference={reference}
       interviewNumber={interviewNumber}
       artifact={artifact}
       isEditable={isEditable}
+      fileName={fileName}
       prompt={module.prompt}
       versionList={versionList}
       launch={
@@ -38,11 +42,15 @@ export function ArtifactVersions({
           workerFailure={workerFailure}
         />
       }
-      renderChooseButton={(number) => (
-        <ChooseButton reference={reference} interviewNumber={interviewNumber} artifact={artifact} number={number} />
-      )}
-      renderDocument={(document) => (
-        <ArtifactDocument reference={reference} interviewNumber={interviewNumber} artifact={artifact} {...document} />
+      renderValidateButton={(number) => renderValidateButton(number, 'validate')}
+      renderDocument={(number, document) => (
+        <ArtifactDocument
+          reference={reference}
+          interviewNumber={interviewNumber}
+          artifact={artifact}
+          number={number}
+          {...document}
+        />
       )}
     />
   );

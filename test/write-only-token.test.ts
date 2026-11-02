@@ -16,6 +16,7 @@ import { startFakeHomeAssistant } from './fake-home-assistant.ts';
 import { startFakeSmtpServer } from './fake-smtp-server.ts';
 import { LEA_WATCH, LEA_WATCH_ID } from './lea.ts';
 import { createRecordedFetch } from './recorded-http.ts';
+import { runAndValidate } from './run-module.ts';
 
 // A Béthune Posting in Léa's Zone, from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -25,7 +26,7 @@ const RUN_BY_MODULE = {
   research: { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } },
   letter: {
     fileByName: {
-      'draft.md': 'Madame, Monsieur,\n',
+      'letter.md': 'Madame, Monsieur,\n',
       'recipients.json': JSON.stringify({
         to: null,
         ccList: [],
@@ -157,8 +158,7 @@ async function saveChannel(module: INotificationChannel, parameters: Record<stri
       await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
       await actions.addInterview({ reference: REFERENCE, ...INPUT_BY_ACTION.addInterview });
     }
-    await actions.runModule({ module: artifactModule, reference: REFERENCE, interview });
-    await actions.runQueuedJobs();
+    await runAndValidate(actions, { module: artifactModule, reference: REFERENCE, interview });
   }
   const secretSet = new Set(parameterList.filter(({ isSecret }) => isSecret).map(({ name }) => name));
   const input = {

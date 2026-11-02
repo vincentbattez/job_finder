@@ -117,7 +117,8 @@ const ARTIFACT_WRITE_NAME_SET = new Set([
   'createJob',
   'startJob',
   'finishJob',
-  'chooseVersion',
+  'keepOriginal',
+  'validateVersion',
   'writeVersionDocument',
 ]);
 
@@ -684,11 +685,11 @@ describe('architecture', () => {
           "export const queue = (workspace, posting) => workspace.createJob(posting, 'letter', { isAutomatic: true });",
           'export const start = (workspace, job) => workspace.startJob(job, {});',
           'export const finish = (workspace, run) => workspace.finishJob(run, {});',
-          'export const choose = (context, version) => context.workspace.chooseVersion(version);',
+          'export const choose = (context, version) => context.workspace.validateVersion(version);',
           "export const save = (workspace, posting, version) => workspace.writeVersionDocument(posting, version, 'a.md', '');",
           // An extraction is no Artifact job, and an action named like a write is no write of the workspace
           "export const extract = (workspace, posting) => workspace.createJob(posting, 'extraction');",
-          'export const relay = (actions, input) => actions.chooseVersion(input);',
+          'export const relay = (actions, input) => actions.validateVersion(input);',
           '',
         ].join('\n'),
         'src/artifact/index.ts':
@@ -702,7 +703,7 @@ describe('architecture', () => {
       'src/actions/postings.ts calls workspace.createJob',
       'src/actions/postings.ts calls workspace.startJob',
       'src/actions/postings.ts calls workspace.finishJob',
-      'src/actions/postings.ts calls context.workspace.chooseVersion',
+      'src/actions/postings.ts calls context.workspace.validateVersion',
       'src/actions/postings.ts calls workspace.writeVersionDocument',
     ]);
   });

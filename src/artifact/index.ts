@@ -7,6 +7,7 @@ import type { ErrorCode } from '#/domain/error.ts';
 import {
   ARTIFACT_SCHEMA,
   ARTIFACT_STATE_SCHEMA,
+  ORIGINAL_FILE_NAME,
   type Artifact,
   type ArtifactState,
   type Candidate,
@@ -52,11 +53,6 @@ interface IArtifactsOption {
 }
 
 const STATE_BY_VERSION_STATE = { running: 'in_progress', ready: 'ready', failed: 'failed' } as const;
-
-// The read-only files of every module, which jf edit keeps out of reach of its session
-const READ_ONLY_FILE_NAME_LIST = Object.values(AI_MODULE_BY_ARTIFACT).flatMap(({ readOnlyFileList = [] }) =>
-  readOnlyFileList.map(({ name }) => name),
-);
 
 // An act throws the very refusal its handle exposes
 function refuse(refusal: IRefusal | null, locale: Locale): void {
@@ -188,7 +184,7 @@ export function createArtifacts({
     const chosenVersion = versionList.find(({ isChosen }) => isChosen);
     const freeze = freezeOf(posting, artifact);
 
-    // Only the Chosen Version is corrected by hand, in place: never a Letter frozen once sent
+    // jf edit opens the Chosen Version, never a Letter frozen once sent
     function editRefusalOf(version: Version | undefined): IRefusal | null {
       if (freeze !== null) {
         return freeze;
@@ -201,26 +197,13 @@ export function createArtifacts({
           };
     }
 
-    // A file the module keeps as the AI wrote it, such as the Draft, stays read-only; the front sends the
-    // name back, so nothing else than a file of the Version may be written
-    function saveRefusalOf(version: Version | undefined, fileName: string, fileNameList: string[]): IRefusal | null {
-      const readOnlyFile = aiModule.readOnlyFileList?.find(({ name }) => name === fileName);
-      return (
-        editRefusalOf(version) ??
-        (readOnlyFile === undefined ? null : { code: readOnlyFile.errorCode, values: { reference } }) ??
-        (fileNameList.includes(fileName)
-          ? null
-          : { code: 'not_a_version_file', values: { fileName, artifact, reference } })
-      );
-    }
-
     function unknownVersionRefusal(number: number): IRefusal {
       const command = commandOf(['versions', reference, artifact], interview);
       return { code: 'unknown_version', values: { reference, artifact, number, command } };
     }
 
-    // Only a ready Version can become the Chosen Version, and a Letter frozen once sent stays chosen
-    function choiceRefusalOf(number: number): IRefusal | null {
+    // A ready Version is validated or corrected, Draft or Validated alike; never a Letter frozen once sent
+    function versionRefusalOf(number: number): IRefusal | null {
       if (freeze !== null) {
         return freeze;
       }
@@ -235,6 +218,21 @@ export function createArtifacts({
         code: version.state === 'failed' ? 'version_failed' : 'version_running',
         values: { reference, artifact, number },
       };
+    }
+
+    // A correction writes the Version's text in place; its Original stays as the AI wrote it, and the front
+    // sends the name back, so nothing else than a file of the Version may be written
+    function saveRefusalOf(number: number, fileName: string): IRefusal | null {
+      const refusal = versionRefusalOf(number);
+      if (refusal !== null) {
+        return refusal;
+      }
+      if (fileName === ORIGINAL_FILE_NAME) {
+        return { code: 'original_not_editable', values: { reference } };
+      }
+      return fileName === aiModule.fileName
+        ? null
+        : { code: 'not_a_version_file', values: { fileName, artifact, reference } };
     }
 
     // Computed once per handle: the Posting page reads it for the button and for the Prompt
@@ -259,16 +257,17 @@ export function createArtifacts({
         : codedError(code, values, { locale }).message;
     }
 
+    // Its text, null while running or once failed, and the AI's Original, null for a Version brought
     const detailVersionList = versionList.map((version) => {
-      const documentList = workspace.readVersionDocuments(posting, version);
-      const fileNameList = documentList.map(({ fileName }) => fileName);
+      const versionRefusal = versionRefusalOf(version.number);
       return {
         version,
-        choiceRefusal: choiceRefusalOf(version.number),
-        documentList: documentList.map((document) => ({
-          ...document,
-          saveRefusal: saveRefusalOf(version, document.fileName, fileNameList),
-        })),
+        versionRefusal,
+        // A Draft is validated; a Validated Version no longer chosen is chosen again the same way
+        isValidatable: !version.isChosen && versionRefusal === null,
+        isCorrectable: versionRefusal === null,
+        text: workspace.readVersionFile(posting, version, aiModule.fileName),
+        original: workspace.readVersionFile(posting, version, ORIGINAL_FILE_NAME),
       };
     });
     const editRefusal = editRefusalOf(chosenVersion);
@@ -351,14 +350,15 @@ export function createArtifacts({
           ...state,
           module: { refusal: run.refusal === null ? null : wordForFront(run.refusal), prompt: run.prompt },
           isEditable: editRefusal === null,
-          versionList: detailVersionList.map(({ version, choiceRefusal, documentList }) => ({
+          fileName: aiModule.fileName,
+          format: aiModule.format,
+          isFrozen: freeze !== null,
+          versionList: detailVersionList.map(({ version, isValidatable, isCorrectable, text, original }) => ({
             version,
-            isChoosable: !version.isChosen && choiceRefusal === null,
-            documentList: documentList.map(({ fileName, markdown, saveRefusal }) => ({
-              fileName,
-              markdown,
-              isModifiable: saveRefusal === null,
-            })),
+            isValidatable,
+            isCorrectable,
+            text,
+            original,
           })),
         };
       },
@@ -379,21 +379,17 @@ export function createArtifacts({
         });
       },
 
-      async choose(number: number): Promise<void> {
-        refuse(choiceRefusalOf(number), locale);
-        await workspace.chooseVersion(versionOf(number));
+      // Validated and Chosen in one transaction: only a Chosen Version is read by another Artifact (ADR-0019)
+      async validate(number: number): Promise<void> {
+        refuse(versionRefusalOf(number), locale);
+        await workspace.validateVersion(versionOf(number));
       },
 
-      // A correction by the Candidate changes the Chosen Version in place, without creating another one
-      saveDocument(fileName: string, markdown: string): void {
-        const fileNameList =
-          chosenVersion === undefined
-            ? []
-            : workspace.readVersionDocuments(posting, chosenVersion).map((document) => document.fileName);
-        refuse(saveRefusalOf(chosenVersion, fileName, fileNameList), locale);
-        if (chosenVersion !== undefined) {
-          workspace.writeVersionDocument(posting, chosenVersion, fileName, markdown);
-        }
+      // A correction by the Candidate changes a Version in place, Draft or Validated, without creating another
+      // one: a Validated Version stays Validated
+      saveDocument(number: number, fileName: string, markdown: string): void {
+        refuse(saveRefusalOf(number, fileName), locale);
+        workspace.writeVersionDocument(posting, versionOf(number), fileName, markdown);
       },
 
       // jf edit, on the Chosen Version, its read-only files out of reach of the session
@@ -407,7 +403,7 @@ export function createArtifacts({
         aiSession.openInteractive({
           prompt: composeEditPrompt({ candidate, posting, artifact, versionPath }),
           directory: postingDirectory,
-          readOnlyPathList: READ_ONLY_FILE_NAME_LIST.map((name) => path.join(postingDirectory, '**', name)),
+          readOnlyPathList: [path.join(postingDirectory, '**', ORIGINAL_FILE_NAME)],
           locale,
         });
       },

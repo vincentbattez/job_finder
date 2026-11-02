@@ -84,9 +84,9 @@ export const ERROR_EN = {
   unknownArtifact: 'Unknown Artifact: {{name}}. Artifacts: {{names}}.',
   // The front shows it beside the button of the missing Artifact, the CLI with the command that lifts it
   missingArtifactForFront:
-    'Posting {{reference}} has no Chosen {{missingLabel}}, which the {{moduleLabel}} relies on: start the {{missingLabel}} first.',
+    'Posting {{reference}} has no Validated {{missingLabel}}, which the {{moduleLabel}} relies on: produce then validate the {{missingLabel}} first.',
   missingArtifactForCli:
-    'Posting {{reference}} has no Chosen {{missingLabel}}, which the {{moduleLabel}} relies on. Produce it first: {{command}}.',
+    'Posting {{reference}} has no Validated {{missingLabel}}, which the {{moduleLabel}} relies on. Produce it first, “{{command}}”, then validate one of its Versions.',
   unknownInput: 'Posting {{reference}} has no Input “{{key}}” for this run: reopen the panel to see its Inputs.',
   requiredInputUnchecked: 'The Input “{{key}}” of Posting {{reference}} is required: this run cannot leave it out.',
   missingOutput: 'The expected file {{outputPath}} is missing.',
@@ -97,15 +97,15 @@ export const ERROR_EN = {
   interruptedJob: 'Interrupted: the worker stopped during this job. Running the module again creates a new Version.',
   noChosenVersionToEdit:
     'Posting {{reference}} has no Chosen Version of {{artifact}} to edit: “{{command}}” produces one.',
-  draftNotEditable:
-    'The Draft is never edited: it keeps what the AI wrote. Correct the Letter of Posting {{reference}}.',
+  originalNotEditable:
+    "The Original is never edited: it keeps what the AI wrote. Correct the Version's text, on Posting {{reference}}.",
   unknownVersion:
     'Unknown Version: {{artifact}} v{{number}} of Posting {{reference}}. “{{command}}” lists its Versions.',
   versionFailed:
-    'Version {{artifact}} v{{number}} of Posting {{reference}} is failed: only a ready Version can be chosen.',
+    'Version {{artifact}} v{{number}} of Posting {{reference}} is failed: only a ready Version is validated or corrected.',
   versionRunning:
-    'Version {{artifact}} v{{number}} of Posting {{reference}} is in progress: only a ready Version can be chosen.',
-  notAVersionFile: '“{{fileName}}” is not a file of the Chosen Version of {{artifact}} of Posting {{reference}}.',
+    'Version {{artifact}} v{{number}} of Posting {{reference}} is in progress: only a ready Version is validated or corrected.',
+  notAVersionFile: '“{{fileName}}” is not an editable file of a Version of {{artifact}} of Posting {{reference}}.',
   noChosenLetter: 'Posting {{reference}} has no Chosen Letter. Produce it: jf run letter {{reference}}.',
 
   // The Profile and its Uploads

@@ -5,6 +5,8 @@ import type { State } from './badge.tsx';
 // The Versions of an Artifact as readPosting gives them, shared by the views of its tabs
 type VersionState = 'running' | 'ready' | 'failed';
 
+export type Validation = 'draft' | 'validated';
+
 export const STATE_BY_VERSION_STATE: Record<VersionState, State> = {
   running: 'in_progress',
   ready: 'ready',
@@ -17,6 +19,26 @@ export interface IPrompt {
   fixedPart: string;
   instructions: string;
   readVersionList: { reference: string; artifact: Artifact; interviewNumber: number | null; number: number }[];
+}
+
+// A Version with its text, null while it runs or once it failed, and the AI's Original, null for a Version
+// the Candidate brought (ADR-0019)
+export interface IVersionDetail {
+  version: {
+    number: number;
+    state: VersionState;
+    validation: Validation;
+    origin: 'ai' | 'candidate';
+    isChosen: boolean;
+    hasCandidateInstructions: boolean;
+    instructions: string;
+    createdAt: Date;
+  };
+  // Given by the action: a Draft to validate, or an older Validated Version to choose again
+  isValidatable: boolean;
+  isCorrectable: boolean;
+  text: string | null;
+  original: string | null;
 }
 
 export interface IArtifactVersions {
@@ -33,16 +55,16 @@ export interface IArtifactVersions {
   module: { refusal: string | null; prompt: IPrompt | null };
   // Given by the action: jf edit opens its Chosen Version
   isEditable: boolean;
-  versionList: {
-    version: {
-      number: number;
-      state: VersionState;
-      isChosen: boolean;
-      hasCandidateInstructions: boolean;
-      instructions: string;
-      createdAt: Date;
-    };
-    isChoosable: boolean;
-    documentList: { fileName: string; markdown: string; isModifiable: boolean }[];
-  }[];
+  // The file of a Version the Candidate reads and corrects, and how its text is written (ADR-0020)
+  fileName: string;
+  format: 'mdx' | 'markdown';
+  // The Letter of an Applied Posting, read-only
+  isFrozen: boolean;
+  versionList: IVersionDetail[];
+}
+
+// What an Artifact tab, a list row or the Sheet tells of it at a glance (spec #125, « IArtifact »): its
+// latest ready Version's validation, none before any
+export function summaryOf({ versionList }: Pick<IArtifactVersions, 'versionList'>): Validation | 'none' {
+  return versionList.findLast(({ version }) => version.state === 'ready')?.version.validation ?? 'none';
 }

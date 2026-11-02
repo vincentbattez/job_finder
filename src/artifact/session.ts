@@ -155,8 +155,9 @@ export async function runSession(
         .find((fileProblem) => fileProblem !== undefined)
     : codedError('session_failed', {}, { locale });
   const errorCode = problem?.code ?? null;
+  // The AI's text stays as it wrote it, beside the text the Candidate corrects (ADR-0019)
   if (errorCode === null) {
-    aiModule.completeVersion?.(outputDirectory);
+    workspace.keepOriginal(posting, version, aiModule.fileName);
   }
   const finished = await workspace.finishJob(
     { job, version },

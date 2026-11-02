@@ -66,6 +66,7 @@ export const POSTING_EN = {
       notes: 'Notes',
     },
     tabState: ' ({{stateLabel}})',
+    tabStateLabelBySummary: { none: 'None', draft: 'Draft', validated: 'Validated', pending: 'In progress' },
     markApplied: 'Mark Applied',
     addInterview: 'Add an Interview',
     seeInterview: 'See Interview {{number}}',
@@ -106,10 +107,68 @@ export const POSTING_EN = {
   // The Versions of an Artifact
   versionNumber: 'v{{versionNumber}}',
   noVersion: 'No Version yet.',
-  chosenBadge: 'Chosen',
+  validationLabelByValidation: { draft: 'Draft', validated: 'Validated' },
   versionInstructions: 'Instructions of this Version',
   noFile: 'No file in this Version.',
-  chooseVersion: 'Choose this Version',
+  validateVersion: 'Validate this Version',
+
+  // The Artifact view of the Research and Letter tabs (spec #125, « Versions: Draft, Validated, Original »)
+  artifactView: {
+    versionSelect: 'Version',
+    versionValue: 'Version {{number}} · {{stateLabel}}',
+    versionNumber: 'Version {{number}}',
+    versionOption: '{{stateLabel}} · {{originLabel}} · {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    versionOptionChosen:
+      '{{stateLabel}} · chosen · {{originLabel}} · {{date, datetime(dateStyle: short; timeZone: Europe/Paris)}}',
+    stateLabelByState: { draft: 'Draft', validated: 'Validated', running: 'In progress', failed: 'Failed' },
+    originLabelByOrigin: { ai: 'AI', candidate: 'you' },
+    chosenBadge: 'Validated · chosen',
+    draftHeading: 'Version {{number}} is a Draft: read it, then validate it',
+    draftNoteLetter: 'Only the Chosen Version goes to the employer.',
+    draftNote: 'Until it is validated, no other Artifact reads it.',
+    draftChosenNote: 'Meanwhile, Version {{number}} stays the Chosen Version.',
+    draftNoChosenNote: 'No Version is chosen yet.',
+    validate: 'Validate Version {{number}}',
+    validated: 'Version {{number}} validated and chosen',
+    olderVersion: 'An older Version. The Chosen Version is Version {{number}}.',
+    seeChosen: 'See it',
+    chooseAgain: 'Choose it again',
+    frozen: 'The Posting is Applied: this Letter is frozen as it was sent.',
+    running: 'Generating',
+    queued: 'Waiting for the worker',
+    runningNote: 'The new Version will arrive as a Draft; the Chosen Version stays the same until then.',
+    runningVersion: 'This Version is being generated.',
+    failedVersion: 'This Version failed: it has no text to read.',
+    emptyHeading: 'No {{artifactLabel}} yet',
+    emptyPitchByArtifact: {
+      research:
+        'The Research establishes, with its sources, what the recruiters expect for this Posting and in what context.',
+      letter: 'The Letter of this Posting. It needs a Validated Research; its Chosen Version is the one sent.',
+      portrait: 'The Portrait establishes what is publicly known of the Interviewers of this Interview.',
+      interview_brief: 'The Interview Brief prepares this Interview: what to tell them, what to revise, how to train.',
+    },
+    modes: 'Mode',
+    modeRead: 'Read',
+    modeEdit: 'Edit',
+    producedOn: 'Produced by the AI on {{date, datetime(dateStyle: long; timeZone: Europe/Paris)}}',
+    broughtOn: 'Brought by you on {{date, datetime(dateStyle: long; timeZone: Europe/Paris)}} · no Original',
+    textLabel: 'Text of Version {{number}}',
+    instructionsSummary: '{{originLabel}} · Instructions of this Version',
+    save: 'Save',
+    cancel: 'Cancel',
+    saved: 'Version {{number}} saved',
+  },
+
+  // Marking Applied while the Letter is not validated (spec #125, « The Posting page »)
+  appliedDialog: {
+    title: 'Mark the Posting Applied?',
+    draftDescription:
+      'Your Letter is still a Draft (Version {{number}}). Validate it so the Letter you sent is the one recorded.',
+    noLetterDescription: 'This Posting has no Validated Letter. Mark it Applied anyway if you applied another way.',
+    validateAndApply: 'Validate the Letter and mark Applied',
+    applyWithoutLetter: 'Mark Applied without a Letter',
+    cancel: 'Cancel',
+  },
 
   // The Prompt a run started now would receive, beside the title of its Artifact
   prompt: {

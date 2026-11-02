@@ -440,10 +440,11 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       }
       const versionList = await actions.listVersions({ reference, artifact, interview });
       const t = await cliOfPosting(actions, reference);
-      for (const { number, state, isChosen, hasCandidateInstructions, createdAt } of versionList) {
+      for (const { number, state, validation, isChosen, hasCandidateInstructions, createdAt } of versionList) {
         const columnList = [
           `v${String(number)}`,
           t(`versionStateLabelByState.${state}`),
+          t(`validationLabelByValidation.${validation}`),
           isChosen ? t('chosenVersion') : '—',
           hasCandidateInstructions ? t('candidateInstructions') : t('defaultInstructions'),
           t('createdAt', { createdAt }),
@@ -461,15 +462,15 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       }
     },
   },
-  choose: {
-    describe: (t) => t('chooseDescription'),
+  validate: {
+    describe: (t) => t('validateDescription'),
     run: async (actions, [reference, artifact, version, interview]) => {
       if (reference === undefined || artifact === undefined || version === undefined) {
-        throw codedError('choose_usage');
+        throw codedError('validate_usage');
       }
-      await actions.chooseVersion({ reference, artifact, number: version.replace(/^v/, ''), interview });
+      await actions.validateVersion({ reference, artifact, number: version.replace(/^v/, ''), interview });
       const t = await cliOfPosting(actions, reference);
-      process.stdout.write(t('versionChosen', { artifact, version, reference }));
+      process.stdout.write(t('versionValidated', { artifact, version, reference }));
     },
   },
   apply: changeStatusCommand('applied', 'apply', (t) => t('applyDescription')),

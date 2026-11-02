@@ -7,6 +7,7 @@ import type { Artifact } from '#/domain/index.ts';
 
 import { detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { runAndValidate } from './run-module.ts';
 
 // The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -19,7 +20,7 @@ const RESEARCH_RUN = {
 };
 const LETTER_RUN = {
   fileByName: {
-    'draft.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal de Béthune.\n',
+    'letter.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal de Béthune.\n',
     'recipients.json': JSON.stringify({
       to: { email: 'p.tj-bethune@justice.fr', source: 'applicationEmail' },
       ccList: [],
@@ -36,8 +37,7 @@ async function readPrompt(actions: Actions, artifact: Artifact) {
 }
 
 async function runModule(actions: Actions, module: Artifact, reference = REFERENCE) {
-  await actions.runModule({ module, reference });
-  await actions.runQueuedJobs();
+  await runAndValidate(actions, { module, reference });
 }
 
 // The Posting Applied, with a first Interview, which the Interview Brief prepares
@@ -52,8 +52,7 @@ describe('the Prompt beside an Artifact', () => {
     const { actions } = await detectPostings(aiSession);
     const prompt = await readPrompt(actions, 'research');
 
-    await actions.runModule({ module: 'research', reference: REFERENCE });
-    await actions.runQueuedJobs();
+    await runAndValidate(actions, { module: 'research', reference: REFERENCE });
 
     const [session] = aiSession.headlessSessionList;
     expect(prompt?.fixedPart).toContain('`research/v<next>/research.md`');

@@ -134,8 +134,8 @@ export const ERROR_CATALOGUE = {
   malformed_output: 'error:malformedOutput',
   // An Artifact to edit has no Chosen Version
   no_chosen_version_to_edit: 'error:noChosenVersionToEdit',
-  // The Draft is asked to be edited, while it keeps what the AI wrote
-  draft_not_editable: 'error:draftNotEditable',
+  // The Original of a Version is asked to be edited, while it keeps what the AI wrote
+  original_not_editable: 'error:originalNotEditable',
   // An Artifact has no Version with this number
   unknown_version: 'error:unknownVersion',
   // A failed Version is chosen
@@ -254,7 +254,7 @@ export const ERROR_CATALOGUE = {
   run_usage: 'cli:runUsage',
   recipients_usage: 'cli:recipientsUsage',
   versions_usage: 'cli:versionsUsage',
-  choose_usage: 'cli:chooseUsage',
+  validate_usage: 'cli:validateUsage',
   status_usage: 'cli:statusUsage',
   profile_usage: 'cli:profileUsage',
   instructions_usage: 'cli:instructionsUsage',

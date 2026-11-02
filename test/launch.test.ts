@@ -5,6 +5,7 @@ import { ARTIFACT_SCHEMA, type Artifact } from '#/domain/index.ts';
 
 import { detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { runAndValidate } from './run-module.ts';
 
 // The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -18,7 +19,7 @@ const RUN_BY_ARTIFACT: Record<Artifact, { fileByName: Record<string, string> }> 
   research: RESEARCH_RUN,
   letter: {
     fileByName: {
-      'draft.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal pour enfants de Béthune.\n',
+      'letter.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal pour enfants de Béthune.\n',
       'recipients.json': JSON.stringify({
         to: { email: 'p.tj-bethune@justice.fr', source: 'applicationEmail' },
         ccList: [],
@@ -47,8 +48,7 @@ const INTERVIEW_ARTIFACT_LIST: readonly Artifact[] = ['portrait', 'interview_bri
 // Launches a module where its Artifact is attached: on the Posting, or on its first Interview
 async function runModule(actions: Actions, module: Artifact) {
   const interview = INTERVIEW_ARTIFACT_LIST.includes(module) ? 1 : undefined;
-  await actions.runModule({ module, reference: REFERENCE, interview });
-  await actions.runQueuedJobs();
+  await runAndValidate(actions, { module, reference: REFERENCE, interview });
 }
 
 // The Artifacts of the Posting, then those of its first Interview, as the Posting page reads them
@@ -119,10 +119,8 @@ describe('the failure of a module', () => {
 
   it('shows a job that failed before its Version as failed, with its reason, over the previous Version', async () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, RUN_BY_ARTIFACT.letter));
-    for (const module of ['research', 'letter']) {
-      await actions.runModule({ module, reference: REFERENCE });
-      await actions.runQueuedJobs();
-    }
+    await runModule(actions, 'research');
+    await runModule(actions, 'letter');
     await actions.runModule({ module: 'letter', reference: REFERENCE });
     await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
 
@@ -222,7 +220,7 @@ describe('the modules the Posting page offers', () => {
       portrait: { refusal: null },
       interview_brief: {
         refusal:
-          "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Fiche d’entretien : lancez d'abord la Recherche.",
+          "L'Offre 2026-2445600 n'a pas de Recherche validée, sur laquelle s'appuie la Fiche d’entretien : produisez puis validez d'abord la Recherche.",
       },
     });
     expect(await readModuleByArtifact(actions)).toMatchObject({
@@ -233,7 +231,7 @@ describe('the modules the Posting page offers', () => {
       research: { refusal: null, prompt: { readVersionList: [] } },
       letter: {
         refusal:
-          "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Lettre : lancez d'abord la Recherche.",
+          "L'Offre 2026-2445600 n'a pas de Recherche validée, sur laquelle s'appuie la Lettre de motivation : produisez puis validez d'abord la Recherche.",
         prompt: null,
       },
     });

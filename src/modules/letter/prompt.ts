@@ -1,25 +1,24 @@
 // The salutation of the example is in the French of the Job Descriptions: cspell:ignore Présidente
 import { describeArtifactLanguage, type IPromptInput } from '#/ai-module/index.ts';
-import { JOB_DESCRIPTION_FILE_NAME } from '#/domain/index.ts';
+import { JOB_DESCRIPTION_FILE_NAME, ORIGINAL_FILE_NAME } from '#/domain/index.ts';
 import { describeProfile } from '#/profile/prompt.ts';
 
 import { RECIPIENTS_FILE_NAME } from './acl/recipients.ts';
 
-// The Draft the session writes, never modified, and the Letter the Candidate corrects, its copy
-export const DRAFT_FILE_NAME = 'draft.md';
+// The Letter the session writes, which the Candidate corrects; the Artifact module keeps its Original
 export const LETTER_FILE_NAME = 'letter.md';
 
 function quote(field: string | null): string {
   return field === null ? 'not given' : `"${field.trim()}"`;
 }
 
-// The pairs Draft/Letter the Candidate already sent, one folder per Applied Posting
+// The pairs Original/Letter the Candidate already sent, one folder per Applied Posting
 function describeSentLetters(sentList: IPromptInput['readVersionList']): string {
   if (sentList.length === 0) {
     return 'The Candidate has not sent any Letter yet.';
   }
   const folderList = sentList.map(({ reference, directory }) => `- Posting ${reference}: \`${directory}\``);
-  return `The Letters the Candidate already sent, one per folder. Each folder holds the Draft the tool wrote (\`${DRAFT_FILE_NAME}\`) and the Letter as the Candidate corrected then sent it (\`${LETTER_FILE_NAME}\`). Compare each pair: their corrections show their style and what they reject, apply them.
+  return `The Letters the Candidate already sent, one per folder. Each folder holds the Original the tool wrote (\`${ORIGINAL_FILE_NAME}\`) and the Letter as the Candidate corrected then sent it (\`${LETTER_FILE_NAME}\`). Compare each pair: their corrections show their style and what they reject, apply them.
 ${folderList.join('\n')}`;
 }
 
@@ -33,7 +32,7 @@ export function composeLetterPrompt({
 }: IPromptInput): string {
   const researchList = readVersionList.filter(({ artifact }) => artifact === 'research');
   const sentList = readVersionList.filter(({ artifact }) => artifact === 'letter');
-  return `You write the Draft of a Candidate's cover letter for a job Posting, and you recommend whom to send it to. ${describeArtifactLanguage('Draft')}
+  return `You write a Candidate's cover letter for a job Posting, and you recommend whom to send it to. ${describeArtifactLanguage('Letter')}
 
 ## The Posting
 
@@ -62,7 +61,7 @@ These are free-text fields: an address may be mixed with a name, a function, a p
 
 ## What you produce
 
-1. \`${outputDirectory}/${DRAFT_FILE_NAME}\`: the Draft, the whole letter in Markdown, from the salutation to the signature, ready to be corrected then pasted into an email.
+1. \`${outputDirectory}/${LETTER_FILE_NAME}\`: the Letter, the whole letter in Markdown, from the salutation to the signature, ready to be corrected then pasted into an email.
 2. \`${outputDirectory}/${RECIPIENTS_FILE_NAME}\`: the recommended recipients, as JSON, exactly in this shape:
 
 \`\`\`json
@@ -76,7 +75,7 @@ These are free-text fields: an address may be mixed with a name, a function, a p
 
 - \`to\`: the address to send the application to, or \`null\` if no field gives one.
 - \`ccList\`: the addresses to copy, possibly none (\`[]\`).
-- \`salutation\`: the salutation of the letter, the same as the Draft's.
+- \`salutation\`: the salutation of the letter, the same as the Letter's.
 - \`source\`: the field the information comes from, \`applicationEmail\`, \`contact1\` or \`contact2\`. For the salutation, the field that names the person or the function the letter is addressed to, or \`null\` for a generic salutation.
 - \`email\`: the address alone, copied as it appears in the \`source\` field, with no name or text around it.
 - \`justification\`: why this recipient, these copies and this salutation, based on the fields.

@@ -1,4 +1,15 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
 
 import { z } from 'zod/v4';
@@ -70,6 +81,12 @@ export function emptyDirectory(directory: string): void {
 export function writeTextFile(filePath: string, text: string): void {
   mkdirSync(path.dirname(filePath), { recursive: true });
   writeFileSync(filePath, text);
+}
+
+// A copy no one may write, not even the session of jf edit
+export function copyAsReadOnly(fromPath: string, toPath: string): void {
+  copyFileSync(fromPath, toPath);
+  chmodSync(toPath, 0o444);
 }
 
 // Throws when the file does not exist, unless it is allowed to be missing
