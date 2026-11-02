@@ -25,6 +25,8 @@ export default defineConfig(({ mode }) => ({
       'lucide-react',
       'next-themes',
       'sonner',
+      '@mdx-js/mdx',
+      'mermaid',
     ],
   },
   // The e2e tests (playwright.config.ts) serve the front with the actions of test/, which fake the

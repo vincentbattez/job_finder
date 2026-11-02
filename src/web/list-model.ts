@@ -46,10 +46,9 @@ function deadlineGroupOf({ deadline }: IDated, now: Date): DeadlineGroupKey {
 
 // A missing date sorts last
 function byDate(first: Date | null, second: Date | null, direction: 1 | -1): number {
-  if (first === null || second === null) {
-    return Number(first === null) - Number(second === null);
-  }
-  return (first.getTime() - second.getTime()) * direction;
+  return first === null || second === null
+    ? Number(first === null) - Number(second === null)
+    : (first.getTime() - second.getTime()) * direction;
 }
 
 const COMPARE_BY_GROUP: Record<DeadlineGroupKey, (first: IDated, second: IDated) => number> = {

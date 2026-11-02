@@ -165,7 +165,7 @@ test.describe('To Apply on the map', () => {
       .poll(async () => {
         const markerBox = await findMarker(page, 'Rennes').boundingBox();
         return markerBox === null
-          ? Number.POSITIVE_INFINITY
+          ? Infinity
           : Math.hypot(
               markerBox.x + markerBox.width / 2 - visibleCenterX,
               markerBox.y + markerBox.height / 2 - visibleCenterY,
