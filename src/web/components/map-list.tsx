@@ -41,6 +41,8 @@ interface IMapListProperties<T extends IMapListItem> extends ISheetSelection {
   renderFacts: (item: T) => ReactNode;
   // What a row offers on its right, such as New's Dismiss and Keep, over the row's own button
   renderActions?: (item: T) => ReactNode;
+  // What the panel's head holds under the list's name, such as the Applications tabs
+  controls?: ReactNode;
   empty: ReactNode;
 }
 
@@ -68,6 +70,7 @@ export function MapList<T extends IMapListItem>({
   legendList,
   renderFacts,
   renderActions,
+  controls,
   empty,
   selectedReference,
   onSelect,
@@ -161,6 +164,7 @@ export function MapList<T extends IMapListItem>({
               <PanelLeftCloseIcon />
             </Button>
           </div>
+          {controls !== undefined && <div className="border-b px-3 py-2.5">{controls}</div>}
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {groupList.length === 0 ? (
               <p className="m-4 rounded-2xl border border-dashed p-6 text-center text-body text-muted-foreground">

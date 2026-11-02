@@ -2,7 +2,6 @@ import { createInstance, type FlatNamespace, type i18n, type ParseKeys, type Res
 
 import { LOCALE_LIST, type Locale } from '#/domain/locale.ts';
 
-import { APPLICATIONS_EN } from './en/applications.ts';
 import { CLI_EN } from './en/cli.ts';
 import { COMMON_EN } from './en/common.ts';
 import { DEFAULT_INSTRUCTIONS_EN } from './en/default-instructions.ts';
@@ -14,7 +13,6 @@ import { POSTING_LIST_EN } from './en/posting-list.ts';
 import { POSTING_EN } from './en/posting.ts';
 import { SETTINGS_EN } from './en/settings.ts';
 import { SHELL_EN } from './en/shell.ts';
-import { APPLICATIONS_FR } from './fr/applications.ts';
 import { CLI_FR } from './fr/cli.ts';
 import { COMMON_FR } from './fr/common.ts';
 import { DEFAULT_INSTRUCTIONS_FR } from './fr/default-instructions.ts';
@@ -31,7 +29,6 @@ import { SHELL_FR } from './fr/shell.ts';
 // shape to those of fr/: a key missing on either side fails the typecheck.
 const EN = {
   common: COMMON_EN,
-  applications: APPLICATIONS_EN,
   postingList: POSTING_LIST_EN,
   cli: CLI_EN,
   error: ERROR_EN,
@@ -50,7 +47,6 @@ const RESOURCES_BY_LOCALE: Record<Locale, Resources> = {
   en: EN,
   fr: {
     common: COMMON_FR,
-    applications: APPLICATIONS_FR,
     postingList: POSTING_LIST_FR,
     cli: CLI_FR,
     error: ERROR_FR,
