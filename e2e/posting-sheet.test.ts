@@ -1,13 +1,8 @@
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-
 import type { Locator, Page } from '@playwright/test';
 import { z } from 'zod/v4';
 
 import { expect, test, type IFront } from './candidate.ts';
-
-// How long a raw write waits for the server's own writes to release the database
-const BUSY_TIMEOUT_MS = 5000;
+import { openDatabase } from './harness.ts';
 
 // The Postings of test/seed-front.ts this file owns, in their import order: their City, its
 // coordinates and the Status each test starts from
@@ -31,8 +26,7 @@ function employerOf(city: string): string {
 // The Candidate's Postings as this file needs them, whatever a previous run left; their references
 // come back, by City
 function resetPostings(candidateId: SheetCandidate): Map<string, string> {
-  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
-  const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
+  const database = openDatabase();
   const referenceList = z
     .array(z.object({ reference: z.string() }))
     .parse(

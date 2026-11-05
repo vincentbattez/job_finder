@@ -2,25 +2,21 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { z } from 'zod/v4';
-
 import { expect, test } from './candidate.ts';
 import { goToRecap, openGeneration } from './generation.ts';
+import { findDataDirectory, READY_TIMEOUT_MS } from './harness.ts';
 
 // Vera's one Posting, which test/seed-front.ts imports with a Validated Research and no other test touches;
 // the import names it from its Markdown (src/modules/source-import)
 const VERA_JOB_DESCRIPTION = '# Greffier – Valence\n\nTenir les audiences du tribunal judiciaire de Valence.\n';
 const REFERENCE = `import-${createHash('sha256').update(VERA_JOB_DESCRIPTION).digest('hex').slice(0, 10)}`;
 
-// The worker takes the job, its session runs, and the Posting page reads the state again
-const READY_TIMEOUT_MS = 15_000;
-
 const PAST_LETTER = 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal judiciaire de Lille.\n';
 const ANNEX = '# Mémoire\n\nLa justice des mineurs.\n';
 
 // Vera's Profile, written first as jf profile would: her CV and Facts, a past letter and an Annex
 function writeVeraProfile(): void {
-  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
+  const dataDirectory = findDataDirectory();
   const profileDirectory = path.join(dataDirectory, 'candidates', 'vera', 'profile');
   rmSync(profileDirectory, { recursive: true, force: true });
   mkdirSync(profileDirectory, { recursive: true });

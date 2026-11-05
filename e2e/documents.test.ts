@@ -1,27 +1,20 @@
 import { rmSync } from 'node:fs';
 import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 
 import { z } from 'zod/v4';
 
 import { expect, test } from './candidate.ts';
 import { openGeneration } from './generation.ts';
-
-// How long a raw write waits for the server's own writes to release the database
-const BUSY_TIMEOUT_MS = 5000;
+import { findDataDirectory, openDatabase } from './harness.ts';
 
 const ANNEX_FILE_NAME = 'annex-releve-de-notes.md';
-
-function dataDirectoryOf(): string {
-  return z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata).dataDirectory;
-}
 
 // One of Cleo's Postings of test/seed-front.ts without any Custom Artifact, and her Profile without the
 // Annex a test adds, whatever a previous run left; its reference comes back for the page
 function resetCleo(fileName: string): string {
-  const dataDirectory = dataDirectoryOf();
+  const dataDirectory = findDataDirectory();
   rmSync(path.join(dataDirectory, 'candidates', 'cleo', 'profile', ANNEX_FILE_NAME), { force: true });
-  const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
+  const database = openDatabase();
   const { id, reference } = z
     .object({ id: z.number(), reference: z.string() })
     .parse(

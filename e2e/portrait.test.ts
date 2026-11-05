@@ -1,15 +1,13 @@
 import { expect, test } from '@playwright/test';
 
 import { generate } from './generation.ts';
+import { READY_TIMEOUT_MS } from './harness.ts';
 import { findInterviews, prepareInterview } from './interview.ts';
 
 // A Posting that test/seed-front.ts leaves without any Artifact and that no other test touches: the test
 // marks it Applied and gives it an Interview. The e2e worker runs the jobs with the fake Claude, whose
 // sessions are short (test/e2e-actions.server.ts).
 const REFERENCE = '2026-2410880';
-
-// The worker takes the job, its session runs, and the Posting page reads the state again
-const READY_TIMEOUT_MS = 15_000;
 
 // The Portrait the fake Claude writes, corrected by the Candidate
 const CORRECTED_PORTRAIT = '# Portrait factice\n\nMme Durand, juge des enfants à Paris depuis 2021.\n';

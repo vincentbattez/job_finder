@@ -1,25 +1,13 @@
 import { readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { z } from 'zod/v4';
 
-// How long a raw write waits for the server's own writes to release the database
-const BUSY_TIMEOUT_MS = 5000;
-// The worker takes the job, then its fake session runs (test/e2e-actions.server.ts)
-const READY_TIMEOUT_MS = 15_000;
+import { findDataDirectory, openDatabase, READY_TIMEOUT_MS } from './harness.ts';
 
 export function findInterviews(page: Page): Locator {
   return page.getByRole('region', { name: 'Entretiens' });
-}
-
-export function findDataDirectory(): string {
-  return z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata).dataDirectory;
-}
-
-export function openDatabase(): DatabaseSync {
-  return new DatabaseSync(path.join(findDataDirectory(), 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
 }
 
 // A detected Posting of the seed is New: put To Apply as keeping it would, without the Research keeping

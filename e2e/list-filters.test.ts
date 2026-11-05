@@ -1,13 +1,8 @@
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-
 import type { Locator, Page } from '@playwright/test';
 import { z } from 'zod/v4';
 
 import { expect, test, type IFront } from './candidate.ts';
-
-// How long a raw write waits for the server's own writes to release the database
-const BUSY_TIMEOUT_MS = 5000;
+import { openDatabase } from './harness.ts';
 
 // Nora's six imported Postings (test/seed-front.ts), in the order the seed imported them, as this file
 // places and sorts them: four To Apply, one To Apply Archived, one New
@@ -33,11 +28,6 @@ const IRIS_POSTING_LIST = [
   },
   { city: 'Rennes', region: 'Bretagne', latitude: 48.11, longitude: -1.68, status: 'new', isArchived: false },
 ];
-
-function openDatabase(): DatabaseSync {
-  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
-  return new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
-}
 
 function titleOf(index: number, city: string): string {
   return `Greffier placé ${String(index + 1)} – ${city}`;

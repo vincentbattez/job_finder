@@ -1,15 +1,10 @@
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-
 import type { Page } from '@playwright/test';
 import { z } from 'zod/v4';
 
 import { expect, test } from './candidate.ts';
+import { openDatabase } from './harness.ts';
 import { prepareApplication, runVersion } from './interview.ts';
 import { findOverflowing } from './overflow.ts';
-
-// How long a raw read waits for the server's own writes to release the database
-const BUSY_TIMEOUT_MS = 5000;
 
 // The Interview Brief the fake Claude writes, its last section renamed by the Candidate
 // (test/e2e-actions.server.ts)
@@ -20,11 +15,6 @@ const RENAMED_BRIEF = [
   '## Présentez-vous\n\nTitulaire d’un master 2, je souhaite rejoindre votre juridiction.',
   '## Questions attendues\n\n- Pourquoi ce poste ?\n',
 ].join('\n\n');
-
-function openDatabase(): DatabaseSync {
-  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
-  return new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
-}
 
 // Ruth's one Posting of test/seed-front.ts, which only this test touches
 function findReference(): string {

@@ -1,14 +1,10 @@
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-
 import type { Locator, Page } from '@playwright/test';
 import { z } from 'zod/v4';
 
 import { expect, test, type IFront } from './candidate.ts';
+import { openDatabase } from './harness.ts';
 import { findOverflowing } from './overflow.ts';
 
-// How long a raw write waits for the server's own writes to release the database
-const BUSY_TIMEOUT_MS = 5000;
 const DAY_MS = 86_400_000;
 
 // Léa's Archived Application (test/seed-front.ts)
@@ -35,8 +31,7 @@ function fromNow(days: number): string {
 // Rosa's Postings as this file needs them, whatever a previous run left. Their title, which names their
 // folder, stays the seed's: their employer tells them apart
 function resetRosa() {
-  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
-  const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
+  const database = openDatabase();
   const postingList = z
     .array(z.object({ id: z.number(), reference: z.string() }))
     .parse(

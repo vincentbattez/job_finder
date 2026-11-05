@@ -1,10 +1,9 @@
 import { rmSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 
 import { z } from 'zod/v4';
 
 import { expect, test, type IFront } from './candidate.ts';
+import { openDatabase } from './harness.ts';
 
 // A single Detection runs at a time, whoever starts it (ADR-0014): these tests run one after the other,
 // each on Candidates of its own, which no other test file detects. They follow the slow fake Source
@@ -15,8 +14,6 @@ test.describe.configure({ mode: 'serial' });
 
 // Started on the shared lock of a previous test's Detection, the Card waits for it to end
 const VERDICT_TIMEOUT_MS = 30_000;
-// How long a raw write of these tests waits for the server's own writes to release the database
-const BUSY_TIMEOUT_MS = 5000;
 const START_NAME = 'Lancer une Détection';
 const RUNNING_NAME = 'Détection en cours';
 
@@ -44,10 +41,9 @@ test.afterEach(releaseDetection);
 // Its Watch on its first launch again, as a new one: a rerun of the test starts from there. Through the
 // database, as the Profile form resets it only when the Parameters change.
 function restartFirstLaunch(watchId: string) {
-  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
   // The server and the worker write to this database too, and the previous test's Detection may
   // still be committing: without a busy timeout, SQLite answers "database is locked" at once
-  const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
+  const database = openDatabase();
   database.prepare('UPDATE "Watch" SET "detectedAt" = NULL WHERE "id" = ?').run(watchId);
   database.close();
 }
