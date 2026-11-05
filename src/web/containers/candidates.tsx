@@ -10,7 +10,7 @@ import { Button } from '#/web/components/ui/button.tsx';
 import { Input } from '#/web/components/ui/input.tsx';
 import { Label } from '#/web/components/ui/label.tsx';
 import { Separator } from '#/web/components/ui/separator.tsx';
-import type { IRefusal } from '#/web/failure.ts';
+import { isRefused, type IRefusal } from '#/web/failure.ts';
 
 import { useFeedback } from './use-feedback.ts';
 import { useSettled } from './use-settled.ts';
@@ -61,7 +61,7 @@ function CandidateCreation() {
   useFeedback(fetcher, () => t('candidates.created'));
   // Once the Candidate is created, the form starts blank again; a refusal keeps what was typed
   useSettled(fetcher, (answer) => {
-    if (typeof answer?.error !== 'string') {
+    if (!isRefused(answer)) {
       formReference.current?.reset();
     }
   });

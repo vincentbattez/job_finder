@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import { DEFAULT_DURATION_MINUTES } from '#/actions/interview-duration.ts';
+import { hasTakenPlace } from '#/actions/interview-time.ts';
 import { parisDateTimeOf } from '#/actions/paris-time.ts';
 import { Badge } from '#/web/components/ui/badge.tsx';
 import { Input } from '#/web/components/ui/input.tsx';
@@ -27,7 +28,6 @@ export const INTERVIEW_DOCUMENT_LIST = ['interview_brief', 'portrait'] as const;
 
 export type InterviewDocument = (typeof INTERVIEW_DOCUMENT_LIST)[number];
 
-const MINUTE_MS = 60_000;
 
 // The Interview on its Posting page, and its full-screen Revision (spec #125, « Reading and Revision »)
 export function interviewPathOf(reference: string, number: number): string {
@@ -36,11 +36,6 @@ export function interviewPathOf(reference: string, number: number): string {
 
 export function revisionPathOf(reference: string, number: number): string {
   return `/postings/${encodeURIComponent(reference)}/interviews/${String(number)}/revision`;
-}
-
-// Over once its duration has passed
-export function isPast({ startAt, durationMinutes }: IInterview, now: number): boolean {
-  return startAt.getTime() + durationMinutes * MINUTE_MS <= now;
 }
 
 // A place or Interviewers left blank read as a dash
@@ -248,7 +243,7 @@ export function InterviewList({
               >
                 <span className="flex items-center justify-between gap-2">
                   <span className="text-sm font-semibold">{t('interviews.title', { number: interview.number })}</span>
-                  <PastBadge isShown={isPast(interview, now)} />
+                  <PastBadge isShown={hasTakenPlace(interview, new Date(now))} />
                 </span>
                 <span className="mt-1 block text-sm tabular-nums">
                   {t('interviews.shortWhen', { date: interview.startAt })}
@@ -291,7 +286,7 @@ export function InterviewSummary({
             <h2 className="max-w-none text-title first-letter:uppercase">
               {t('interviews.when', { date: interview.startAt })}
             </h2>
-            <PastBadge isShown={isPast(interview, now)} />
+            <PastBadge isShown={hasTakenPlace(interview, new Date(now))} />
           </div>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {t('interviews.facts', { number: interview.number, minutes: interview.durationMinutes })}

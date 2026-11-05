@@ -1,6 +1,6 @@
 import ReactMarkdown, { type Components } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 
+import { REMARK_PLUGIN_LIST } from './markdown-plugins.ts';
 import { highlightMarkers } from './markers.ts';
 
 // The titles of a document sit below the headings of the page that shows it, which keeps a
@@ -16,9 +16,6 @@ const COMPONENT_BY_ELEMENT: Components = {
     </div>
   ),
 };
-
-// GitHub Markdown: the AI sums up figures in tables, which plain Markdown leaves as raw pipes
-const REMARK_PLUGIN_LIST = [remarkGfm];
 
 const REHYPE_PLUGIN_LIST = [highlightMarkers];
 

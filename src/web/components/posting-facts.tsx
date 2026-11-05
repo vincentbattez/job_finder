@@ -3,8 +3,8 @@ import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import { Link } from 'react-router';
-import remarkGfm from 'remark-gfm';
 
+import { REMARK_PLUGIN_LIST } from './markdown-plugins.ts';
 import type { Step } from './step-badge.tsx';
 
 interface ILinkedPosting {
@@ -39,9 +39,6 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 
 // The titles of the Job Description sit below the heading of its tab, which keeps one h1 per page
 const COMPONENT_BY_ELEMENT: Components = { h1: 'h3', h2: 'h3', h3: 'h4', h4: 'h5' };
-
-// GitHub Markdown, as the Sources and the import write it; react-markdown skips raw HTML
-const REMARK_PLUGIN_LIST = [remarkGfm];
 
 const LINK_CLASS_NAME = 'text-primary underline-offset-4 hover:underline';
 

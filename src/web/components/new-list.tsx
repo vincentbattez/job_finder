@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { Actions } from '#/actions/index.ts';
 import { Button } from '#/web/components/ui/button.tsx';
+import { useShortDate } from '#/web/components/use-short-date.ts';
 import { Tooltip, TooltipContent, TooltipTrigger } from '#/web/components/ui/tooltip.tsx';
 import { groupNew, type NewGroupKey } from '#/web/list-model.ts';
 
@@ -24,12 +25,6 @@ const TONE_CLASS_BY_GROUP: Record<NewGroupKey, string> = {
 };
 
 export type SortDecision = 'keep' | 'dismiss';
-
-function useShortDate() {
-  const { t } = useTranslation('lists');
-  return (date: Date, now: Date) =>
-    date.getUTCFullYear() === now.getUTCFullYear() ? t('shortDate', { date }) : t('shortDateWithYear', { date });
-}
 
 // Dismiss then Keep on a New row (DESIGN.md « Map-first list »): an outline cross and the
 // primary check, each named for assistive technologies and in its tooltip
@@ -89,7 +84,7 @@ export function NewList({
   } & ISheetSelection
 >) {
   const { t } = useTranslation('lists');
-  const shortDate = useShortDate();
+  const shortDate = useShortDate(now);
   const rowList: Row[] = itemList.map(({ posting, isFound }) => ({ ...posting, isFound }));
   const groupList = groupNew(rowList, now).map(({ key, itemList: groupItemList }) => ({
     key,
@@ -117,11 +112,11 @@ export function NewList({
         <>
           {row.publishedAt !== null && (
             <span className="text-muted-foreground tabular-nums">
-              {t('new.published', { date: shortDate(row.publishedAt, now) })}
+              {t('new.published', { date: shortDate(row.publishedAt) })}
             </span>
           )}
           {row.deadline !== null && (
-            <span className="tabular-nums">{t('new.deadline', { date: shortDate(row.deadline, now) })}</span>
+            <span className="tabular-nums">{t('new.deadline', { date: shortDate(row.deadline) })}</span>
           )}
           {row.repostOf !== null && (
             <span

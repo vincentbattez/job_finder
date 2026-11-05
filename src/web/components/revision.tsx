@@ -9,10 +9,11 @@ import {
   UserRoundSearchIcon,
   UsersIcon,
 } from 'lucide-react';
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
+import { findInterviewEnd } from '#/actions/interview-time.ts';
 import type { IRevisionSection } from '#/actions/revision-sections.ts';
 import { ArtifactText, type ArtifactTextFormat } from '#/web/components/mdx/artifact-text.tsx';
 import { Badge } from '#/web/components/ui/badge.tsx';
@@ -28,7 +29,7 @@ const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 // The countdown moves by the minute at most
-const TICK_MS = 30_000;
+export const TICK_MS = 30_000;
 
 // The documents at hand beside the Revision, in its side Sheet (spec #125, « Reading and Revision »)
 const REVISION_SIDE_LIST = ['portrait', 'posting', 'letter'] as const;
@@ -41,28 +42,13 @@ const ICON_BY_SIDE: Record<RevisionSide, ReactNode> = {
   letter: <MailIcon />,
 };
 
-// The time, from the loader's on the first render, so the server's page and the browser's agree, then
-// again every half minute
-export function useNow(initial: number): number {
-  const [now, setNow] = useState(initial);
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(Date.now());
-    }, TICK_MS);
-    return () => {
-      clearInterval(interval);
-    };
-  }, []);
-  return now;
-}
-
 type Moment = 'upcoming' | 'ongoing' | 'past';
 
 // How long until the Interview starts, or since it ended: « 3 j 4 h », « 2 h 05 », « 12 min »
 function useCountdown(interview: IInterview, now: number): { moment: Moment; value: string } {
   const { t } = useTranslation('posting');
   const start = interview.startAt.getTime();
-  const end = start + interview.durationMinutes * MINUTE_MS;
+  const end = findInterviewEnd(interview).getTime();
   const spell = (ms: number) => {
     const days = Math.floor(ms / DAY_MS);
     const hours = Math.floor((ms % DAY_MS) / HOUR_MS);

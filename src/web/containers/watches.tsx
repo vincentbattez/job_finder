@@ -23,7 +23,7 @@ import {
   type SourceModule,
   type Watch,
 } from '#/web/components/watches.tsx';
-import type { IRefusal } from '#/web/failure.ts';
+import { isRefused, type IRefusal } from '#/web/failure.ts';
 
 import { useFeedback } from './use-feedback.ts';
 import { useSettled } from './use-settled.ts';
@@ -72,7 +72,7 @@ function WatchCreation({ sourceList }: Readonly<{ sourceList: SourceModule[] }>)
   const fetcher = useFetcher<IRefusal>();
   useFeedback(fetcher, () => t('watches.created'));
   useSettled(fetcher, (answer) => {
-    if (typeof answer?.error !== 'string') {
+    if (!isRefused(answer)) {
       formReference.current?.reset();
     }
   });

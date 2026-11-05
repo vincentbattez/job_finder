@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useLoaderData, useSearchParams, type LoaderFunctionArgs, type MetaArgs } from 'react-router';
 
 import { localeOf, tFor } from '#/actions/i18n.ts';
+import { hasTakenPlace } from '#/actions/interview-time.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { summaryOf, type IArtifactVersions } from '#/web/components/artifact.ts';
@@ -17,7 +18,6 @@ import { Notes } from '#/web/containers/notes.tsx';
 import { PostingActions } from '#/web/containers/posting-actions.tsx';
 import { relayLoader } from '#/web/relay-action.server.ts';
 
-const MINUTE_MS = 60_000;
 
 export function loader({ params, request }: LoaderFunctionArgs) {
   return relayLoader(request, async () => {
@@ -76,9 +76,9 @@ export default function Posting() {
   const letter = artifactOf('letter');
   const letterList = letter?.versionList ?? [];
   const latestLetter = letterList.findLast(({ version }) => version.state === 'ready');
-  const now = Date.now();
+  const now = new Date();
   const nextInterview =
-    interviewList.find(({ startAt, durationMinutes }) => startAt.getTime() + durationMinutes * MINUTE_MS > now) ??
+    interviewList.find((interview) => !hasTakenPlace(interview, now)) ??
     interviewList.at(-1);
   const description = [
     posting.employer,
