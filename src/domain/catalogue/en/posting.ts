@@ -101,6 +101,7 @@ export const POSTING_EN = {
   // The relaunch of the extraction
   extractionLabel: 'Fields read by Claude',
   relaunchExtraction: 'Run the extraction again',
+  extractionRelaunched: 'Extraction started again',
 
   // The Versions of an Artifact
   versionNumber: 'v{{versionNumber}}',

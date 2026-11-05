@@ -90,6 +90,7 @@ export const POSTING_FR: typeof POSTING_EN = {
   // Every Artifact is feminine in French: la Recherche, la Lettre, la Fiche d’entretien, la Visualisation
   extractionLabel: 'Champs relevés par Claude',
   relaunchExtraction: 'Relancer l’extraction',
+  extractionRelaunched: 'Extraction relancée',
 
   versionNumber: 'v{{versionNumber}}',
   validationLabelByValidation: { draft: 'Brouillon', validated: 'Validée' },

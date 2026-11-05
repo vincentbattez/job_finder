@@ -100,6 +100,40 @@ test.describe('a dropped Job Description', () => {
       page.getByRole('region', { name: 'Carte des Offres' }).getByRole('button', { name: `Grenoble · ${TITLE}` }),
     ).toHaveCount(1);
   });
+
+  test('runs a failed extraction again, and says so', async ({ page, asCandidate, openPage }) => {
+    await asCandidate(DROPPING_CANDIDATE);
+    await openPage('/to-apply');
+    const imported = await page.request.post('/import', { form: { fileName: FILE_NAME, markdown: JOB_DESCRIPTION } });
+    expect(imported.ok()).toBe(true);
+    await openPage('/to-apply');
+    const name = new RegExp(`${FILE_NAME}|${TITLE}`);
+    await page
+      .getByRole('complementary')
+      .getByRole('listitem')
+      .filter({ hasText: name })
+      .getByRole('link', { name })
+      .click();
+    const extraction = page.getByRole('form', { name: 'Champs relevés par Claude' });
+    await expect(extraction.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
+
+    // The fake Claude never fails an extraction: its job is marked as if it had
+    const database = openDatabase();
+    database
+      .prepare(
+        `UPDATE "Job" SET "state" = 'failed', "log" = 'Claude n’a rien écrit.' WHERE "module" = 'extraction'
+          AND "postingId" IN (SELECT "id" FROM "Posting" WHERE "candidateId" = ?)`,
+      )
+      .run(DROPPING_CANDIDATE);
+    database.close();
+    await page.reload();
+    await expect(extraction.getByRole('status')).toHaveText('En échec');
+
+    await extraction.getByRole('button', { name: 'Relancer l’extraction' }).click();
+
+    await expect(page.getByRole('region', { name: 'Notifications alt+T' })).toContainText('Extraction relancée');
+    await expect(extraction.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
+  });
 });
 
 test('imports a pasted Job Description: it skips New for To Apply, its name that of a paste until its title is read', async ({
