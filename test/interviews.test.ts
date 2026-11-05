@@ -38,6 +38,17 @@ describe('the Interviews of an Application', () => {
     await expect(addInterview('2026-2233332', '2030-11-19T14:00')).resolves.toMatchObject({ number: 1 });
   });
 
+  it('take the next numbers when added together', async () => {
+    await apply('2026-2278425');
+
+    const interviewList = await Promise.all([
+      addInterview('2026-2278425', '2030-11-19T14:00'),
+      addInterview('2026-2278425', '2030-11-20T14:00'),
+    ]);
+
+    expect(interviewList.map(({ number }) => number).toSorted((a, b) => a - b)).toEqual([1, 2]);
+  });
+
   it('are refused on a To Apply Posting, which has no Application yet', async () => {
     await expect(addInterview('2026-2445600', '2030-11-19T14:00')).rejects.toMatchObject({
       code: 'interview_without_application',

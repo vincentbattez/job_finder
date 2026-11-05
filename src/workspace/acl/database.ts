@@ -871,12 +871,18 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    // Numbered after the last Interview of its Posting, like a Version. Outside a transaction, which
-    // would fail at once on a lock another process holds: the unique number still refuses a duplicate.
+    // Numbered after the last Interview of its Posting, like a Version. A write first, which takes the
+    // lock: a transaction that reads first fails at once on a lock another process holds.
     async createInterview({ id }: Posting, fields: InterviewFields): Promise<Interview> {
-      const { _max: max } = await prisma.interview.aggregate({ where: { postingId: id }, _max: { number: true } });
       return INTERVIEW_SCHEMA.parse(
-        await prisma.interview.create({ data: { ...fields, postingId: id, number: (max.number ?? 0) + 1 } }),
+        await prisma.$transaction(async (transaction) => {
+          await transaction.$executeRaw`UPDATE "Posting" SET "id" = "id" WHERE "id" = ${id}`;
+          const { _max: max } = await transaction.interview.aggregate({
+            where: { postingId: id },
+            _max: { number: true },
+          });
+          return transaction.interview.create({ data: { ...fields, postingId: id, number: (max.number ?? 0) + 1 } });
+        }),
       );
     },
 
