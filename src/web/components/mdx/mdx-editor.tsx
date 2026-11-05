@@ -251,7 +251,9 @@ export function MdxEditor({
       onError={({ error }) => {
         onError(error);
       }}
-      className={cn('mdx-editor', resolvedTheme === 'dark' && 'dark-theme')}
+      // MDXEditor's dark theme keeps a white page behind its nested editors and its selects: the app's own, in
+      // both themes. Its stylesheet is not in a layer, hence the !
+      className={cn('mdx-editor [--basePageBg:var(--background)]!', resolvedTheme === 'dark' && 'dark-theme')}
       contentEditableClassName={cn(
         'prose max-w-none px-4 py-6 text-reading dark:prose-invert',
         format === 'markdown' && 'prose-lg',

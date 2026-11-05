@@ -132,7 +132,9 @@ export function BringDialog({
     >
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{t('artifactView.bringDialog.title', { artifactLabel })}</DialogTitle>
+          <DialogTitle className="max-w-none text-title">
+            {t('artifactView.bringDialog.title', { artifactLabel })}
+          </DialogTitle>
           <DialogDescription>{t('artifactView.bringDialog.description')}</DialogDescription>
         </DialogHeader>
         <Tabs
