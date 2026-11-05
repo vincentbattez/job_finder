@@ -16,11 +16,9 @@ const FILE_NAME = 'greffier-grenoble.md';
 // reads the state again every two seconds
 const READY_TIMEOUT_MS = 15_000;
 
-// Hugo's Postings, which this test alone adds (test/seed-front.ts): until the worker reads its city,
-// an imported Posting has no point on the map, which another test would see on Léa's
-const CANDIDATE_NAME = 'Hugo';
-
-test('imports a Job Description dropped on the Postings: it shows at once, then the worker reads its fields and runs its Research', async ({
+// Hugo and Lina, whose Postings these tests alone add (test/seed-front.ts): until the worker reads its
+// city, an imported Posting has no point on the map, which another test would see on Léa's
+test('imports a Job Description dropped from the header: To Apply at once, then the worker reads its fields and runs its Research', async ({
   page,
   asCandidate,
   openPage,
@@ -28,10 +26,9 @@ test('imports a Job Description dropped on the Postings: it shows at once, then 
   // The tiles of the map come from OpenStreetMap over the internet: its points show without them
   await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
   await asCandidate('hugo');
-  await openPage('/postings');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Offres de ${CANDIDATE_NAME}`);
-  // The drop needs React, which enables the field once it runs
-  await expect(page.getByLabel('Importer une Fiche de poste')).toBeEnabled();
+  await openPage('/');
+  await page.getByRole('button', { name: 'Importer' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Importer une Fiche de poste' });
 
   const dataTransfer = await page.evaluateHandle(
     ({ fileName, markdown }) => {
@@ -41,10 +38,18 @@ test('imports a Job Description dropped on the Postings: it shows at once, then 
     },
     { fileName: FILE_NAME, markdown: JOB_DESCRIPTION },
   );
-  await page.getByText('Glissez ici une Fiche de poste en Markdown').dispatchEvent('drop', { dataTransfer });
+  await dialog.getByText('Dépose un fichier ici').dispatchEvent('drop', { dataTransfer });
+  await expect(dialog.getByRole('textbox', { name: 'Texte de la Fiche de poste' })).toHaveValue(JOB_DESCRIPTION);
+  await dialog.getByRole('button', { name: 'Importer' }).click();
 
+  await expect(dialog).toBeHidden();
   // Named after its file until Claude has read its title
-  await expect(page.getByText(`Offre importée : ${FILE_NAME}`)).toBeVisible();
+  const notifications = page.getByRole('region', { name: 'Notifications alt+T' });
+  await expect(notifications).toContainText(new RegExp(`Offre importée\\s: ${FILE_NAME}`));
+  await notifications.getByRole('button', { name: 'Voir dans À traiter' }).click();
+  await expect(page).toHaveURL(/\/to-apply$/);
+
+  await openPage('/postings');
   await page
     .getByRole('row', { name: new RegExp(FILE_NAME) })
     .getByRole('link', { name: FILE_NAME })
@@ -66,4 +71,33 @@ test('imports a Job Description dropped on the Postings: it shows at once, then 
   await expect(
     page.getByRole('region', { name: 'Carte des Offres' }).getByRole('button', { name: `Grenoble · ${TITLE}` }),
   ).toHaveCount(1);
+});
+
+test('imports a pasted Job Description: it skips New for To Apply, its name that of a paste until its title is read', async ({
+  page,
+  asCandidate,
+  openPage,
+}) => {
+  await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
+  await asCandidate('lina');
+  await openPage('/');
+  await page.getByRole('button', { name: 'Importer' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Importer une Fiche de poste' });
+  await expect(dialog.getByRole('button', { name: 'Importer' })).toBeDisabled();
+
+  // A text of its own: its reference hashes it, and another Candidate's Posting may not share it
+  await dialog.getByRole('textbox', { name: 'Texte de la Fiche de poste' }).fill(`${JOB_DESCRIPTION}\n<!-- pasted -->`);
+  await dialog.getByRole('button', { name: 'Importer' }).click();
+
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('region', { name: 'Notifications alt+T' })).toContainText(
+    /Offre importée\s: Fiche de poste collée/,
+  );
+  await expect(page.locator('main')).not.toContainText('Fiche de poste collée');
+
+  await openPage('/to-apply');
+  // Under either name: the worker may have read its title already
+  await expect(
+    page.getByRole('listitem').filter({ hasText: new RegExp(`Fiche de poste collée|${TITLE}`) }),
+  ).toBeVisible();
 });

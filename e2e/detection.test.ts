@@ -16,11 +16,13 @@ test.describe.configure({ mode: 'serial' });
 const VERDICT_TIMEOUT_MS = 30_000;
 // How long a raw write of these tests waits for the server's own writes to release the database
 const BUSY_TIMEOUT_MS = 5000;
+const START_NAME = 'Lancer une Détection';
+const RUNNING_NAME = 'Détection en cours';
 
-// The Postings of the Candidate asCandidate chose
-async function openPostingsOf({ page, openPage }: IFront, candidateName: string) {
-  await openPage('/postings');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Offres de ${candidateName}`);
+// New, where a Candidate starts and follows a Detection, with the button ready to take a click
+async function openNew({ page, openPage }: Pick<IFront, 'page' | 'openPage'>) {
+  await openPage('/');
+  await expect(page.getByRole('button', { name: START_NAME })).toBeEnabled({ timeout: VERDICT_TIMEOUT_MS });
 }
 
 // Its Watch on its first launch again, as a new one: a rerun of the test starts from there. Through the
@@ -34,102 +36,134 @@ function restartFirstLaunch(watchId: string) {
   database.close();
 }
 
-test('shows the last Detection on landing, then a Detection of no new Posting as a titled block', async ({
+test('starts from the header, then tells a Detection of no new Posting, its Near Misses linked, until closed', async ({
   page,
   asCandidate,
   openPage,
 }) => {
   await asCandidate('lou');
-  await openPostingsOf({ page, openPage }, 'Lou');
-  await expect(page.getByText('Dernière Détection')).toBeVisible();
+  await openNew({ page, openPage });
 
-  await page.getByRole('button', { name: 'Lancer une Détection' }).click();
+  await page.getByRole('button', { name: START_NAME }).click();
 
-  const result = page.getByRole('region', { name: 'Aucune nouvelle Offre' });
-  await expect(result).toBeVisible({ timeout: VERDICT_TIMEOUT_MS });
-  await expect(page.getByRole('status')).toHaveText('Aucune nouvelle Offre');
-  await expect(result).toContainText('lancée depuis le bouton');
-  await expect(result).toContainText('Greffier placé : la Source a listé 81 Offres, toutes déjà connues.');
-  await expect(result.locator('time')).toHaveAttribute('datetime', /^\d{4}-/);
-  // The near-miss Postings, collapsed
-  const nearMiss = result.getByText('1 titre écarté de peu');
-  await expect(nearMiss).toBeVisible();
-  await expect(result.getByText('lou-near')).toBeHidden();
-  await nearMiss.click();
-  await expect(result.getByText('lou-near')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Notifications alt+T' })).toContainText('Détection lancée');
+  const verdict = page.getByRole('region', { name: 'Aucune nouvelle Offre' });
+  await expect(verdict).toBeVisible({ timeout: VERDICT_TIMEOUT_MS });
+  await expect(page.locator('main').getByRole('status')).toHaveText('Aucune nouvelle Offre');
+  await expect(verdict).toContainText('lancée depuis le bouton');
+  await expect(verdict).toContainText('Greffier placé : la Source a listé 81 Offres, toutes déjà connues.');
+  await expect(verdict.locator('time')).toHaveAttribute('datetime', /^\d{4}-/);
   // The Watch goes by its label, never by its identifier
   await expect(page.locator('main')).not.toContainText('lou-1');
+  // The Near Misses wait on the Watches page, under the Watch they could widen
+  await verdict.getByRole('link', { name: '1 titre écarté de peu' }).click();
+  await expect(page).toHaveURL(/\/watches#near-misses$/);
+  const nearMisses = page.getByRole('region', { name: 'Titres écartés de peu' });
+  await expect(nearMisses).toBeInViewport();
+  await expect(nearMisses.getByRole('heading', { level: 3 })).toHaveText(['Greffier placé']);
+  await expect(nearMisses).toContainText('Greffier placé adjoint');
+  await expect(nearMisses).toContainText('lou-near');
+
+  await openPage('/');
+  await verdict.getByRole('button', { name: 'Fermer la Détection' }).click();
+  await expect(verdict).toBeHidden();
+  await page.reload();
+  await expect(page.getByRole('button', { name: START_NAME })).toBeEnabled();
+  await expect(verdict).toBeHidden();
 });
 
-test('shows the progress of a first launch, after a reload too, then what it imported in one screen', async ({
+test('shows the progress of each Watch, after a reload too, the button held, then what a first launch imported', async ({
   page,
   asCandidate,
   openPage,
 }) => {
   restartFirstLaunch('iris-1');
   await asCandidate('iris');
-  await openPostingsOf({ page, openPage }, 'Iris');
+  await openNew({ page, openPage });
 
-  await page.getByRole('button', { name: 'Lancer une Détection' }).click();
+  await page.getByRole('button', { name: START_NAME }).click();
 
-  const progress = page.getByRole('region', { name: 'Détection en cours' });
+  const progress = page.getByRole('region', { name: RUNNING_NAME });
   await expect(progress).toBeVisible();
-  await expect(page.getByRole('status')).toHaveText(/^Détection en cours : /);
+  await expect(page.locator('main').getByRole('status')).toHaveText(/^Détection en cours : /);
   await expect(progress).toContainText('Greffier placé');
   await expect(progress).toContainText(/Lecture des Fiches de poste \d+ \/ 81/, { timeout: VERDICT_TIMEOUT_MS });
-  await expect(progress).toContainText(/min \d+ s écoulées/);
-  await expect(progress.getByRole('progressbar')).toHaveAttribute('max', '81');
-  // The panel survives a reload, and no second Detection can start
+  await expect(progress).toContainText(/Lancée à \d{2}:\d{2} · \d+ min \d+ s écoulées/);
+  await expect(progress.getByRole('progressbar')).toBeVisible();
+  // The Card survives a reload, and no second Detection can start
   await page.reload();
   await expect(progress).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Lancer une Détection' })).toBeHidden();
+  await expect(page.getByRole('button', { name: RUNNING_NAME })).toBeDisabled();
 
-  const result = page.getByRole('region', { name: '81 Offres importées' });
-  await expect(result).toBeVisible({ timeout: VERDICT_TIMEOUT_MS });
-  await expect(result).toContainText(
+  const verdict = page.getByRole('region', { name: '81 Offres importées' });
+  await expect(verdict).toBeVisible({ timeout: VERDICT_TIMEOUT_MS });
+  await expect(verdict).toContainText(
     'Greffier placé : premier lancement, 81 Offres importées, sans Recherche ni notification.',
   );
-  const viewportHeight = page.viewportSize()?.height ?? 0;
-  const resultBox = await result.boundingBox();
-  expect(resultBox?.height ?? Infinity).toBeLessThanOrEqual(viewportHeight);
+  await expect(page.getByRole('button', { name: START_NAME })).toBeEnabled();
 });
 
-test('names the first new Postings and marks them all New in the list', async ({ page, asCandidate, openPage }) => {
+test('fills the found group at the top of New while it reads, then tells how many', async ({
+  page,
+  asCandidate,
+  openPage,
+}) => {
   await asCandidate('jules');
-  await openPostingsOf({ page, openPage }, 'Jules');
+  await openNew({ page, openPage });
 
-  await page.getByRole('button', { name: 'Lancer une Détection' }).click();
+  await page.getByRole('button', { name: START_NAME }).click();
 
-  const result = page.getByRole('region', { name: '81 nouvelles Offres' });
-  await expect(result).toBeVisible({ timeout: VERDICT_TIMEOUT_MS });
-  await expect(page.getByRole('status')).toHaveText('81 nouvelles Offres');
-  await expect(result.getByRole('link', { name: /^Greffier placé \d+$/ })).toHaveCount(3);
-  await expect(result.getByRole('link', { name: 'Les voir dans la liste, marquées « Nouvelle »' })).toHaveAttribute(
-    'href',
-    '/#posting-list',
-  );
-  // The found mark, beside each Posting's own Step, New too
-  await expect(page.locator('#posting-list .posting-list__new')).toHaveCount(81);
+  await expect(page.getByRole('region', { name: RUNNING_NAME })).toBeVisible();
+  // Polled, before the verdict: the Card is still there
+  const foundGroup = page.getByRole('heading', { level: 2, name: /^Trouvées à l’instant/ });
+  await expect(foundGroup).toBeVisible({ timeout: VERDICT_TIMEOUT_MS });
+  await expect(page.getByRole('region', { name: RUNNING_NAME })).toBeVisible();
+
+  const verdict = page.getByRole('region', { name: '81 nouvelles Offres' });
+  await expect(verdict).toBeVisible({ timeout: VERDICT_TIMEOUT_MS });
+  await expect(page.locator('main').getByRole('status')).toHaveText('81 nouvelles Offres');
+  await expect(verdict).toContainText('Greffier placé : 81 nouvelles Offres.');
+  await expect(foundGroup).toBeVisible();
 });
 
-test('tells a failure, what was done before it, and offers to run it again', async ({
+test('tells a failure and what was done before it, the button ready to run it again', async ({
   page,
   asCandidate,
   openPage,
 }) => {
   await asCandidate('theo');
-  await openPostingsOf({ page, openPage }, 'Théo');
-  // Left over by an earlier run: the button runs it again
-  await page.getByRole('button', { name: /Lancer une Détection|La relancer/ }).click();
+  await openNew({ page, openPage });
 
-  const result = page.getByRole('region', { name: 'La Détection a échoué' });
-  await expect(result).toBeVisible({ timeout: VERDICT_TIMEOUT_MS });
-  await expect(page.getByRole('status')).toHaveText('La Détection a échoué');
-  await expect(result).toContainText('The slow Source failed on');
-  await expect(result).toContainText(
+  await page.getByRole('button', { name: START_NAME }).click();
+
+  const verdict = page.getByRole('region', { name: 'La Détection a échoué' });
+  await expect(verdict).toBeVisible({ timeout: VERDICT_TIMEOUT_MS });
+  await expect(page.locator('main').getByRole('status')).toHaveText('La Détection a échoué');
+  await expect(verdict).toContainText('The slow Source failed on');
+  await expect(verdict).toContainText(
     'Greffier placé : arrêtée à « Lecture des Fiches de poste », Fiches de poste lues : 2. 2 nouvelles Offres enregistrées avant.',
   );
-  await expect(page.getByRole('button', { name: 'La relancer' })).toBeVisible();
+  await expect(page.getByRole('button', { name: START_NAME })).toBeEnabled();
+});
+
+test('refuses a Detection while one runs, a page left open telling when that one started', async ({
+  page,
+  asCandidate,
+  openPage,
+}) => {
+  await asCandidate('lou');
+  await openNew({ page, openPage });
+  // Started elsewhere: this idle page does not poll, so its button still offers to start one
+  const started = await page.request.post('/detect');
+  expect(started.ok()).toBe(true);
+
+  await page.getByRole('button', { name: START_NAME }).click();
+
+  await expect(page.getByRole('region', { name: 'Notifications alt+T' })).toContainText(
+    /Une Détection est déjà en cours, lancée le /,
+  );
+  await expect(page.getByRole('region', { name: RUNNING_NAME })).toBeVisible();
+  await expect(page.getByRole('button', { name: START_NAME })).toBeEnabled({ timeout: VERDICT_TIMEOUT_MS });
 });
 
 test('shows a Detection of another Candidate running, without letting a second one start', async ({
@@ -138,19 +172,16 @@ test('shows a Detection of another Candidate running, without letting a second o
   openPage,
 }) => {
   await asCandidate('iris');
-  await openPostingsOf({ page, openPage }, 'Iris');
-  await page.getByRole('button', { name: 'Lancer une Détection' }).click();
-  await expect(page.getByRole('region', { name: 'Détection en cours' })).toBeVisible();
+  await openNew({ page, openPage });
+  await page.getByRole('button', { name: START_NAME }).click();
+  await expect(page.getByRole('region', { name: RUNNING_NAME })).toBeVisible();
 
   await asCandidate('lou');
+  await openPage('/');
 
-  await openPostingsOf({ page, openPage }, 'Lou');
-
-  const progress = page.getByRole('region', { name: 'Détection en cours' });
+  const progress = page.getByRole('region', { name: RUNNING_NAME });
   await expect(progress).toContainText('Une Détection cherche dans les Veilles d’un autre Candidat');
-  await expect(page.getByRole('button', { name: 'Lancer une Détection' })).toBeHidden();
+  await expect(page.getByRole('button', { name: RUNNING_NAME })).toBeDisabled();
   // Over, its verdict is Iris's: Lou's stays as it was
-  await expect(page.getByRole('button', { name: 'Lancer une Détection' })).toBeVisible({
-    timeout: VERDICT_TIMEOUT_MS,
-  });
+  await expect(page.getByRole('button', { name: START_NAME })).toBeEnabled({ timeout: VERDICT_TIMEOUT_MS });
 });

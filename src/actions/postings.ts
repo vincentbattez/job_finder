@@ -17,7 +17,7 @@ import { LETTER_MODULE } from '#/modules/letter/index.ts';
 import { hasBeenApplied, listStatusChoices } from '#/status/index.ts';
 
 import { ARTIFACT_INPUT_SCHEMA, LIST_INPUT_SCHEMA, REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
-import { foundReferencesOf } from './detect.ts';
+import { currentFoundReferencesOf } from './detect.ts';
 import { findWorkerFailure } from './stalled-job.ts';
 
 export function createPostingActions({ workspace, artifacts, findCandidate, findPosting, findLocale }: ActionContext) {
@@ -71,8 +71,7 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
       const candidate = await findCandidate(rawInput);
       const { isArchived } = LIST_INPUT_SCHEMA.parse(rawInput);
       const postingList = await workspace.listPostings(candidate.id);
-      const { last } = await workspace.findDetections(candidate.id);
-      const foundReferenceSet = new Set(foundReferencesOf(last));
+      const foundReferenceSet = new Set(currentFoundReferencesOf(await workspace.findDetections(candidate.id)));
       return postingList
         .filter(({ status, archivedAt }) => status === 'new' && (archivedAt !== null) === isArchived)
         .map((posting) => NEW_ITEM_SCHEMA.parse({ posting, isFound: foundReferenceSet.has(posting.reference) }));

@@ -27,7 +27,7 @@ async function openHomeOfEmma({ page, openPage }: IFront) {
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('New');
 }
 
-test('shows the Sidebar and the Profile in English to a Candidate with the en locale', async ({
+test('shows the Sidebar, the Profile and the Watches in English to a Candidate with the en locale', async ({
   page,
   asCandidate,
   openPage,
@@ -54,14 +54,17 @@ test('shows the Sidebar and the Profile in English to a Candidate with the en lo
     'Annexes',
     'Uploads',
     'New file',
-    'Watches',
   ]);
   await expect(page.getByText('No Upload yet.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save the Facts' })).toBeVisible();
   await expect(
     page.getByRole('region', { name: 'New file' }).getByRole('button', { name: 'Create a file' }),
   ).toBeVisible();
-  const newWatch = page.getByRole('group', { name: 'New Watch' });
+
+  await page.getByRole('link', { name: 'Watches', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Watches');
+  await expect(page).toHaveTitle('Watches · Job Finder');
+  const newWatch = page.getByRole('region', { name: 'New Watch' });
   await expect(newWatch.getByRole('textbox', { name: 'Searched title' })).toBeVisible();
   await expect(newWatch.getByRole('button', { name: 'Create the Watch' })).toBeVisible();
 });
@@ -101,15 +104,11 @@ test('shows the tools of the Posting list in English to a Candidate with the en 
   openPage,
 }) => {
   await asCandidate('emma');
-  await openPage('/postings');
+  await openPage('/');
 
-  // A Detection another test runs hides the button behind its progress, in English too (ADR-0014)
-  await expect(
-    page
-      .getByRole('button', { name: 'Run a Detection' })
-      .or(page.getByRole('region', { name: 'Detection in progress' })),
-  ).toBeVisible();
-  await expect(page.getByText('Import a Job Description')).toBeVisible();
+  // A Detection another test runs changes the button to its progress, in English too (ADR-0014)
+  await expect(page.getByRole('button', { name: /^(?:Run a Detection|Detection in progress…)$/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Import' })).toBeVisible();
 });
 
 test('shows To Apply over the map in English to a Candidate with the en locale', async ({

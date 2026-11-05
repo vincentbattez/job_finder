@@ -25,13 +25,26 @@ import { hasBeenApplied } from '#/status/index.ts';
 
 import type { ActionContext } from './context.ts';
 import { createTolerantLocator } from './locator.ts';
+import { watchNamesOf } from './watch-label.ts';
 
 // The Postings a Detection found, outside a Watch's first launch, whose Postings already online are only
 // imported: New's « found » group until the next one (spec #125 « Lists »)
-export function foundReferencesOf(detection: RecordedDetection | null): string[] {
+function foundReferencesOf(detection: RecordedDetection | null): string[] {
   return (detection?.watchList ?? [])
     .filter(({ isFirstLaunch }) => !isFirstLaunch)
     .flatMap(({ newPostingList }) => newPostingList.map(({ reference }) => reference));
+}
+
+// What New's « found » group shows: the running Detection's Postings as it finds them, or those of the
+// last one while no Detection runs on the Candidate's Watches, another Candidate's holding none of them
+export function currentFoundReferencesOf({
+  running,
+  last,
+}: {
+  running: RecordedDetection | null;
+  last: RecordedDetection | null;
+}): string[] {
+  return foundReferencesOf(running !== null && running.watchList.length > 0 ? running : last);
 }
 
 // Every Watch, started from jf detect unless the daily automation says so
@@ -102,24 +115,7 @@ export function createDetectActions({
   locate,
   notifyCandidate,
 }: ActionContext) {
-  function descriptionOf({ source }: Watch): SourceModule | undefined {
-    return sourceList.find(({ description: { id } }) => id === source)?.description;
-  }
-
-  function sourceNameOf(watch: Watch): string {
-    return descriptionOf(watch)?.name ?? watch.source;
-  }
-
-  // What the Candidate reads to tell a Watch apart: its first text Parameter, such as the searched
-  // title, in the order its Source declares them, never its identifier (#63)
-  function labelOf(watch: Watch): string {
-    const { source, parameters } = watch;
-    const description = descriptionOf(watch);
-    const label = description?.parameterList
-      .map(({ name }) => parameters[name])
-      .find((value): value is string => typeof value === 'string' && value !== '');
-    return label ?? description?.name ?? source;
-  }
+  const { labelOf, sourceNameOf } = watchNamesOf(sourceList);
 
   // A detected Posting is saved New, a Repost included, and starts nothing: the Candidate sorts it
   // (ADR-0018). The Detection Summary tells it, unless it was already online at the first launch; a

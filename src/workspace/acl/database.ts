@@ -12,6 +12,7 @@ import type { ErrorCode } from '#/domain/error.ts';
 import {
   CANDIDATE_SCHEMA,
   DEFAULT_DEADLINE_PERIOD_SCHEMA,
+  DETECTED_POSTING_SCHEMA,
   INTERVIEW_SCHEMA,
   JOB_SCHEMA,
   POSTING_SCHEMA,
@@ -26,6 +27,7 @@ import {
   type Artifact,
   type Candidate,
   type DefaultDeadlinePeriod,
+  type DetectedPosting,
   type DetectionOrigin,
   type DetectionWatch,
   type Interview,
@@ -729,6 +731,20 @@ export function openDatabase(databasePath: string) {
 
     async setDetected({ id }: Watch): Promise<void> {
       await prisma.watch.update({ where: { id }, data: { detectedAt: new Date() } });
+    },
+
+    // The Near Misses of the last Detection that searched the Watch: none until a Detection went through
+    // with its Parameters, a change of them starting its first launch again (ADR-0011)
+    async listNearMisses({ id, detectedAt }: Watch): Promise<DetectedPosting[]> {
+      if (detectedAt === null) {
+        return [];
+      }
+      const last = await prisma.detectionWatch.findFirst({
+        where: { watchId: id, step: { in: ['reading', 'notifying', 'done'] } },
+        orderBy: { id: 'desc' },
+        select: { nearMissList: true },
+      });
+      return z.array(DETECTED_POSTING_SCHEMA).parse(last?.nearMissList ?? []);
     },
 
     async findPostings(reference: string): Promise<Posting[]> {

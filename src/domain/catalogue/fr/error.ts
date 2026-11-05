@@ -19,8 +19,8 @@ export const ERROR_FR: typeof ERROR_EN = {
   configKeysMixed:
     "La config {{configPath}} contient à la fois l'ancienne clé « {{frenchKey}} » et son nouveau nom « {{englishKey}} ». Ne garder que « {{englishKey}} », en y fusionnant ce que contient « {{frenchKey}} », puis relancer.",
   detectionRunning:
-    'Une Détection est déjà en cours, lancée le {{startedAt, datetime(dateStyle: medium; timeStyle: short; timeZone: Europe/Paris)}} : attendre son verdict, puis la relancer au besoin.',
-  detectionInterrupted: 'Interrompue : la Détection s’est arrêtée avant la fin, sans verdict. La relancer.',
+    'Une Détection est déjà en cours, lancée le {{startedAt, datetime(dateStyle: medium; timeStyle: short; timeZone: Europe/Paris)}} : attends son verdict, puis relance-la au besoin.',
+  detectionInterrupted: 'Interrompue : la Détection s’est arrêtée avant la fin, sans verdict. Relance-la.',
 
   missingJobDescription:
     "Fiche de poste introuvable pour l'Offre {{reference}} : {{filePath}}. La remettre à cet emplacement, d'où l'outil la lit.",
@@ -35,10 +35,10 @@ export const ERROR_FR: typeof ERROR_EN = {
   ambiguousPosting:
     "Plusieurs Offres ont la référence {{reference}}, chez des Candidats différents : leurs Veilles suivent la même Source, et l'outil ne sait pas encore choisir entre elles. Le signaler pour qu'il les distingue.",
 
-  unknownWatch: "{{candidateName}} n'a pas de Veille {{watchId}} : recharger la page de son Profil.",
-  unknownSource: 'Source inconnue : {{sourceId}}. En choisir une parmi {{knownList}} dans les Veilles du Profil.',
+  unknownWatch: "{{candidateName}} n'a pas de Veille {{watchId}} : recharger la page des Veilles.",
+  unknownSource: 'Source inconnue : {{sourceId}}. En choisir une parmi {{knownList}} sur la page des Veilles.',
   unknownSourceOfWatch:
-    'Source inconnue pour la Veille {{watchId}} : {{sourceId}}. En choisir une parmi {{knownList}} dans les Veilles du Profil.',
+    'Source inconnue pour la Veille {{watchId}} : {{sourceId}}. En choisir une parmi {{knownList}} sur la page des Veilles.',
   watchParameters:
     "La Veille {{watchId}} ne donne pas à la Source {{sourceName}} les Paramètres qu'elle attend : corriger {{labels}} dans le Profil de son Candidat.",
   sourceParameters: "La Source {{sourceName}} attend d'autres Paramètres : renseigner {{labels}}.",

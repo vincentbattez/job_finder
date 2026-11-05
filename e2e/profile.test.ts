@@ -6,15 +6,7 @@ import { z } from 'zod/v4';
 
 import { expect, test, type AsCandidate, type IFront } from './candidate.ts';
 
-const HEADING_LIST = [
-  'CV',
-  'Faits',
-  'Lettres de motivation passées',
-  'Annexes',
-  'Pièces',
-  'Nouveau fichier',
-  'Veilles',
-] as const;
+const HEADING_LIST = ['CV', 'Faits', 'Lettres de motivation passées', 'Annexes', 'Pièces', 'Nouveau fichier'] as const;
 
 function toastsOf(page: Page) {
   return page.getByRole('region', { name: 'Notifications alt+T' });

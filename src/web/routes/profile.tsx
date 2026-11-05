@@ -20,8 +20,6 @@ import { FactsForm } from '#/web/containers/facts.tsx';
 import { useProfileDeletion } from '#/web/containers/profile-deletion.tsx';
 import { AnnexCreation, ProfileDocument, ProfileFileCreation } from '#/web/containers/profile-documents.tsx';
 import { Uploads } from '#/web/containers/uploads.tsx';
-import { Watches } from '#/web/containers/watches.tsx';
-import { translateParameters } from '#/web/parameters.server.ts';
 import { relayAction, relayLoader } from '#/web/relay-action.server.ts';
 
 export function loader({ request }: LoaderFunctionArgs) {
@@ -38,8 +36,6 @@ export function loader({ request }: LoaderFunctionArgs) {
       })),
       uploadList: candidate === null ? [] : await ACTIONS.listUploads({ candidateId: candidate.id }),
       sectionList: candidate === null ? [] : await ACTIONS.readFacts({ candidateId: candidate.id }),
-      watchList: candidate === null ? [] : await ACTIONS.listWatches({ candidateId: candidate.id }),
-      sourceList: translateParameters(await ACTIONS.listSources(), locale),
     };
   });
 }
@@ -117,7 +113,7 @@ export function meta({ loaderData }: MetaArgs<typeof loader>) {
 }
 
 export default function Profile() {
-  const { candidate, documentList, uploadList, sectionList, watchList, sourceList } = useLoaderData<typeof loader>();
+  const { candidate, documentList, uploadList, sectionList } = useLoaderData<typeof loader>();
   const { t } = useTranslation('settings');
   const deletion = useProfileDeletion();
 
@@ -191,7 +187,6 @@ export default function Profile() {
         <SettingsSection heading={t('profileFile.creationHeading')} description={t('profileFile.creationDescription')}>
           <ProfileFileCreation />
         </SettingsSection>
-        <Watches watchList={watchList} sourceList={sourceList} />
       </div>
       {deletion.dialog}
     </main>

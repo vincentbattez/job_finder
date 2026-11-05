@@ -11,7 +11,7 @@
   color: var(--color-ink);
 }
 
-/* One .button for every button, the selects that sit beside one and the drop zone's label, filled
+/* One .button for every button and the selects that sit beside one, filled
    with the accent when primary */
 .button {
   font-size: var(--text-sm);
