@@ -178,7 +178,7 @@ function WatchVerdict({ watch }: Readonly<{ watch: IDetectionWatch }>) {
       {/* Shown with the Watch they could widen, on the Watches page */}
       {nearMissList.length > 0 && (
         <p>
-          <Link to={{ pathname: '/watches', hash: 'near-misses' }}>
+          <Link to={{ pathname: '/watches', hash: 'near-misses' }} className="underline underline-offset-4">
             {t('detection.nearMissSummary', { count: nearMissList.length })}
           </Link>
         </p>
