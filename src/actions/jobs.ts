@@ -4,7 +4,7 @@ import { z } from 'zod/v4';
 
 import type { JobFailure } from '#/artifact/index.ts';
 import { codedError, codedErrorOf } from '#/domain/coded-error.ts';
-import { GENERATION_SCHEMA, type Generation, type Job, type QueuedJob } from '#/domain/index.ts';
+import { GENERATION_SCHEMA, IMPORT_SOURCE_ID, type Generation, type Job, type QueuedJob } from '#/domain/index.ts';
 import {
   composeResearchFailedNotification,
   composeResearchReadyNotification,
@@ -80,7 +80,7 @@ export function createJobActions(context: ActionContext) {
       // The extraction of an imported Posting runs again after a failure
       if (module === 'extraction') {
         const posting = await findPosting(reference);
-        if (posting.source !== 'import') {
+        if (posting.source !== IMPORT_SOURCE_ID) {
           throw codedError('not_imported', { reference }, { locale: await findLocale(posting.candidateId) });
         }
         return workspace.createJob(posting, 'extraction');

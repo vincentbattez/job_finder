@@ -70,6 +70,27 @@ test('keeps notes and Mastered marks across reloads', async ({ page, openPage })
   await expect(margin.getByRole('button', { name: 'Maîtrisée · À réviser' })).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('ticks a Checklist of the Interview Brief while revising only', async ({ page, openPage }) => {
+  const reference = findReference();
+  const revisionPath = await prepareRevision(page, reference);
+  await post(page, `/postings/${reference}/interview_brief/document`, {
+    number: '1',
+    interview: '1',
+    fileName: 'interview-brief.md',
+    markdown: '# Fiche\n\n<Checklist title="À emporter">\n\n- Pièce d’identité\n- Diplôme\n\n</Checklist>\n',
+  });
+
+  await openPage(revisionPath);
+  await expect(page.getByText('0 sur 2 faits')).toBeVisible();
+  await page.getByRole('checkbox', { name: 'Diplôme' }).check();
+  await expect(page.getByText('1 sur 2 faits')).toBeVisible();
+
+  await openPage(`/postings/${reference}?tab=interviews`);
+  await page.getByRole('tab', { name: /^Fiche d’entretien/ }).click();
+  await expect(page.getByText('Pièce d’identité')).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: 'Diplôme' })).toHaveCount(0);
+});
+
 test('carries notes and Mastered marks over to a newer Chosen Interview Brief', async ({ page, openPage }) => {
   const reference = findReference();
   const revisionPath = await prepareRevision(page, reference);

@@ -79,8 +79,8 @@ export function usePostingMutations({
     markApplied,
     isKeepPending: keepFetcher.state !== 'idle',
     isArchivePending: archiveFetcher.state !== 'idle',
-    isStatusBusy: statusFetcher.state !== 'idle',
-    // Applied is what both To Apply and an outcome move to: its button alone spins while it is sent
+    isAnyStatusPending: statusFetcher.state !== 'idle',
+    // To Apply and the outcomes both offer Applied: only the button of the Status being sent spins
     isStatusPending: (status: Status) => statusFetcher.state !== 'idle' && submittedStatus.current === status,
     appliedDialog: {
       isOpen: isAppliedDialogOpen,

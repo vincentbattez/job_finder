@@ -53,11 +53,8 @@ export interface IActionsOption {
   sourceFactoryList?: readonly SourceFactory[];
 }
 
-// The data migration of the Start Date (spec #125): a Posting saved before it existed gets the one its
-// stored Job Description gives, read by its Source. An imported Posting has none, and a Job Description
-// pasted from a Source keeps that Source's format, so each one tries. Safe on every launch: only the
-// Postings still without one are read, and one whose Job Description says nothing, or is missing, stays
-// without.
+// The data migration of the Start Date (spec #125), safe on every launch: an imported Posting has no Source
+// of its own, but a Job Description pasted from one keeps its format, so each Source tries.
 async function fillStartDates(workspace: Workspace, sourceList: ISource[]): Promise<void> {
   const postingList = await workspace.listPostingsWithoutStartDate([
     ...sourceList.map(({ description: { id } }) => id),

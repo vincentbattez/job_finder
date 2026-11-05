@@ -244,9 +244,9 @@ describe('actions', () => {
       INSERT INTO Posting (candidateId, source, reference, title, isInZone) VALUES ('lea', 'import', 'i-2', 'Greffier', 1);`);
     database.close();
     const postingsDirectory = path.join(dataDirectory, 'candidates', 'lea', 'postings');
-    // cspell:disable-next-line
     writeJobDescription(
       path.join(postingsDirectory, 'i-1-greffier'),
+      // cspell:disable-next-line
       "### Date de vacance de l'emploi\n\n01/12/2026\n",
     );
     writeJobDescription(path.join(postingsDirectory, 'i-2-greffier'), 'Registry officer, as soon as possible.\n');

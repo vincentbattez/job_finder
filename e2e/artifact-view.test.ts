@@ -2,10 +2,9 @@ import { globSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import type { Page } from '@playwright/test';
-import { z } from 'zod/v4';
 
 import { expect, test } from './candidate.ts';
-import { findDataDirectory, openDatabase, READY_TIMEOUT_MS } from './harness.ts';
+import { findDataDirectory, findPostingOfCleo, openDatabase, READY_TIMEOUT_MS } from './harness.ts';
 
 // These journeys change data, each on its own Posting that test/seed-front.ts prepared: Versailles has a
 // Chosen Research v1 and a Draft v2, Bastia a Validated Research and a Draft Letter
@@ -34,6 +33,17 @@ function resetArtifact(reference: string, artifact: 'research' | 'letter', chose
   for (const version of globSync(versionPattern)) {
     writeFileSync(path.join(version, `${artifact}.md`), readFileSync(path.join(version, 'original.md')));
   }
+}
+
+// A Posting the seed gives no Version of that Artifact, without the ones a previous run brought
+function deleteVersions(reference: string, artifact: 'research' | 'letter'): void {
+  const database = openDatabase();
+  database
+    .prepare(
+      'DELETE FROM "Version" WHERE "artifact" = ? AND "postingId" = (SELECT "id" FROM "Posting" WHERE "reference" = ?)',
+    )
+    .run(artifact, reference);
+  database.close();
 }
 
 test('validates a Draft, which becomes the Chosen Version, the previous one staying Validated', async ({
@@ -171,6 +181,7 @@ test('compares a corrected Letter with its Original, side by side then in tabs o
 });
 
 test('brings a pasted Research as a Draft with no Original, then validates it', async ({ page, openPage }) => {
+  deleteVersions(PASTED_RESEARCH_REFERENCE, 'research');
   await openPage(`/postings/${PASTED_RESEARCH_REFERENCE}?tab=research`);
   const research = page.getByRole('region', { name: 'Recherche' });
 
@@ -190,6 +201,7 @@ test('brings a pasted Research as a Draft with no Original, then validates it', 
 });
 
 test('brings a Letter from a Markdown file, then validates it', async ({ page, openPage }) => {
+  deleteVersions(FILE_LETTER_REFERENCE, 'letter');
   await openPage(`/postings/${FILE_LETTER_REFERENCE}?tab=letter`);
   const letter = page.getByRole('region', { name: 'Lettre de motivation' });
 
@@ -216,13 +228,7 @@ test('brings a Letter from a Markdown file, then validates it', async ({ page, o
 // reference comes back for the page
 function resetLetterOfCleo(city: string): string {
   const database = openDatabase();
-  const { id, reference } = z
-    .object({ id: z.number(), reference: z.string() })
-    .parse(
-      database
-        .prepare('SELECT "id", "reference" FROM "Posting" WHERE "candidateId" = \'cleo\' AND "title" = ?')
-        .get(`greffier-cleo-${city}.md`),
-    );
+  const { id, reference } = findPostingOfCleo(database, `greffier-cleo-${city}.md`);
   database.prepare('DELETE FROM "Version" WHERE "artifact" = \'letter\' AND "postingId" = ?').run(id);
   database.close();
   return reference;

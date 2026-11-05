@@ -4,8 +4,6 @@ import type { Interview, Locale, Posting, Status, Step } from '#/domain/index.ts
 import { hasTakenPlace } from '#/domain/interview-time.ts';
 import { PARIS_DAY_FORMAT } from '#/domain/paris-time.ts';
 
-export { findInterviewEnd, hasTakenPlace } from '#/domain/interview-time.ts';
-
 // What the status rules read of a Posting
 type PostingStatus = Pick<Posting, 'reference' | 'status' | 'appliedAt'>;
 

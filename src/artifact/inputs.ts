@@ -292,7 +292,7 @@ export async function resolveInputs(workspace: Workspace, target: ITarget, artif
 // An Input a Version recorded, as its key names it: what the front needs to word it (spec #125). The Version
 // it read goes null once deleted, so the key alone tells which Artifact it was.
 export function recordedInputDetailOf({ key, readVersion }: Version['inputList'][number]) {
-  const named = {
+  const common = {
     key,
     fileName: null,
     title: readVersion?.customArtifact?.title ?? null,
@@ -308,20 +308,20 @@ export function recordedInputDetailOf({ key, readVersion }: Version['inputList']
           },
   };
   if (key === JOB_DESCRIPTION_KEY || key === 'notes') {
-    return { ...named, kind: key };
+    return { ...common, kind: key };
   }
   if (key.startsWith(PROFILE_KEY_PREFIX)) {
     const fileName = key.slice(PROFILE_KEY_PREFIX.length);
     const kind: InputKind = profileDocumentKindOf(fileName) === 'past_letter' ? 'past_letter' : 'profile_document';
-    return { ...named, kind, fileName };
+    return { ...common, kind, fileName };
   }
   if (key.startsWith('custom:')) {
-    return { ...named, kind: 'custom_artifact' as const };
+    return { ...common, kind: 'custom_artifact' as const };
   }
   // `artifact:<artifact>[@<interview>]` or `posting:<reference>/<artifact>`
   const [name] = key.slice(Math.max(key.indexOf(':'), key.lastIndexOf('/')) + 1).split('@', 1);
   const artifact = ARTIFACT_SCHEMA.parse(name);
-  return { ...named, kind: 'artifact' as const, artifact };
+  return { ...common, kind: 'artifact' as const, artifact };
 }
 
 // The keys a run checks by default, as jf run and an automatic run take them

@@ -76,7 +76,7 @@ export function PostingActions({
     changeStatus,
     markApplied,
     isStatusPending,
-    isStatusBusy,
+    isAnyStatusPending,
     isKeepPending,
     isArchivePending,
   } = mutations;
@@ -150,7 +150,7 @@ export function PostingActions({
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" isPending={isStatusBusy}>
+              <Button size="sm" isPending={isAnyStatusPending}>
                 <FlagIcon />
                 <HeaderActionLabel>{t('page.recordOutcome')}</HeaderActionLabel>
                 <ChevronDownIcon />

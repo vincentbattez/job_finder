@@ -18,3 +18,14 @@ export function findDataDirectory(): string {
 export function openDatabase(): DatabaseSync {
   return new DatabaseSync(path.join(findDataDirectory(), 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
 }
+
+// One of Cleo's Postings of test/seed-front.ts, by the file it was saved from
+export function findPostingOfCleo(database: DatabaseSync, title: string): { id: number; reference: string } {
+  return z
+    .object({ id: z.number(), reference: z.string() })
+    .parse(
+      database
+        .prepare('SELECT "id", "reference" FROM "Posting" WHERE "candidateId" = \'cleo\' AND "title" = ?')
+        .get(title),
+    );
+}

@@ -473,6 +473,7 @@ const PROMPT_SCHEMA = z
   })
   .brand<'Domain'>();
 
+// A Past Letter is one of the Profile's or the Chosen Letter of another Applied Posting: one set either way
 const INPUT_KIND_SCHEMA = z.enum([
   'job_description',
   'artifact',
@@ -627,7 +628,6 @@ export type PostingDetail = z.infer<typeof POSTING_DETAIL_SCHEMA>;
 const INPUT_MODE_SCHEMA = z.enum(['required', 'default', 'optional']);
 // Why an Input cannot be unchecked, which the front words
 const INPUT_REASON_SCHEMA = z.enum(['job_description', 'required_artifact', 'profile_core']);
-// A Past Letter is one of the Profile's or the Chosen Letter of another Applied Posting: one set either way
 
 export type InputMode = z.infer<typeof INPUT_MODE_SCHEMA>;
 export type InputReason = z.infer<typeof INPUT_REASON_SCHEMA>;

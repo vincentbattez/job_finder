@@ -9,7 +9,8 @@ import {
 } from 'react-router';
 
 import { localeOf, tFor } from '#/actions/i18n.ts';
-import { codedError, profileDocumentKindOf } from '#/actions/index.ts';
+import { codedError } from '#/actions/index.ts';
+import { profileDocumentKindOf } from '#/actions/profile-document.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { CopyCommand } from '#/web/components/copy-command.tsx';
