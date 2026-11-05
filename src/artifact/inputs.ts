@@ -4,6 +4,7 @@ import {
   ARTIFACT_SCHEMA,
   JOB_DESCRIPTION_FILE_NAME,
   ORIGINAL_FILE_NAME,
+  profileDocumentKindOf,
   type Artifact,
   type InputKind,
   type InputMode,
@@ -51,10 +52,6 @@ export interface IInput {
 // How many Past Letters a run checks by default, the most recent: the AI reads the current style
 // without a pile of old letters
 const RECENT_PAST_LETTER_COUNT = 5;
-
-// The Profile's documents, told apart by name: its core every run that reads the Profile requires
-const PROFILE_CORE_LIST = new Set(['cv.md', 'facts.md']);
-const PROFILE_LETTER_PATTERN = /^letter-.*\.md$/;
 
 const JOB_DESCRIPTION_KEY = 'job_description';
 
@@ -213,8 +210,10 @@ async function listProfileInputs(
   isReadingOriginals: boolean,
 ): Promise<IInput[]> {
   const documentList = workspace.readProfileDocuments(posting.candidateId).map(({ fileName, markdown, savedAt }) => {
-    const isCore = PROFILE_CORE_LIST.has(fileName);
-    const isLetter = PROFILE_LETTER_PATTERN.test(fileName);
+    const documentKind = profileDocumentKindOf(fileName);
+    // Its core, which every run that reads the Profile requires
+    const isCore = documentKind === 'cv' || documentKind === 'facts';
+    const isLetter = documentKind === 'past_letter';
     return inputOf({
       key: `profile:${fileName}`,
       kind: isLetter ? 'past_letter' : 'profile_document',
