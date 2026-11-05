@@ -61,6 +61,8 @@ const OTHER_CANDIDATE_LIST = [
   { id: 'jade', name: 'Jade' },
   { id: 'hugo', name: 'Hugo' },
   { id: 'nina', name: 'Nina' },
+  { id: 'maya', name: 'Maya' },
+  { id: 'lucie', name: 'Lucie' },
 ];
 
 // What the Letter recommends for the Béthune Posting, from its mail de candidature and contacts

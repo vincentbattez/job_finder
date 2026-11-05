@@ -47,11 +47,19 @@ test('shows the Sidebar and the Profile in English to a Candidate with the en lo
   await page.getByRole('link', { name: 'Profile', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Profile');
   await expect(page).toHaveTitle('Profile · Job Finder');
-  await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Facts', 'Uploads', 'New file', 'Watches']);
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText([
+    'CV',
+    'Facts',
+    'Past Letters',
+    'Annexes',
+    'Uploads',
+    'New file',
+    'Watches',
+  ]);
   await expect(page.getByText('No Upload yet.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save the Facts' })).toBeVisible();
   await expect(
-    page.getByRole('region', { name: 'New file' }).getByRole('textbox', { name: 'File name' }),
+    page.getByRole('region', { name: 'New file' }).getByRole('button', { name: 'Create a file' }),
   ).toBeVisible();
   const newWatch = page.getByRole('group', { name: 'New Watch' });
   await expect(newWatch.getByRole('textbox', { name: 'Searched title' })).toBeVisible();

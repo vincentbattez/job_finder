@@ -398,6 +398,19 @@ export const MARKDOWN_FILE_SCHEMA = z.object(MARKDOWN_FILE_SHAPE).brand<'Domain'
 
 export type MarkdownFile = z.infer<typeof MARKDOWN_FILE_SCHEMA>;
 
+// A document of the Profile, told apart by its name (spec #125): any other name is an Annex
+type ProfileDocumentKind = 'annex' | 'cv' | 'facts' | 'past_letter';
+
+export function profileDocumentKindOf(fileName: string): ProfileDocumentKind {
+  if (fileName === 'cv.md') {
+    return 'cv';
+  }
+  if (fileName === 'facts.md') {
+    return 'facts';
+  }
+  return /^letter-.*\.md$/u.test(fileName) ? 'past_letter' : 'annex';
+}
+
 // A Markdown file dated by its last write: a document of the Profile, whose Past Letters are dated by
 // the day they were added
 export const DATED_MARKDOWN_FILE_SCHEMA = z.object({ ...MARKDOWN_FILE_SHAPE, savedAt: z.date() }).brand<'Domain'>();
