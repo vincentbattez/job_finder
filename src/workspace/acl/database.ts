@@ -662,24 +662,34 @@ export function openDatabase(databasePath: string) {
     },
 
     // A Custom Artifact and its single Version, Validated and Chosen from creation: the Candidate wrote it
-    // (spec #125)
-    async createCustomArtifact(posting: Posting, interview: Interview | null, title: string): Promise<Version> {
+    // (spec #125). Brought as a PDF, it stays running until the job queued with it converts the PDF.
+    async createCustomArtifact(
+      posting: Posting,
+      interview: Interview | null,
+      title: string,
+      upload: string | null = null,
+    ): Promise<Version> {
+      const postingLink = { connect: { id: posting.id } };
+      const interviewLink = interview === null ? {} : { interview: { connect: { id: interview.id } } };
       const { version } = await prisma.customArtifact.create({
         data: {
-          postingId: posting.id,
-          interviewId: interview?.id ?? null,
+          posting: postingLink,
+          ...interviewLink,
           title,
           version: {
             create: {
-              postingId: posting.id,
-              interviewId: interview?.id ?? null,
+              posting: postingLink,
+              ...interviewLink,
               artifact: 'custom',
               number: 1,
-              state: 'ready',
+              state: upload === null ? 'ready' : 'running',
               validation: 'validated',
               isChosen: true,
               origin: 'candidate',
               instructions: '',
+              ...(upload !== null && {
+                job: { create: { module: 'custom', upload, posting: postingLink, ...interviewLink } },
+              }),
             },
           },
         },

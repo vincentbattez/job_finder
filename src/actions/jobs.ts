@@ -58,6 +58,20 @@ export function createJobActions(context: ActionContext) {
     return notificationFailure === undefined ? job : workspace.failNotification(job, notificationFailure);
   }
 
+  async function runPostingJob(job: Job): Promise<{ job: Job; failure: JobFailure | undefined }> {
+    const { module, version, upload } = job;
+    if (module === 'extraction') {
+      return { ...(await runExtraction(context, job)), failure: undefined };
+    }
+    if (module !== 'custom') {
+      return artifacts.run({ ...job, module });
+    }
+    if (version === null || upload === null) {
+      throw codedError('unknown_job', { jobId: job.id });
+    }
+    return artifacts.runCustomConversion({ ...job, version, upload });
+  }
+
   return {
     // Only queues the job: the worker runs it, so restarting the front never stops a session
     // (ADR-0003)
@@ -122,11 +136,7 @@ export function createJobActions(context: ActionContext) {
             jobList.push(await runConversion(context, job));
             continue;
           }
-          const { module } = job;
-          const { job: finishedJob, failure } =
-            module === 'extraction'
-              ? { ...(await runExtraction(context, job)), failure: undefined }
-              : await artifacts.run({ ...job, module });
+          const { job: finishedJob, failure } = await runPostingJob(job);
           jobList.push(await notifyFinished(finishedJob, failure));
         } catch (error) {
           // An error fails this job only, the one running, and the worker goes on with the queue

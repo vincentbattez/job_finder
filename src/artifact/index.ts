@@ -26,7 +26,7 @@ import { composeEditPrompt } from '#/edit/prompt.ts';
 import { hasBeenApplied } from '#/status/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
-import { runBroughtConversion } from './brought.ts';
+import { runBroughtConversion, runCustomConversion } from './brought.ts';
 import {
   defaultKeysOf,
   findChosenVersion,
@@ -484,9 +484,22 @@ export function createArtifacts({
       key: `custom:${String(version.customArtifact?.id)}`,
       title: version.customArtifact?.title,
       interviewNumber: version.interview?.number ?? null,
+      state: version.state,
       text: workspace.readVersionFile(posting, version, CUSTOM_ARTIFACT_FILE_NAME) ?? '',
       createdAt: version.createdAt,
     });
+  }
+
+  async function customInterviewOf(posting: Posting, interviewNumber: number | undefined): Promise<Interview | null> {
+    if (interviewNumber === undefined) {
+      return null;
+    }
+    const interview = await workspace.findInterview(posting, interviewNumber);
+    if (interview === null) {
+      const { locale } = await candidateOf(posting);
+      throw codedError('unknown_interview', { reference: posting.reference, number: interviewNumber }, { locale });
+    }
+    return interview;
   }
 
   return {
@@ -520,14 +533,33 @@ export function createArtifacts({
       title: string;
       text: string;
     }): Promise<CustomArtifact> {
-      const { locale } = await candidateOf(posting);
-      const interview = interviewNumber === undefined ? null : await workspace.findInterview(posting, interviewNumber);
-      if (interview === null && interviewNumber !== undefined) {
-        throw codedError('unknown_interview', { reference: posting.reference, number: interviewNumber }, { locale });
-      }
+      const interview = await customInterviewOf(posting, interviewNumber);
       const version = await workspace.createCustomArtifact(posting, interview, title);
       workspace.writeVersionDocument(posting, version, CUSTOM_ARTIFACT_FILE_NAME, text);
       return customArtifactOf(posting, version);
+    },
+
+    // A Custom Artifact from a PDF: listed at once, its text written by the worker's conversion (ADR-0003)
+    async createCustomFromPdf({
+      posting,
+      interview: interviewNumber,
+      title,
+      content,
+    }: {
+      posting: Posting;
+      interview?: number | undefined;
+      title: string;
+      content: Uint8Array;
+    }): Promise<CustomArtifact> {
+      const interview = await customInterviewOf(posting, interviewNumber);
+      const upload = workspace.saveBroughtPdf(posting, content);
+      return customArtifactOf(posting, await workspace.createCustomArtifact(posting, interview, title, upload));
+    },
+
+    async runCustomConversion(
+      job: Job & { version: Version; upload: string },
+    ): Promise<{ job: Job; version: Version; failure: JobFailure | undefined }> {
+      return runCustomConversion({ workspace, aiSession }, job, await candidateOf(job.posting));
     },
 
     // Those of the Posting and of its Interviews, in the order they were added

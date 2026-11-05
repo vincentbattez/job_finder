@@ -467,7 +467,7 @@ export const POSTING_EN = {
     titlePlaceholder: 'Notes from a call, activity report…',
     textLabel: 'Text',
     textPlaceholder: 'What Claude should know, in Markdown or plain text.',
-    filePrompt: 'or choose a file (.md, .txt)',
+    filePrompt: 'or choose a file (.md, .txt, .pdf)',
     scopeLegend: 'Where to keep it',
     scopePosting: 'For this Posting',
     scopePostingHint: 'A document of the Posting, read by its next runs.',
@@ -481,6 +481,11 @@ export const POSTING_EN = {
     submitFromPanel: 'Add and check',
     added: 'Document added: {{title}}',
     annexAdded: 'Annex added to your Profile: {{title}}',
+    pdfHint: 'Claude converts it to text. You and your generations can read the document once it is converted.',
+    pdfRemove: 'Remove this PDF',
+    pdfQueued: 'PDF sent, converting: {{title}}',
+    pdfConverting: 'Converting…',
+    pdfFailed: 'Conversion failed. Add it again.',
   },
 
   interviews: {

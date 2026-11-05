@@ -450,7 +450,7 @@ export const POSTING_FR: typeof POSTING_EN = {
     titlePlaceholder: 'Notes d’un appel, rapport d’activité…',
     textLabel: 'Texte',
     textPlaceholder: 'Ce que Claude doit savoir, en Markdown ou en texte simple.',
-    filePrompt: 'ou choisir un fichier (.md, .txt)',
+    filePrompt: 'ou choisir un fichier (.md, .txt, .pdf)',
     scopeLegend: 'Où le garder',
     scopePosting: 'Pour cette Offre',
     scopePostingHint: 'Un document de l’Offre, lu par ses prochaines générations.',
@@ -464,6 +464,11 @@ export const POSTING_FR: typeof POSTING_EN = {
     submitFromPanel: 'Ajouter et cocher',
     added: 'Document ajouté : {{title}}',
     annexAdded: 'Annexe ajoutée à ton Profil : {{title}}',
+    pdfHint: 'Claude le convertit en texte. Le document se lit, et les générations le lisent, une fois converti.',
+    pdfRemove: 'Retirer ce PDF',
+    pdfQueued: 'PDF envoyé, conversion en cours : {{title}}',
+    pdfConverting: 'Conversion…',
+    pdfFailed: 'Conversion échouée. Ajoute-le à nouveau.',
   },
 
   interviews: {
