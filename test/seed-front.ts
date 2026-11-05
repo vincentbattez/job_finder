@@ -27,8 +27,8 @@ import { createRecordedFetch } from './recorded-http.ts';
 // also has the Instructions the e2e tests change. Léa, Camille and Sacha have their Notification Channel
 // through the fake Home Assistant; Yanis and Zoé each have theirs changed by one e2e test only. Léa's Posting
 // 2026-2409247 has a Research made with the default Instructions, then one made with hers. Jade, without
-// Watch, has hers created, changed and deleted by one e2e test only. Hugo, without Watch, gets the
-// Postings that e2e/import.test.ts imports, so that Léa's list and map stay as seeded. Nina, without
+// Watch, has hers created, changed and deleted by one e2e test only. Hugo and Lina, without Watch, get
+// the Postings that e2e/import.test.ts imports, so that Léa's list and map stay as seeded. Nina, without
 // Watch, has her locale switched by e2e/shell.test.ts only. Lou, Jules, Iris and Théo each
 // follow the slow fake Source, for e2e/detection.test.ts only: Lou and Jules past their first launch,
 // Lou always finding the same Postings, Jules new ones; Iris and Théo never detected by the seed, the
@@ -60,6 +60,7 @@ const OTHER_CANDIDATE_LIST = [
   { id: 'rose', name: 'Rose' },
   { id: 'jade', name: 'Jade' },
   { id: 'hugo', name: 'Hugo' },
+  { id: 'lina', name: 'Lina' },
   { id: 'nina', name: 'Nina' },
 ];
 

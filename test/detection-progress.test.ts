@@ -106,7 +106,10 @@ describe('the last Detection', () => {
 });
 
 // The detail page of 2026-2199164, the fourth reference oldest first
+const HELD_REFERENCE = '2026-2199164';
 const HELD_URL = 'https://place-ep-recrute.talent-soft.com/offre-de-emploi/emploi_2199164.aspx';
+// A reference the Detection reads before HELD_URL
+const FOUND_SO_FAR_REFERENCE = '2025-2093618';
 
 // The recorded responses, the detail page of HELD_URL held back until released: the Detection stops
 // there, mid-reading, for as long as a test looks at it
@@ -150,6 +153,30 @@ describe('a running Detection', () => {
       finishedAt: null,
       watchList: [{ label: 'attaché de justice', step: 'reading', listedCount: 81, readCount: 3, readTotal: 81 }],
     });
+    heldFetch.release();
+  });
+
+  // New's « found » group fills while the Detection reads, polled by the front (spec #125 story 15)
+  it('flags in New the Postings it found so far', async () => {
+    const dataDirectory = createDataDirectory();
+    const earlierFetch = createRecordedFetch({
+      [DSJ_FEED_URL]: { body: feedWithout([HELD_REFERENCE, FOUND_SO_FAR_REFERENCE]) },
+    });
+    const earlierActions = await createActions({ dataDirectory, fetch: earlierFetch.fetch });
+    await earlierActions.detect();
+    const heldFetch = createHeldFetch();
+    const actions = await createActions({ dataDirectory, fetch: heldFetch.fetch });
+
+    await actions.startDetection({ candidateId: 'lea' });
+    await vi.waitFor(async () => {
+      const { running } = await actions.followDetection({ candidateId: 'lea' });
+      expect(running?.watchList[0]?.readCount).toBe(1);
+    });
+
+    const itemList = await actions.listNew({ candidateId: 'lea' });
+    expect(itemList.filter(({ isFound }) => isFound).map(({ posting }) => posting.reference)).toEqual([
+      FOUND_SO_FAR_REFERENCE,
+    ]);
     heldFetch.release();
   });
 

@@ -21,6 +21,80 @@ export const LISTS_EN = {
     restored: 'Posting back in New',
     undo: 'Undo',
   },
+  // The Detection in New's header and the Card under it (spec #125 « Detection and import »)
+  detection: {
+    start: 'Run a Detection',
+    started: 'Detection started',
+    running: 'Detection in progress…',
+    starting: 'Starting the Detection…',
+    runningHeading: 'Detection in progress',
+    startedAt: 'Started at {{date, datetime(hour: 2-digit; minute: 2-digit; timeZone: Europe/Paris)}} · {{elapsed}}',
+    // How long the running Detection has taken so far
+    elapsed: '{{minutes}} min {{seconds}} s elapsed',
+    elapsedHours: '{{hours}} h {{minutes}} min elapsed',
+    // Another Candidate’s Detection holds the lock: one at a time
+    otherCandidate: 'A Detection is searching the Watches of another Candidate: run yours once it is over.',
+    stepByStep: {
+      waiting: 'Waiting for its turn',
+      searching: 'Searching the Source',
+      reading: 'Reading the Job Descriptions',
+      notifying: 'Sending the notifications',
+      done: 'Done',
+    },
+    readCount: '{{readCount}} / {{readTotal}}',
+    // The polite live region: the run, its key steps and the verdict, without the counters
+    announceRunning: 'Detection in progress: {{step}}',
+    originByOrigin: {
+      button: 'started from the button',
+      automation: 'started by the daily automation',
+      cli: 'started by jf detect',
+    },
+    failedHeading: 'The Detection failed',
+    nothingNewHeading: 'No new Posting',
+    newHeading_one: '{{count}} new Posting',
+    newHeading_other: '{{count}} new Postings',
+    firstLaunchHeading_one: '{{count}} Posting imported',
+    firstLaunchHeading_other: '{{count}} Postings imported',
+    // One line per Watch, named by its label
+    nothingNew_zero: '{{label}}: the Source listed no Posting.',
+    nothingNew_one: '{{label}}: the Source listed {{count}} Posting, already known.',
+    nothingNew_other: '{{label}}: the Source listed {{count}} Postings, all already known.',
+    newPostings_one: '{{label}}: {{count}} new Posting.',
+    newPostings_other: '{{label}}: {{count}} new Postings.',
+    firstLaunch_zero: '{{label}}: first launch, nothing to import.',
+    firstLaunch_one: '{{label}}: first launch, {{count}} Posting imported, no Research or notification started.',
+    firstLaunch_other: '{{label}}: first launch, {{count}} Postings imported, no Research or notification started.',
+    notReached: '{{label}}: not reached before the failure.',
+    failedWatch_zero:
+      '{{label}}: stopped at “{{step}}”, Job Descriptions read: {{readCount}}. No new Posting saved before.',
+    failedWatch_one:
+      '{{label}}: stopped at “{{step}}”, Job Descriptions read: {{readCount}}. {{count}} new Posting saved before.',
+    failedWatch_other:
+      '{{label}}: stopped at “{{step}}”, Job Descriptions read: {{readCount}}. {{count}} new Postings saved before.',
+    nearMisses_one: '{{count}} title narrowly left out',
+    nearMisses_other: '{{count}} titles narrowly left out',
+    fold: 'Fold the Detection',
+    unfold: 'Unfold the Detection',
+    close: 'Close the Detection',
+  },
+  // The import in New's header: a dropped file or a pasted text
+  jobDescriptionImport: {
+    open: 'Import',
+    heading: 'Import a Job Description',
+    description: 'A Posting found outside your Watches: it goes straight To Apply and starts its Research.',
+    dropPrompt: 'Drop a file here',
+    dropHint: 'Markdown or text · or click to choose',
+    orPaste: 'or paste its text',
+    textLabel: 'Text of the Job Description',
+    textPlaceholder: 'Title, employer, place, duties…',
+    // The name of a pasted Posting until its title is read
+    pastedTitle: 'Pasted Job Description',
+    submit: 'Import',
+    cancel: 'Cancel',
+    imported: 'Posting imported: {{title}}. Its Research follows once its fields are read.',
+    see: 'See in To Apply',
+    notText: '“{{fileName}}” is not a text file: drop a Markdown or text file, or paste its text.',
+  },
   toApply: {
     pageTitle: 'To Apply · Job Finder',
     heading: 'To Apply',
