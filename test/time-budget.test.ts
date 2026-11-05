@@ -29,8 +29,6 @@ const BUDGET = {
   slowFileList: [{ file: 'test/slow.test.ts', budgetMs: 5000, reason: 'spawns a CLI' }],
 };
 
-// Each test and the whole run keep under a time budget, so the suite never drifts back to minutes
-// (CODING_STANDARDS “Tests”, #108)
 // What the Playwright reporter makes of one test, as Playwright hands it over
 function endRunOf(status: 'passed' | 'failed', durationMs: number, { isCi }: { isCi: boolean }) {
   vi.stubEnv('CI', isCi ? 'true' : undefined);
@@ -48,6 +46,8 @@ function endRunOf(status: 'passed' | 'failed', durationMs: number, { isCi }: { i
   return reporter.onEnd();
 }
 
+// Each test and the whole run keep under a time budget, so the suite never drifts back to minutes
+// (CODING_STANDARDS “Tests”, #108)
 describe('the time budget', () => {
   it('reports a test over the budget, with its duration and its budget', () => {
     const run = {

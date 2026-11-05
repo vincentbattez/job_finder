@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-interface IFetcherState<TAnswer> {
+export interface IFetcherState<TAnswer> {
   state: 'idle' | 'loading' | 'submitting';
   data: TAnswer;
 }

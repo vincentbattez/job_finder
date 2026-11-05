@@ -14,11 +14,11 @@ export function findInterviews(page: Page): Locator {
   return page.getByRole('region', { name: 'Entretiens' });
 }
 
-function findDataDirectory(): string {
+export function findDataDirectory(): string {
   return z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata).dataDirectory;
 }
 
-function openDatabase(): DatabaseSync {
+export function openDatabase(): DatabaseSync {
   return new DatabaseSync(path.join(findDataDirectory(), 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
 }
 
@@ -67,20 +67,41 @@ export async function prepareApplication(page: Page, reference: string): Promise
   await deleteEveryInterview(page, reference);
 }
 
+// The folders of the Versions past the first ones
+function readVersionFolders(research: string, keptCount: number): string[] {
+  return readdirSync(research)
+    .filter((name) => Number(name.slice(1)) > keptCount)
+    .map((name) => path.join(research, name));
+}
+
 // A test that produces the Research of its Posting starts without one, whatever a previous run left:
-// its Versions, and their folders, which a new Version 1 could not take over
-export function forgetResearch(reference: string): void {
+// its Versions, and their folders, which a new Version 1 could not take over. A seed's failed Version
+// stays, when told how many to keep.
+export function forgetResearch(reference: string, keptCount = 0): void {
   const database = openDatabase();
   const row = database.prepare('SELECT "id", "candidateId" FROM "Posting" WHERE "reference" = ?').get(reference);
   const { id, candidateId } = z.object({ id: z.number(), candidateId: z.string() }).parse(row);
-  database.prepare(`DELETE FROM "Version" WHERE "artifact" = 'research' AND "postingId" = ?`).run(id);
+  database
+    .prepare(`DELETE FROM "Version" WHERE "artifact" = 'research' AND "postingId" = ? AND "number" > ?`)
+    .run(id, keptCount);
+  // Their jobs too: the state of an Artifact is that of its last job
+  database
+    .prepare(
+      `DELETE FROM "Job" WHERE "module" = 'research' AND "postingId" = ? AND "id" NOT IN
+       (SELECT "jobId" FROM "Version" WHERE "postingId" = ? AND "jobId" IS NOT NULL)`,
+    )
+    .run(id, id);
   database.close();
   const postingsDirectory = path.join(findDataDirectory(), 'candidates', candidateId, 'postings');
   for (const folder of readdirSync(postingsDirectory)) {
     if (!folder.startsWith(reference)) {
       continue;
     }
-    rmSync(path.join(postingsDirectory, folder, 'research'), { recursive: true, force: true });
+    const research = path.join(postingsDirectory, folder, 'research');
+    const forgottenList = keptCount === 0 ? [research] : readVersionFolders(research, keptCount);
+    for (const version of forgottenList) {
+      rmSync(version, { recursive: true, force: true });
+    }
   }
 }
 
@@ -96,16 +117,16 @@ function countReadyVersions(reference: string, artifact: string): number {
   return z.object({ count: z.number() }).parse(row).count;
 }
 
-// A Version run by the worker, a Draft until validated, once the Posting has that many
+// A Version run by the worker, a Draft until validated, once the Posting has that many ready
 export async function runVersion(
   page: Page,
-  { number, ...form }: Readonly<{ module: string; reference: string; interview?: string; number: number }>,
+  { readyCount, ...form }: Readonly<{ module: string; reference: string; interview?: string; readyCount: number }>,
 ): Promise<void> {
   const response = await page.request.post('/run', { form });
   expect(response.ok()).toBe(true);
   await expect
     .poll(() => countReadyVersions(form.reference, form.module), { timeout: READY_TIMEOUT_MS, intervals: [100] })
-    .toBe(number);
+    .toBe(readyCount);
 }
 
 // The Posting page open on a single Interview, freshly added: what a Portrait and an Interview Brief

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { generate } from './generation.ts';
 import { findInterviews, forgetResearch, prepareInterview, runVersion } from './interview.ts';
@@ -20,8 +20,7 @@ const CORRECTED_BRIEF = `# Fiche d’entretien factice
 Titulaire d’un master 2 de droit privé, je souhaite rejoindre votre juridiction.
 `;
 
-// These tests go through the one Posting of this file: one after the other, the last going on from
-// the Interview Brief the one before leaves
+// Each test prepares its own start, on the one Posting of this file: one after the other
 test.describe.configure({ mode: 'serial' });
 
 test('refuses the Interview Brief of an Interview until the Posting has a Chosen Research', async ({ page }) => {
@@ -44,14 +43,27 @@ test('refuses the Interview Brief of an Interview until the Posting has a Chosen
   await expect(brief).not.toContainText("n'a pas de Recherche validée");
 });
 
-test('launches the Interview Brief of an Interview, then validates it', async ({ page }) => {
+// An Interview whose Interview Brief can run, on a page reloaded once they are produced
+async function prepareBriefOf(page: Page): Promise<void> {
   forgetResearch(REFERENCE);
   await prepareInterview(page, REFERENCE);
-  await runVersion(page, { module: 'research', reference: REFERENCE, number: 1 });
-  const validated = await page.request.post(`/postings/${REFERENCE}/research/validate`, { form: { number: '1' } });
-  expect(validated.ok()).toBe(true);
+  await runVersion(page, { module: 'research', reference: REFERENCE, readyCount: 1 });
+  await validate(page, 'research', { number: '1' });
+}
+
+async function validate(page: Page, artifact: string, form: Record<string, string>): Promise<void> {
+  const response = await page.request.post(`/postings/${REFERENCE}/${artifact}/validate`, { form });
+  expect(response.ok()).toBe(true);
+}
+
+async function reload(page: Page): Promise<void> {
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
+}
+
+test('launches the Interview Brief of an Interview, then validates it', async ({ page }) => {
+  await prepareBriefOf(page);
+  await reload(page);
   const brief = findInterviews(page).getByRole('region', { name: 'Fiche d’entretien' });
 
   await generate(page, brief);
@@ -66,8 +78,10 @@ test('launches the Interview Brief of an Interview, then validates it', async ({
 });
 
 test('corrects the Validated Interview Brief, which still fits a phone', async ({ page }) => {
-  await page.goto(`/postings/${REFERENCE}?tab=interviews&interview=1`);
-  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
+  await prepareBriefOf(page);
+  await runVersion(page, { module: 'interview_brief', reference: REFERENCE, interview: '1', readyCount: 1 });
+  await validate(page, 'interview_brief', { number: '1', interview: '1' });
+  await reload(page);
   const brief = findInterviews(page).getByRole('region', { name: 'Fiche d’entretien' });
   await brief.getByRole('button', { name: 'Modifier' }).click();
   const textbox = brief.getByRole('textbox', { name: 'Texte de la Version 1' });

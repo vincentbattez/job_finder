@@ -2,6 +2,7 @@ import { z } from 'zod/v4';
 
 import { expect, test } from './candidate.ts';
 import { goToRecap, openGeneration } from './generation.ts';
+import { forgetResearch, runVersion } from './interview.ts';
 
 // Each test launches modules on a Posting of its own, which test/seed-front.ts prepares: the data
 // folder is shared by the whole run. The e2e worker runs the queued jobs with the fake Claude, whose
@@ -18,8 +19,11 @@ const RECEIVED_NOTIFICATION_LIST_SCHEMA = z.array(
 
 test.describe('launching the modules of a Posting', () => {
   test.describe('a failed Research', () => {
-    // The second test goes on from the Draft the first one leaves, on the Posting only they touch
+    // Each starts from the seed's failed Version alone, on the Posting only they touch
     test.describe.configure({ mode: 'serial' });
+    test.beforeEach(() => {
+      forgetResearch(FAILED_RESEARCH_REFERENCE, 1);
+    });
 
     test('relaunches from its panel closed meanwhile', async ({ page, openPage }) => {
       await openPage(`/postings/${FAILED_RESEARCH_REFERENCE}?tab=letter`);
@@ -59,6 +63,7 @@ test.describe('launching the modules of a Posting', () => {
     });
 
     test('whose Draft, once validated, lets the Letter run', async ({ page, request, openPage }) => {
+      await runVersion(page, { module: 'research', reference: FAILED_RESEARCH_REFERENCE, readyCount: 1 });
       await openPage(`/postings/${FAILED_RESEARCH_REFERENCE}?tab=research`);
       const research = page.getByRole('region', { name: 'Recherche' });
       const letter = page.getByRole('region', { name: 'Lettre de motivation' });

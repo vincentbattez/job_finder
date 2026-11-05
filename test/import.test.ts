@@ -448,9 +448,9 @@ describe('import of a Job Description in Markdown', () => {
     });
     await actions.detect();
     // An older Posting left off the map, which the next Detection locates before it reaches the import
-    new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite')).exec(
-      `UPDATE "Posting" SET "latitude" = NULL WHERE "reference" = '2026-2445600'`,
-    );
+    const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'));
+    database.exec(`UPDATE "Posting" SET "latitude" = NULL WHERE "reference" = '2026-2445600'`);
+    database.close();
     const { posting } = await actions.importJobDescription({
       candidateId: 'lea',
       fileName: FILE_NAME,

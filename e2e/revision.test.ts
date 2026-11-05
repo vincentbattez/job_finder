@@ -49,7 +49,7 @@ async function prepareRevision(page: Page, reference: string): Promise<string> {
     place: 'Tribunal judiciaire, Colmar',
     interviewers: 'Mme Klein, directrice de greffe',
   });
-  await runVersion(page, { module: 'interview_brief', reference, interview: '1', number: 1 });
+  await runVersion(page, { module: 'interview_brief', reference, interview: '1', readyCount: 1 });
   await post(page, `/postings/${reference}/interview_brief/validate`, { number: '1', interview: '1' });
   return `/postings/${reference}/interviews/1/revision`;
 }
@@ -87,7 +87,7 @@ test('carries notes and Mastered marks over to a newer Chosen Interview Brief', 
   await post(page, revisionPath, { intent: 'mastered', title: 'À réviser', isMastered: 'true' });
 
   // A newer Draft waits: the Revision keeps the Chosen Version until it is validated
-  await runVersion(page, { module: 'interview_brief', reference, interview: '1', number: 2 });
+  await runVersion(page, { module: 'interview_brief', reference, interview: '1', readyCount: 2 });
   await post(page, `/postings/${reference}/interview_brief/document`, {
     number: '2',
     interview: '1',

@@ -1,7 +1,8 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
 import { expect, test } from './candidate.ts';
+import { findDataDirectory, openDatabase } from './interview.ts';
 
 // The fake Claude of test/e2e-actions.server.ts extracts this Job Description, in Grenoble
 const JOB_DESCRIPTION = readFileSync(
@@ -12,6 +13,18 @@ const TITLE = 'Greffier placé – Tribunal judiciaire de Grenoble';
 
 const FILE_NAME = 'greffier-grenoble.md';
 
+const DROPPING_CANDIDATE = 'hugo';
+
+function forgetPostingsOf(candidateId: string): void {
+  const database = openDatabase();
+  const postingsOf = 'SELECT "id" FROM "Posting" WHERE "candidateId" = ?';
+  database.prepare(`DELETE FROM "Version" WHERE "postingId" IN (${postingsOf})`).run(candidateId);
+  database.prepare(`DELETE FROM "Job" WHERE "postingId" IN (${postingsOf})`).run(candidateId);
+  database.prepare('DELETE FROM "Posting" WHERE "candidateId" = ?').run(candidateId);
+  database.close();
+  rmSync(path.join(findDataDirectory(), 'candidates', candidateId, 'postings'), { recursive: true, force: true });
+}
+
 // The worker takes the extraction, then the Research, each with its session, and the Posting page reads
 // the state again
 const READY_TIMEOUT_MS = 15_000;
@@ -19,8 +32,11 @@ const READY_TIMEOUT_MS = 15_000;
 // Hugo and Lina, whose Postings these tests alone add (test/seed-front.ts): until the worker reads its
 // city, an imported Posting has no point on the map, which another test would see on Léa's
 test.describe('a dropped Job Description', () => {
-  // The second goes on from the Posting the first imports
+  // Each starts without any Posting of Hugo's: one after the other
   test.describe.configure({ mode: 'serial' });
+  test.beforeEach(() => {
+    forgetPostingsOf(DROPPING_CANDIDATE);
+  });
 
   test('imports a Job Description dropped from the header: To Apply at once, then the worker reads its fields and runs its Research', async ({
     page,
@@ -29,7 +45,7 @@ test.describe('a dropped Job Description', () => {
   }) => {
     // The tiles of the map come from OpenStreetMap over the internet: its points show without them
     await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
-    await asCandidate('hugo');
+    await asCandidate(DROPPING_CANDIDATE);
     await openPage('/');
     await page.getByRole('button', { name: 'Importer' }).click();
     const dialog = page.getByRole('dialog', { name: 'Importer une Fiche de poste' });
@@ -73,11 +89,16 @@ test.describe('a dropped Job Description', () => {
 
   test('locates a Job Description once read, on the list and the map', async ({ page, asCandidate, openPage }) => {
     await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
-    await asCandidate('hugo');
+    await asCandidate(DROPPING_CANDIDATE);
     await openPage('/to-apply');
+    const imported = await page.request.post('/import', { form: { fileName: FILE_NAME, markdown: JOB_DESCRIPTION } });
+    expect(imported.ok()).toBe(true);
     // Located in Grenoble by API Géo's recorded answer, with its Deadline read by Claude
     const row = page.getByRole('listitem').filter({ hasText: TITLE });
-    await expect(row).toHaveText(/^Grenoble/);
+    await expect(async () => {
+      await page.reload();
+      await expect(row).toHaveText(/^Grenoble/, { timeout: 500 });
+    }).toPass({ timeout: READY_TIMEOUT_MS });
     await expect(row).toContainText('15 déc.');
     await expect(
       page.getByRole('region', { name: 'Carte des Offres' }).getByRole('button', { name: `Grenoble · ${TITLE}` }),
@@ -91,6 +112,7 @@ test('imports a pasted Job Description: it skips New for To Apply, its name that
   openPage,
 }) => {
   await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
+  forgetPostingsOf('lina');
   await asCandidate('lina');
   await openPage('/');
   await page.getByRole('button', { name: 'Importer' }).click();
