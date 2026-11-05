@@ -1,6 +1,6 @@
 import { z } from 'zod/v4';
 
-import type { Job } from '#/domain/index.ts';
+import { IMPORT_SOURCE_ID, type Job } from '#/domain/index.ts';
 
 import type { ActionContext } from './context.ts';
 import { createTolerantLocator } from './locator.ts';
@@ -59,7 +59,7 @@ export function createImportActions({ workspace, importSource, findCandidate, lo
       }
       const posting = await workspace.savePosting({
         candidateId: candidate.id,
-        source: 'import',
+        source: IMPORT_SOURCE_ID,
         listedPosting,
         jobDescription,
         location: await locate(null, candidate.locale),

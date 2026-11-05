@@ -406,6 +406,9 @@ export const RECIPIENTS_SCHEMA = z
 
 export type Recipients = z.infer<typeof RECIPIENTS_SCHEMA>;
 
+// The source of a Posting the Candidate imported, which no Source of the registry lists
+export const IMPORT_SOURCE_ID = 'import';
+
 // A Markdown file of the data folder: of the Profile of a Candidate, such as facts.md or cv.md
 const MARKDOWN_FILE_SHAPE = { fileName: z.string(), markdown: z.string() };
 
