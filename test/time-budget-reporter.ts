@@ -12,7 +12,7 @@ interface ISlowFile {
   reason: string;
 }
 
-interface ITimeBudget {
+export interface ITimeBudget {
   testBudgetMs: number;
   suiteBudgetMs: number;
   slowFileList: ISlowFile[];

@@ -53,7 +53,7 @@ The front is an orchestration of shadcn components on Tailwind v4; `DESIGN.md` i
 - **Tokens.** Colors, radii, shadows and the type scale are CSS variables of `src/web/app.css`, light and dark (`.dark`, set by `next-themes`), mapped to Tailwind by `@theme inline`. A color is a token (`bg-primary`, `text-validated-foreground`), never a palette class nor a raw value; a state hue always comes with its label or icon.
 - **Components.** shadcn's live in `src/web/components/ui/`, as its CLI writes them (`components.json`), outside ESLint but under the typecheck; a Dumb composes them with `cn()` and variants. A custom component is written only where shadcn covers nothing.
 - **Feedback.** Every mutation ends in a toast, success or its Error Code's message (`useFeedback`), and its button shows `isPending` meanwhile.
-- **Client dependencies.** Each one the browser loads is listed in `optimizeDeps.include` of `vite.config.ts`, so the first e2e page hydrates.
+- **Client dependencies.** Each one the browser loads is listed in `optimizeDeps.include` of `vite.config.ts`, so the first page of the dev server hydrates: the e2e tests run on the build (`test/e2e-server.ts`), so nothing runs into a missing one but the dev server itself.
 
 ## Data
 
@@ -68,7 +68,7 @@ The front is an orchestration of shadcn components on Tailwind v4; `DESIGN.md` i
 - Each Notification Channel gives `test/write-only-token.test.ts` Parameters its fake server accepts: the test checks that no action returns one of its secret Parameters, and fails as long as a Channel is missing from it. No Source has a secret Parameter yet: the first one that declares one goes in too.
 - An e2e test that changes data changes its own, which only it touches (its Posting, its Candidate), and resets them at the start, not at the end: it passes alone, repeated (`--repeat-each` with `--workers=1`) or alongside the others. `fullyParallel` fails the one that reads what another left behind. **(CI)**
 - Each architecture rule has a fixture project that breaks it, to prove it catches something.
-- A test keeps under its time budget, and the run under the suite's: 6 s per test and 180 s for the run on the GitHub runner, where `test/time-budget-reporter.ts` fails the run that goes over; elsewhere it only reports. A file whose tests legitimately take longer (a CLI spawned, the Prisma CLI, the archunit graph) is listed in its `SLOW_FILE_LIST` with its own budget and the reason. A fixed cost paid by each test (a Detection, a cspell start) goes in the global setup or in a `beforeAll`, which is what keeps the run under its budget. **(CI)**
+- A test keeps under its time budget, and the run under the suite's: 6 s per test and 180 s for the run on the GitHub runner, where `test/time-budget-reporter.ts` (Vitest) and `test/playwright-time-budget-reporter.ts` (e2e, each shard) fail the run that goes over; elsewhere they only report. A file whose tests legitimately take longer (a CLI spawned, the Prisma CLI, the archunit graph) is listed in its `SLOW_FILE_LIST` with its own budget and the reason. A fixed cost paid by each test (a Detection, a cspell start) goes in the global setup or in a `beforeAll`, which is what keeps the run under its budget. **(CI)**
 
 ## Git
 

@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
 // scrollbar, so the check is that nothing runs past the right edge, where it would be cut off. The
 // map lays its tiles and points out past its edges and clips them: only the map itself counts. A strip
 // that scrolls sideways, such as the tabs of the Posting page, keeps what passes its edge reachable. On
-// a cold dev server the stylesheet may apply after the page shows: the caller polls until it does.
+// a loaded machine the stylesheet may apply after the page shows: the caller polls until it does.
 export function findOverflowing(page: Page): Promise<string[]> {
   return page.locator('body').evaluate((body) =>
     [...body.querySelectorAll('*')]

@@ -1,8 +1,9 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
+import PlaywrightTimeBudgetReporter from './playwright-time-budget-reporter.ts';
 import { findOverBudget } from './time-budget-reporter.ts';
 
 const FIXTURE_DIRECTORY = path.join(import.meta.dirname, 'fixtures', 'time-budget');
@@ -30,6 +31,23 @@ const BUDGET = {
 
 // Each test and the whole run keep under a time budget, so the suite never drifts back to minutes
 // (CODING_STANDARDS “Tests”, #108)
+// What the Playwright reporter makes of one test, as Playwright hands it over
+function endRunOf(status: 'passed' | 'failed', durationMs: number, { isCi }: { isCi: boolean }) {
+  vi.stubEnv('CI', isCi ? 'true' : undefined);
+  vi.spyOn(console, 'error').mockReturnValue();
+  onTestFinished(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+  const reporter = new PlaywrightTimeBudgetReporter({ budget: BUDGET });
+  reporter.onBegin();
+  reporter.onTestEnd(
+    { title: 'a test', location: { file: 'e2e/a.test.ts', line: 1, column: 1 } },
+    { status, duration: durationMs },
+  );
+  return reporter.onEnd();
+}
+
 describe('the time budget', () => {
   it('reports a test over the budget, with its duration and its budget', () => {
     const run = {
@@ -59,6 +77,24 @@ describe('the time budget', () => {
       suiteMs: 12_000,
     };
     expect(findOverBudget(run, BUDGET)).toEqual(['the suite: 12000 ms, budget 10000 ms']);
+  });
+
+  describe('on an e2e run', () => {
+    it('fails it in CI when a test goes over the budget', async () => {
+      await expect(endRunOf('passed', 1800, { isCi: true })).resolves.toEqual({ status: 'failed' });
+    });
+
+    it('only reports it outside CI', async () => {
+      await expect(endRunOf('passed', 1800, { isCi: false })).resolves.toBeUndefined();
+    });
+
+    it('passes it when each test is under the budget', async () => {
+      await expect(endRunOf('passed', 20, { isCi: true })).resolves.toBeUndefined();
+    });
+
+    it('leaves a failed test to Playwright, its duration being a timeout', async () => {
+      await expect(endRunOf('failed', 30_000, { isCi: true })).resolves.toBeUndefined();
+    });
   });
 
   // The proof that the guard fails a run: a fixture project with an injected slow probe

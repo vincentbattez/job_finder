@@ -12,8 +12,8 @@ const TITLE = 'Greffier placé – Tribunal judiciaire de Grenoble';
 
 const FILE_NAME = 'greffier-grenoble.md';
 
-// The worker takes the extraction, then the Research, each session lasting a second, and the Posting page
-// reads the state again every two seconds
+// The worker takes the extraction, then the Research, each with its session, and the Posting page reads
+// the state again
 const READY_TIMEOUT_MS = 15_000;
 
 // Hugo and Lina, whose Postings these tests alone add (test/seed-front.ts): until the worker reads its

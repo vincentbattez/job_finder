@@ -1,3 +1,4 @@
+import { readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -7,16 +8,16 @@ import { z } from 'zod/v4';
 // How long a raw write waits for the server's own writes to release the database
 const BUSY_TIMEOUT_MS = 5000;
 
-// The dev server compiles a route on its first request: the first page of a worker hydrates late in CI
-const HYDRATION_TIMEOUT_MS = 15_000;
-
 export function findInterviews(page: Page): Locator {
   return page.getByRole('region', { name: 'Entretiens' });
 }
 
+function findDataDirectory(): string {
+  return z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata).dataDirectory;
+}
+
 function openDatabase(): DatabaseSync {
-  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
-  return new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
+  return new DatabaseSync(path.join(findDataDirectory(), 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
 }
 
 // A detected Posting of the seed is New: put To Apply as keeping it would, without the Research keeping
@@ -64,6 +65,23 @@ export async function prepareApplication(page: Page, reference: string): Promise
   await deleteEveryInterview(page, reference);
 }
 
+// A test that produces the Research of its Posting starts without one, whatever a previous run left:
+// its Versions, and their folders, which a new Version 1 could not take over
+export function forgetResearch(reference: string): void {
+  const database = openDatabase();
+  const row = database.prepare('SELECT "id", "candidateId" FROM "Posting" WHERE "reference" = ?').get(reference);
+  const { id, candidateId } = z.object({ id: z.number(), candidateId: z.string() }).parse(row);
+  database.prepare(`DELETE FROM "Version" WHERE "artifact" = 'research' AND "postingId" = ?`).run(id);
+  database.close();
+  const postingsDirectory = path.join(findDataDirectory(), 'candidates', candidateId, 'postings');
+  for (const folder of readdirSync(postingsDirectory)) {
+    if (!folder.startsWith(reference)) {
+      continue;
+    }
+    rmSync(path.join(postingsDirectory, folder, 'research'), { recursive: true, force: true });
+  }
+}
+
 // The Posting page open on a single Interview, freshly added: what a Portrait and an Interview Brief
 // prepare
 export async function prepareInterview(page: Page, reference: string): Promise<void> {
@@ -80,5 +98,5 @@ export async function prepareInterview(page: Page, reference: string): Promise<v
   expect(response.ok()).toBe(true);
   await page.goto(`/postings/${reference}?tab=interviews&interview=1`);
   // A click before React runs the page would go nowhere: wait for it
-  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true', { timeout: HYDRATION_TIMEOUT_MS });
+  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
 }

@@ -12,8 +12,7 @@ import { goToRecap, openGeneration } from './generation.ts';
 const VERA_JOB_DESCRIPTION = '# Greffier – Valence\n\nTenir les audiences du tribunal judiciaire de Valence.\n';
 const REFERENCE = `import-${createHash('sha256').update(VERA_JOB_DESCRIPTION).digest('hex').slice(0, 10)}`;
 
-// The worker takes the job, then its session lasts a second, and the Posting page reads the state again
-// every two seconds
+// The worker takes the job, its session runs, and the Posting page reads the state again
 const READY_TIMEOUT_MS = 15_000;
 
 const PAST_LETTER = 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal judiciaire de Lille.\n';

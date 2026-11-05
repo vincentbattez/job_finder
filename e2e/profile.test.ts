@@ -213,41 +213,50 @@ test.describe('Profile of a Candidate', () => {
     await expect(uploads.getByText('Aucune Pièce pour l’instant.')).toBeVisible();
   });
 
-  test('converts a dropped Upload into cv.md, then says why it will not overwrite it and runs again', async ({
-    page,
-    asCandidate,
-    openPage,
-  }) => {
-    await openFreshProfileOf({ page, asCandidate, openPage }, { id: 'rose', name: 'Rose' }, { hasCv: false });
-    const uploads = page.getByRole('region', { name: 'Pièces' });
-    await expect(uploads.getByLabel('Déposer une Pièce')).toBeEnabled();
+  test.describe('the conversion of an Upload', () => {
     const cvPdfPath = path.join(import.meta.dirname, '../test/fixtures/profile/cv.pdf');
+    // Each test puts back the Profile of Rose, their one Candidate: one after the other
+    test.describe.configure({ mode: 'serial' });
 
-    await uploads.getByLabel('Déposer une Pièce').setInputFiles(cvPdfPath);
+    test('converts a dropped Upload into cv.md', async ({ page, asCandidate, openPage }) => {
+      await openFreshProfileOf({ page, asCandidate, openPage }, { id: 'rose', name: 'Rose' }, { hasCv: false });
+      const uploads = page.getByRole('region', { name: 'Pièces' });
+      await expect(uploads.getByLabel('Déposer une Pièce')).toBeEnabled();
 
-    const conversion = uploads.getByRole('form', { name: 'Conversion en Markdown de cv.pdf' });
-    await expect(conversion.getByRole('status')).toHaveText('En cours');
-    await expect(conversion.getByRole('status')).toHaveText('Prêt');
-    await unfold(page, 'cv.md');
-    await expect(contentOf(page, 'cv.md')).toHaveValue('# CV converti\n\n## Formation\n\n- Master 2 droit public\n');
-    await contentOf(page, 'cv.md').fill('# CV de Rose\n\n## Formation\n\n- Master 2 droit public, Lille\n');
-    await page.getByRole('button', { name: 'Enregistrer cv.md' }).click();
-    await expect(toastsOf(page).getByText('cv.md enregistré')).toBeVisible();
+      await uploads.getByLabel('Déposer une Pièce').setInputFiles(cvPdfPath);
 
-    // Dropped again, the CV would replace the corrected cv.md: the conversion refuses and says so
-    await uploads.getByLabel('Déposer une Pièce').setInputFiles(cvPdfPath);
-    await expect(conversion.getByRole('status')).toHaveText('En échec');
-    await expect(conversion).toContainText("que le Profil a déjà : il n'est pas écrasé");
-    await expect(contentOf(page, 'cv.md')).toHaveValue(
-      '# CV de Rose\n\n## Formation\n\n- Master 2 droit public, Lille\n',
-    );
+      const conversion = uploads.getByRole('form', { name: 'Conversion en Markdown de cv.pdf' });
+      await expect(conversion.getByRole('status')).toHaveText('En cours');
+      await expect(conversion.getByRole('status')).toHaveText('Prêt');
+      await unfold(page, 'cv.md');
+      await expect(contentOf(page, 'cv.md')).toHaveValue('# CV converti\n\n## Formation\n\n- Master 2 droit public\n');
+    });
 
-    await deleteThroughDialog(page, 'cv.md');
-    await conversion.getByRole('button', { name: 'Relancer la conversion de cv.pdf' }).click();
-    await expect(toastsOf(page).getByText('Conversion de cv.pdf en file d’attente')).toBeVisible();
-    await expect(conversion.getByRole('status')).toHaveText('Prêt');
-    await unfold(page, 'cv.md');
-    await expect(contentOf(page, 'cv.md')).toHaveValue('# CV converti\n\n## Formation\n\n- Master 2 droit public\n');
+    test('says why it will not overwrite a cv.md, and runs again once it is gone', async ({
+      page,
+      asCandidate,
+      openPage,
+    }) => {
+      await openFreshProfileOf({ page, asCandidate, openPage }, { id: 'rose', name: 'Rose' });
+      const uploads = page.getByRole('region', { name: 'Pièces' });
+      await expect(uploads.getByLabel('Déposer une Pièce')).toBeEnabled();
+
+      await uploads.getByLabel('Déposer une Pièce').setInputFiles(cvPdfPath);
+
+      const conversion = uploads.getByRole('form', { name: 'Conversion en Markdown de cv.pdf' });
+      await expect(conversion.getByRole('status')).toHaveText('En échec');
+      await expect(conversion).toContainText("que le Profil a déjà : il n'est pas écrasé");
+      await unfold(page, 'cv.md');
+      await expect(contentOf(page, 'cv.md')).toHaveValue('# CV de Rose\n\n## Formation\n\n- Master 2 droit public\n');
+
+      await deleteThroughDialog(page, 'cv.md');
+      // By the keyboard: the toast of the deletion covers this button until it leaves
+      await conversion.getByRole('button', { name: 'Relancer la conversion de cv.pdf' }).press('Enter');
+      await expect(toastsOf(page).getByText('Conversion de cv.pdf en file d’attente')).toBeVisible();
+      await expect(conversion.getByRole('status')).toHaveText('Prêt');
+      await unfold(page, 'cv.md');
+      await expect(contentOf(page, 'cv.md')).toHaveValue('# CV converti\n\n## Formation\n\n- Master 2 droit public\n');
+    });
   });
 
   test('says how to fill an empty Profile', async ({ page, asCandidate, openPage }) => {

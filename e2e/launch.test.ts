@@ -5,12 +5,11 @@ import { goToRecap, openGeneration } from './generation.ts';
 
 // Each test launches modules on a Posting of its own, which test/seed-front.ts prepares: the data
 // folder is shared by the whole run. The e2e worker runs the queued jobs with the fake Claude, whose
-// sessions last a second (test/e2e-actions.server.ts).
+// sessions are short (test/e2e-actions.server.ts).
 const FAILED_RESEARCH_REFERENCE = '2026-2412591';
 const NOTIFICATION_FAILED_REFERENCE = '2026-2445609';
 
-// The worker takes the job, then its session lasts a second, and the Posting page reads the state again
-// every two seconds
+// The worker takes the job, its session runs, and the Posting page reads the state again
 const READY_TIMEOUT_MS = 15_000;
 
 const RECEIVED_NOTIFICATION_LIST_SCHEMA = z.array(

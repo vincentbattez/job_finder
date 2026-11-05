@@ -192,7 +192,8 @@ test.describe('The Posting Sheet', () => {
     await expect(sheet.locator('[data-step]')).toHaveText('Refusée · archivée');
     await expect(sheet.getByRole('button', { name: 'Désarchiver' })).toBeVisible();
 
-    await sheet.getByRole('link', { name: 'Ouvrir la page complète' }).click();
+    // By the keyboard: the toasts above cover this link until they leave, all a click would wait for
+    await sheet.getByRole('link', { name: 'Ouvrir la page complète' }).press('Enter');
     await expect(page).toHaveURL(`/postings/${dijon}`);
     await page.getByRole('tab', { name: 'Notes' }).click();
     await expect(page.getByRole('textbox', { name: 'Notes en Markdown' })).toHaveValue(notes);

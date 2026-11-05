@@ -1,16 +1,15 @@
 import { expect, test } from '@playwright/test';
 
 import { generate } from './generation.ts';
-import { findInterviews, prepareInterview } from './interview.ts';
+import { findInterviews, forgetResearch, prepareInterview } from './interview.ts';
 import { findOverflowing } from './overflow.ts';
 
 // A Posting that test/seed-front.ts leaves without any Artifact and that no other test touches: the
 // test marks it Applied, gives it an Interview and produces its Research first. The e2e worker runs
-// the jobs with the fake Claude, whose sessions last a second (test/e2e-actions.server.ts).
+// the jobs with the fake Claude (test/e2e-actions.server.ts).
 const REFERENCE = '2026-2416437';
 
-// The worker takes the job, then its session lasts a second, and the Posting page reads the state again
-// every two seconds
+// The worker takes the job, its session runs, and the Posting page reads the state again
 const READY_TIMEOUT_MS = 15_000;
 
 // The Interview Brief the fake Claude writes, its « [à compléter : …] » filled in by the Candidate
@@ -24,6 +23,7 @@ Titulaire d’un master 2 de droit privé, je souhaite rejoindre votre juridicti
 test('launches the Interview Brief of an Interview once the Posting has a Chosen Research, then corrects it', async ({
   page,
 }) => {
+  forgetResearch(REFERENCE);
   await prepareInterview(page, REFERENCE);
   const research = page.getByRole('region', { name: 'Recherche' });
   // The first tab of the selected Interview

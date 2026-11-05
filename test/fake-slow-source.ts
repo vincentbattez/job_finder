@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { setTimeout } from 'node:timers/promises';
 
 import { z } from 'zod/v4';
@@ -43,17 +44,32 @@ const FAIL_AFTER_PARAMETER = parameter(z.string().optional(), {
   label: textKeyOf('fakeSlowSource', 'failAfterLabel'),
 });
 
-// How long each search and each Job Description read take: the front's Source waits long enough for
-// e2e/detection.test.ts to see each step of the progress, the seed of test/seed-front.ts not at all
+// While the hold file exists, a Detection of the front stays on its first reads: how
+// e2e/detection.test.ts looks at one in progress, without racing it
+const HELD_AFTER_READ_COUNT = 3;
+const HOLD_POLL_MS = 50;
+// A test that dies holding it must not stop the next ones for long
+const HOLD_LIMIT_MS = 15_000;
+
+// How long each search and each Job Description read take, the seed of test/seed-front.ts not at all,
+// and the file that holds the Detection, for the front's Source
 interface ISlowSourceDelays {
   searchMs: number;
   readMs: number;
+  holdFilePath?: string | undefined;
+}
+
+async function waitWhileExists(filePath: string): Promise<void> {
+  const limit = Date.now() + HOLD_LIMIT_MS;
+  while (existsSync(filePath) && Date.now() < limit) {
+    await setTimeout(HOLD_POLL_MS);
+  }
 }
 
 // Stands in for a Source, an external boundary, in the e2e tests: a slow module of the family, without
 // network, declared as a real one (ADR-0010). Each search lists Postings never seen before, or always
 // the same ones given referencePrefix, and one near-miss Posting; given failAfter, reading fails once that many Job Descriptions are read.
-export function defineSlowSource({ searchMs, readMs }: ISlowSourceDelays): SourceFactory {
+export function defineSlowSource({ searchMs, readMs, holdFilePath }: ISlowSourceDelays): SourceFactory {
   return defineSource({
     id: 'slow',
     name: 'Slow Source',
@@ -96,6 +112,9 @@ export function defineSlowSource({ searchMs, readMs }: ISlowSourceDelays): Sourc
 
     async readJobDescription(reference, { failAfter }) {
       await setTimeout(readMs);
+      if (holdFilePath !== undefined && Number(reference.slice(-3)) > HELD_AFTER_READ_COUNT) {
+        await waitWhileExists(holdFilePath);
+      }
       if (failAfter !== undefined && Number(reference.slice(-3)) > Number(failAfter)) {
         throw new Error(`The slow Source failed on ${reference}.`);
       }
