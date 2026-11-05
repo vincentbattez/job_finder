@@ -1,4 +1,8 @@
+import { globSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+
 import { expect, test } from './candidate.ts';
+import { findDataDirectory, openDatabase } from './harness.ts';
 
 // These journeys change data, each on its own Posting that test/seed-front.ts prepared: Versailles has a
 // Chosen Research v1 and a Draft v2, Bastia a Validated Research and a Draft Letter
@@ -11,10 +15,29 @@ const FILE_LETTER_REFERENCE = '2026-2407111';
 
 const CORRECTED_LETTER = 'Madame la Première présidente,\n\nTitulaire d’un master 2 de droit privé obtenu en 2025.\n';
 
+// An Artifact of a Posting as test/seed-front.ts left it, whatever a previous run did to it: its Versions
+// Drafts but the Chosen one and those before it, each with the text of its Original
+function resetArtifact(reference: string, artifact: 'research' | 'letter', chosenNumber: number | null): void {
+  const database = openDatabase();
+  database
+    .prepare(
+      `UPDATE "Version"
+       SET "validation" = CASE WHEN "number" <= ? THEN 'validated' ELSE 'draft' END, "isChosen" = "number" = ?
+       WHERE "artifact" = ? AND "postingId" = (SELECT "id" FROM "Posting" WHERE "reference" = ?)`,
+    )
+    .run(chosenNumber ?? 0, chosenNumber ?? 0, artifact, reference);
+  database.close();
+  const versionPattern = path.join(findDataDirectory(), 'candidates', '*', 'postings', `${reference}*`, artifact, 'v*');
+  for (const version of globSync(versionPattern)) {
+    writeFileSync(path.join(version, `${artifact}.md`), readFileSync(path.join(version, 'original.md')));
+  }
+}
+
 test('validates a Draft, which becomes the Chosen Version, the previous one staying Validated', async ({
   page,
   openPage,
 }) => {
+  resetArtifact(VERSAILLES_REFERENCE, 'research', 1);
   await openPage(`/postings/${VERSAILLES_REFERENCE}?tab=research`);
   const research = page.getByRole('region', { name: 'Recherche' });
   const versionSelect = research.getByRole('combobox', { name: 'Version' });
@@ -45,6 +68,7 @@ test('corrects a Draft Letter, validates it in marking the Posting Applied, find
   page,
   openPage,
 }) => {
+  resetArtifact(BASTIA_REFERENCE, 'letter', null);
   // Back To Apply, whatever a run stopped halfway left it at
   const response = await page.request.post(`/postings/${BASTIA_REFERENCE}/status`, { form: { status: 'to_apply' } });
   expect(response.ok()).toBe(true);
@@ -86,6 +110,7 @@ test('corrects a Draft Letter, validates it in marking the Posting Applied, find
 });
 
 test('corrects a Research in the editor, keeping its component and its Validated state', async ({ page, openPage }) => {
+  resetArtifact(CORRECTED_RESEARCH_REFERENCE, 'research', 1);
   await openPage(`/postings/${CORRECTED_RESEARCH_REFERENCE}?tab=research`);
   const research = page.getByRole('region', { name: 'Recherche' });
 
@@ -106,6 +131,7 @@ test('compares a corrected Letter with its Original, side by side then in tabs o
   page,
   openPage,
 }) => {
+  resetArtifact(COMPARED_LETTER_REFERENCE, 'letter', null);
   await openPage(`/postings/${COMPARED_LETTER_REFERENCE}?tab=letter`);
   const letter = page.getByRole('region', { name: 'Lettre de motivation' });
 
