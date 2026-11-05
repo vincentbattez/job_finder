@@ -125,6 +125,7 @@ const DEFAULT_DELAY_MONTHS = 6;
 const DETECTION_INCLUDE = { watchList: { orderBy: { id: 'asc' } } } as const;
 
 const MIGRATION_TIMEOUT_MS = 2 * 60_000;
+const MIGRATION_ATTEMPT_COUNT = 5;
 
 // The single row of the worker's heartbeat
 const WORKER_HEARTBEAT_ID = 1;
@@ -190,18 +191,34 @@ function hasPendingMigration(databasePath: string): boolean {
   }
 }
 
+// The worker and the web starting together both migrate, and Prisma gives up on the database the other
+// holds: it tries again, and finds the migrations applied or applies the rest (ADR-0004)
+function migrate(url: string): void {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      execFileSync(process.execPath, [PRISMA_CLI_PATH, 'migrate', 'deploy'], {
+        cwd: ROOT_DIRECTORY,
+        env: { ...process.env, DATABASE_URL: url, CHECKPOINT_DISABLE: '1' },
+        stdio: 'pipe',
+        // A migration takes seconds: one that hangs fails the launch rather than holding it
+        timeout: MIGRATION_TIMEOUT_MS,
+      });
+      return;
+    } catch (error) {
+      const isLocked = error instanceof Error && error.message.includes('database is locked');
+      if (!isLocked || attempt === MIGRATION_ATTEMPT_COUNT) {
+        throw error;
+      }
+    }
+  }
+}
+
 // Migrates first, but only when a migration is pending: the Prisma CLI takes 0.3 s to start
 // (ADR-0004). Prisma never leaves this file (ADR-0005).
 export function openDatabase(databasePath: string) {
   const url = `file:${databasePath}`;
   if (hasPendingMigration(databasePath)) {
-    execFileSync(process.execPath, [PRISMA_CLI_PATH, 'migrate', 'deploy'], {
-      cwd: ROOT_DIRECTORY,
-      env: { ...process.env, DATABASE_URL: url, CHECKPOINT_DISABLE: '1' },
-      stdio: 'pipe',
-      // A migration takes seconds: one that hangs fails the launch rather than holding it
-      timeout: MIGRATION_TIMEOUT_MS,
-    });
+    migrate(url);
   }
   // Read at launch once the Default Deadline Period exists, then changed by the process that saves them (ADR-0011)
   let defaultDelayMonths = DEFAULT_DELAY_MONTHS;

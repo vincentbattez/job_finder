@@ -13,5 +13,6 @@ This choice replaces the PRD line (#1) "`node:sqlite`: no ORM, no native depende
 - Two native dependencies come in: `better-sqlite3`, through the Prisma adapter, and Prisma's migration engine. `package.json#allowScripts` allows their install scripts.
 - `npm install` generates the client in `src/workspace/generated/`, outside git. Prisma types do not leave `src/workspace/acl/`, which converts each row to a domain type (ADR-0005).
 - `prisma migrate deploy` costs about 0.3 s, the time its CLI takes to start. A `jf` launch only pays it when a migration is pending: it first reads the `_prisma_migrations` table, where Prisma records the ones it applied. Most tests start from an already migrated database.
+- The worker and the web starting together can both migrate. Prisma gives up on a database the other holds, so a launch tries again; the second to keep an Original leaves the first's.
 - SQLite no longer checks enum values (a Posting's Status, the state of a Version or a job): Prisma checks them.
 - Prisma commands and `db:` tasks only touch `dev-data/`. A generated migration is not edited by hand, and CI fails if the schema changed without a migration.

@@ -1,3 +1,5 @@
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -12,6 +14,7 @@ import { openContext } from '#/actions/context.ts';
 import { i18nOf } from '#/actions/i18n.ts';
 import { createActions, type Actions } from '#/actions/index.ts';
 import { ArtifactText } from '#/web/components/mdx/artifact-text.tsx';
+import { copyAsReadOnly } from '#/workspace/acl/files.ts';
 
 import { createFakeNotificationChannel, LEA_TARGET } from './fake-notification-channel.ts';
 import { writeOlderDatabase } from './older-database.ts';
@@ -29,6 +32,8 @@ const BEFORE_NEW_STATUS_MIGRATION = '20261102184315_version_input';
 const BEFORE_ZONE_REMOVAL_MIGRATION = '20261102194517_posting_status_new';
 // The last migration before a Version was a Draft or Validated (ADR-0019)
 const BEFORE_VERSION_VALIDATION_MIGRATION = '20261102184315_version_input';
+
+const LOCK_HELD_MS = 6000;
 
 const FACTS = '# Faits\n\n## Mobilité\n\n- Lille et alentours\n';
 const CV = '# CV de Léa\n';
@@ -873,4 +878,49 @@ describe('the Versions of an older data folder', () => {
     expect(snapshotOf(dataDirectory)).toEqual(entryList);
     expect(selectAll(dataDirectory, 'SELECT * FROM Version ORDER BY id')).toEqual(versionList);
   });
+
+  // The worker and the web open the same data at their first launch: between one's check that an Original is
+  // missing and its copy, the other may have kept it. No action can stop in that gap, hence the copy itself.
+  it('leave the Original another launch has just kept, read-only', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'jf-original-'));
+    const textPath = path.join(directory, 'research.md');
+    const originalPath = path.join(directory, 'original.md');
+    writeFileSync(textPath, RESEARCH);
+    copyAsReadOnly(textPath, originalPath);
+    writeFileSync(textPath, '# Corrected\n');
+
+    copyAsReadOnly(textPath, originalPath);
+
+    expect(readFileSync(originalPath, 'utf8')).toBe(RESEARCH);
+    expect(statSync(originalPath).mode & 0o777).toBe(0o444);
+  });
+});
+
+describe('two launches on a data folder an older jf left', () => {
+  // The worker and the web open the same data at their first launch. Prisma gives up on a database locked
+  // for 5 s: here a process holds the lock longer than that, as a launch migrating at the same time can.
+  it('migrate once the other has let go of the database, rather than crash', async () => {
+    const dataDirectory = mkdtempSync(path.join(tmpdir(), 'jf-locked-'));
+    const databasePath = writeOlderDatabase(dataDirectory, BEFORE_ZONE_REMOVAL_MIGRATION);
+    const holder = spawn(
+      process.execPath,
+      [
+        '--input-type=module',
+        '--eval',
+        `import { DatabaseSync } from 'node:sqlite';
+         const database = new DatabaseSync(${JSON.stringify(databasePath)});
+         database.exec('BEGIN EXCLUSIVE');
+         console.log('held');
+         setTimeout(() => database.exec('COMMIT'), ${String(LOCK_HELD_MS)});`,
+      ],
+      { stdio: ['ignore', 'pipe', 'inherit'] },
+    );
+    await once(holder.stdout, 'data');
+
+    await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'PRAGMA table_info(Posting)')).not.toContainEqual(
+      expect.objectContaining({ name: 'isInZone' }),
+    );
+  }, 20_000);
 });

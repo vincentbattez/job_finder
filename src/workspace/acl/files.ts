@@ -1,5 +1,6 @@
 import {
   chmodSync,
+  constants,
   copyFileSync,
   existsSync,
   mkdirSync,
@@ -89,9 +90,19 @@ export function writeTextFile(filePath: string, text: string): void {
   writeFileSync(filePath, text);
 }
 
-// A copy no one may write, not even the session of jf edit
+const EXISTING_FILE_ERROR_SCHEMA = z.object({ code: z.literal('EEXIST') });
+
+// A copy no one may write, not even the session of jf edit. The first copy stays: the worker and the web
+// starting together may both keep the same Original (ADR-0004), and the second has nothing left to do.
 export function copyAsReadOnly(fromPath: string, toPath: string): void {
-  copyFileSync(fromPath, toPath);
+  try {
+    copyFileSync(fromPath, toPath, constants.COPYFILE_EXCL);
+  } catch (error) {
+    if (EXISTING_FILE_ERROR_SCHEMA.safeParse(error).success) {
+      return;
+    }
+    throw error;
+  }
   chmodSync(toPath, 0o444);
 }
 
