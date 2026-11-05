@@ -52,7 +52,7 @@ function restartFirstLaunch(watchId: string) {
   database.close();
 }
 
-test('starts from the header, then tells a Detection of no new Posting, its Near Misses linked, until closed', async ({
+test('starts from the header, then tells a Detection of no new Posting, its Near Misses linked', async ({
   page,
   asCandidate,
   openPage,
@@ -79,9 +79,21 @@ test('starts from the header, then tells a Detection of no new Posting, its Near
   await expect(nearMisses.getByRole('heading', { level: 3 })).toHaveText(['Greffier placé']);
   await expect(nearMisses).toContainText('Greffier placé adjoint');
   await expect(nearMisses).toContainText('lou-near');
+});
 
-  await openPage('/');
+test('keeps the verdict of a Detection until closed', async ({ page, asCandidate, openPage }) => {
+  await asCandidate('lou');
+  await openNew({ page, openPage });
+  await page.getByRole('button', { name: START_NAME }).click();
+  // Over, rather than the verdict of the previous test still there
+  await expect(page.getByRole('region', { name: 'Notifications alt+T' })).toContainText('Détection lancée');
+  await expect(page.getByRole('button', { name: START_NAME })).toBeEnabled({ timeout: VERDICT_TIMEOUT_MS });
+  await page.reload();
+  const verdict = page.getByRole('region', { name: 'Aucune nouvelle Offre' });
+  await expect(verdict).toBeVisible();
+
   await verdict.getByRole('button', { name: 'Fermer la Détection' }).click();
+
   await expect(verdict).toBeHidden();
   await page.reload();
   await expect(page.getByRole('button', { name: START_NAME })).toBeEnabled();
@@ -171,7 +183,8 @@ test('refuses a Detection while one runs, a page left open telling when that one
   asCandidate,
   openPage,
 }) => {
-  await asCandidate('lou');
+  // Jules', whose Job Descriptions are all new: the hold stops on reading them, which Lou's never needs
+  await asCandidate('jules');
   await openNew({ page, openPage });
   holdDetection();
   // Started elsewhere: this idle page does not poll, so its button still offers to start one

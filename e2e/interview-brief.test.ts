@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { generate } from './generation.ts';
-import { findInterviews, forgetResearch, prepareInterview } from './interview.ts';
+import { findInterviews, forgetResearch, prepareInterview, runVersion } from './interview.ts';
 import { findOverflowing } from './overflow.ts';
 
 // A Posting that test/seed-front.ts leaves without any Artifact and that no other test touches: the
@@ -20,9 +20,10 @@ const CORRECTED_BRIEF = `# Fiche d’entretien factice
 Titulaire d’un master 2 de droit privé, je souhaite rejoindre votre juridiction.
 `;
 
-test('launches the Interview Brief of an Interview once the Posting has a Chosen Research, then corrects it', async ({
-  page,
-}) => {
+// Both tests go through the one Posting of this file: one after the other
+test.describe.configure({ mode: 'serial' });
+
+test('refuses the Interview Brief of an Interview until the Posting has a Chosen Research', async ({ page }) => {
   forgetResearch(REFERENCE);
   await prepareInterview(page, REFERENCE);
   const research = page.getByRole('region', { name: 'Recherche' });
@@ -38,6 +39,19 @@ test('launches the Interview Brief of an Interview once the Posting has a Chosen
   await research.getByRole('button', { name: 'Valider la Version 1' }).click();
   await expect(page.getByRole('tab', { name: 'Recherche (Validée)' })).toBeVisible();
   await page.getByRole('tab', { name: /^Entretiens/ }).click();
+  await expect(brief).toBeVisible();
+  await expect(brief).not.toContainText("n'a pas de Recherche validée");
+});
+
+test('launches the Interview Brief of an Interview, then corrects it', async ({ page }) => {
+  forgetResearch(REFERENCE);
+  await prepareInterview(page, REFERENCE);
+  await runVersion(page, { module: 'research', reference: REFERENCE, number: 1 });
+  const validated = await page.request.post(`/postings/${REFERENCE}/research/validate`, { form: { number: '1' } });
+  expect(validated.ok()).toBe(true);
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
+  const brief = findInterviews(page).getByRole('region', { name: 'Fiche d’entretien' });
 
   await generate(page, brief);
 
@@ -48,7 +62,8 @@ test('launches the Interview Brief of an Interview once the Posting has a Chosen
   await brief.getByRole('button', { name: 'Valider la Version 1' }).click();
   await expect(brief.getByText('Validée · retenue')).toBeVisible();
   await expect(findInterviews(page).getByRole('tab', { name: 'Fiche d’entretien (Validée)' })).toBeVisible();
-  await brief.getByRole('button', { name: 'Modifier' }).click();
+  // By the keyboard: the toast of the validation covers this button until it leaves
+  await brief.getByRole('button', { name: 'Modifier' }).press('Enter');
   const textbox = brief.getByRole('textbox', { name: 'Texte de la Version 1' });
   await expect(textbox).toBeEnabled();
   await textbox.fill(CORRECTED_BRIEF);

@@ -31,7 +31,8 @@ test('launches the Portrait of an Interview without a Research, then corrects it
   await portrait.getByRole('button', { name: 'Valider la Version 1' }).click();
   await expect(portrait.getByText('Validée · retenue')).toBeVisible();
   await expect(interviews.getByRole('tab', { name: 'Portrait (Validée)' })).toBeVisible();
-  await portrait.getByRole('button', { name: 'Modifier' }).click();
+  // By the keyboard: the toast of the validation covers this button until it leaves
+  await portrait.getByRole('button', { name: 'Modifier' }).press('Enter');
   const textbox = portrait.getByRole('textbox', { name: 'Texte de la Version 1' });
   await expect(textbox).toBeEnabled();
   await textbox.fill(CORRECTED_PORTRAIT);

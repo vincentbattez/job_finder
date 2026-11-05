@@ -5,14 +5,11 @@ import type { Page } from '@playwright/test';
 import { z } from 'zod/v4';
 
 import { expect, test } from './candidate.ts';
-import { prepareApplication } from './interview.ts';
+import { prepareApplication, runVersion } from './interview.ts';
 import { findOverflowing } from './overflow.ts';
 
 // How long a raw read waits for the server's own writes to release the database
 const BUSY_TIMEOUT_MS = 5000;
-
-// The e2e worker takes the job, then its fake session runs (test/e2e-actions.server.ts)
-const READY_TIMEOUT_MS = 15_000;
 
 // The Interview Brief the fake Claude writes, its last section renamed by the Candidate
 // (test/e2e-actions.server.ts)
@@ -37,27 +34,6 @@ function findReference(): string {
   return z.object({ reference: z.string() }).parse(row).reference;
 }
 
-function countReadyBriefs(reference: string): number {
-  const database = openDatabase();
-  const row = database
-    .prepare(
-      `SELECT count(*) AS "count" FROM "Version" JOIN "Posting" ON "Posting"."id" = "Version"."postingId"
-       WHERE "Posting"."reference" = ? AND "Version"."artifact" = 'interview_brief' AND "Version"."state" = 'ready'`,
-    )
-    .get(reference);
-  database.close();
-  return z.object({ count: z.number() }).parse(row).count;
-}
-
-// Another Version of the Interview Brief of Interview 1, run by the worker, a Draft until validated
-async function runBrief(page: Page, reference: string, number: number): Promise<void> {
-  const response = await page.request.post('/run', {
-    form: { module: 'interview_brief', reference, interview: '1' },
-  });
-  expect(response.ok()).toBe(true);
-  await expect.poll(() => countReadyBriefs(reference), { timeout: READY_TIMEOUT_MS, intervals: [100] }).toBe(number);
-}
-
 async function post(page: Page, url: string, form: Record<string, string>): Promise<void> {
   const response = await page.request.post(url, { form });
   expect(response.ok()).toBe(true);
@@ -73,7 +49,7 @@ async function prepareRevision(page: Page, reference: string): Promise<string> {
     place: 'Tribunal judiciaire, Colmar',
     interviewers: 'Mme Klein, directrice de greffe',
   });
-  await runBrief(page, reference, 1);
+  await runVersion(page, { module: 'interview_brief', reference, interview: '1', number: 1 });
   await post(page, `/postings/${reference}/interview_brief/validate`, { number: '1', interview: '1' });
   return `/postings/${reference}/interviews/1/revision`;
 }
@@ -111,7 +87,7 @@ test('carries notes and Mastered marks over to a newer Chosen Interview Brief', 
   await post(page, revisionPath, { intent: 'mastered', title: 'À réviser', isMastered: 'true' });
 
   // A newer Draft waits: the Revision keeps the Chosen Version until it is validated
-  await runBrief(page, reference, 2);
+  await runVersion(page, { module: 'interview_brief', reference, interview: '1', number: 2 });
   await post(page, `/postings/${reference}/interview_brief/document`, {
     number: '2',
     interview: '1',

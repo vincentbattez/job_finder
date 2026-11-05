@@ -7,6 +7,8 @@ import { z } from 'zod/v4';
 
 // How long a raw write waits for the server's own writes to release the database
 const BUSY_TIMEOUT_MS = 5000;
+// The worker takes the job, then its fake session runs (test/e2e-actions.server.ts)
+const READY_TIMEOUT_MS = 15_000;
 
 export function findInterviews(page: Page): Locator {
   return page.getByRole('region', { name: 'Entretiens' });
@@ -80,6 +82,30 @@ export function forgetResearch(reference: string): void {
     }
     rmSync(path.join(postingsDirectory, folder, 'research'), { recursive: true, force: true });
   }
+}
+
+function countReadyVersions(reference: string, artifact: string): number {
+  const database = openDatabase();
+  const row = database
+    .prepare(
+      `SELECT count(*) AS "count" FROM "Version" JOIN "Posting" ON "Posting"."id" = "Version"."postingId"
+       WHERE "Posting"."reference" = ? AND "Version"."artifact" = ? AND "Version"."state" = 'ready'`,
+    )
+    .get(reference, artifact);
+  database.close();
+  return z.object({ count: z.number() }).parse(row).count;
+}
+
+// A Version run by the worker, a Draft until validated, once the Posting has that many
+export async function runVersion(
+  page: Page,
+  { number, ...form }: Readonly<{ module: string; reference: string; interview?: string; number: number }>,
+): Promise<void> {
+  const response = await page.request.post('/run', { form });
+  expect(response.ok()).toBe(true);
+  await expect
+    .poll(() => countReadyVersions(form.reference, form.module), { timeout: READY_TIMEOUT_MS, intervals: [100] })
+    .toBe(number);
 }
 
 // The Posting page open on a single Interview, freshly added: what a Portrait and an Interview Brief
