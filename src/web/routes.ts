@@ -18,6 +18,7 @@ export default [
   route('postings/:reference/interviews/:number/revision', 'routes/revision.tsx'),
   route('postings/:reference/:artifact/document', 'routes/document.ts'),
   route('postings/:reference/:artifact/validate', 'routes/validate.ts'),
+  route('postings/:reference/:artifact/bring', 'routes/bring.ts'),
   route('postings/:reference/:artifact/generation', 'routes/generation.ts'),
   route('candidate', 'routes/candidate.ts'),
   route('locale', 'routes/locale.ts'),

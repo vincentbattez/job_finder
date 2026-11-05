@@ -1,5 +1,14 @@
 import { cn } from 'cn';
-import { BookOpenIcon, CheckIcon, FocusIcon, LoaderIcon, LockIcon, PencilLineIcon, SparklesIcon } from 'lucide-react';
+import {
+  BookOpenIcon,
+  CheckIcon,
+  Columns2Icon,
+  FocusIcon,
+  LoaderIcon,
+  LockIcon,
+  PencilLineIcon,
+  SparklesIcon,
+} from 'lucide-react';
 import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,9 +20,10 @@ import { useSidebar } from '#/web/components/ui/sidebar.tsx';
 
 import { ArtifactReader, LetterPage } from './artifact-reader.tsx';
 import type { IArtifactVersions, IVersionDetail } from './artifact.ts';
+import { CompareView } from './compare-view.tsx';
 import type { IRecipients } from './recipients.tsx';
 
-export type ArtifactMode = 'read' | 'edit';
+export type ArtifactMode = 'read' | 'edit' | 'compare';
 
 type ShownVersion = IVersionDetail['version'];
 
@@ -97,16 +107,29 @@ function VersionSelect({
   );
 }
 
-// The modes of a Version: reading it, or correcting it in place when it is not frozen (ADR-0019)
+// The modes of a Version: reading it, correcting it in place when it is not frozen, or comparing it with the
+// AI's Original, which a Version brought has not (ADR-0019)
 function ModeSwitch({
   mode,
   isEditable,
+  isComparable,
   onModeChange,
-}: Readonly<{ mode: ArtifactMode; isEditable: boolean; onModeChange: (mode: ArtifactMode) => void }>) {
+}: Readonly<{
+  mode: ArtifactMode;
+  isEditable: boolean;
+  isComparable: boolean;
+  onModeChange: (mode: ArtifactMode) => void;
+}>) {
   const { t } = useTranslation('posting');
   const modeList = [
     { value: 'read', label: t('artifactView.modeRead'), icon: <BookOpenIcon aria-hidden />, isDisabled: false },
     { value: 'edit', label: t('artifactView.modeEdit'), icon: <PencilLineIcon aria-hidden />, isDisabled: !isEditable },
+    {
+      value: 'compare',
+      label: t('artifactView.modeCompare'),
+      icon: <Columns2Icon aria-hidden />,
+      isDisabled: !isComparable,
+    },
   ] as const;
   return (
     <div role="group" aria-label={t('artifactView.modes')} className="flex rounded-md border p-0.5">
@@ -118,6 +141,7 @@ function ModeSwitch({
           variant={mode === value ? 'secondary' : 'ghost'}
           aria-pressed={mode === value}
           disabled={isDisabled}
+          title={value === 'compare' && isDisabled ? t('artifactView.noOriginal') : undefined}
           className="h-7"
           onClick={() => {
             onModeChange(value);
@@ -215,8 +239,9 @@ function DraftBanner({
 function EmptyArtifact({
   artifact,
   launch,
+  bring,
   failure,
-}: Readonly<{ artifact: Artifact; launch: ReactNode; failure: ReactNode }>) {
+}: Readonly<{ artifact: Artifact; launch: ReactNode; bring: ReactNode; failure: ReactNode }>) {
   const { t } = useTranslation('posting');
   return (
     <div className="flex flex-col items-center rounded-2xl border border-dashed px-6 py-12 text-center">
@@ -231,6 +256,7 @@ function EmptyArtifact({
       </p>
       <div className="mt-5 flex w-full max-w-xl flex-col items-center gap-3 [&>div]:justify-center">
         {launch}
+        {bring}
         <div className="w-full text-left">{failure}</div>
       </div>
     </div>
@@ -263,9 +289,36 @@ function VersionBody({
   return <ArtifactReader text={detail.text} format={format} />;
 }
 
+// The Version in its mode, falling back to reading where the mode does not apply to it
+function ModeBody({
+  mode,
+  artifact,
+  format,
+  detail,
+  recipients,
+  editor,
+}: Readonly<{
+  mode: ArtifactMode;
+  artifact: Artifact;
+  format: IArtifactVersions['format'];
+  detail: IVersionDetail;
+  recipients: IRecipients | null;
+  editor: (detail: IVersionDetail) => ReactNode;
+}>) {
+  if (mode === 'edit' && detail.isCorrectable && detail.text !== null) {
+    return <>{editor(detail)}</>;
+  }
+  if (mode === 'compare' && detail.original !== null && detail.text !== null) {
+    return <CompareView original={detail.original} text={detail.text} format={format} />;
+  }
+  return <VersionBody artifact={artifact} format={format} detail={detail} recipients={recipients} />;
+}
+
 interface IArtifactViewSlots {
   // Generate or Regenerate, which opens the generation panel, with its refusal beside it
   launch: ReactNode;
+  // Bringing my own Version, absent for a frozen Letter
+  bring: ReactNode;
   // Why its last run failed or does not move
   failure: ReactNode;
   // Validating a Draft, or choosing an older Validated Version again
@@ -287,6 +340,7 @@ export function ArtifactView({
   onSelect,
   onModeChange,
   launch,
+  bring,
   failure,
   validateButton,
   editor,
@@ -315,7 +369,7 @@ export function ArtifactView({
       {detail === undefined ? (
         <>
           {isRunning && <RunningCard state={state} />}
-          <EmptyArtifact artifact={artifact} launch={launch} failure={failure} />
+          <EmptyArtifact artifact={artifact} launch={launch} bring={bring} failure={failure} />
         </>
       ) : (
         <>
@@ -325,10 +379,12 @@ export function ArtifactView({
               <VersionStateBadge version={detail.version} />
               <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
                 {launch}
+                {bring}
                 <FocusModeButton />
                 <ModeSwitch
                   mode={mode}
                   isEditable={detail.isCorrectable && detail.text !== null}
+                  isComparable={detail.original !== null && detail.text !== null}
                   onModeChange={onModeChange}
                 />
               </div>
@@ -374,11 +430,14 @@ export function ArtifactView({
             </div>
           )}
           <div className="pt-2">
-            {mode === 'edit' && detail.isCorrectable && detail.text !== null ? (
-              editor(detail)
-            ) : (
-              <VersionBody artifact={artifact} format={format} detail={detail} recipients={recipients} />
-            )}
+            <ModeBody
+              mode={mode}
+              artifact={artifact}
+              format={format}
+              detail={detail}
+              recipients={recipients}
+              editor={editor}
+            />
           </div>
         </>
       )}

@@ -88,6 +88,8 @@ export const ERROR_FR: typeof ERROR_EN = {
     "L'Offre {{reference}} n'a pas de Version retenue de {{artifact}} à modifier : « {{command}} » en produit une.",
   originalNotEditable:
     "L'Original ne se modifie jamais : il garde ce que l'IA a écrit. Corrigez le texte de la Version, sur l'Offre {{reference}}.",
+  emptyBroughtVersion:
+    "La Version apportée pour l'Offre {{reference}} n'a pas de texte. Coller ou déposer son texte, puis l'ajouter à nouveau.",
   unknownVersion:
     "Version inconnue : {{artifact}} v{{number}} de l'Offre {{reference}}. « {{command}} » liste ses Versions.",
   versionFailed:

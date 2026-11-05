@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 
 import { codedError } from '#/domain/coded-error.ts';
@@ -25,10 +26,12 @@ import {
   deleteFile,
   emptyDirectory,
   moveDirectory,
+  moveFile,
   readDatedMarkdownFiles,
   readMarkdownFiles,
   readTextFile,
   readUploads,
+  writeBinaryFile,
   writeTextFile,
   writeUpload,
 } from './acl/files.ts';
@@ -37,6 +40,10 @@ import { migrateLayout } from './layout.ts';
 const UPLOADS_FOLDER = 'uploads';
 // Among the Uploads, but not one: neither a PDF nor a Markdown file of the Profile
 const CONVERSION_FOLDER = '.conversion';
+// The PDFs a Candidate brought for a Posting, until the worker converts each into a Version's folder
+const BROUGHT_FOLDER = '.brought';
+// A brought PDF's name in the folder of the Version it became
+const BROUGHT_PDF_FILE_NAME = 'brought.pdf';
 
 function slugify(text: string): string {
   return wordListOf(text).join('-');
@@ -183,6 +190,23 @@ export async function openWorkspace(dataDirectory: string) {
     keepOriginal(posting: Posting, version: Version, fileName: string): void {
       const directory = versionDirectoryOf(posting, version);
       copyAsReadOnly(path.join(directory, fileName), path.join(directory, ORIGINAL_FILE_NAME));
+    },
+
+    // A brought PDF waits under a name of its own, which its conversion job keeps
+    saveBroughtPdf(posting: Posting, content: Uint8Array): string {
+      const fileName = `${randomUUID()}.pdf`;
+      writeBinaryFile(path.join(postingDirectoryOf(posting), BROUGHT_FOLDER, fileName), content);
+      return fileName;
+    },
+
+    // Its conversion starts: the PDF joins the folder of its Version, where the session reads it
+    moveBroughtPdf(posting: Posting, fileName: string, version: Version): string {
+      const directory = versionDirectoryOf(posting, version);
+      moveFile(
+        path.join(postingDirectoryOf(posting), BROUGHT_FOLDER, fileName),
+        path.join(directory, BROUGHT_PDF_FILE_NAME),
+      );
+      return BROUGHT_PDF_FILE_NAME;
     },
 
     // A correction by the Candidate changes the Version in place, without creating another one

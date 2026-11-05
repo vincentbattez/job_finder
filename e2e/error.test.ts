@@ -61,5 +61,5 @@ test('keeps the text typed when saving a correction fails', async ({ page, openP
   await expect(
     page.getByText("« renamed.md » n'est pas un fichier modifiable d'une Version de research de l'Offre 2026-2445600."),
   ).toBeVisible();
-  await expect(textbox).toHaveValue('# Recherche corrigée\n');
+  await expect(textbox).toContainText('Recherche corrigée');
 });

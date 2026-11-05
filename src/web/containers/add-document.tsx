@@ -42,11 +42,16 @@ export function AddDocumentDialog({
   onAdded,
 }: Readonly<IAddDocumentOption>) {
   const { t } = useTranslation('posting');
-  const fetcher = useFetcher<IRefusal & { added?: { key: string } }>();
+  const fetcher = useFetcher<IRefusal & { added?: { key: string }; isQueued?: boolean }>();
   const sent = useRef<{ isSent: boolean; title: string; scope: string }>({ isSent: false, title: '', scope: '' });
-  useFeedback(fetcher, () =>
-    t(sent.current.scope === 'profile' ? 'documents.annexAdded' : 'documents.added', { title: sent.current.title }),
-  );
+  useFeedback(fetcher, () => {
+    if (fetcher.data?.isQueued === true) {
+      return t('documents.pdfQueued', { title: sent.current.title });
+    }
+    return t(sent.current.scope === 'profile' ? 'documents.annexAdded' : 'documents.added', {
+      title: sent.current.title,
+    });
+  });
   const onAddedReference = useRef(onAdded);
   onAddedReference.current = onAdded;
   const onOpenChangeReference = useRef(onOpenChange);
@@ -56,10 +61,13 @@ export function AddDocumentDialog({
       return;
     }
     sent.current.isSent = false;
-    if (fetcher.data?.added === undefined) {
+    const { added, isQueued } = fetcher.data ?? {};
+    if (added === undefined && isQueued !== true) {
       return;
     }
-    onAddedReference.current?.(fetcher.data.added.key);
+    if (added !== undefined) {
+      onAddedReference.current?.(added.key);
+    }
     onOpenChangeReference.current(false);
   }, [fetcher.state, fetcher.data]);
   return (
@@ -86,6 +94,7 @@ export function AddDocumentDialog({
               sent.current = { isSent: true, title: textOf('title'), scope: textOf('scope') };
               void fetcher.submit(formData, {
                 method: 'post',
+                encType: 'multipart/form-data',
                 action: `/postings/${encodeURIComponent(reference)}/documents`,
                 preventScrollReset: true,
               });

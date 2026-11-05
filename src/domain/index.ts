@@ -313,6 +313,13 @@ const READ_VERSION_SCHEMA = z.object({
 // An Input a Version's run read, by its key, with the Version it read for an Artifact Input
 const RECORDED_INPUT_SCHEMA = z.object({ key: z.string(), readVersion: READ_VERSION_SCHEMA.nullable() });
 
+// Produced by the AI, which keeps its Original, or brought by the Candidate, with none (ADR-0019)
+const VERSION_ORIGIN_SCHEMA = z.enum(['ai', 'candidate']);
+
+export type VersionOrigin = z.infer<typeof VERSION_ORIGIN_SCHEMA>;
+
+const VERSION_STATE_SCHEMA = z.enum(['running', 'ready', 'failed']);
+
 // Each launch of a module creates a new Version, which keeps the Instructions it was produced with
 // and the Inputs it read. Its number counts the Versions of its Artifact on its Interview, for an
 // Artifact attached to one, else on its Posting.
@@ -325,11 +332,11 @@ export const VERSION_SCHEMA = z
     customArtifact: z.object({ id: z.int(), title: z.string() }).nullable(),
     number: z.int(),
     isChosen: z.boolean(),
-    state: z.enum(['running', 'ready', 'failed']),
+    state: VERSION_STATE_SCHEMA,
     // A Draft until the Candidate validates it, which makes it the Chosen Version (ADR-0019)
     validation: z.enum(['draft', 'validated']),
     // The AI's, which keeps its Original, or the Candidate's own, with none
-    origin: z.enum(['ai', 'candidate']),
+    origin: VERSION_ORIGIN_SCHEMA,
     instructions: z.string(),
     hasCandidateInstructions: z.boolean(),
     // The Inputs its run read, by key, with the Version read for an Artifact Input (ADR-0021)
@@ -340,9 +347,10 @@ export const VERSION_SCHEMA = z
 
 export type Version = z.infer<typeof VERSION_SCHEMA>;
 
-// An AI module is named after the Artifact it produces; the extraction fills the imported Posting
+// An AI module is named after the Artifact it produces; the extraction fills the imported Posting, and a
+// custom job converts the PDF of a Custom Artifact
 // itself, without a Version
-const MODULE_SCHEMA = z.enum([...ARTIFACT_SCHEMA.options, 'extraction']);
+const MODULE_SCHEMA = z.enum([...ARTIFACT_SCHEMA.options, 'extraction', 'custom']);
 
 export type Module = z.infer<typeof MODULE_SCHEMA>;
 
@@ -367,6 +375,8 @@ export const JOB_SCHEMA = z
     sessionId: z.string().nullable(),
     // The keys of the Inputs checked for an Artifact job; null for the default Inputs of its type
     inputKeyList: z.array(z.string()).nullable(),
+    // The PDF the Candidate brought, which an Artifact job converts into their Version; null for a run
+    upload: z.string().nullable(),
     // When the worker claimed it, null while it is queued
     startedAt: z.date().nullable(),
     version: VERSION_SCHEMA.nullable(),
@@ -536,12 +546,14 @@ const EARLIER_APPLICATION_SCHEMA = z.object({
 // What the Posting page shows: the Posting with its raw contacts, its Job Description, every
 // Version of each Artifact with its files, and the recipients its Chosen Letter recommends
 // A document the Candidate added for a Posting, or one of its Interviews, as the Documents section lists it:
-// the key a run's Input names it by, and the text of its single Version
+// the key a run's Input names it by, and the state and the text of its single Version, running while the
+// worker converts a PDF
 export const CUSTOM_ARTIFACT_SCHEMA = z
   .object({
     key: z.string(),
     title: z.string(),
     interviewNumber: z.int().nullable(),
+    state: VERSION_STATE_SCHEMA,
     text: z.string(),
     createdAt: z.date(),
   })

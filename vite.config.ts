@@ -29,6 +29,8 @@ export default defineConfig(({ mode }) => ({
       'mermaid',
       'cmdk',
       'vaul',
+      '@mdxeditor/editor',
+      'react-resizable-panels',
     ],
   },
   // The e2e tests (playwright.config.ts) serve the front with the actions of test/, which fake the

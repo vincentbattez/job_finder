@@ -1,4 +1,5 @@
-import { FilePlus2Icon, FileTextIcon } from 'lucide-react';
+import { cn } from 'cn';
+import { FilePlus2Icon, FileTextIcon, LoaderCircleIcon, TriangleAlertIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -13,8 +14,28 @@ export interface ICustomArtifact {
   key: string;
   title: string;
   interviewNumber: number | null;
+  state: 'running' | 'ready' | 'failed';
   text: string;
   createdAt: Date;
+}
+
+// A PDF the worker has not converted has nothing to read yet: it only tells where it stands
+function UnreadableDocument({ title, state }: Readonly<Pick<ICustomArtifact, 'title' | 'state'>>) {
+  const { t } = useTranslation('posting');
+  const isFailed = state === 'failed';
+  return (
+    <div className="flex items-center gap-2 px-1 py-1.5 text-sm text-muted-foreground">
+      {isFailed ? (
+        <TriangleAlertIcon aria-hidden className="size-4 shrink-0 text-destructive" />
+      ) : (
+        <LoaderCircleIcon aria-hidden className="size-4 shrink-0 animate-spin" />
+      )}
+      <span className="min-w-0 flex-1 truncate">{title}</span>
+      <span className={cn('shrink-0 text-xs', isFailed && 'text-destructive')}>
+        {isFailed ? t('documents.pdfFailed') : t('documents.pdfConverting')}
+      </span>
+    </div>
+  );
 }
 
 // The Documents section of the Posting tab (spec #125): the Custom Artifacts of the Posting and of its
@@ -41,22 +62,26 @@ export function DocumentsSection({
         <p className="text-sm text-muted-foreground">{t('documents.empty')}</p>
       ) : (
         <ul className="-mx-1 space-y-0.5">
-          {customArtifactList.map(({ key, title, interviewNumber }) => (
+          {customArtifactList.map(({ key, title, interviewNumber, state }) => (
             <li key={key}>
-              <button
-                type="button"
-                aria-label={t('documents.open', { title })}
-                onClick={() => {
-                  setOpenKey(key);
-                }}
-                className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-sm outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                <FileTextIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate">{title}</span>
-                {interviewNumber !== null && (
-                  <Badge variant="outline">{t('documents.ofInterview', { number: interviewNumber })}</Badge>
-                )}
-              </button>
+              {state === 'ready' ? (
+                <button
+                  type="button"
+                  aria-label={t('documents.open', { title })}
+                  onClick={() => {
+                    setOpenKey(key);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-sm outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  <FileTextIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate">{title}</span>
+                  {interviewNumber !== null && (
+                    <Badge variant="outline">{t('documents.ofInterview', { number: interviewNumber })}</Badge>
+                  )}
+                </button>
+              ) : (
+                <UnreadableDocument title={title} state={state} />
+              )}
             </li>
           ))}
         </ul>

@@ -48,13 +48,28 @@ export function createJobActions(context: ActionContext) {
   // A notification not sent stays on the job, which the Posting page shows (CODING_STANDARDS
   // “Visible failure”)
   async function notifyFinished(job: QueuedJob, failure: JobFailure | undefined): Promise<QueuedJob> {
-    if (job.module !== 'research') {
+    // A Research the Candidate brought as a PDF is theirs: no one needs telling it is ready
+    if (job.module !== 'research' || job.upload !== null) {
       return job;
     }
     const composeNotification = composeFinishedNotification(job, failure);
     const notificationFailure =
       composeNotification === null ? undefined : await notify(job.posting, composeNotification);
     return notificationFailure === undefined ? job : workspace.failNotification(job, notificationFailure);
+  }
+
+  async function runPostingJob(job: Job): Promise<{ job: Job; failure: JobFailure | undefined }> {
+    const { module, version, upload } = job;
+    if (module === 'extraction') {
+      return { ...(await runExtraction(context, job)), failure: undefined };
+    }
+    if (module !== 'custom') {
+      return artifacts.run({ ...job, module });
+    }
+    if (version === null || upload === null) {
+      throw codedError('unknown_job', { jobId: job.id });
+    }
+    return artifacts.runCustomConversion({ ...job, version, upload });
   }
 
   return {
@@ -121,11 +136,7 @@ export function createJobActions(context: ActionContext) {
             jobList.push(await runConversion(context, job));
             continue;
           }
-          const { module } = job;
-          const { job: finishedJob, failure } =
-            module === 'extraction'
-              ? { ...(await runExtraction(context, job)), failure: undefined }
-              : await artifacts.run({ ...job, module });
+          const { job: finishedJob, failure } = await runPostingJob(job);
           jobList.push(await notifyFinished(finishedJob, failure));
         } catch (error) {
           // An error fails this job only, the one running, and the worker goes on with the queue
