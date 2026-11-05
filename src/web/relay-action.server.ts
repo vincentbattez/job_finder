@@ -19,20 +19,25 @@ async function localeOf(request: Request): Promise<Locale> {
 // Every action of a route runs through here (test/architecture.test.ts): a failure goes back to the
 // form that posted, in its code's message and the Candidate's locale, rather than replacing the page
 // and what was typed in it (CODING_STANDARDS “Visible failure”). By default the refusal is { error };
-// a route whose form needs to know where the failure belongs words it with refuse.
-export function relayAction<TAnswer>(request: Request, run: () => Promise<TAnswer>): Promise<TAnswer | IRefusal>;
+// a route whose form needs to know where the failure belongs words it with refuse. An action with
+// nothing to say still answers an object of its own: two answers of null look the same to a fetcher
+// when React skips the renders in between, and the mutation would go unnoticed (useSettled).
+export function relayAction<TAnswer>(
+  request: Request,
+  run: () => Promise<TAnswer>,
+): Promise<NonNullable<TAnswer> | IRefusal>;
 export function relayAction<TAnswer, TRefusal>(
   request: Request,
   run: () => Promise<TAnswer>,
   refuse: (message: string) => TRefusal,
-): Promise<TAnswer | TRefusal>;
+): Promise<NonNullable<TAnswer> | IRefusal | TRefusal>;
 export async function relayAction(
   request: Request,
   run: () => Promise<unknown>,
   refuse = (error: string): IRefusal => ({ error }),
 ): Promise<unknown> {
   try {
-    return await run();
+    return (await run()) ?? ({ error: null } satisfies IRefusal);
   } catch (error) {
     // A redirect thrown on purpose is an answer, not a failure
     if (error instanceof Response) {

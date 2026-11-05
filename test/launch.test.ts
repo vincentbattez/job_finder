@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { type Actions } from '#/actions/index.ts';
 import { ARTIFACT_SCHEMA, type Artifact } from '#/domain/index.ts';
 
+import { applyTo } from './apply.ts';
 import { detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { runAndValidate } from './run-module.ts';
 
 // The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -18,7 +20,7 @@ const RUN_BY_ARTIFACT: Record<Artifact, { fileByName: Record<string, string> }> 
   research: RESEARCH_RUN,
   letter: {
     fileByName: {
-      'draft.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal pour enfants de Béthune.\n',
+      'letter.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal pour enfants de Béthune.\n',
       'recipients.json': JSON.stringify({
         to: { email: 'p.tj-bethune@justice.fr', source: 'applicationEmail' },
         ccList: [],
@@ -39,19 +41,15 @@ const RUN_BY_ARTIFACT: Record<Artifact, { fileByName: Record<string, string> }> 
       ].join('\n\n'),
     },
   },
-  visualization: {
-    fileByName: { 'visualization.html': '<!DOCTYPE html><html lang="fr"><body><h1>PAS</h1></body></html>\n' },
-  },
 };
 
 // The Artifacts attached to an Interview, which run once the Posting is Applied and has one
-const INTERVIEW_ARTIFACT_LIST: readonly Artifact[] = ['portrait', 'interview_brief', 'visualization'];
+const INTERVIEW_ARTIFACT_LIST: readonly Artifact[] = ['portrait', 'interview_brief'];
 
 // Launches a module where its Artifact is attached: on the Posting, or on its first Interview
 async function runModule(actions: Actions, module: Artifact) {
   const interview = INTERVIEW_ARTIFACT_LIST.includes(module) ? 1 : undefined;
-  await actions.runModule({ module, reference: REFERENCE, interview });
-  await actions.runQueuedJobs();
+  await runAndValidate(actions, { module, reference: REFERENCE, interview });
 }
 
 // The Artifacts of the Posting, then those of its first Interview, as the Posting page reads them
@@ -62,7 +60,7 @@ async function readArtifactList(actions: Actions) {
 
 // The Posting Applied, with a first Interview: its Letter is frozen from then on
 async function addInterview(actions: Actions) {
-  await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+  await applyTo(actions, REFERENCE);
   await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: 'Béthune', interviewers: '' });
 }
 
@@ -122,12 +120,10 @@ describe('the failure of a module', () => {
 
   it('shows a job that failed before its Version as failed, with its reason, over the previous Version', async () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, RUN_BY_ARTIFACT.letter));
-    for (const module of ['research', 'letter']) {
-      await actions.runModule({ module, reference: REFERENCE });
-      await actions.runQueuedJobs();
-    }
+    await runModule(actions, 'research');
+    await runModule(actions, 'letter');
     await actions.runModule({ module: 'letter', reference: REFERENCE });
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
 
     await actions.runQueuedJobs();
 
@@ -207,7 +203,8 @@ async function readModuleByArtifact(actions: Actions) {
 
 describe('the modules the Posting page offers', () => {
   it('offers a module for each Artifact a module produces, held back while an input it needs is missing', async () => {
-    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
+    // Keeping the Posting queues its Research, before the one the test runs
+    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, RESEARCH_RUN));
     const toApply = await readModuleByArtifact(actions);
     await addInterview(actions);
     const before = await readModuleByArtifact(actions);
@@ -217,7 +214,7 @@ describe('the modules the Posting page offers', () => {
     // An Interview Brief prepares an Interview, which only an Application has
     expect(Object.keys(toApply)).toEqual(['research', 'letter']);
     // In the words of the front, beside the button of the missing Artifact: no command to type
-    expect(Object.keys(before)).toEqual(['research', 'letter', 'portrait', 'interview_brief', 'visualization']);
+    expect(Object.keys(before)).toEqual(['research', 'letter', 'portrait', 'interview_brief']);
     expect(before).toMatchObject({
       research: { refusal: null },
       letter: { refusal: /a été Postulée : sa Lettre retenue est figée/ },
@@ -225,11 +222,7 @@ describe('the modules the Posting page offers', () => {
       portrait: { refusal: null },
       interview_brief: {
         refusal:
-          "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Fiche d’entretien : lancez d'abord la Recherche.",
-      },
-      visualization: {
-        refusal:
-          "L'Offre 2026-2445600 n'a pas de Fiche d’entretien retenue, sur laquelle s'appuie la Visualisation : lancez d'abord la Fiche d’entretien.",
+          "L'Offre 2026-2445600 n'a pas de Recherche validée, sur laquelle s'appuie la Fiche d’entretien : produisez puis validez d'abord la Recherche.",
       },
     });
     expect(await readModuleByArtifact(actions)).toMatchObject({
@@ -240,7 +233,7 @@ describe('the modules the Posting page offers', () => {
       research: { refusal: null, prompt: { readVersionList: [] } },
       letter: {
         refusal:
-          "L'Offre 2026-2445600 n'a pas de Recherche retenue, sur laquelle s'appuie la Lettre : lancez d'abord la Recherche.",
+          "L'Offre 2026-2445600 n'a pas de Recherche validée, sur laquelle s'appuie la Lettre de motivation : produisez puis validez d'abord la Recherche.",
         prompt: null,
       },
     });

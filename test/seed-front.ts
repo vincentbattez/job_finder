@@ -6,6 +6,7 @@ import { createActions } from '#/actions/index.ts';
 import { SOURCE_LIST } from '#/actions/modules.ts';
 import type { IHeadlessSession } from '#/ai-session/acl/claude-code.ts';
 
+import { applyTo } from './apply.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { FAKE_HOME_ASSISTANT_TOKEN } from './fake-home-assistant.ts';
 import { defineSlowSource } from './fake-slow-source.ts';
@@ -20,18 +21,20 @@ import { createRecordedFetch } from './recorded-http.ts';
 // Applied, Archived and To Apply; Camille has no Watch, hence no Posting. The tests
 // that change data work on Postings of their own: Bastia 2026-2426147 (a Research and a Letter to
 // correct), Versailles 2026-2409178 (two Research), Rennes 2026-2420931 (a Research, ready for
-// its Letter) and Narbonne 2026-2412591 (a failed Research). Léa's Béthune Posting 2026-2445609 has a Research
+// its Letter), Narbonne 2026-2412591 (a failed Research), 2026-2402432 (a Validated Research with a component to
+// correct) and 2026-2400177 (a Draft Letter to correct and compare). Léa's Béthune Posting 2026-2445609 has a Research
 // ready whose notification failed, which e2e/launch.test.ts only reads. Sacha, Noé, Inès, Malo and Rose, without
 // Watch either, each have their Profile changed by one e2e test only, which writes it first; Sacha
 // also has the Instructions the e2e tests change. Léa, Camille and Sacha have their Notification Channel
 // through the fake Home Assistant; Yanis and Zoé each have theirs changed by one e2e test only. Léa's Posting
 // 2026-2409247 has a Research made with the default Instructions, then one made with hers. Jade, without
-// Watch, has hers created, changed and deleted by one e2e test only. Hugo, without Watch, gets the
-// Postings that e2e/import.test.ts imports, so that Léa's list and map stay as seeded. Nina, without
-// Watch, has her locale switched by e2e/locale-switcher.test.ts only. Lou, Jules, Iris and Théo each
+// Watch, has hers created, changed and deleted by one e2e test only. Hugo and Lina, without Watch, get
+// the Postings that e2e/import.test.ts imports, so that Léa's list and map stay as seeded. Nina, without
+// Watch, has her locale switched by e2e/shell.test.ts only. Lou, Jules, Iris and Théo each
 // follow the slow fake Source, for e2e/detection.test.ts only: Lou and Jules past their first launch,
 // Lou always finding the same Postings, Jules new ones; Iris and Théo never detected by the seed, the
-// Source of Théo failing after two Job Descriptions.
+// Source of Théo failing after two Job Descriptions. Mila, without Watch, has the imported Postings
+// that e2e/to-apply.test.ts places and dates.
 const dataDirectory = process.env.JF_DATA_DIRECTORY ?? '';
 // The folder is wiped first: anything outside the temporary folder, data/ above all, is refused
 if (!dataDirectory.startsWith(tmpdir())) {
@@ -44,6 +47,10 @@ const RENNES_REFERENCE = '2026-2420931';
 const NARBONNE_REFERENCE = '2026-2412591';
 const INSTRUCTIONS_REFERENCE = '2026-2409247';
 const NOTIFICATION_FAILED_REFERENCE = '2026-2445609';
+// Corrected in MDXEditor (e2e/artifact-view.test.ts): a Validated Research with a component of the catalogue,
+// and a Draft Letter long enough for Compare to fold what is identical
+const CORRECTED_RESEARCH_REFERENCE = '2026-2402432';
+const COMPARED_LETTER_REFERENCE = '2026-2400177';
 // Where playwright.config.ts started the fake Home Assistant
 const FAKE_HOME_ASSISTANT_URL = process.env.FAKE_HOME_ASSISTANT_URL ?? '';
 // Without a Watch, beside Léa (test/lea.ts)
@@ -58,7 +65,10 @@ const OTHER_CANDIDATE_LIST = [
   { id: 'rose', name: 'Rose' },
   { id: 'jade', name: 'Jade' },
   { id: 'hugo', name: 'Hugo' },
+  { id: 'lina', name: 'Lina' },
   { id: 'nina', name: 'Nina' },
+  { id: 'maya', name: 'Maya' },
+  { id: 'lucie', name: 'Lucie' },
 ];
 
 // What the Letter recommends for the Béthune Posting, from its mail de candidature and contacts
@@ -76,7 +86,7 @@ function research(title: string): string {
 // Bastia publishes no address the Letter could recommend as is: it falls back on a generic salutation
 const BASTIA_LETTER = {
   fileByName: {
-    'draft.md': 'Madame la Première présidente,\n\nTitulaire d’un [à compléter : diplôme et année d’obtention].\n',
+    'letter.md': 'Madame la Première présidente,\n\nTitulaire d’un [à compléter : diplôme et année d’obtention].\n',
     'recipients.json': JSON.stringify({
       to: null,
       ccList: [],
@@ -85,6 +95,17 @@ const BASTIA_LETTER = {
     }),
   },
 };
+
+// A Research long enough to scroll, in five sections and its Sources, which e2e/reading.test.ts reads
+// with its rail
+const SECTION_TITLE_LIST = ['Le ressort', 'La juridiction', 'Le poste', 'Les attentes', 'Les questions'];
+const PARAGRAPH =
+  'La juridiction interrégionale spécialisée traite les affaires de criminalité organisée et de délinquance financière les plus complexes du ressort, avec des magistrats dédiés, des greffiers formés à ces procédures et des assistants spécialisés venus des administrations partenaires, qui travaillent ensemble sur des dossiers longs et sensibles.';
+const LONG_RESEARCH = [
+  '# Recherche : la JIRS du TJ de Rennes',
+  ...SECTION_TITLE_LIST.flatMap((title) => [`## ${title}`, PARAGRAPH, PARAGRAPH, PARAGRAPH]),
+  '## Sources\n\n- https://www.justice.fr/',
+].join('\n\n');
 
 function researchRun(title: string) {
   return { fileByName: { 'research.md': `# ${title}\n\n## Sources\n\n- https://www.justice.fr/\n` } };
@@ -96,17 +117,31 @@ const RUN_BY_VERSION: Record<string, Parameters<typeof createFakeAiSession>[numb
   [`${BETHUNE_REFERENCE} research v1`]: { fileByName: { 'research.md': research('Recherche retenue') } },
   [`${BETHUNE_REFERENCE} research v2`]: { fileByName: { 'research.md': research('Recherche relancée') } },
   [`${BETHUNE_REFERENCE} letter v1`]: {
-    fileByName: { 'draft.md': 'Madame la Présidente,\n', 'recipients.json': JSON.stringify(RECIPIENTS) },
+    fileByName: { 'letter.md': 'Madame la Présidente,\n', 'recipients.json': JSON.stringify(RECIPIENTS) },
   },
   [`${BASTIA_REFERENCE} research v1`]: researchRun('Recherche : la cour d’appel de Bastia'),
   [`${BASTIA_REFERENCE} letter v1`]: BASTIA_LETTER,
   [`${VERSAILLES_REFERENCE} research v1`]: researchRun('Recherche première : le pôle civil du TJ de Versailles'),
   [`${VERSAILLES_REFERENCE} research v2`]: researchRun('Recherche relancée : le pôle civil du TJ de Versailles'),
-  [`${RENNES_REFERENCE} research v1`]: researchRun('Recherche : la JIRS du TJ de Rennes'),
+  [`${RENNES_REFERENCE} research v1`]: { fileByName: { 'research.md': `${LONG_RESEARCH}\n` } },
   // The reason e2e/launch.test.ts reads beside the Relaunch button
   [`${NARBONNE_REFERENCE} research v1`]: {
     isSuccess: false,
     log: 'Claude Code a atteint la limite de son abonnement.',
+  },
+  [`${CORRECTED_RESEARCH_REFERENCE} research v1`]: {
+    fileByName: {
+      'research.md':
+        '# Recherche à corriger\n\nLe tribunal recrute deux attachés.\n\n<Callout type="warning">\nDate à vérifier.\n</Callout>\n\n## Sources\n\n- https://www.justice.fr/\n',
+    },
+  },
+  [`${COMPARED_LETTER_REFERENCE} research v1`]: researchRun('Recherche : la Lettre à comparer'),
+  [`${COMPARED_LETTER_REFERENCE} letter v1`]: {
+    fileByName: {
+      'letter.md':
+        'Madame la Présidente,\n\nPremier paragraphe.\n\nDeuxième paragraphe.\n\nTroisième paragraphe.\n\nParagraphe à corriger.\n\nCordialement,\n',
+      'recipients.json': BASTIA_LETTER.fileByName['recipients.json'],
+    },
   },
   [`${NOTIFICATION_FAILED_REFERENCE} research v1`]: researchRun('Recherche : l’instruction du TJ de Béthune'),
   [`${INSTRUCTIONS_REFERENCE} research v1`]: researchRun('Recherche par défaut : le TJ de Pontoise'),
@@ -172,17 +207,29 @@ await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
 await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
 // The worker's turn, which the e2e tests take here rather than in a worker process
 await actions.runQueuedJobs();
-await actions.chooseVersion({ reference: BETHUNE_REFERENCE, artifact: 'research', number: 1 });
+await actions.validateVersion({ reference: BETHUNE_REFERENCE, artifact: 'research', number: 1 });
 await actions.runModule({ module: 'letter', reference: BETHUNE_REFERENCE });
 await actions.runQueuedJobs();
 await actions.runModule({ module: 'research', reference: BASTIA_REFERENCE });
 await actions.runModule({ module: 'research', reference: VERSAILLES_REFERENCE });
 await actions.runModule({ module: 'research', reference: VERSAILLES_REFERENCE });
 await actions.runQueuedJobs();
+// Each Version is a Draft until validated (ADR-0019): Versailles keeps its v2 a Draft beside its Chosen v1, and
+// Bastia's Letter, a Draft, builds on its Validated Research (e2e/artifact-view.test.ts)
+await actions.validateVersion({ reference: VERSAILLES_REFERENCE, artifact: 'research', number: 1 });
+await actions.validateVersion({ reference: BASTIA_REFERENCE, artifact: 'research', number: 1 });
 await actions.runModule({ module: 'letter', reference: BASTIA_REFERENCE });
 await actions.runQueuedJobs();
 await actions.runModule({ module: 'research', reference: RENNES_REFERENCE });
 await actions.runModule({ module: 'research', reference: NARBONNE_REFERENCE });
+await actions.runQueuedJobs();
+await actions.validateVersion({ reference: RENNES_REFERENCE, artifact: 'research', number: 1 });
+await actions.runModule({ module: 'research', reference: CORRECTED_RESEARCH_REFERENCE });
+await actions.runModule({ module: 'research', reference: COMPARED_LETTER_REFERENCE });
+await actions.runQueuedJobs();
+await actions.validateVersion({ reference: CORRECTED_RESEARCH_REFERENCE, artifact: 'research', number: 1 });
+await actions.validateVersion({ reference: COMPARED_LETTER_REFERENCE, artifact: 'research', number: 1 });
+await actions.runModule({ module: 'letter', reference: COMPARED_LETTER_REFERENCE });
 await actions.runQueuedJobs();
 
 // Ready while Home Assistant refused the token Léa saved for a while: its notification failed
@@ -192,6 +239,7 @@ const leaParameters = { url: FAKE_HOME_ASSISTANT_URL, service: 'notify.mobile_ap
 await actions.saveNotificationChannel({ ...leaChannel, parameters: { ...leaParameters, token: 'jeton-refusé' } });
 await actions.runModule({ module: 'research', reference: NOTIFICATION_FAILED_REFERENCE });
 await actions.runQueuedJobs();
+await actions.validateVersion({ reference: NOTIFICATION_FAILED_REFERENCE, artifact: 'research', number: 1 });
 await actions.saveNotificationChannel({
   ...leaChannel,
   parameters: { ...leaParameters, token: FAKE_HOME_ASSISTANT_TOKEN },
@@ -204,19 +252,32 @@ await actions.saveInstructions({ candidateId: 'lea', module: 'research', instruc
 await actions.runModule({ module: 'research', reference: INSTRUCTIONS_REFERENCE });
 await actions.runQueuedJobs();
 await actions.deleteInstructions({ candidateId: 'lea', module: 'research' });
+// Léa kept the Postings she prepared, out of New (ADR-0018): their Research ran already, so keeping
+// queues none
+for (const reference of [
+  BETHUNE_REFERENCE,
+  BASTIA_REFERENCE,
+  VERSAILLES_REFERENCE,
+  RENNES_REFERENCE,
+  NARBONNE_REFERENCE,
+  NOTIFICATION_FAILED_REFERENCE,
+  INSTRUCTIONS_REFERENCE,
+]) {
+  await actions.keep({ reference });
+}
 
-await actions.changeStatus({ reference: '2026-2285305', status: 'applied' });
-// The Applications whose outcome e2e/edition.test.ts changes, one with JS and one without
-await actions.changeStatus({ reference: '2026-2448056', status: 'applied' });
-await actions.changeStatus({ reference: '2026-2448209', status: 'applied' });
-// The Applications whose Interviews e2e/interviews.test.ts adds, edits and deletes, one with JS and one
-// without
-await actions.changeStatus({ reference: '2026-2448213', status: 'applied' });
-await actions.changeStatus({ reference: '2026-2448215', status: 'applied' });
+await applyTo(actions, '2026-2285305');
+// Two more Applications In progress, without Interview, which no e2e test changes
+await applyTo(actions, '2026-2448056');
+await applyTo(actions, '2026-2448209');
+// The Application whose Interviews e2e/interviews.test.ts adds, edits and deletes, and one more In
+// progress that no e2e test changes
+await applyTo(actions, '2026-2448213');
+await applyTo(actions, '2026-2448215');
 await actions.archive({ reference: '2026-2290529' });
-// The Applications in progress whose outcome e2e/home.test.ts changes from their row: one with JS, with an
-// upcoming Interview and Notes, and one without JS; their Interviews, the nearest, keep them among the 3 the home shows
-await actions.changeStatus({ reference: '2026-2448220', status: 'applied' });
+// Two more Applications in progress, each with an upcoming Interview, the first with Notes, which no e2e
+// test changes
+await applyTo(actions, '2026-2448220');
 await actions.addInterview({
   reference: '2026-2448220',
   start: '2030-01-15T10:00',
@@ -224,23 +285,22 @@ await actions.addInterview({
   interviewers: 'Mme Durand',
 });
 await actions.saveNotes({ reference: '2026-2448220', notes: '# Appel du greffe\n\nRappeler **lundi**.\n' });
-await actions.changeStatus({ reference: '2026-2448225', status: 'applied' });
+await applyTo(actions, '2026-2448225');
 await actions.addInterview({
   reference: '2026-2448225',
   start: '2030-01-20T10:00',
   place: 'Tribunal judiciaire',
   interviewers: 'Mme Durand',
 });
-// One Posting per section of /applications for e2e/applications.test.ts, out of the Hauts-de-France and of
-// Melun, which e2e/map.test.ts counts: Hired, two Rejected whose outcome it changes from their row (with JS and
-// without), an Archived Application and a Posting archived without one
+// Léa's closed Postings: Hired, two Rejected, an Archived Application, whose page e2e/applications.test.ts
+// opens, and a Posting archived without one
 for (const [reference, status] of [
   ['2026-2289933', 'hired'],
   ['2026-2315264', 'rejected'],
   ['2026-2399015', 'rejected'],
   ['2026-2340735', 'applied'],
 ]) {
-  await actions.changeStatus({ reference, status: 'applied' });
+  await applyTo(actions, reference);
   await actions.changeStatus({ reference, status });
 }
 await actions.archive({ reference: '2026-2340735' });
@@ -270,4 +330,170 @@ RUN_BY_VERSION[`${oliverPosting.reference.slice(0, BETHUNE_REFERENCE.length)} re
   'Research: the Douai court of appeal',
 );
 await actions.runModule({ module: 'research', reference: oliverPosting.reference });
+await actions.runQueuedJobs();
+
+// Mila's To Apply list is e2e/to-apply.test.ts's own: six imported Postings, which the test gives a
+// City, coordinates and a Deadline counted from the day it runs, so that their groups never age
+await actions.createCandidate({ id: 'mila', name: 'Mila' });
+for (const city of ['lille', 'lyon', 'bordeaux', 'rennes', 'nice', 'strasbourg']) {
+  await actions.importJobDescription({
+    candidateId: 'mila',
+    fileName: `greffier-${city}.md`,
+    markdown: `# Greffier – ${city}\n`,
+  });
+}
+await actions.runQueuedJobs();
+
+// Rosa's Applications are e2e/applications.test.ts's own: eight imported Postings, which the test
+// marks Applied, Hired or Rejected and gives Interviews and dates counted from the day it runs
+await actions.createCandidate({ id: 'rosa', name: 'Rosa' });
+for (const city of ['lille', 'lyon', 'bordeaux', 'rennes', 'nice', 'strasbourg', 'dijon', 'brest']) {
+  await actions.importJobDescription({
+    candidateId: 'rosa',
+    fileName: `clerk-${city}.md`,
+    markdown: `# Court clerk – ${city}\n`,
+  });
+}
+await actions.runQueuedJobs();
+
+// Ana, Eli and Tom each sort one Posting of e2e/new.test.ts, which puts it back New first: kept from its
+// row, dismissed then restored, kept from its page
+for (const { id, name } of [
+  { id: 'ana', name: 'Ana' },
+  { id: 'eli', name: 'Eli' },
+  { id: 'tom', name: 'Tom' },
+]) {
+  await actions.createCandidate({ id, name });
+  await actions.importJobDescription({
+    candidateId: id,
+    fileName: `greffier-${id}.md`,
+    markdown: `# Greffier placé – ${name}\n`,
+  });
+}
+await actions.runQueuedJobs();
+
+// Sia, Ivo and Gus open the Sheet of e2e/posting-sheet.test.ts, which places and resets their Postings
+// first: Sia browses two, Ivo acts on one, Gus's New one opens from its marker
+for (const { id, name, cityList } of [
+  { id: 'sia', name: 'Sia', cityList: ['arras', 'caen'] },
+  { id: 'ivo', name: 'Ivo', cityList: ['dijon'] },
+  { id: 'gus', name: 'Gus', cityList: ['brest'] },
+]) {
+  await actions.createCandidate({ id, name });
+  for (const city of cityList) {
+    await actions.importJobDescription({
+      candidateId: id,
+      fileName: `greffier-${city}.md`,
+      markdown: `# Greffier – ${city}\n\n## Missions\n\nTenir les audiences du tribunal.\n`,
+    });
+  }
+}
+await actions.runQueuedJobs();
+
+// The lists' filters are e2e/list-filters.test.ts's own: Nora has six imported Postings, which the test
+// places, sorts and archives; Yara one, which it dismisses then finds under Archived
+await actions.createCandidate({ id: 'nora', name: 'Nora' });
+for (const index of [1, 2, 3, 4, 5, 6]) {
+  await actions.importJobDescription({
+    candidateId: 'nora',
+    fileName: `greffier-nora-${String(index)}.md`,
+    markdown: `# Greffier placé – Nora ${String(index)}\n`,
+  });
+}
+await actions.createCandidate({ id: 'yara', name: 'Yara' });
+await actions.importJobDescription({
+  candidateId: 'yara',
+  fileName: 'greffier-yara.md',
+  markdown: '# Greffier placé – Yara\n',
+});
+await actions.runQueuedJobs();
+
+// Max reads his To Apply list on a phone in e2e/phone.test.ts, which places and dates his three
+// imported Postings first
+await actions.createCandidate({ id: 'max', name: 'Max' });
+for (const city of ['arras', 'caen', 'tours']) {
+  await actions.importJobDescription({
+    candidateId: 'max',
+    fileName: `greffier-max-${city}.md`,
+    markdown: `# Greffier – Max ${city}\n`,
+  });
+}
+await actions.runQueuedJobs();
+
+// Paul, without Watch, has one imported Posting per journey of e2e/posting-page.test.ts, which finds
+// each by the reference its Markdown gives (e2e/paul.ts): one Interviewed, its Interview past, one
+// Invited, its Interview to come
+await actions.createCandidate({ id: 'paul', name: 'Paul' });
+const paulReferenceByJourney = new Map<string, string>();
+for (const journey of ['applied', 'interviewed', 'invited', 'archive', 'notes']) {
+  const { posting } = await actions.importJobDescription({
+    candidateId: 'paul',
+    fileName: `court-clerk-${journey}.md`,
+    markdown: `# Court clerk – ${journey}\n\nApply by 30 November 2026.\n`,
+  });
+  paulReferenceByJourney.set(journey, posting.reference);
+}
+await actions.runQueuedJobs();
+for (const { journey, start } of [
+  { journey: 'interviewed', start: '2026-01-10T10:00' },
+  { journey: 'invited', start: '2030-02-01T10:00' },
+]) {
+  const reference = paulReferenceByJourney.get(journey);
+  await applyTo(actions, reference);
+  await actions.addInterview({ reference, start, place: 'Tribunal judiciaire', interviewers: 'M. Martin' });
+}
+
+// Vera, without Watch, opens the generation panel of e2e/generation.test.ts on her one imported Posting,
+// whose Research is validated; the test writes her Profile first, so that the Letter has Inputs to uncheck
+await actions.createCandidate({ id: 'vera', name: 'Vera' });
+const { posting: veraPosting } = await actions.importJobDescription({
+  candidateId: 'vera',
+  fileName: 'greffier-valence.md',
+  markdown: '# Greffier – Valence\n\nTenir les audiences du tribunal judiciaire de Valence.\n',
+});
+await actions.runQueuedJobs();
+RUN_BY_VERSION[`${veraPosting.reference.slice(0, BETHUNE_REFERENCE.length)} research v1`] = researchRun(
+  'Recherche : le tribunal judiciaire de Valence',
+);
+await actions.runModule({ module: 'research', reference: veraPosting.reference });
+await actions.runQueuedJobs();
+await actions.validateVersion({ reference: veraPosting.reference, artifact: 'research', number: 1 });
+
+// Ugo, without Watch, edits his Research Instructions in the generation panel of e2e/instructions.test.ts,
+// on his one imported Posting; the test never launches, so his Posting stays as seeded
+await actions.createCandidate({ id: 'ugo', name: 'Ugo' });
+await actions.importJobDescription({
+  candidateId: 'ugo',
+  fileName: 'greffier-vienne.md',
+  markdown: '# Greffier – Vienne\n\nAccueillir le public du tribunal judiciaire de Vienne.\n',
+});
+await actions.runQueuedJobs();
+
+// Ruth, without Watch, revises an Interview in e2e/revision.test.ts on her one imported Posting, whose
+// Research is validated so that its Interview Brief may run; the test gives it its Interview and Briefs
+await actions.createCandidate({ id: 'ruth', name: 'Ruth' });
+const { posting: ruthPosting } = await actions.importJobDescription({
+  candidateId: 'ruth',
+  fileName: 'greffier-colmar.md',
+  markdown: '# Greffier – Colmar\n\nAccueillir le public du tribunal judiciaire de Colmar.\n',
+});
+await actions.runQueuedJobs();
+RUN_BY_VERSION[`${ruthPosting.reference.slice(0, BETHUNE_REFERENCE.length)} research v1`] = researchRun(
+  'Recherche : le tribunal judiciaire de Colmar',
+);
+await actions.runModule({ module: 'research', reference: ruthPosting.reference });
+await actions.runQueuedJobs();
+await actions.validateVersion({ reference: ruthPosting.reference, artifact: 'research', number: 1 });
+
+// Cleo, without Watch, adds documents in e2e/documents.test.ts: to one imported Posting from its Documents
+// section, to another from the generation panel of its Research, to two others as PDFs; and brings her Letter
+// as a PDF to the others (e2e/artifact-view.test.ts)
+await actions.createCandidate({ id: 'cleo', name: 'Cleo' });
+for (const city of ['Douai', 'Laval', 'Tarbes', 'Nantes', 'Vannes', 'Nevers']) {
+  await actions.importJobDescription({
+    candidateId: 'cleo',
+    fileName: `greffier-cleo-${city.toLowerCase()}.md`,
+    markdown: `# Greffier – ${city}\n\nTenir les audiences du tribunal judiciaire de ${city}.\n`,
+  });
+}
 await actions.runQueuedJobs();

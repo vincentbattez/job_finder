@@ -1,8 +1,10 @@
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 
 import { codedError } from '#/domain/coded-error.ts';
 import {
   JOB_DESCRIPTION_FILE_NAME,
+  ORIGINAL_FILE_NAME,
   type Artifact,
   type Interview,
   type JobDescription,
@@ -18,14 +20,18 @@ import { messageOf, wordListOf } from '#/text/index.ts';
 import { findObsoleteConfig, readObsoleteConfig } from './acl/config.ts';
 import { openDatabase, type INewCandidate, type INewPosting } from './acl/database.ts';
 import {
+  copyAsReadOnly,
   createDirectory,
   deleteDirectory,
   deleteFile,
   emptyDirectory,
   moveDirectory,
+  moveFile,
+  readDatedMarkdownFiles,
   readMarkdownFiles,
   readTextFile,
   readUploads,
+  writeBinaryFile,
   writeTextFile,
   writeUpload,
 } from './acl/files.ts';
@@ -34,6 +40,10 @@ import { migrateLayout } from './layout.ts';
 const UPLOADS_FOLDER = 'uploads';
 // Among the Uploads, but not one: neither a PDF nor a Markdown file of the Profile
 const CONVERSION_FOLDER = '.conversion';
+// The PDFs a Candidate brought for a Posting, until the worker converts each into a Version's folder
+const BROUGHT_FOLDER = '.brought';
+// A brought PDF's name in the folder of the Version it became
+export const BROUGHT_PDF_FILE_NAME = 'brought.pdf';
 
 function slugify(text: string): string {
   return wordListOf(text).join('-');
@@ -75,13 +85,24 @@ export async function openWorkspace(dataDirectory: string) {
   }
 
   // Each Version of an Artifact has its own folder, so a new launch never overwrites the others; the
-  // preview of a Prompt names that of the Version still to be created by a placeholder for its number
+  // preview of a Prompt names that of the Version still to be created by a placeholder for its number. A
+  // Custom Artifact has a folder of its own, by its id, for its single Version.
   function versionDirectoryOf(
     posting: Posting,
-    { interview, artifact, number }: Pick<Version, 'interview' | 'artifact'> & { number: number | string },
+    {
+      interview,
+      artifact,
+      number,
+      customArtifact = null,
+    }: Pick<Version, 'interview' | 'artifact'> & {
+      number: number | string;
+      customArtifact?: Version['customArtifact'];
+    },
   ): string {
     const directory = interview === null ? postingDirectoryOf(posting) : interviewDirectoryOf(posting, interview);
-    return path.join(directory, artifact, `v${String(number)}`);
+    return customArtifact === null
+      ? path.join(directory, artifact, `v${String(number)}`)
+      : path.join(directory, artifact, String(customArtifact.id), `v${String(number)}`);
   }
 
   return {
@@ -117,6 +138,11 @@ export async function openWorkspace(dataDirectory: string) {
     // The Profile is a flat folder of Markdown files
     readProfileFiles(candidateId: string) {
       return readMarkdownFiles(profileDirectoryOf(candidateId));
+    },
+
+    // Dated by their last write: a Past Letter of the Profile is dated by the day it was added
+    readProfileDocuments(candidateId: string) {
+      return readDatedMarkdownFiles(profileDirectoryOf(candidateId));
     },
 
     saveProfileFile(candidateId: string, fileName: ProfileFileName, markdown: string): void {
@@ -155,9 +181,32 @@ export async function openWorkspace(dataDirectory: string) {
       return readMarkdownFiles(outputDirectory);
     },
 
-    // The Markdown files of a Version, such as the Draft and the Letter of a Letter Version
-    readVersionDocuments(posting: Posting, version: Version) {
-      return readMarkdownFiles(versionDirectoryOf(posting, version));
+    // A file of a Version, null when it has none
+    readVersionFile(posting: Posting, version: Version, fileName: string): string | null {
+      return readTextFile(path.join(versionDirectoryOf(posting, version), fileName));
+    },
+
+    // The AI's text, kept as it wrote it beside the text the Candidate corrects (ADR-0019)
+    keepOriginal(posting: Posting, version: Version, fileName: string): void {
+      const directory = versionDirectoryOf(posting, version);
+      copyAsReadOnly(path.join(directory, fileName), path.join(directory, ORIGINAL_FILE_NAME));
+    },
+
+    // A brought PDF waits under a name of its own, which its conversion job keeps
+    saveBroughtPdf(posting: Posting, content: Uint8Array): string {
+      const fileName = `${randomUUID()}.pdf`;
+      writeBinaryFile(path.join(postingDirectoryOf(posting), BROUGHT_FOLDER, fileName), content);
+      return fileName;
+    },
+
+    // Its conversion starts: the PDF joins the folder of its Version, where the session reads it
+    moveBroughtPdf(posting: Posting, fileName: string, version: Version): string {
+      const directory = versionDirectoryOf(posting, version);
+      moveFile(
+        path.join(postingDirectoryOf(posting), BROUGHT_FOLDER, fileName),
+        path.join(directory, BROUGHT_PDF_FILE_NAME),
+      );
+      return BROUGHT_PDF_FILE_NAME;
     },
 
     // A correction by the Candidate changes the Version in place, without creating another one

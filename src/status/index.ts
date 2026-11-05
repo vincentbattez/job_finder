@@ -1,15 +1,14 @@
 import { tFor } from '#/domain/catalogue/i18n.ts';
 import { codedError } from '#/domain/coded-error.ts';
 import type { Interview, Locale, Posting, Status, Step } from '#/domain/index.ts';
+import { hasTakenPlace } from '#/domain/interview-time.ts';
+import { PARIS_DAY_FORMAT } from '#/domain/paris-time.ts';
 
 // What the status rules read of a Posting
 type PostingStatus = Pick<Posting, 'reference' | 'status' | 'appliedAt'>;
 
 // What the Status choices read of a Posting: an Interview proves its Letter was sent
 type PostingWithInterview = Pick<Posting, 'status' | 'appliedAt'> & { hasInterview: boolean };
-
-// A calendar day in France, as « 2026-11-20 », so that two days compare as strings
-const FRANCE_DAY_FORMAT = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' });
 
 // The last day to apply: the Deadline, else the publication date plus the default delay of the
 // config (GLOSSARY.md « Deadline »). The Source gives the Deadline as a day, at midnight UTC.
@@ -25,7 +24,7 @@ function findLastDay(
   }
   const lastDay = new Date(publishedAt);
   lastDay.setUTCMonth(lastDay.getUTCMonth() + defaultDelayMonths);
-  return FRANCE_DAY_FORMAT.format(lastDay);
+  return PARIS_DAY_FORMAT.format(lastDay);
 }
 
 // Computed, never stored, since it depends on the day; a Posting without any date never expires
@@ -35,19 +34,7 @@ export function isExpired(
   defaultDelayMonths: number,
 ): boolean {
   const lastDay = findLastDay(posting, defaultDelayMonths);
-  return lastDay !== undefined && FRANCE_DAY_FORMAT.format(now) > lastDay;
-}
-
-const MINUTE_MS = 60_000;
-
-// When an Interview ends, its start plus its duration
-export function findInterviewEnd({ startAt, durationMinutes }: Pick<Interview, 'startAt' | 'durationMinutes'>): Date {
-  return new Date(startAt.getTime() + durationMinutes * MINUTE_MS);
-}
-
-// Taken place once its start plus its duration has passed: an Interview in progress is still to come
-export function hasTakenPlace(interview: Pick<Interview, 'startAt' | 'durationMinutes'>, now: Date): boolean {
-  return findInterviewEnd(interview).getTime() <= now.getTime();
+  return lastDay !== undefined && PARIS_DAY_FORMAT.format(now) > lastDay;
 }
 
 // Computed, never stored, since it depends on the time (ADR-0009): an outcome wins over the Interviews,
@@ -65,8 +52,9 @@ export function findStep(
 
 // Applied once, even if Archived since: the Candidate sent its Chosen Letter, and its Application
 // started. A Posting Applied before appliedAt existed has none.
+// New, not sorted yet, is never Applied, like To Apply.
 export function hasBeenApplied({ status, appliedAt }: Pick<Posting, 'status' | 'appliedAt'>): boolean {
-  return status !== 'to_apply' || appliedAt !== null;
+  return (status !== 'new' && status !== 'to_apply') || appliedAt !== null;
 }
 
 // When a Posting moving to the status was first Applied: its Chosen Letter, the one sent, stays
@@ -79,9 +67,12 @@ export function findAppliedAt(posting: Pick<Posting, 'status' | 'appliedAt'>, st
 const APPLICATION_STATUS_LIST: Status[] = ['applied', 'hired', 'rejected'];
 
 // What the outcome selector offers besides the Status the Posting has, Archived or not (ADR-0007):
-// Applied on a To Apply Posting, then the other outcomes of its Application. An Applied Posting goes
+// nothing on a New Posting, which is kept or dismissed instead (ADR-0018), Applied on a To Apply Posting, then the other outcomes of its Application. An Applied Posting goes
 // back to To Apply when its Letter was never sent; an outcome or an Interview proves it was.
 export function listStatusChoices(posting: PostingWithInterview): Status[] {
+  if (posting.status === 'new') {
+    return [];
+  }
   if (!hasBeenApplied(posting)) {
     return ['applied'];
   }
@@ -99,7 +90,10 @@ export function assertStatusChange(
   if (status === posting.status || choiceList.includes(status)) {
     return;
   }
-  if (hasBeenApplied(posting)) {
+  if (posting.status === 'new') {
+    throw codedError('new_not_sorted', { reference: posting.reference }, { locale });
+  }
+  if (status === 'to_apply' && hasBeenApplied(posting)) {
     const code = posting.status === 'applied' ? 'to_apply_with_interview' : 'to_apply_after_outcome';
     throw codedError(code, { reference: posting.reference }, { locale });
   }

@@ -4,23 +4,29 @@ import { expect, test } from '@playwright/test';
 test.describe('French routes', () => {
   for (const { frenchPath, englishPath } of [
     { frenchPath: '/profil', englishPath: '/profile' },
-    { frenchPath: '/consignes', englishPath: '/instructions' },
-    { frenchPath: '/candidats', englishPath: '/candidates' },
-    { frenchPath: '/candidat', englishPath: '/candidate' },
+    { frenchPath: '/consignes', englishPath: '/settings' },
+    { frenchPath: '/instructions', englishPath: '/settings' },
+    { frenchPath: '/candidats', englishPath: '/settings' },
+    { frenchPath: '/candidates', englishPath: '/settings' },
+    { frenchPath: '/veilles', englishPath: '/watches' },
     { frenchPath: '/offres/2026-2445600', englishPath: '/postings/2026-2445600' },
-    { frenchPath: '/offres/2026-2445600/statut', englishPath: '/postings/2026-2445600/status' },
-    { frenchPath: '/offres/2026-2445600/lettre/document', englishPath: '/postings/2026-2445600/letter/document' },
-    {
-      frenchPath: '/offres/2026-2445600/fiche_entretien/document',
-      englishPath: '/postings/2026-2445600/interview_brief/document',
-    },
-    { frenchPath: '/offres/2026-2445600/recherche/retenue', englishPath: '/postings/2026-2445600/research/chosen' },
+    // The list of every Posting went away: To Apply is what a link to it was for
+    { frenchPath: '/postings', englishPath: '/to-apply' },
   ]) {
     test(`redirects ${frenchPath} permanently to ${englishPath}`, async ({ page }) => {
       const response = await page.request.get(`${frenchPath}?from=bookmark`, { maxRedirects: 0 });
 
       expect(response.status()).toBe(301);
       expect(response.headers().location).toBe(`${englishPath}?from=bookmark`);
+    });
+  }
+
+  // Forms posted to these, never a link: no stored address needs them, and a redirect would answer nothing anyway
+  for (const formPath of ['/candidat', '/offres/2026-2445600/statut', '/offres/2026-2445600/recherche/retenue']) {
+    test(`no longer redirects ${formPath}`, async ({ page }) => {
+      const response = await page.request.get(formPath, { maxRedirects: 0 });
+
+      expect(response.status()).toBe(404);
     });
   }
 
@@ -34,18 +40,10 @@ test.describe('French routes', () => {
     expect(response.headers().location).toBe('/?city=Melun&region=%C3%8Ele-de-France&archived=on');
   });
 
-  // The Posting list moved from the home to /postings: a filter saved before keeps filtering there
-  test('redirects a filter of the Posting list saved on the home permanently to /postings', async ({ page }) => {
-    const response = await page.request.get('/?city=Melun&archived=on', { maxRedirects: 0 });
-
-    expect(response.status()).toBe(301);
-    expect(response.headers().location).toBe('/postings?city=Melun&archived=on');
-  });
-
   test('opens the English page from a French link', async ({ page }) => {
     await page.goto('/candidats');
 
-    await expect(page).toHaveURL(/\/candidates$/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Candidats');
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Réglages');
   });
 });

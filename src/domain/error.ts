@@ -86,6 +86,12 @@ export const ERROR_CATALOGUE = {
   // Statuses
   // A Posting cannot move to this Status from its own
   status_change: 'error:statusChange',
+  // A New Posting moves only by being kept or dismissed (ADR-0018)
+  new_not_sorted: 'error:newNotSorted',
+  // Only a New Posting is kept: one already sorted is not sorted again
+  not_new: 'error:notNew',
+  // Marking Applied over a Draft Letter takes an answer: validate it, or apply without a Letter (spec #125)
+  letter_still_draft: 'error:letterStillDraft',
   // A Hired or Rejected Posting cannot go back to To Apply: only In progress is undone, Archived or not
   to_apply_after_outcome: 'error:toApplyAfterOutcome',
   // An Applied Posting with an Interview cannot go back to To Apply: the Interview proves its Letter was sent
@@ -110,6 +116,10 @@ export const ERROR_CATALOGUE = {
   unknown_artifact: 'error:unknownArtifact',
   // An Artifact the module relies on has no Chosen Version
   missing_artifact: 'error:missingArtifactForCli',
+  // A run is asked to read an Input it does not have
+  unknown_input: 'error:unknownInput',
+  // A run is asked without an Input its Artifact requires
+  required_input_unchecked: 'error:requiredInputUnchecked',
   // The extraction is asked for a Posting its Source gave the fields of
   not_imported: 'error:notImported',
   // No job has this number
@@ -128,12 +138,12 @@ export const ERROR_CATALOGUE = {
   empty_output: 'error:emptyOutput',
   // A file the module wrote does not have its format
   malformed_output: 'error:malformedOutput',
-  // The Visualization is asked to be edited, while it follows the Interview Brief
-  visualization_not_editable: 'error:visualizationNotEditable',
   // An Artifact to edit has no Chosen Version
   no_chosen_version_to_edit: 'error:noChosenVersionToEdit',
-  // The Draft is asked to be edited, while it keeps what the AI wrote
-  draft_not_editable: 'error:draftNotEditable',
+  // The Original of a Version is asked to be edited, while it keeps what the AI wrote
+  original_not_editable: 'error:originalNotEditable',
+  // A Version the Candidate brings has no text
+  empty_brought_version: 'error:emptyBroughtVersion',
   // An Artifact has no Version with this number
   unknown_version: 'error:unknownVersion',
   // A failed Version is chosen
@@ -142,8 +152,6 @@ export const ERROR_CATALOGUE = {
   version_running: 'error:versionRunning',
   // A file asked for is not one of the Chosen Version
   not_a_version_file: 'error:notAVersionFile',
-  // A Visualization Version has no page
-  visualization_without_page: 'error:visualizationWithoutPage',
   // A Posting has no Chosen Letter to send
   no_chosen_letter: 'error:noChosenLetter',
 
@@ -254,7 +262,7 @@ export const ERROR_CATALOGUE = {
   run_usage: 'cli:runUsage',
   recipients_usage: 'cli:recipientsUsage',
   versions_usage: 'cli:versionsUsage',
-  choose_usage: 'cli:chooseUsage',
+  validate_usage: 'cli:validateUsage',
   status_usage: 'cli:statusUsage',
   profile_usage: 'cli:profileUsage',
   instructions_usage: 'cli:instructionsUsage',

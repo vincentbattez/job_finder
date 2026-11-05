@@ -1,61 +1,175 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
+import { z } from 'zod/v4';
 
 import { expect, test, type IFront } from './candidate.ts';
+import { openDatabase } from './harness.ts';
 import { findOverflowing } from './overflow.ts';
 
-// test/seed-front.ts gives Léa one Posting per section that only these tests read: Hired, two Rejected whose
-// outcome they change from their row, an Archived Application and a Posting archived without one
-const HIRED_REFERENCE = '2026-2289933';
-const REJECTED_REFERENCE = '2026-2315264';
-const REJECTED_WITHOUT_JS_REFERENCE = '2026-2399015';
+const DAY_MS = 86_400_000;
+
+// Léa's Archived Application (test/seed-front.ts)
 const ARCHIVED_REFERENCE = '2026-2340735';
-const ARCHIVED_WITHOUT_APPLICATION_REFERENCE = '2026-2380466';
 
-const SECTION_HEADING_LIST = ['Postes obtenus', 'En cours', 'Refusées', 'Archivées', 'Archivées sans Candidature'];
+// Rosa's eight imported Postings (test/seed-front.ts), in the order the seed imported them, as this file
+// sets them: Interviews, Deadline and the day Applied counted in days from now
+const POSTING_LIST = [
+  { city: 'Lille', status: 'applied', interviewDayList: [-10, -2], deadlineDays: null, appliedDays: -30 },
+  { city: 'Lyon', status: 'applied', interviewDayList: [-5], deadlineDays: null, appliedDays: -25 },
+  { city: 'Bordeaux', status: 'applied', interviewDayList: [3], deadlineDays: null, appliedDays: -20 },
+  { city: 'Rennes', status: 'applied', interviewDayList: [-4, 1], deadlineDays: null, appliedDays: -15 },
+  { city: 'Nice', status: 'applied', interviewDayList: [], deadlineDays: 20, appliedDays: -3 },
+  { city: 'Strasbourg', status: 'applied', interviewDayList: [], deadlineDays: 5, appliedDays: -2 },
+  { city: 'Dijon', status: 'hired', interviewDayList: [-40], deadlineDays: null, appliedDays: -60 },
+  { city: 'Brest', status: 'rejected', interviewDayList: [], deadlineDays: null, appliedDays: -50 },
+];
 
-// Léa's, once asCandidate chose her
-async function openApplications({ page, openPage }: IFront) {
-  await openPage('/applications');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Candidatures de Léa');
+// A time from now as Prisma stores a DateTime
+function fromNow(days: number): string {
+  return new Date(Date.now() + days * DAY_MS).toISOString().replace('Z', '+00:00');
 }
 
-function findSection(page: Page, heading: string) {
-  return page.getByRole('region', { name: heading, exact: true });
-}
-
-function findRow(page: Page, heading: string, reference: string) {
-  return findSection(page, heading)
-    .getByRole('article')
-    .filter({ has: page.locator(`a[href="/postings/${reference}"]`) });
-}
-
-// Puts the Application back to Rejected first, whatever a run stopped halfway left it at
-async function putBackRejected(page: Page, reference: string) {
-  const response = await page.request.post(`/postings/${reference}/status`, { form: { status: 'rejected' } });
-  expect(response.ok()).toBe(true);
-}
-
-test.describe('/applications', () => {
-  test('shows every section in order, each Posting in its own', async ({ page, asCandidate, openPage }) => {
-    await putBackRejected(page, REJECTED_REFERENCE);
-    await asCandidate('lea');
-    await openApplications({ page, openPage });
-
-    await expect(page.getByRole('heading', { level: 2 })).toHaveText(SECTION_HEADING_LIST);
-    await expect(findRow(page, 'Postes obtenus', HIRED_REFERENCE).locator('.badge')).toHaveText('Poste obtenu');
-    await expect(findRow(page, 'Refusées', REJECTED_REFERENCE).locator('.badge')).toHaveText('Refusée');
-    // Archived is a mark beside the step, which it keeps (ADR-0007)
-    await expect(findRow(page, 'Archivées', ARCHIVED_REFERENCE).locator('.badge')).toHaveText(['Postulée', 'Archivée']);
-    const archivedWithoutApplication = findRow(
-      page,
-      'Archivées sans Candidature',
-      ARCHIVED_WITHOUT_APPLICATION_REFERENCE,
+// Rosa's Postings as this file needs them, whatever a previous run left. Their title, which names their
+// folder, stays the seed's: their employer tells them apart
+function resetRosa() {
+  const database = openDatabase();
+  const postingList = z
+    .array(z.object({ id: z.number(), reference: z.string() }))
+    .parse(
+      database.prepare('SELECT "id", "reference" FROM "Posting" WHERE "candidateId" = ? ORDER BY "id"').all('rosa'),
     );
-    await expect(archivedWithoutApplication.getByRole('button', { name: 'Marquer comme Postulée' })).toBeVisible();
-    await expect(archivedWithoutApplication.getByRole('group', { name: 'Issue de la Candidature' })).toHaveCount(0);
+  const update = database.prepare(
+    `UPDATE "Posting" SET "employer" = ?, "city" = ?, "region" = NULL, "latitude" = ?, "longitude" = ?,
+      "deadline" = ?, "status" = ?, "appliedAt" = ?, "archivedAt" = NULL WHERE "id" = ?`,
+  );
+  const interviewDeletion = database.prepare('DELETE FROM "Interview" WHERE "postingId" = ?');
+  const insertInterview = database.prepare(
+    `INSERT INTO "Interview" ("postingId", "number", "startAt", "durationMinutes", "place", "interviewers")
+      VALUES (?, ?, ?, 60, 'Tribunal', 'Mme Durand')`,
+  );
+  // At once: another test of this file may be reading Rosa's Applications meanwhile
+  database.exec('BEGIN IMMEDIATE');
+  for (const [index, { city, status, interviewDayList, deadlineDays, appliedDays }] of POSTING_LIST.entries()) {
+    const { id } = z.object({ id: z.number() }).parse(postingList[index]);
+    update.run(
+      `Cour d’appel de ${city}`,
+      city,
+      45 + index,
+      index - 1,
+      deadlineDays === null ? null : fromNow(deadlineDays),
+      status,
+      fromNow(appliedDays),
+      id,
+    );
+    interviewDeletion.run(id);
+    for (const [number, days] of interviewDayList.entries()) {
+      insertInterview.run(id, number + 1, fromNow(days));
+    }
+  }
+  database.exec('COMMIT');
+  database.close();
+}
+
+async function openApplicationsOfRosa({
+  page,
+  asCandidate,
+  openPage,
+}: IFront & { asCandidate: (id: string) => Promise<void> }) {
+  // The tiles come from OpenStreetMap over the internet: the markers show without them
+  await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
+  resetRosa();
+  await asCandidate('rosa');
+  await openPage('/applications');
+}
+
+function findPanel(page: Page): Locator {
+  return page.getByRole('complementary', { name: 'Candidatures' });
+}
+
+function findMarker(page: Page, city: string): Locator {
+  return page
+    .getByRole('region', { name: 'Carte des Offres' })
+    .getByRole('button', { name: new RegExp(`^${city} · `) });
+}
+
+function findRow(page: Page, city: string): Locator {
+  return page.getByRole('listitem').filter({ hasText: `Cour d’appel de ${city}` });
+}
+
+test.describe('Applications on the map', () => {
+  test('groups In progress as Interviewed, Invited then Applied, each group in its order', async ({
+    page,
+    asCandidate,
+    openPage,
+  }) => {
+    await openApplicationsOfRosa({ page, asCandidate, openPage });
+
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Candidatures');
+    const panel = findPanel(page);
+    await expect(panel.getByRole('tab')).toHaveText(['En cours6', 'Poste obtenu1', 'Refusées1']);
+    await expect(panel.getByRole('tab', { name: /^En cours/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(panel.getByRole('heading', { level: 2 })).toHaveText([/^Entretien passé/, /^Convoquée/, /^Postulée/]);
+    // The latest Interview first, then the soonest Interview, then the nearest Deadline; the City first
+    await expect(panel.getByRole('region', { name: 'Entretien passé' }).getByRole('listitem')).toHaveText([
+      /^Lille/,
+      /^Lyon/,
+    ]);
+    await expect(panel.getByRole('region', { name: 'Convoquée' }).getByRole('listitem')).toHaveText([
+      /^Rennes/,
+      /^Bordeaux/,
+    ]);
+    await expect(panel.getByRole('region', { name: 'Postulée' }).getByRole('listitem')).toHaveText([
+      /^Strasbourg/,
+      /^Nice/,
+    ]);
+    // A row tells its Step, its next Interview and the day Applied
+    const rennes = findRow(page, 'Rennes');
+    await expect(rennes.locator('[data-step]')).toHaveText('Convoquée');
+    await expect(rennes).toContainText('Entretien le');
+    await expect(rennes).toContainText('Postulée le');
+    await expect(findRow(page, 'Lille')).not.toContainText('Entretien le');
+
+    // One color per Step on the markers, which the legend names
+    await expect(findMarker(page, 'Rennes')).toHaveAttribute('data-group', 'invited');
+    await expect(findMarker(page, 'Lille')).toHaveAttribute('data-group', 'interviewed');
+    await expect(page.getByRole('list', { name: 'Légende' }).getByRole('listitem')).toHaveText([
+      'Entretien passé',
+      'Convoquée',
+      'Postulée',
+    ]);
   });
 
-  test('shows an Archived Application at its step on its page too, beside the Archived badge', async ({
+  test('shows Hired and Rejected in their own tabs, which the URL keeps', async ({ page, asCandidate, openPage }) => {
+    await openApplicationsOfRosa({ page, asCandidate, openPage });
+    const panel = findPanel(page);
+
+    await panel.getByRole('tab', { name: /^Poste obtenu/ }).click();
+    await expect(page).toHaveURL('/applications?tab=hired');
+    await expect(panel.getByRole('listitem')).toHaveText([/^Dijon/]);
+    await expect(findRow(page, 'Dijon').locator('[data-step]')).toHaveText('Poste obtenu');
+
+    await panel.getByRole('tab', { name: /^Refusées/ }).click();
+    await expect(page).toHaveURL('/applications?tab=rejected');
+    await expect(panel.getByRole('listitem')).toHaveText([/^Brest/]);
+
+    // Back returns to the previous tab
+    await page.goBack();
+    await expect(page).toHaveURL('/applications?tab=hired');
+    await expect(panel.getByRole('tab', { name: /^Poste obtenu/ })).toHaveAttribute('aria-selected', 'true');
+
+    await openPage('/applications?tab=rejected');
+    await expect(findPanel(page).getByRole('listitem')).toHaveText([/^Brest/]);
+  });
+
+  test('is reached from the Sidebar', async ({ page, asCandidate, openPage }) => {
+    await asCandidate('lea');
+    await openPage('/');
+
+    await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Candidatures' }).click();
+    await expect(page).toHaveURL('/applications');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Candidatures');
+  });
+
+  test('shows an Archived Application at its step on its page, beside the Archived mark', async ({
     page,
     asCandidate,
     openPage,
@@ -63,72 +177,22 @@ test.describe('/applications', () => {
     await asCandidate('lea');
     await openPage(`/postings/${ARCHIVED_REFERENCE}`);
 
-    await expect(page.locator('.posting-detail__title .badge')).toHaveText(['Postulée', 'Archivée']);
-  });
-
-  test('puts a Rejected Application back In progress from its row, staying on the page', async ({
-    page,
-    asCandidate,
-    openPage,
-  }) => {
-    await putBackRejected(page, REJECTED_REFERENCE);
-    await asCandidate('lea');
-    await openApplications({ page, openPage });
-
-    await findRow(page, 'Refusées', REJECTED_REFERENCE).getByRole('button', { name: 'Remettre en cours' }).click();
-
-    await expect(findRow(page, 'En cours', REJECTED_REFERENCE)).toHaveCount(1);
-    await expect(findRow(page, 'Refusées', REJECTED_REFERENCE)).toHaveCount(0);
-    await expect(page).toHaveURL('/applications');
-  });
-
-  test('is reached from the home and from the menu', async ({ page, asCandidate, openPage }) => {
-    await asCandidate('lea');
-    await openPage('/');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bonjour Léa');
-
-    await page.getByRole('link', { name: 'Toutes les Candidatures' }).click();
-    await expect(page).toHaveURL('/applications');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Candidatures de Léa');
-
-    await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Accueil' }).click();
-    await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Candidatures' }).click();
-    await expect(page).toHaveURL('/applications');
+    await expect(page.locator('main > header [data-step]')).toHaveText('Postulée · archivée');
   });
 
   test('fits a phone screen', async ({ page, asCandidate, openPage }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await asCandidate('lea');
-    await openApplications({ page, openPage });
+    await openApplicationsOfRosa({ page, asCandidate, openPage });
 
+    // On a phone the list is a drawer over the map (e2e/phone.test.ts)
+    await expect(page.getByRole('dialog', { name: /^Candidatures/ }).getByRole('tab')).toHaveCount(3);
     await expect.poll(() => findOverflowing(page)).toEqual([]);
   });
 
   test('asks who is there before showing any Application', async ({ page }) => {
     await page.goto('/applications');
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Qui consulte ses Candidatures ?');
-    await expect(page.getByRole('article')).toHaveCount(0);
-  });
-
-  test.describe('before React runs', () => {
-    test.use({ javaScriptEnabled: false });
-
-    test('marks a Rejected Application Hired from its row through a plain form, back on the page', async ({
-      page,
-      asCandidate,
-      openPage,
-    }) => {
-      await putBackRejected(page, REJECTED_WITHOUT_JS_REFERENCE);
-      await asCandidate('lea');
-      await openApplications({ page, openPage });
-
-      await findRow(page, 'Refusées', REJECTED_WITHOUT_JS_REFERENCE)
-        .getByRole('button', { name: 'Poste obtenu' })
-        .click();
-
-      await expect(page).toHaveURL('/applications');
-      await expect(findRow(page, 'Postes obtenus', REJECTED_WITHOUT_JS_REFERENCE)).toHaveCount(1);
-    });
+    await expect(page.getByText('Qui consulte ses Offres ?')).toBeVisible();
+    await expect(findPanel(page)).toHaveCount(0);
   });
 });

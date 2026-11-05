@@ -128,18 +128,30 @@ export async function readFeed(locale: Locale, httpFetch: typeof fetch = fetch):
   return listedPostingList;
 }
 
+// The day as the site writes it, 30/12/2026, at midnight UTC
+function dayOf(text: string): Date {
+  return new Date(text.split('/').toReversed().join('-'));
+}
+
+// The day under the heading of the vacancy, read in the Markdown of the Job Description, so a Job
+// Description stored before the Start Date existed gives it too
+export function readStartDate(markdown: string): Date | null {
+  // cspell:disable-next-line
+  const day = /^### Date de vacance de l['’]emploi\n+(\d{2}\/\d{2}\/\d{4})$/mu.exec(markdown)?.[1];
+  return day === undefined ? null : dayOf(day);
+}
+
 function readField(html: string, id: string): string | null {
   const value = new RegExp(String.raw`id="${id}"[^>]*>([\s\S]*?)</p>`).exec(html)?.[1] ?? '';
   return toText(value) === '' ? null : toText(value);
 }
 
-// The fields are read by their element ids, stable across offers (ADR-0001). The employing court of
-// appeal tells the Zone, a Parameter of this Source only: it stays out of the Job Description.
+// The fields are read by their element ids, stable across offers (ADR-0001)
 export async function readJobDescription(
   reference: string,
   locale: Locale,
   httpFetch: typeof fetch = fetch,
-): Promise<{ jobDescription: JobDescription; courtOfAppeal: string | null }> {
+): Promise<JobDescription> {
   // cspell:disable-next-line
   const url = `${ORIGIN}/offre-de-emploi/emploi_${reference.slice('AAAA-'.length)}.aspx`;
   const html = await get(httpFetch, url, locale);
@@ -154,17 +166,16 @@ export async function readJobDescription(
   }
   // cspell:disable
   const deadline = readField(content, 'fldoffer_date1');
-  // The employing court of appeal is the offer's entity, such as « Direction des services judiciaires - CA DOUAI »
-  const entity = toText(/_divEntityDesc"[^>]*>[\s\S]*?<\/h3>([\s\S]*?)<\/div>/.exec(content)?.[1] ?? '');
-  const jobDescription = JOB_DESCRIPTION_SCHEMA.parse({
-    deadline: deadline === null ? null : new Date(deadline.split('/').toReversed().join('-')),
+  const markdown = toMarkdown(content);
+  return JOB_DESCRIPTION_SCHEMA.parse({
+    deadline: deadline === null ? null : dayOf(deadline),
+    startDate: readStartDate(markdown),
     employer: readField(content, 'fldoffer_longtext2'),
     workplace: readField(content, 'fldlocation_shorttext1'),
     applicationEmail: readField(content, 'fldorigin_shorttext1'),
     contact1: readField(content, 'fldorigin_shorttext2'),
     contact2: readField(content, 'fldorigin_shorttext3'),
-    markdown: toMarkdown(content),
+    markdown,
   });
   // cspell:enable
-  return { jobDescription, courtOfAppeal: / - CA (.+)$/.exec(entity)?.[1] ?? null };
 }

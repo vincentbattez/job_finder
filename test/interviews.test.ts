@@ -2,7 +2,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import type { Actions } from '#/actions/index.ts';
 
-import { detectPostings } from './data-directory.ts';
+import { applyTo } from './apply.ts';
+import { detectPostings, holdDatabaseLock } from './data-directory.ts';
 
 const PLACE = 'Tribunal judiciaire, Béthune';
 
@@ -11,23 +12,42 @@ const INTERVIEWERS = 'Mme Durand, directrice de greffe';
 // Each test works on its own Posting, so they share one Detection on the responses recorded on 2026-10-29
 describe('the Interviews of an Application', () => {
   let actions: Actions;
+  let dataDirectory: string;
 
   beforeAll(async () => {
-    ({ actions } = await detectPostings());
+    ({ actions, dataDirectory } = await detectPostings());
   });
 
   async function apply(reference: string): Promise<void> {
-    await actions.changeStatus({ reference, status: 'applied' });
+    await applyTo(actions, reference);
   }
 
   async function addInterview(reference: string, start: string, other: Record<string, unknown> = {}) {
-    await actions.addInterview({ reference, start, place: PLACE, interviewers: INTERVIEWERS, ...other });
+    return actions.addInterview({ reference, start, place: PLACE, interviewers: INTERVIEWERS, ...other });
   }
 
   async function readStep(reference: string): Promise<string> {
     const { posting } = await actions.readPosting({ reference });
     return posting.step;
   }
+
+  it('wait for the write of another process', async () => {
+    await apply('2026-2233332');
+    await holdDatabaseLock(dataDirectory);
+
+    await expect(addInterview('2026-2233332', '2030-11-19T14:00')).resolves.toMatchObject({ number: 1 });
+  });
+
+  it('take the next numbers when added together', async () => {
+    await apply('2026-2278425');
+
+    const interviewList = await Promise.all([
+      addInterview('2026-2278425', '2030-11-19T14:00'),
+      addInterview('2026-2278425', '2030-11-20T14:00'),
+    ]);
+
+    expect(interviewList.map(({ number }) => number).toSorted((a, b) => a - b)).toEqual([1, 2]);
+  });
 
   it('are refused on a To Apply Posting, which has no Application yet', async () => {
     await expect(addInterview('2026-2445600', '2030-11-19T14:00')).rejects.toMatchObject({
@@ -135,6 +155,18 @@ describe('the Interviews of an Application', () => {
     expect(await actions.listInterviews({ reference: '2026-2231960' })).toEqual([
       expect.objectContaining({ number: 2, startAt: new Date('2030-01-17T08:00:00Z') }),
     ]);
+  });
+
+  // The front lands on the Interview just added (spec #125, « Interviews »)
+  it('give the Interview just added, numbered after the last one', async () => {
+    await apply('2026-2315264');
+    await addInterview('2026-2315264', '2030-01-10T09:00');
+    await addInterview('2026-2315264', '2030-01-17T09:00');
+    await actions.deleteInterview({ reference: '2026-2315264', number: 1 });
+
+    const added = await addInterview('2026-2315264', '2030-01-24T09:00');
+
+    expect(added).toMatchObject({ number: 3, startAt: new Date('2030-01-24T08:00:00Z'), place: PLACE });
   });
 
   it.each([

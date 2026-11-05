@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
+import { promptOf } from '#/artifact/prompt.ts';
 import { DEFAULT_INSTRUCTIONS_EN } from '#/domain/catalogue/en/default-instructions.ts';
 import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructions.ts';
 import type { Artifact } from '#/domain/index.ts';
+import { MARK_END, MARK_START } from '#/domain/substitution.ts';
+import { MDX_CATALOGUE } from '#/web/components/mdx/catalogue.tsx';
 
+import { applyTo } from './apply.ts';
 import { detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { markedValuesOf } from './marked-values.ts';
+import { runAndValidate } from './run-module.ts';
 
 // The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -19,7 +25,7 @@ const RESEARCH_RUN = {
 };
 const LETTER_RUN = {
   fileByName: {
-    'draft.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal de Béthune.\n',
+    'letter.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal de Béthune.\n',
     'recipients.json': JSON.stringify({
       to: { email: 'p.tj-bethune@justice.fr', source: 'applicationEmail' },
       ccList: [],
@@ -28,18 +34,6 @@ const LETTER_RUN = {
     }),
   },
 };
-const INTERVIEW_BRIEF_RUN = {
-  fileByName: {
-    'interview-brief.md': [
-      "# Fiche d'entretien : tribunal pour enfants de Béthune",
-      "## À réviser\n\n- L'assistance éducative.",
-      '## Moyens mnémotechniques\n\n- « PAS » : Protéger, Accompagner, Sanctionner.',
-      '## Présentez-vous\n\nTitulaire d’un [à compléter : diplôme], je souhaite rejoindre le tribunal pour enfants.',
-      '## Questions probables\n\n- Pourquoi le tribunal pour enfants de Béthune ?\n',
-    ].join('\n\n'),
-  },
-};
-
 // The Prompt the Posting page shows beside an Artifact of the Posting, or of its first Interview
 async function readPrompt(actions: Actions, artifact: Artifact) {
   const { artifactList, interviewList } = await actions.readPosting({ reference: REFERENCE });
@@ -47,14 +41,13 @@ async function readPrompt(actions: Actions, artifact: Artifact) {
     ?.module.prompt;
 }
 
-async function runModule(actions: Actions, module: Artifact, reference = REFERENCE, interview?: number) {
-  await actions.runModule({ module, reference, interview });
-  await actions.runQueuedJobs();
+async function runModule(actions: Actions, module: Artifact, reference = REFERENCE) {
+  await runAndValidate(actions, { module, reference });
 }
 
-// The Posting Applied, with a first Interview, which the Interview Brief and the Visualization prepare
+// The Posting Applied, with a first Interview, which the Interview Brief prepares
 async function addInterview(actions: Actions) {
-  await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+  await applyTo(actions, REFERENCE);
   await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: 'Béthune', interviewers: '' });
 }
 
@@ -64,13 +57,30 @@ describe('the Prompt beside an Artifact', () => {
     const { actions } = await detectPostings(aiSession);
     const prompt = await readPrompt(actions, 'research');
 
-    await actions.runModule({ module: 'research', reference: REFERENCE });
-    await actions.runQueuedJobs();
+    await runAndValidate(actions, { module: 'research', reference: REFERENCE });
 
     const [session] = aiSession.headlessSessionList;
     expect(prompt?.fixedPart).toContain('`research/v<next>/research.md`');
     expect(prompt?.fixedPart.replaceAll('research/v<next>', 'research/v1')).toBe(session?.fixedPrompt);
-    expect(prompt?.instructions).toBe(session?.instructions);
+    expect(prompt?.prompt.replaceAll('research/v<next>', 'research/v1')).toBe(session && promptOf(session));
+    expect(prompt?.prompt).toContain('# Inputs\n\n## Input: Job Description\n\n## Informations générales\n');
+  });
+
+  it('marks, in its Fixed Part, each value the tool substituted, and only them', async () => {
+    const { actions } = await detectPostings(createFakeAiSession());
+
+    const prompt = await readPrompt(actions, 'research');
+
+    expect(markedValuesOf(prompt?.markedFixedPart)).toEqual([
+      REFERENCE,
+      'Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE',
+      "Cour d'Appel de Douai",
+      'Tribunal Judiciaire de Béthune',
+      `https://choisirleservicepublic.gouv.fr/offre-emploi/${REFERENCE}/?tracking=1&idOrigine=502`,
+      'research/v<next>/research.md',
+      'research/v<next>/research.md',
+    ]);
+    expect(prompt?.markedFixedPart.replaceAll(MARK_START, '').replaceAll(MARK_END, '')).toBe(prompt?.fixedPart);
   });
 
   it('is, for a Letter reading a Letter sent for another Posting, the one its run receives', async () => {
@@ -78,7 +88,7 @@ describe('the Prompt beside an Artifact', () => {
     const { actions } = await detectPostings(aiSession);
     await runModule(actions, 'research', SENT_REFERENCE);
     await runModule(actions, 'letter', SENT_REFERENCE);
-    await actions.changeStatus({ reference: SENT_REFERENCE, status: 'applied' });
+    await applyTo(actions, SENT_REFERENCE);
     await runModule(actions, 'research');
     await actions.saveInstructions({ candidateId: 'lea', module: 'letter', instructions: 'Une page au plus.' });
     const prompt = await readPrompt(actions, 'letter');
@@ -86,9 +96,9 @@ describe('the Prompt beside an Artifact', () => {
     await runModule(actions, 'letter');
 
     const session = aiSession.headlessSessionList.at(-1);
-    expect(prompt?.fixedPart.replaceAll('letter/v<next>', 'letter/v1')).toBe(session?.fixedPrompt);
+    expect(prompt?.prompt.replaceAll('letter/v<next>', 'letter/v1')).toBe(session && promptOf(session));
+    expect(prompt?.prompt).toContain(`## Input: Letter sent for Posting ${SENT_REFERENCE}\n\n### As sent\n\n`);
     expect(prompt?.instructions).toBe('Une page au plus.');
-    expect(prompt?.instructions).toBe(session?.instructions);
   });
 
   it("holds the Candidate's own Instructions once they replaced the default ones of their Locale", async () => {
@@ -110,7 +120,7 @@ describe('the Prompt beside an Artifact', () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, LETTER_RUN, RESEARCH_RUN));
     await runModule(actions, 'research', SENT_REFERENCE);
     await runModule(actions, 'letter', SENT_REFERENCE);
-    await actions.changeStatus({ reference: SENT_REFERENCE, status: 'applied' });
+    await applyTo(actions, SENT_REFERENCE);
 
     await runModule(actions, 'research');
 
@@ -133,24 +143,18 @@ describe('the Prompt beside an Artifact', () => {
     });
   });
 
-  it('lists the Chosen Letter for the Interview Brief, and the Interview Brief for the Visualization', async () => {
-    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, LETTER_RUN, INTERVIEW_BRIEF_RUN));
+  it('lists the Chosen Letter for the Interview Brief', async () => {
+    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, LETTER_RUN));
     await runModule(actions, 'research');
     await runModule(actions, 'letter');
     await addInterview(actions);
-    const briefPrompt = await readPrompt(actions, 'interview_brief');
 
-    await runModule(actions, 'interview_brief', REFERENCE, 1);
+    const briefPrompt = await readPrompt(actions, 'interview_brief');
 
     expect(briefPrompt?.readVersionList).toEqual([
       { reference: REFERENCE, artifact: 'research', interviewNumber: null, number: 1 },
       { reference: REFERENCE, artifact: 'letter', interviewNumber: null, number: 1 },
     ]);
-    const visualizationPrompt = await readPrompt(actions, 'visualization');
-    expect(visualizationPrompt?.readVersionList).toEqual([
-      { reference: REFERENCE, artifact: 'interview_brief', interviewNumber: 1, number: 1 },
-    ]);
-    expect(visualizationPrompt?.fixedPart).toContain('interviews/1/visualization/v<next>');
   });
 
   it('is absent while the module is refused: a required Artifact missing, or the Letter frozen once Applied', async () => {
@@ -158,10 +162,41 @@ describe('the Prompt beside an Artifact', () => {
     const withoutResearch = await readPrompt(actions, 'letter');
     await runModule(actions, 'research');
 
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
 
     expect(withoutResearch).toBeNull();
     expect(await readPrompt(actions, 'letter')).toBeNull();
     expect(await readPrompt(actions, 'research')).not.toBeNull();
+  });
+});
+
+// The components the front renders, as its catalogue declares them: the Markdown elements it restyles aside
+const CATALOGUE_COMPONENT_NAME_LIST = Object.keys(MDX_CATALOGUE).filter((name) => /^[A-Z]/u.test(name));
+
+describe('the Fixed Part of an MDX Artifact', () => {
+  it.each(['research', 'portrait', 'interview_brief'] satisfies Artifact[])(
+    'names, for the %s, every component of the catalogue',
+    async (artifact) => {
+      const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
+      await runModule(actions, 'research');
+      await addInterview(actions);
+
+      const prompt = await readPrompt(actions, artifact);
+      const fixedPart = prompt?.fixedPart ?? '';
+
+      expect(CATALOGUE_COMPONENT_NAME_LIST.filter((name) => !fixedPart.includes(`<${name}`))).toEqual([]);
+      expect(fixedPart).toContain('MDX');
+    },
+  );
+
+  it('leaves the Letter in plain Markdown, naming no component', async () => {
+    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
+    await runModule(actions, 'research');
+
+    const prompt = await readPrompt(actions, 'letter');
+    const fixedPart = prompt?.fixedPart ?? '';
+
+    expect(CATALOGUE_COMPONENT_NAME_LIST.filter((name) => fixedPart.includes(`<${name}`))).toEqual([]);
+    expect(fixedPart).not.toContain('MDX');
   });
 });

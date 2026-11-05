@@ -1,11 +1,13 @@
-import { redirect, type ActionFunctionArgs } from 'react-router';
+import type { ActionFunctionArgs } from 'react-router';
 
 import { codedError } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
+import { readCandidate } from '#/web/candidate.server.ts';
 import { relayAction } from '#/web/relay-action.server.ts';
 
-// The Interviews section of the Posting page posts here, then the page shows the Interviews as saved;
-// a refusal goes back to the form, which keeps what was typed
+// The Interview Dialog and the Interviews tab post here through a fetcher, which revalidates the page;
+// adding answers the Interview added, which the Dialog shows and lands on; a refusal goes back to the form,
+// which keeps what was typed
 export function action({ params, request }: ActionFunctionArgs) {
   return relayAction(request, async () => {
     const formData = await request.formData();
@@ -18,8 +20,11 @@ export function action({ params, request }: ActionFunctionArgs) {
     };
     switch (formData.get('intent')) {
       case 'add': {
-        await ACTIONS.addInterview({ reference: params.reference, ...fields });
-        break;
+        const { number, startAt, durationMinutes, place, interviewers } = await ACTIONS.addInterview({
+          reference: params.reference,
+          ...fields,
+        });
+        return { added: { number, startAt, durationMinutes, place, interviewers } };
       }
       case 'edit': {
         await ACTIONS.editInterview({ ...interview, ...fields });
@@ -30,9 +35,10 @@ export function action({ params, request }: ActionFunctionArgs) {
         break;
       }
       default: {
-        throw codedError('unknown_intent');
+        const { locale } = await readCandidate(request);
+        throw codedError('unknown_intent', {}, { locale });
       }
     }
-    return redirect(`/postings/${String(params.reference)}`);
+    return null;
   });
 }

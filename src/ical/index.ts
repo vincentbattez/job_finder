@@ -82,8 +82,11 @@ function foldLine(line: string): string {
   return partList.join('\r\n ');
 }
 
-// An iCal file of one event, written by hand since the format is simple enough to spare a dependency: a day-before
-// alarm, which Apple Calendar honors and Google Calendar replaces with its own reminders
+// The reminders of an Interview: the day before, to prepare, then an hour before, to leave (spec #125, « Interviews »)
+const REMINDER_TRIGGER_LIST = ['-P1D', '-PT1H'];
+
+// An iCal file of one event, written by hand since the format is simple enough to spare a dependency: its alarms,
+// which Apple Calendar honors and Google Calendar replaces with its own reminders
 export function formatCalendar(event: ICalendarEvent): string {
   const lineList = [
     'BEGIN:VCALENDAR',
@@ -102,11 +105,13 @@ export function formatCalendar(event: ICalendarEvent): string {
     `LOCATION:${escapeText(event.location)}`,
     `DESCRIPTION:${escapeText(event.description)}`,
     `URL:${event.url}`,
-    'BEGIN:VALARM',
-    'ACTION:DISPLAY',
-    `DESCRIPTION:${escapeText(event.summary)}`,
-    'TRIGGER:-P1D',
-    'END:VALARM',
+    ...REMINDER_TRIGGER_LIST.flatMap((trigger) => [
+      'BEGIN:VALARM',
+      'ACTION:DISPLAY',
+      `DESCRIPTION:${escapeText(event.summary)}`,
+      `TRIGGER:${trigger}`,
+      'END:VALARM',
+    ]),
     'END:VEVENT',
     'END:VCALENDAR',
   ];

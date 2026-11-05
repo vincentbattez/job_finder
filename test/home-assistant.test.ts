@@ -10,7 +10,7 @@ import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.
 const LEA_SERVICE = 'notify.mobile_app_iphone_de_lea';
 const CAMILLE_SERVICE = 'notify.mobile_app_pixel_de_camille';
 
-// Two Béthune Postings in Léa's Zone, from the responses recorded on 2026-10-29
+// Two Béthune Postings, from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 const OTHER_REFERENCE = '2026-2445609';
 
@@ -251,7 +251,7 @@ describe('the Detection Summary', () => {
   it("goes to each Candidate's own Home Assistant", async () => {
     const homeAssistantByCandidateId = { lea: await startHomeAssistant(), camille: await startHomeAssistant() };
     const dataDirectory = createDataDirectory();
-    // Camille follows the same Postings as Léa, those of the courts of appeal of Douai and Amiens
+    // Camille follows the same Postings as Léa
     const frontActions = await createActions({ dataDirectory });
     await frontActions.createCandidate({ id: 'camille', name: 'Camille' });
     await frontActions.saveWatch({ candidateId: 'camille', ...LEA_WATCH });

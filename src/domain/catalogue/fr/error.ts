@@ -19,8 +19,8 @@ export const ERROR_FR: typeof ERROR_EN = {
   configKeysMixed:
     "La config {{configPath}} contient à la fois l'ancienne clé « {{frenchKey}} » et son nouveau nom « {{englishKey}} ». Ne garder que « {{englishKey}} », en y fusionnant ce que contient « {{frenchKey}} », puis relancer.",
   detectionRunning:
-    'Une Détection est déjà en cours, lancée le {{startedAt, datetime(dateStyle: medium; timeStyle: short; timeZone: Europe/Paris)}} : attendre son verdict, puis la relancer au besoin.',
-  detectionInterrupted: 'Interrompue : la Détection s’est arrêtée avant la fin, sans verdict. La relancer.',
+    'Une Détection est déjà en cours, lancée le {{startedAt, datetime(dateStyle: medium; timeStyle: short; timeZone: Europe/Paris)}} : attends son verdict, puis relance-la au besoin.',
+  detectionInterrupted: 'Interrompue : la Détection s’est arrêtée avant la fin, sans verdict. Relance-la.',
 
   missingJobDescription:
     "Fiche de poste introuvable pour l'Offre {{reference}} : {{filePath}}. La remettre à cet emplacement, d'où l'outil la lit.",
@@ -35,15 +35,19 @@ export const ERROR_FR: typeof ERROR_EN = {
   ambiguousPosting:
     "Plusieurs Offres ont la référence {{reference}}, chez des Candidats différents : leurs Veilles suivent la même Source, et l'outil ne sait pas encore choisir entre elles. Le signaler pour qu'il les distingue.",
 
-  unknownWatch: "{{candidateName}} n'a pas de Veille {{watchId}} : recharger la page de son Profil.",
-  unknownSource: 'Source inconnue : {{sourceId}}. En choisir une parmi {{knownList}} dans les Veilles du Profil.',
+  unknownWatch: "{{candidateName}} n'a pas de Veille {{watchId}} : recharger la page des Veilles.",
+  unknownSource: 'Source inconnue : {{sourceId}}. En choisir une parmi {{knownList}} sur la page des Veilles.',
   unknownSourceOfWatch:
-    'Source inconnue pour la Veille {{watchId}} : {{sourceId}}. En choisir une parmi {{knownList}} dans les Veilles du Profil.',
+    'Source inconnue pour la Veille {{watchId}} : {{sourceId}}. En choisir une parmi {{knownList}} sur la page des Veilles.',
   watchParameters:
     "La Veille {{watchId}} ne donne pas à la Source {{sourceName}} les Paramètres qu'elle attend : corriger {{labels}} dans le Profil de son Candidat.",
   sourceParameters: "La Source {{sourceName}} attend d'autres Paramètres : renseigner {{labels}}.",
   notificationsNotSent: '{{failures}}',
 
+  notNew: "L'Offre {{reference}} n'est plus Nouvelle : elle a déjà été triée.",
+  letterStillDraft:
+    "L'Offre {{reference}} a encore une Lettre de motivation en Brouillon : valide-la, ou marque l'Offre Postulée sans Lettre de motivation.",
+  newNotSorted: "L'Offre {{reference}} est Nouvelle : garde-la ou écarte-la d'abord.",
   statusChange: "L'Offre {{reference}} est {{statusLabel}} : elle ne peut passer qu'en {{nextLabels}}.",
   toApplyAfterOutcome:
     "L'Offre {{reference}} a un résultat : la remettre Envoyée d'abord, seule une Offre Postulée sans Entretien revient À traiter.",
@@ -64,9 +68,13 @@ export const ERROR_FR: typeof ERROR_EN = {
   unknownModule: 'Module inconnu : {{name}}. Modules : {{names}}.',
   unknownArtifact: 'Artefact inconnu : {{name}}. Artefacts : {{names}}.',
   missingArtifactForFront:
-    "L'Offre {{reference}} n'a pas de {{missingLabel}} retenue, sur laquelle s'appuie la {{moduleLabel}} : lancez d'abord la {{missingLabel}}.",
+    "L'Offre {{reference}} n'a pas de {{missingLabel}} validée, sur laquelle s'appuie la {{moduleLabel}} : produisez puis validez d'abord la {{missingLabel}}.",
   missingArtifactForCli:
-    "L'Offre {{reference}} n'a pas de {{missingLabel}} retenue, sur laquelle s'appuie la {{moduleLabel}}. La produire d'abord : {{command}}.",
+    "L'Offre {{reference}} n'a pas de {{missingLabel}} validée, sur laquelle s'appuie la {{moduleLabel}}. La produire d'abord, « {{command}} », puis valider une de ses Versions.",
+  unknownInput:
+    "L'Offre {{reference}} n'a pas d'entrée « {{key}} » pour cette génération : rouvrir le panneau pour voir ses entrées.",
+  requiredInputUnchecked:
+    "L'entrée « {{key}} » de l'Offre {{reference}} est requise : cette génération ne peut pas s'en passer.",
   missingOutput: 'Le fichier attendu {{outputPath}} est absent.',
   emptyOutput: 'Le fichier attendu {{outputPath}} est vide.',
   malformedOutput: 'Le fichier {{outputPath}} est mal formé : {{formatError}}.',
@@ -78,22 +86,20 @@ export const ERROR_FR: typeof ERROR_EN = {
     'Le job {{jobId}} tourne depuis plus de {{minutes}} minutes, au-delà de sa durée maximale : le worker est bloqué. Le redémarrer : « lpm service worker restart -p job_finder », ce qui fait échouer le job ; puis relancer le module.',
   interruptedJob:
     "Interrompu : le worker s'est arrêté pendant ce job. Relancer le module en crée une nouvelle Version.",
-  visualizationNotEditable:
-    "La Visualisation ne se modifie pas à la main : elle reprend la Fiche d'entretien retenue. Corrigez celle-ci, puis relancez la Visualisation de l'Offre {{reference}}.",
   noChosenVersionToEdit:
     "L'Offre {{reference}} n'a pas de Version retenue de {{artifact}} à modifier : « {{command}} » en produit une.",
-  draftNotEditable:
-    "Le Brouillon ne se modifie jamais : il garde ce que l'IA a écrit. Corrigez la Lettre de l'Offre {{reference}}.",
+  originalNotEditable:
+    "L'Original ne se modifie jamais : il garde ce que l'IA a écrit. Corrigez le texte de la Version, sur l'Offre {{reference}}.",
+  emptyBroughtVersion:
+    "La Version apportée pour l'Offre {{reference}} n'a pas de texte. Coller ou déposer son texte, puis l'ajouter à nouveau.",
   unknownVersion:
     "Version inconnue : {{artifact}} v{{number}} de l'Offre {{reference}}. « {{command}} » liste ses Versions.",
   versionFailed:
-    "La Version {{artifact}} v{{number}} de l'Offre {{reference}} est en échec : seule une Version prête peut être retenue.",
+    "La Version {{artifact}} v{{number}} de l'Offre {{reference}} est en échec : seule une Version prête se valide ou se corrige.",
   versionRunning:
-    "La Version {{artifact}} v{{number}} de l'Offre {{reference}} est en cours : seule une Version prête peut être retenue.",
+    "La Version {{artifact}} v{{number}} de l'Offre {{reference}} est en cours : seule une Version prête se valide ou se corrige.",
   notAVersionFile:
-    "« {{fileName}} » n'est pas un fichier de la Version retenue de {{artifact}} de l'Offre {{reference}}.",
-  visualizationWithoutPage:
-    "La Visualisation v{{number}} de l'Offre {{reference}} n'a pas de page : relancez la Visualisation.",
+    "« {{fileName}} » n'est pas un fichier modifiable d'une Version de {{artifact}} de l'Offre {{reference}}.",
   noChosenLetter: "L'Offre {{reference}} n'a pas de Lettre retenue. La produire : jf run letter {{reference}}.",
 
   invalidProfileFileName:
@@ -135,8 +141,6 @@ export const ERROR_FR: typeof ERROR_EN = {
   extractionInvented: "ne figure pas tel quel dans la Fiche de poste : la session l'a inventé",
   noLevelOneHeading: 'il ne commence pas par un titre de niveau 1 (« # »)',
   noSourcesSection: "il n'a pas de section « ## Sources » avec au moins un lien",
-  notACompletePage: "ce n'est pas une page HTML complète, de « <!DOCTYPE html> » à « </html> »",
-  hasScript: "il contient un script, que le front n'exécute pas",
   recipientsFormat: 'il ne suit pas le format demandé ({{detail}})',
   inventedAddress: "l'adresse {{email}} ne figure pas dans le champ {{field}} de l'Offre",
 

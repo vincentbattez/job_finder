@@ -25,13 +25,6 @@ interface ISearchResult {
   publishedReferenceList: string[];
 }
 
-// A Posting's detail page, and whether the Posting is in the Zone of the Watch, which the Source alone
-// knows how to tell
-export interface ISourceReadResult {
-  jobDescription: JobDescription;
-  isInZone: boolean;
-}
-
 // What a module of the family declares to defineSource. Its operations read the site with the fetch
 // the Source was created with, which the tests replace with recorded responses, and tell a failure in
 // the locale of the Watch's Candidate.
@@ -49,7 +42,10 @@ interface ISourceDefinition<TShape extends ParameterShape> {
     parameters: ParametersOf<TShape>,
     httpFetch: typeof fetch | undefined,
     locale: Locale,
-  ) => Promise<ISourceReadResult>;
+  ) => Promise<JobDescription>;
+  // The Start Date a Job Description the Source stored gives, so a Posting saved before the Start
+  // Date existed gets it too; null when it says nothing
+  readStartDate: (markdown: string) => Date | null;
 }
 
 // A module as the Detection uses it, whatever its Parameters: each operation parses those of the
@@ -59,7 +55,8 @@ export interface ISource {
   description: SourceModule;
   parseParameters(rawParameters: unknown, locale: Locale): Parameters;
   search(watch: Watch, locale: Locale): Promise<ISearchResult>;
-  readJobDescription(reference: string, watch: Watch, locale: Locale): Promise<ISourceReadResult>;
+  readJobDescription(reference: string, watch: Watch, locale: Locale): Promise<JobDescription>;
+  readStartDate(markdown: string): Date | null;
 }
 
 // What a module of the family exports: it creates the Source, bound to the fetch it reads the site with
@@ -77,6 +74,7 @@ export function defineSource<TShape extends ParameterShape>({
   parameterSchema,
   search,
   readJobDescription,
+  readStartDate,
 }: ISourceDefinition<TShape>): SourceFactory {
   const parameters = declareParameters(name, parameterSchema);
   const description = SOURCE_MODULE_SCHEMA.parse({ id, name, parameterList: parameters.parameterList });
@@ -101,5 +99,6 @@ export function defineSource<TShape extends ParameterShape>({
     search: (watch, locale) => search(parseParametersOf(watch, locale), httpFetch, locale),
     readJobDescription: (reference, watch, locale) =>
       readJobDescription(reference, parseParametersOf(watch, locale), httpFetch, locale),
+    readStartDate,
   });
 }

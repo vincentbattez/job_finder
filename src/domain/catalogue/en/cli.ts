@@ -17,8 +17,7 @@ export const CLI_EN = {
 
   // A Posting on one line. The Source gives the Deadline as a day, at midnight UTC.
   deadline: '{{deadline, datetime(timeZone: UTC)}}',
-  inZone: 'Zone',
-  outOfZone: 'out of Zone',
+  startDate: 'Start Date {{startDate, datetime(timeZone: UTC)}}',
   repostOf: 'Repost of {{reference}}',
   repostedAs: 'Reposted as {{reference}}',
 
@@ -63,14 +62,14 @@ export const CLI_EN = {
 
   // jf run
   runDescription:
-    'Queues a new Version of an Artifact, which the worker produces with Claude Code; --wait waits for the end: jf run research|letter|portrait|brief|visualization <posting> [<interview>] [--wait]',
+    'Queues a new Version of an Artifact, which the worker produces with Claude Code; --wait waits for the end: jf run research|letter|portrait|brief <posting> [<interview>] [--wait]',
   runUsage:
     'Usage: jf run <module> <posting> [<interview>] [--wait], for example jf run research 2026-2445600, or jf run brief 2026-2445600 1 for the Interview Brief of Interview 1.',
   queued: '{{module}} of Posting {{reference}} queued (job {{jobId}}).\n',
   runQueued: 'The worker will produce it. “{{versionsCommand}}” follows its Versions.\n',
   runWaiting: 'Waiting for the worker (lpm worker service): Claude Code may take several minutes…\n',
   runFailed: '{{name}} failed ({{errorCode}}):\n{{log}}\nRun it again: {{command}}',
-  runReady: '{{name}} ready and chosen. “{{versionsCommand}}” lists its Versions.\n',
+  runReady: '{{name}} ready, as a Draft until validated. “{{versionsCommand}}” lists its Versions.\n',
 
   // jf recipients
   recipientsDescription:
@@ -84,7 +83,7 @@ export const CLI_EN = {
   salutation: 'Salutation: {{text}}',
   justification: 'Justification: {{text}}',
 
-  // jf versions, jf choose
+  // jf versions, jf validate
   versionsDescription:
     'Lists the Versions of an Artifact: jf versions <posting> research, or jf versions <posting> brief <interview> for an Artifact of an Interview',
   versionsUsage:
@@ -92,21 +91,23 @@ export const CLI_EN = {
   versionStateLabelByState: { running: 'in progress', ready: 'ready', failed: 'failed' },
   lastJobFailed: 'Last launch failed ({{errorCode}}):\n{{log}}\n',
   lastJobStalled: 'Last launch not moving ({{errorCode}}):\n{{message}}\n',
+  validationLabelByValidation: { draft: 'Draft', validated: 'Validated' },
   chosenVersion: 'chosen',
   candidateInstructions: 'Candidate’s Instructions',
   defaultInstructions: 'Default Instructions',
   createdAt: '{{createdAt, datetime(dateStyle: short; timeStyle: medium; timeZone: Europe/Paris)}}',
-  chooseDescription:
-    'Changes the Chosen Version of an Artifact: jf choose <posting> research <version>, or jf choose <posting> brief <version> <interview>',
-  chooseUsage:
-    'Usage: jf choose <posting> <artifact> <version> [<interview>], for example jf choose 2026-2445600 research 2, or jf choose 2026-2445600 brief 2 1.',
-  versionChosen: '{{artifact}} {{version}} chosen for Posting {{reference}}.\n',
+  validateDescription:
+    'Validates a Version of an Artifact, which becomes its Chosen Version: jf validate <posting> research <version>, or jf validate <posting> brief <version> <interview>',
+  validateUsage:
+    'Usage: jf validate <posting> <artifact> <version> [<interview>], for example jf validate 2026-2445600 research 2, or jf validate 2026-2445600 brief 2 1.',
+  versionValidated: '{{artifact}} {{version}} validated and chosen for Posting {{reference}}.\n',
 
   // jf apply, jf hired, jf rejected, jf in-progress, jf archive, jf unarchive
   statusCommandDescription: '{{description}}: jf {{name}} <posting>',
   statusUsage: 'Usage: jf {{name}} <posting>. “jf list <candidate>” lists the Postings.',
   statusChanged: '{{reference}}: {{statusLabel}}\n',
-  applyDescription: 'Moves a Posting to Applied, with or without a Letter, which freezes its Letter',
+  applyDescription:
+    'Moves a Posting to Applied, which freezes its Letter; over a Draft Letter, validate it first or add --without-letter',
   toApplyDescription:
     'Puts an Applied Posting whose Letter was never sent, without an Interview, back to To Apply, its Letter free again',
   hiredDescription: 'Marks an Application Hired: the Candidate gets the job',
@@ -162,7 +163,7 @@ export const CLI_EN = {
   jobFailed: 'failed: {{firstLine}}',
   conversionDone: 'stored in the Profile',
   conversionJob: 'job {{jobId}}, conversion of Upload {{upload}} of {{candidateId}}: {{outcome}}\n',
-  artifactDone: 'ready and chosen',
+  artifactDone: 'ready, as a Draft',
   artifactJob: 'job {{jobId}}, {{artifact}} of Posting {{reference}}: {{outcome}}\n',
   // The first message of an interactive session, which Claude answers in the language of the Candidate
   sessionGreeting: 'Hello!',

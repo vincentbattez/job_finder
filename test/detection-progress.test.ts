@@ -9,7 +9,6 @@ import { z } from 'zod/v4';
 import { createActions, type Actions } from '#/actions/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
-import { createFakeAiSession } from './fake-ai-session.ts';
 import { LEA_WATCH_ID } from './lea.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
@@ -107,7 +106,10 @@ describe('the last Detection', () => {
 });
 
 // The detail page of 2026-2199164, the fourth reference oldest first
+const HELD_REFERENCE = '2026-2199164';
 const HELD_URL = 'https://place-ep-recrute.talent-soft.com/offre-de-emploi/emploi_2199164.aspx';
+// A reference the Detection reads before HELD_URL
+const FOUND_SO_FAR_REFERENCE = '2025-2093618';
 
 // The recorded responses, the detail page of HELD_URL held back until released: the Detection stops
 // there, mid-reading, for as long as a test looks at it
@@ -154,6 +156,30 @@ describe('a running Detection', () => {
     heldFetch.release();
   });
 
+  // New's « found » group fills while the Detection reads, polled by the front (spec #125 story 15)
+  it('flags in New the Postings it found so far', async () => {
+    const dataDirectory = createDataDirectory();
+    const earlierFetch = createRecordedFetch({
+      [DSJ_FEED_URL]: { body: feedWithout([HELD_REFERENCE, FOUND_SO_FAR_REFERENCE]) },
+    });
+    const earlierActions = await createActions({ dataDirectory, fetch: earlierFetch.fetch });
+    await earlierActions.detect();
+    const heldFetch = createHeldFetch();
+    const actions = await createActions({ dataDirectory, fetch: heldFetch.fetch });
+
+    await actions.startDetection({ candidateId: 'lea' });
+    await vi.waitFor(async () => {
+      const { running } = await actions.followDetection({ candidateId: 'lea' });
+      expect(running?.watchList[0]?.readCount).toBe(1);
+    });
+
+    const itemList = await actions.listNew({ candidateId: 'lea' });
+    expect(itemList.filter(({ isFound }) => isFound).map(({ posting }) => posting.reference)).toEqual([
+      FOUND_SO_FAR_REFERENCE,
+    ]);
+    heldFetch.release();
+  });
+
   it('refuses a second Detection, whoever starts it, until it is over', async () => {
     const dataDirectory = createDataDirectory();
     const heldFetch = createHeldFetch();
@@ -174,7 +200,7 @@ describe('a running Detection', () => {
 
   // The daily automation and the button at the same instant, each in its own process: the lock
   // refuses one with its code (ADR-0014), so the same new Posting is never saved twice
-  it('lets one of two Detections launched at the same instant run, with no duplicate Posting or job', async () => {
+  it('lets one of two Detections launched at the same instant run, with no duplicate Posting', async () => {
     const dataDirectory = createDataDirectory();
     const bethuneReferenceList = ['2026-2445600', '2026-2445609'];
     const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout(bethuneReferenceList) } });
@@ -188,16 +214,11 @@ describe('a running Detection', () => {
     expect(outcomeList.flatMap((outcome) => ('newReferenceList' in outcome ? outcome.newReferenceList : []))).toEqual(
       bethuneReferenceList,
     );
-    const research = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
-    const worker = await createActions({ dataDirectory, aiSession: createFakeAiSession(research, research) });
-    const postingList = await worker.listPostings({ candidateId: 'lea' });
+    const actions = await createActions({ dataDirectory });
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
     const referenceList = postingList.map(({ reference }) => reference);
     expect(referenceList).toHaveLength(81);
     expect(new Set(referenceList).size).toBe(81);
-    const jobList = await worker.runQueuedJobs();
-    expect(jobList.map((job) => ('posting' in job ? `${job.module} ${job.posting.reference}` : job.module))).toEqual(
-      bethuneReferenceList.map((reference) => `research ${reference}`),
-    );
   });
 
   it('stops holding the lock once its process died, and says it was interrupted', async () => {
@@ -244,7 +265,7 @@ describe('the scope of a Detection', () => {
     await actions.saveWatch({
       candidateId: 'emma',
       source: 'pep',
-      parameters: { title: 'attaché de justice', courtOfAppealList: ['Douai'] },
+      parameters: { title: 'attaché de justice' },
     });
 
     await actions.startDetection({ candidateId: 'emma' });

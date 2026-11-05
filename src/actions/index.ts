@@ -4,6 +4,7 @@ import type { DomainValue } from '#/domain/index.ts';
 import { createApplicationActions } from './applications.ts';
 import { createCandidateActions } from './candidates.ts';
 import { openContext, type IActionsOption } from './context.ts';
+import { createCustomArtifactActions } from './custom-artifacts.ts';
 import { createDetectActions } from './detect.ts';
 import { createEditionActions } from './edition.ts';
 import { createFactsActions } from './facts.ts';
@@ -15,6 +16,7 @@ import { createNotesActions } from './notes.ts';
 import { createNotificationChannelActions } from './notification-channel.ts';
 import { createPostingActions } from './postings.ts';
 import { createProfileActions } from './profile.ts';
+import { createRevisionActions } from './revision.ts';
 import { createStatusActions } from './status.ts';
 import { createUploadActions } from './uploads.ts';
 import { createWatchActions } from './watches.ts';
@@ -26,7 +28,6 @@ export { messageOf } from '#/text/index.ts';
 export { codedError, codedErrorOf, formatError, formatFailure } from '#/domain/coded-error.ts';
 export type { ErrorCode } from '#/domain/error.ts';
 export type { Artifact } from '#/domain/index.ts';
-export { ARTIFACT_RENAME_LIST } from '#/domain/artifact-rename.ts';
 
 // The single entry point of every feature, so no business rule lives in the CLI or the front
 // (ADR-0003); `satisfies` holds each action to unknown input and domain output (ADR-0005)
@@ -41,6 +42,7 @@ export async function createActions(option: IActionsOption) {
     ...createStatusActions(context),
     ...createNotesActions(context),
     ...createApplicationActions(context),
+    ...createRevisionActions(context),
     ...createInterviewActions(context),
     ...createProfileActions(context),
     ...createUploadActions(context),
@@ -48,6 +50,7 @@ export async function createActions(option: IActionsOption) {
     ...createFactsActions(context),
     ...createInstructionsActions(context),
     ...createEditionActions(context),
+    ...createCustomArtifactActions(context),
     ...createJobActions(context),
   } satisfies Record<string, (rawInput: unknown) => Promise<void> | Promise<DomainValue | DomainValue[]>>);
 }

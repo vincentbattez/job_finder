@@ -27,6 +27,7 @@ function fakePosting(candidateId: string): Prisma.PostingUncheckedCreateInput {
     url: `https://example.org/postings/${reference}`,
     publishedAt: faker.date.recent({ days: 60 }),
     deadline: faker.date.soon({ days: 45 }),
+    startDate: faker.helpers.maybe(() => faker.date.soon({ days: 120, refDate: '2026-12-01' })) ?? null,
     employer: `Cour d'appel de ${faker.helpers.arrayElement(COURT_OF_APPEAL_LIST)}`,
     workplace: `Tribunal judiciaire de ${city}`,
     // cspell:enable
@@ -39,7 +40,6 @@ function fakePosting(candidateId: string): Prisma.PostingUncheckedCreateInput {
     contact2: faker.helpers.maybe(() => faker.person.fullName()) ?? null,
     status: faker.helpers.arrayElement(['to_apply', 'applied'] as const),
     archivedAt: faker.helpers.maybe(() => faker.date.recent({ days: 30 }), { probability: 0.2 }) ?? null,
-    isInZone: faker.datatype.boolean(),
     versionList: {
       create: hasResearch
         ? [{ artifact: 'research', number: 1, isChosen: true, state: 'ready', instructions: '' }]

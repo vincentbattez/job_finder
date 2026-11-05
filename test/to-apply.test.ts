@@ -1,0 +1,96 @@
+import { describe, expect, it } from 'vitest';
+
+import { applyTo } from './apply.ts';
+import { detectPostings } from './data-directory.ts';
+import { createFakeAiSession } from './fake-ai-session.ts';
+import { runAndValidate } from './run-module.ts';
+
+// Postings detected from the responses recorded on 2026-10-29: Béthune juvenile court, Rennes, Melun
+const BETHUNE_REFERENCE = '2026-2445600';
+const RENNES_REFERENCE = '2026-2420931';
+const ARCHIVED_REFERENCE = '2026-2290529';
+const APPLIED_REFERENCE = '2026-2285305';
+const NEW_REFERENCE = '2026-2445609';
+
+const RESEARCH_RUN = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
+const LETTER_RUN = {
+  fileByName: {
+    'letter.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal pour enfants de Béthune.\n',
+    'recipients.json': JSON.stringify({
+      to: { email: 'p.tj-bethune@justice.fr', source: 'applicationEmail' },
+      ccList: [],
+      salutation: { text: 'Madame la Présidente,', source: 'contact1' },
+      justification: 'Le mail de candidature est celui de la présidence.',
+    }),
+  },
+};
+
+// The To Apply list: what the Candidate prepares, with where its Research and Letter stand (ADR-0019)
+describe('To Apply list', () => {
+  it('lists the followed To Apply Postings, each with the state of its Research and its Letter', async () => {
+    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, LETTER_RUN, RESEARCH_RUN));
+    await runAndValidate(actions, { module: 'research', reference: BETHUNE_REFERENCE });
+    await runAndValidate(actions, { module: 'letter', reference: BETHUNE_REFERENCE });
+    // A second Research, a Draft while the Candidate keeps the first one chosen
+    await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
+    await actions.runQueuedJobs();
+    for (const reference of [BETHUNE_REFERENCE, RENNES_REFERENCE, ARCHIVED_REFERENCE]) {
+      await actions.keep({ reference });
+    }
+    await actions.archive({ reference: ARCHIVED_REFERENCE });
+    await applyTo(actions, APPLIED_REFERENCE);
+
+    const itemList = await actions.listToApply({ candidateId: 'lea' });
+
+    const referenceList = itemList.map(({ posting }) => posting.reference);
+    expect(referenceList).toContain(RENNES_REFERENCE);
+    expect(referenceList).not.toContain(ARCHIVED_REFERENCE);
+    expect(referenceList).not.toContain(APPLIED_REFERENCE);
+    // Not sorted yet: New
+    expect(referenceList).not.toContain(NEW_REFERENCE);
+    // The latest Research waits as a Draft behind the Chosen one; the Letter is Validated
+    expect(itemList.find(({ posting }) => posting.reference === BETHUNE_REFERENCE)).toMatchObject({
+      research: 'draft',
+      letter: 'validated',
+    });
+    expect(itemList.find(({ posting }) => posting.reference === RENNES_REFERENCE)).toMatchObject({
+      research: 'none',
+      letter: 'none',
+    });
+  });
+
+  it('lists the Archived To Apply Postings apart, under Archived', async () => {
+    const { actions } = await detectPostings();
+    for (const reference of [RENNES_REFERENCE, ARCHIVED_REFERENCE]) {
+      await actions.keep({ reference });
+    }
+    await actions.archive({ reference: ARCHIVED_REFERENCE });
+    // Archived while still New: it belongs to New's Archived, not To Apply's
+    await actions.archive({ reference: NEW_REFERENCE });
+
+    const itemList = await actions.listToApply({ candidateId: 'lea', isArchived: true });
+
+    expect(itemList.map(({ posting }) => posting.reference)).toEqual([ARCHIVED_REFERENCE]);
+  });
+
+  // The Sheet and the Posting page tell the same state as the list's chips
+  it('tells, on the Posting, where each of its Artifacts stands', async () => {
+    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN, RESEARCH_RUN));
+    await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
+    await actions.runQueuedJobs();
+    await actions.runModule({ module: 'research', reference: BETHUNE_REFERENCE });
+    await actions.runQueuedJobs();
+    await actions.validateVersion({ reference: BETHUNE_REFERENCE, artifact: 'research', number: 1 });
+
+    const { artifactList } = await actions.readPosting({ reference: BETHUNE_REFERENCE });
+
+    expect(artifactList.find(({ artifact }) => artifact === 'research')).toMatchObject({ validation: 'draft' });
+    expect(artifactList.find(({ artifact }) => artifact === 'letter')).toMatchObject({ validation: 'none' });
+  });
+
+  it('refuses to list the To Apply Postings of an unknown Candidate', async () => {
+    const { actions } = await detectPostings();
+
+    await expect(actions.listToApply({ candidateId: 'nobody' })).rejects.toThrow(/nobody/);
+  });
+});

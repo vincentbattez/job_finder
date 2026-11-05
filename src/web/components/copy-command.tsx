@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import './copy-command.css';
+import { Button } from '#/web/components/ui/button.tsx';
 
 // Over plain http on the LAN (ADR-0002), browsers withhold the Clipboard API: a hidden field is
 // copied the way every browser still allows
@@ -24,31 +24,26 @@ function copyText(text: string): void {
 function CopyButton({ text, label, copiedLabel }: Readonly<{ text: string; label: string; copiedLabel: string }>) {
   const [isCopied, setIsCopied] = useState(false);
   return (
-    <button
-      className="button"
+    <Button
       type="button"
+      variant="outline"
+      size="sm"
       onClick={() => {
         copyText(text);
         setIsCopied(true);
       }}
     >
       {isCopied ? copiedLabel : label}
-    </button>
+    </Button>
   );
 }
 
 export function CopyCommand({ command }: Readonly<{ command: string }>) {
   const { t } = useTranslation('posting');
   return (
-    <div className="copy-command">
-      <code>{command}</code>
+    <div className="flex flex-wrap items-center gap-2">
+      <code className="rounded-md bg-muted px-2 py-1 font-mono text-xs">{command}</code>
       <CopyButton text={command} label={t('copy')} copiedLabel={t('copiedCommand')} />
     </div>
   );
-}
-
-// A document as Markdown, as it goes into a mail
-export function CopyMarkdown({ markdown }: Readonly<{ markdown: string }>) {
-  const { t } = useTranslation('posting');
-  return <CopyButton text={markdown} label={t('copyMarkdown')} copiedLabel={t('copiedMarkdown')} />;
 }

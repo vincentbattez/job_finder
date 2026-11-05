@@ -34,8 +34,7 @@ export const PARAMETERS_SCHEMA = z.record(z.string(), z.json()).brand<'Domain'>(
 
 export type Parameters = z.infer<typeof PARAMETERS_SCHEMA>;
 
-// A Watch follows one of the Sources, which alone knows its Parameters, its Zone among them
-// (ADR-0010). detectedAt stays null until a Detection of the Watch went through: until then, it is
+// A Watch follows one of the Sources, which alone knows its Parameters (ADR-0010). detectedAt stays null until a Detection of the Watch went through: until then, it is
 // the first launch.
 export const WATCH_SCHEMA = z
   .object({
@@ -61,6 +60,8 @@ export type ListedPosting = z.infer<typeof LISTED_POSTING_SCHEMA>;
 export const JOB_DESCRIPTION_SCHEMA = z
   .object({
     deadline: z.date().nullable(),
+    // The day its Position is to be filled, null when the Job Description says nothing
+    startDate: z.date().nullable(),
     employer: z.string().nullable(),
     workplace: z.string().nullable(),
     applicationEmail: z.string().nullable(),
@@ -75,6 +76,8 @@ export type JobDescription = z.infer<typeof JOB_DESCRIPTION_SCHEMA>;
 // The file of the Job Description in the folder of its Posting, where every session runs
 export const JOB_DESCRIPTION_FILE_NAME = 'job-description.md';
 
+export { ORIGINAL_FILE_NAME } from './original.ts';
+
 // Where a Posting is: its city, and the region and coordinates API Géo gives its commune. The city
 // stays as read, without region nor coordinates, while API Géo knows no commune by that name.
 const LOCATION_SHAPE = {
@@ -88,14 +91,15 @@ export const LOCATION_SCHEMA = z.object(LOCATION_SHAPE).brand<'Domain'>();
 
 export type Location = z.infer<typeof LOCATION_SCHEMA>;
 
-// The stored Status: Invited and Interviewed are computed from the Interviews, never stored (ADR-0009)
-export const STATUS_SCHEMA = z.enum(['to_apply', 'applied', 'hired', 'rejected']);
+// The stored Status: Invited and Interviewed are computed from the Interviews, never stored (ADR-0009).
+// A detected Posting starts New until the Candidate sorts it (ADR-0018)
+export const STATUS_SCHEMA = z.enum(['new', 'to_apply', 'applied', 'hired', 'rejected']);
 
 export type Status = z.infer<typeof STATUS_SCHEMA>;
 
 // The Status as read: the stored one, Applied showing as Invited or Interviewed from its Interviews
 // (ADR-0009)
-const STEP_SCHEMA = z.enum(['to_apply', 'applied', 'invited', 'interviewed', 'hired', 'rejected']);
+const STEP_SCHEMA = z.enum(['new', 'to_apply', 'applied', 'invited', 'interviewed', 'hired', 'rejected']);
 
 export type Step = z.infer<typeof STEP_SCHEMA>;
 
@@ -116,6 +120,14 @@ export const INTERVIEW_SCHEMA = z.object(INTERVIEW_SHAPE).brand<'Domain'>();
 
 export type Interview = z.infer<typeof INTERVIEW_SCHEMA>;
 
+// A section of the Revision of an Interview, by its title: the Candidate's note and whether they marked it
+// Mastered (GLOSSARY.md « Revision »)
+export const REVISION_SECTION_SCHEMA = z
+  .object({ title: z.string(), note: z.string(), isMastered: z.boolean() })
+  .brand<'Domain'>();
+
+export type RevisionSection = z.infer<typeof REVISION_SECTION_SCHEMA>;
+
 // Another Posting of the Candidate, named by its reference
 const LINKED_POSTING_SCHEMA = z.object({ reference: z.string() });
 
@@ -131,6 +143,8 @@ export const POSTING_SCHEMA = z
     url: z.string().nullable(),
     publishedAt: z.date().nullable(),
     deadline: z.date().nullable(),
+    // The day its Position is to be filled, null when the Job Description says nothing
+    startDate: z.date().nullable(),
     employer: z.string().nullable(),
     workplace: z.string().nullable(),
     applicationEmail: z.string().nullable(),
@@ -150,7 +164,6 @@ export const POSTING_SCHEMA = z
     unpublishedAt: z.date().nullable(),
     // Free Markdown the Candidate keeps on it, whatever its Status; empty by default
     notes: z.string(),
-    isInZone: z.boolean(),
     isExpired: z.boolean(),
     // The Posting it publishes again, and the Postings that publish it again
     repostOf: LINKED_POSTING_SCHEMA.nullable(),
@@ -160,46 +173,36 @@ export const POSTING_SCHEMA = z
 
 export type Posting = z.infer<typeof POSTING_SCHEMA>;
 
-// An Application as its row shows it, on the home and on /applications
+// Where an Artifact stands for a list: no ready Version yet, its latest ready Version a Draft waiting
+// for the Candidate, or that Version Validated (ADR-0019)
+const VALIDATION_SCHEMA = z.enum(['none', 'draft', 'validated']);
+
+export type Validation = z.infer<typeof VALIDATION_SCHEMA>;
+
+// A Posting as a list item shows it, with where its Research and its Letter stand
+export const LIST_ITEM_SCHEMA = z
+  .object({ posting: POSTING_SCHEMA, research: VALIDATION_SCHEMA, letter: VALIDATION_SCHEMA })
+  .brand<'Domain'>();
+
+export type ListItem = z.infer<typeof LIST_ITEM_SCHEMA>;
+
+// A New Posting as its list shows it, and whether the last Detection found it (ADR-0018)
+export const NEW_ITEM_SCHEMA = z.object({ posting: POSTING_SCHEMA, isFound: z.boolean() }).brand<'Domain'>();
+
+export type NewItem = z.infer<typeof NEW_ITEM_SCHEMA>;
+
+// An Application as its list shows it, with what its groups sort by (spec #125 « Lists »)
 export const APPLICATION_SCHEMA = z
   .object({
     posting: POSTING_SCHEMA,
-    // What the outcome selector offers, beside the Status the Posting has
-    statusChoiceList: z.array(STATUS_SCHEMA),
-    // The next Interview, else the last one once none is upcoming; null without any
-    nextInterview: INTERVIEW_SCHEMA.nullable(),
-    hasUpcomingInterview: z.boolean(),
-    interviewCount: z.int(),
-    // The first lines of the Notes, as plain text
-    notesExcerpt: z.string(),
-    // The last time it moved: its Status changed, it was archived or an Interview took place
-    lastChangeAt: z.date(),
+    // The start of its next Interview, null when none is to come
+    nextInterviewAt: z.date().nullable(),
+    // The start of the last Interview that took place, null when none has
+    lastInterviewAt: z.date().nullable(),
   })
   .brand<'Domain'>();
 
 export type Application = z.infer<typeof APPLICATION_SCHEMA>;
-
-// The sections of /applications, in the order it shows them: an Archived one leaves its outcome's section
-export const APPLICATION_SECTION_NAME_SCHEMA = z.enum([
-  'hired',
-  'in_progress',
-  'rejected',
-  'archived',
-  'archived_without_application',
-]);
-
-export type ApplicationSectionName = z.infer<typeof APPLICATION_SECTION_NAME_SCHEMA>;
-
-// A section of /applications and its rows, the most recently changed first, the most recently archived
-// first in the Archived ones
-export const APPLICATION_SECTION_SCHEMA = z
-  .object({
-    section: APPLICATION_SECTION_NAME_SCHEMA,
-    applicationList: z.array(APPLICATION_SCHEMA),
-  })
-  .brand<'Domain'>();
-
-export type ApplicationSection = z.infer<typeof APPLICATION_SECTION_SCHEMA>;
 
 // What a Detection found for one Watch, why each notification it could not send failed, and why
 // its Postings stay off the map, API Géo being down. On the first launch, the Postings already
@@ -227,7 +230,10 @@ export type DetectionOrigin = z.infer<typeof DETECTION_ORIGIN_SCHEMA>;
 // Watch at the step it stopped at (#63)
 const DETECTION_STEP_SCHEMA = z.enum(['waiting', 'searching', 'reading', 'notifying', 'done']);
 
-const DETECTED_POSTING_SCHEMA = z.object({ reference: z.string(), title: z.string() });
+// A Posting a Detection found, or a Near Miss, as it records them: its reference and its title
+export const DETECTED_POSTING_SCHEMA = z.object({ reference: z.string(), title: z.string() });
+
+export type DetectedPosting = z.infer<typeof DETECTED_POSTING_SCHEMA>;
 
 // A Watch as a Detection records it: its label rather than its identifier, its step, then its verdict
 const DETECTION_WATCH_SCHEMA = z
@@ -275,9 +281,16 @@ export const DETECTION_OVERVIEW_SCHEMA = z
 
 export type DetectionOverview = z.infer<typeof DETECTION_OVERVIEW_SCHEMA>;
 
-export const ARTIFACT_SCHEMA = z.enum(['research', 'letter', 'portrait', 'interview_brief', 'visualization']);
+export const ARTIFACT_SCHEMA = z.enum(['research', 'letter', 'portrait', 'interview_brief']);
 
 export type Artifact = z.infer<typeof ARTIFACT_SCHEMA>;
+
+// What a Version belongs to: an Artifact an AI module produces, or a Custom Artifact, the Candidate's own
+// document with its single Version (spec #125)
+const VERSION_ARTIFACT_SCHEMA = z.enum([...ARTIFACT_SCHEMA.options, 'custom']);
+
+// The file of a Custom Artifact's Version, MDX like every Artifact but the Letter (ADR-0020)
+export const CUSTOM_ARTIFACT_FILE_NAME = 'document.mdx';
 
 // The fixed part of the prompt is not among the Instructions: no one changes it (ADR-0003)
 export const MODULE_INSTRUCTIONS_SCHEMA = z
@@ -291,35 +304,55 @@ const VERSION_INTERVIEW_SCHEMA = z.object({ number: z.int() }).nullable();
 
 // A Version that another Version read as input, of its own Posting or of another one
 const READ_VERSION_SCHEMA = z.object({
-  artifact: ARTIFACT_SCHEMA,
+  artifact: VERSION_ARTIFACT_SCHEMA,
   number: z.int(),
   posting: z.object({ reference: z.string() }),
   interview: VERSION_INTERVIEW_SCHEMA,
+  // The Custom Artifact it is the single Version of
+  customArtifact: z.object({ title: z.string() }).nullable(),
 });
 
+// An Input a Version's run read, by its key, with the Version it read for an Artifact Input
+const RECORDED_INPUT_SCHEMA = z.object({ key: z.string(), readVersion: READ_VERSION_SCHEMA.nullable() });
+
+// Produced by the AI, which keeps its Original, or brought by the Candidate, with none (ADR-0019)
+const VERSION_ORIGIN_SCHEMA = z.enum(['ai', 'candidate']);
+
+export type VersionOrigin = z.infer<typeof VERSION_ORIGIN_SCHEMA>;
+
+const VERSION_STATE_SCHEMA = z.enum(['running', 'ready', 'failed']);
+
 // Each launch of a module creates a new Version, which keeps the Instructions it was produced with
-// and the Versions it read. Its number counts the Versions of its Artifact on its Interview, for an
+// and the Inputs it read. Its number counts the Versions of its Artifact on its Interview, for an
 // Artifact attached to one, else on its Posting.
 export const VERSION_SCHEMA = z
   .object({
     id: z.int(),
     interview: VERSION_INTERVIEW_SCHEMA,
-    artifact: ARTIFACT_SCHEMA,
+    artifact: VERSION_ARTIFACT_SCHEMA,
+    // The Custom Artifact it is the single Version of, null for any other Artifact
+    customArtifact: z.object({ id: z.int(), title: z.string() }).nullable(),
     number: z.int(),
     isChosen: z.boolean(),
-    state: z.enum(['running', 'ready', 'failed']),
+    state: VERSION_STATE_SCHEMA,
+    // A Draft until the Candidate validates it, which makes it the Chosen Version (ADR-0019)
+    validation: z.enum(['draft', 'validated']),
+    // The AI's, which keeps its Original, or the Candidate's own, with none
+    origin: VERSION_ORIGIN_SCHEMA,
     instructions: z.string(),
     hasCandidateInstructions: z.boolean(),
-    inputList: z.array(READ_VERSION_SCHEMA),
+    // The Inputs its run read, by key, with the Version read for an Artifact Input (ADR-0021)
+    inputList: z.array(RECORDED_INPUT_SCHEMA),
     createdAt: z.date(),
   })
   .brand<'Domain'>();
 
 export type Version = z.infer<typeof VERSION_SCHEMA>;
 
-// An AI module is named after the Artifact it produces; the extraction fills the imported Posting
+// An AI module is named after the Artifact it produces; the extraction fills the imported Posting, and a
+// custom job converts the PDF of a Custom Artifact
 // itself, without a Version
-const MODULE_SCHEMA = z.enum([...ARTIFACT_SCHEMA.options, 'extraction']);
+const MODULE_SCHEMA = z.enum([...ARTIFACT_SCHEMA.options, 'extraction', 'custom']);
 
 export type Module = z.infer<typeof MODULE_SCHEMA>;
 
@@ -342,6 +375,10 @@ export const JOB_SCHEMA = z
     notificationErrorCode: ERROR_CODE_SCHEMA.nullable(),
     notificationFailure: z.string().nullable(),
     sessionId: z.string().nullable(),
+    // The keys of the Inputs checked for an Artifact job; null for the default Inputs of its type
+    inputKeyList: z.array(z.string()).nullable(),
+    // The PDF the Candidate brought, which an Artifact job converts into their Version; null for a run
+    upload: z.string().nullable(),
     // When the worker claimed it, null while it is queued
     startedAt: z.date().nullable(),
     version: VERSION_SCHEMA.nullable(),
@@ -369,13 +406,21 @@ export const RECIPIENTS_SCHEMA = z
 
 export type Recipients = z.infer<typeof RECIPIENTS_SCHEMA>;
 
-// A Markdown file of the data folder: of the Profile of a Candidate, such as facts.md or cv.md, or of a
-// Version, such as the Draft or the Letter of a Letter Version
+// The source of a Posting the Candidate imported, which no Source of the registry lists
+export const IMPORT_SOURCE_ID = 'import';
+
+// A Markdown file of the data folder: of the Profile of a Candidate, such as facts.md or cv.md
 const MARKDOWN_FILE_SHAPE = { fileName: z.string(), markdown: z.string() };
 
 export const MARKDOWN_FILE_SCHEMA = z.object(MARKDOWN_FILE_SHAPE).brand<'Domain'>();
 
 export type MarkdownFile = z.infer<typeof MARKDOWN_FILE_SCHEMA>;
+
+// A Markdown file dated by its last write: a document of the Profile, whose Past Letters are dated by
+// the day they were added
+export const DATED_MARKDOWN_FILE_SCHEMA = z.object({ ...MARKDOWN_FILE_SHAPE, savedAt: z.date() }).brand<'Domain'>();
+
+export type DatedMarkdownFile = z.infer<typeof DATED_MARKDOWN_FILE_SCHEMA>;
 
 // The name of a file of the Profile, which the front chooses: a single segment of safe characters
 // ending in .md, so no name leads out of the Profile folder
@@ -411,23 +456,53 @@ export type Section = z.infer<typeof SECTION_SCHEMA>;
 // it reads, named by its Posting, its Interview if attached to one, its Artifact and its number
 const PROMPT_READ_VERSION_SCHEMA = z.object({
   reference: z.string(),
-  artifact: ARTIFACT_SCHEMA,
+  artifact: VERSION_ARTIFACT_SCHEMA,
   interviewNumber: z.int().nullable(),
   number: z.int(),
 });
 
+// markedFixedPart: the Fixed Part with each value the tool substituted between private-use marks; prompt:
+// the whole Markdown the session receives, its checked Inputs inlined (ADR-0021)
 const PROMPT_SCHEMA = z
-  .object({ fixedPart: z.string(), instructions: z.string(), readVersionList: z.array(PROMPT_READ_VERSION_SCHEMA) })
+  .object({
+    fixedPart: z.string(),
+    markedFixedPart: z.string(),
+    instructions: z.string(),
+    prompt: z.string(),
+    readVersionList: z.array(PROMPT_READ_VERSION_SCHEMA),
+  })
   .brand<'Domain'>();
 
-// A Markdown file of a Version, and whether the Candidate may correct it by hand
-const DOCUMENT_SCHEMA = z.object({ ...MARKDOWN_FILE_SHAPE, isModifiable: z.boolean() });
+// A Past Letter is one of the Profile's or the Chosen Letter of another Applied Posting: one set either way
+const INPUT_KIND_SCHEMA = z.enum([
+  'job_description',
+  'artifact',
+  'custom_artifact',
+  'notes',
+  'profile_document',
+  'past_letter',
+]);
 
-// isChoosable: whether the Candidate may make it the Chosen Version
-const VERSION_DOCUMENTS_SCHEMA = z.object({
+// An Input a Version read, with what the front needs to name it among the Inputs it was produced from
+const RECORDED_INPUT_DETAIL_SCHEMA = z.object({
+  key: z.string(),
+  kind: INPUT_KIND_SCHEMA,
+  fileName: z.string().nullable(),
+  title: z.string().nullable(),
+  artifact: ARTIFACT_SCHEMA.nullable(),
+  readVersion: PROMPT_READ_VERSION_SCHEMA.nullable(),
+});
+
+// A Version with its text and its Original (ADR-0019): whether the Candidate may validate it, making it the
+// Chosen Version, and correct its text; the text is null while it runs or once it failed, the Original null
+// for a Version the Candidate brought
+const VERSION_DETAIL_SCHEMA = z.object({
   version: VERSION_SCHEMA,
-  isChoosable: z.boolean(),
-  documentList: z.array(DOCUMENT_SCHEMA),
+  inputList: z.array(RECORDED_INPUT_DETAIL_SCHEMA),
+  isValidatable: z.boolean(),
+  isCorrectable: z.boolean(),
+  text: z.string().nullable(),
+  original: z.string().nullable(),
 });
 
 // What the front shows of an Artifact at a glance: queued while its job waits for the worker, in
@@ -468,20 +543,50 @@ export type ArtifactState = z.infer<typeof ARTIFACT_STATE_SCHEMA>;
 const ARTIFACT_VERSIONS_SCHEMA = z.object({
   artifact: ARTIFACT_SCHEMA,
   ...ARTIFACT_STATE_SHAPE,
+  // Where it stands for the Candidate, as the lists and the Sheet tell it (ADR-0019)
+  validation: VALIDATION_SCHEMA,
   // The module that produces it: why it cannot run now, null when it can; else the Prompt a run started
   // now would receive, with the Chosen Versions it reads, null while it is refused
   module: z.object({ refusal: z.string().nullable(), prompt: PROMPT_SCHEMA.nullable() }),
-  // Whether jf edit opens it now: it has a Chosen Version, and is neither a Visualization nor the
-  // Letter of an Applied Posting
+  // Whether jf edit opens it now: it has a Chosen Version, and is not the Letter of an Applied Posting
   isEditable: z.boolean(),
-  versionList: z.array(VERSION_DOCUMENTS_SCHEMA),
+  // The file of a Version the Candidate reads and corrects
+  fileName: z.string(),
+  // MDX through the closed catalogue, or plain Markdown for the Letter (ADR-0020)
+  format: z.enum(['mdx', 'markdown']),
+  // The Letter of an Applied Posting: read-only, never validated, corrected, brought or regenerated
+  isFrozen: z.boolean(),
+  versionList: z.array(VERSION_DETAIL_SCHEMA),
 });
 
 // An Interview on the Posting page, with every Version of each Artifact attached to it
 const INTERVIEW_DETAIL_SCHEMA = z.object({ ...INTERVIEW_SHAPE, artifactList: z.array(ARTIFACT_VERSIONS_SCHEMA) });
 
+// The Application to an earlier Posting of a Position, which its Repost tells
+const EARLIER_APPLICATION_SCHEMA = z.object({
+  reference: z.string(),
+  appliedAt: z.date().nullable(),
+  step: STEP_SCHEMA,
+});
+
 // What the Posting page shows: the Posting with its raw contacts, its Job Description, every
 // Version of each Artifact with its files, and the recipients its Chosen Letter recommends
+// A document the Candidate added for a Posting, or one of its Interviews, as the Documents section lists it:
+// the key a run's Input names it by, and the state and the text of its single Version, running while the
+// worker converts a PDF
+export const CUSTOM_ARTIFACT_SCHEMA = z
+  .object({
+    key: z.string(),
+    title: z.string(),
+    interviewNumber: z.int().nullable(),
+    state: VERSION_STATE_SCHEMA,
+    text: z.string(),
+    createdAt: z.date(),
+  })
+  .brand<'Domain'>();
+
+export type CustomArtifact = z.infer<typeof CUSTOM_ARTIFACT_SCHEMA>;
+
 export const POSTING_DETAIL_SCHEMA = z
   .object({
     posting: POSTING_SCHEMA,
@@ -492,8 +597,17 @@ export const POSTING_DETAIL_SCHEMA = z
     hasApplication: z.boolean(),
     interviewList: z.array(INTERVIEW_DETAIL_SCHEMA),
     jobDescription: z.string(),
+    // Its Position across its Reposts: how many times it was published, since when, and the latest
+    // Application the Candidate made to an earlier Posting of it
+    repost: z.object({
+      publicationNumber: z.int(),
+      firstPublishedAt: z.date().nullable(),
+      earlierApplication: EARLIER_APPLICATION_SCHEMA.nullable(),
+    }),
     // The Artifacts attached to the Posting
     artifactList: z.array(ARTIFACT_VERSIONS_SCHEMA),
+    // Its Custom Artifacts and those of its Interviews, in the order they were added
+    customArtifactList: z.array(CUSTOM_ARTIFACT_SCHEMA),
     recipients: RECIPIENTS_SCHEMA.nullable(),
     // That of its latest extraction job, null for a Posting that was not imported; the log says why
     // it failed, workerFailure why it makes no progress
@@ -509,6 +623,54 @@ export const POSTING_DETAIL_SCHEMA = z
   .brand<'Domain'>();
 
 export type PostingDetail = z.infer<typeof POSTING_DETAIL_SCHEMA>;
+
+// required: locked and checked; default: checked, can be unchecked; optional: unchecked, added on demand
+const INPUT_MODE_SCHEMA = z.enum(['required', 'default', 'optional']);
+// Why an Input cannot be unchecked, which the front words
+const INPUT_REASON_SCHEMA = z.enum(['job_description', 'required_artifact', 'profile_core']);
+
+export type InputMode = z.infer<typeof INPUT_MODE_SCHEMA>;
+export type InputReason = z.infer<typeof INPUT_REASON_SCHEMA>;
+export type InputKind = z.infer<typeof INPUT_KIND_SCHEMA>;
+
+// What the generation panel shows before a run (spec #125, « Inputs and the generation panel »): each
+// Input with its exact content, checked as the panel opens, the Version it reads named for the front; why
+// the run is refused, worded for the page; and the Prompt the session would receive for the checked Inputs
+// (ADR-0021), null while refused
+// An Input of the panel: the Artifact it reads, and that Artifact's Chosen Version named for the front
+const GENERATION_INPUT_SCHEMA = z.object({
+  key: z.string(),
+  kind: INPUT_KIND_SCHEMA,
+  mode: INPUT_MODE_SCHEMA,
+  reason: INPUT_REASON_SCHEMA.nullable(),
+  isAvailable: z.boolean(),
+  isChecked: z.boolean(),
+  content: z.string(),
+  wordCount: z.int(),
+  fileName: z.string().nullable(),
+  // The title of a Custom Artifact
+  title: z.string().nullable(),
+  datedAt: z.date().nullable(),
+  artifact: ARTIFACT_SCHEMA.nullable(),
+  readVersion: PROMPT_READ_VERSION_SCHEMA.extend({ title: z.string() }).nullable(),
+});
+
+export const GENERATION_SCHEMA = z
+  .object({
+    artifact: ARTIFACT_SCHEMA,
+    refusal: z.string().nullable(),
+    // Research and Portrait search the web; the others read only their Inputs
+    isSearchingWeb: z.boolean(),
+    // Whether it reads the Profile, where an Annex added from the panel goes
+    isReadingProfile: z.boolean(),
+    nextNumber: z.int(),
+    chosenNumber: z.int().nullable(),
+    inputList: z.array(GENERATION_INPUT_SCHEMA),
+    prompt: PROMPT_SCHEMA.nullable(),
+  })
+  .brand<'Domain'>();
+
+export type Generation = z.infer<typeof GENERATION_SCHEMA>;
 
 // A job of the Profile of a Candidate rather than of a Posting: the conversion of an Upload into Markdown
 export const PROFILE_JOB_SCHEMA = z
@@ -564,17 +726,12 @@ export const EXTRACTION_SCHEMA = z
 
 export type Extraction = z.infer<typeof EXTRACTION_SCHEMA>;
 
-// The HTML page of a Visualization Version, which the front shows in a sandboxed frame
-export const VISUALIZATION_SCHEMA = z.object({ html: z.string() }).brand<'Domain'>();
-
-export type Visualization = z.infer<typeof VISUALIZATION_SCHEMA>;
-
 // The iCal file of an Interview, which the front serves for download and jf ical writes
 export const ICAL_FILE_SCHEMA = z.object({ fileName: z.string(), text: z.string() }).brand<'Domain'>();
 
 export type IcalFile = z.infer<typeof ICAL_FILE_SCHEMA>;
 
-// A Parameter as the front builds its field: typed in, a list of values, secret, or chosen among what
+// A Parameter as the front builds its field: typed in, secret, or chosen among what
 // the module lists. Its label and placeholder are i18next keys of the module's own namespace, whose
 // copy stays in its folder (ADR-0010, ADR-0012).
 export const PARAMETER_SCHEMA = z
@@ -582,7 +739,7 @@ export const PARAMETER_SCHEMA = z
     name: z.string(),
     label: z.string(),
     placeholder: z.string().nullable(),
-    type: z.enum(['text', 'url', 'list']),
+    type: z.enum(['text', 'url']),
     isRequired: z.boolean(),
     isSecret: z.boolean(),
     hasChoices: z.boolean(),

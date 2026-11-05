@@ -1,26 +1,23 @@
 import { generatePath, matchPath } from 'react-router';
 
-import { ARTIFACT_RENAME_LIST } from '#/actions/index.ts';
-
-// The routes of the French front and their English ones, as route patterns: a link Léa saved keeps
-// working (#65). A `:param` of the French route goes into the English one; an Artifact in a path has
-// a route of its own, which ranks before the English route's `:artifact`. The Visualization of a Posting
-// lost its redirect: a Visualization belongs to an Interview now, which no French link names.
+// The pages that moved and where they are now, as route patterns: a link Léa saved keeps working (#65).
+// A `:param` of the old route goes into the new one. Only pages have an entry: a form posts to its route,
+// and no link leads there. The Visualization lost its redirect: it went away (ADR-0020). The Candidates
+// page became a section of the Settings (#155), and so did the Instructions page (#149). The list of
+// every Posting gave way to To Apply, which reads the same filters (#156).
 export const REDIRECT_LIST = [
-  { from: 'candidat', to: 'candidate' },
+  { from: 'postings', to: 'to-apply' },
   { from: 'profil', to: 'profile' },
-  { from: 'candidats', to: 'candidates' },
-  { from: 'consignes', to: 'instructions' },
+  { from: 'veilles', to: 'watches' },
+  { from: 'candidats', to: 'settings' },
+  { from: 'candidates', to: 'settings' },
+  { from: 'consignes', to: 'settings' },
+  { from: 'instructions', to: 'settings' },
   { from: 'offres/:reference', to: 'postings/:reference' },
-  { from: 'offres/:reference/statut', to: 'postings/:reference/status' },
-  ...ARTIFACT_RENAME_LIST.flatMap(({ from, to }) => [
-    { from: `offres/:reference/${from}/document`, to: `postings/:reference/${to}/document` },
-    { from: `offres/:reference/${from}/retenue`, to: `postings/:reference/${to}/chosen` },
-  ]),
 ];
 
 // The query parameters of the French filters of the Posting list and their English names: a filter Léa
-// saved keeps filtering. Their values are English already, or the Candidate's own (a city, a region).
+// saved keeps filtering, now New's (`/`). Their values are English already, or the Candidate's own (a city, a region).
 const QUERY_PARAMETER_RENAME_LIST = [
   { from: 'ville', to: 'city' },
   { from: 'archivees', to: 'archived' },

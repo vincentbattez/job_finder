@@ -1,8 +1,9 @@
 # The project's words that are not in the English dictionary (cspell.config.yaml)
 
 # Glossary terms
-Choosable
+Validatable
 repost
+Insertable
 reposted
 reposts
 unarchive
@@ -24,7 +25,10 @@ gstatic
 ianvs
 isbot
 knip
+cmdk
 lefthook
+mdxeditor
+mdxjs
 nums
 oklab
 oklch
@@ -36,6 +40,7 @@ spinbutton
 STARTTLS
 topbar
 unstub
+unproject
 vitest
 vincentbattez
 wordmark
@@ -85,7 +90,12 @@ Melun
 Inès
 Lou
 Malo
+Mila
+Yara
 Noé
 Sacha
 Théo
 Yanis
+fontsource
+shadcn
+stringbool

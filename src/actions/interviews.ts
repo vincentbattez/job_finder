@@ -9,13 +9,12 @@ import {
   type Interview,
   type Locale,
   type Posting,
-  type Version,
 } from '#/domain/index.ts';
 import { DEFAULT_DURATION_MINUTES } from '#/domain/interview-duration.ts';
-import { interviewSectionIdOf } from '#/domain/interview-section.ts';
+import { findInterviewEnd } from '#/domain/interview-time.ts';
 import { dateOfParisDateTime } from '#/domain/paris-time.ts';
 import { formatCalendar } from '#/ical/index.ts';
-import { findInterviewEnd, hasBeenApplied } from '#/status/index.ts';
+import { hasBeenApplied } from '#/status/index.ts';
 
 import { REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
 
@@ -47,34 +46,39 @@ const INTERVIEW_EDIT_INPUT_SCHEMA = INTERVIEW_INPUT_SCHEMA.extend(z.object(FIELD
 // The address the Candidate opened Job Finder through: only its origin builds the links
 const ICAL_INPUT_SCHEMA = INTERVIEW_INPUT_SCHEMA.extend({ origin: z.url().transform((url) => new URL(url).origin) });
 
-// The sections of the Posting page to review before the Interview, by their anchor: those of the Posting,
-// then the Interview Brief of the Interview, in its section
+// The sections of the Posting page to review before the Interview, by their tab
 const REVIEWED_ARTIFACT_LIST = ['research', 'letter'] as const;
 
-// What the Candidate reviews from their phone before the Interview: the official ad, if the Posting has
-// one, then the Posting page and its sections, and the page of the Chosen Visualization of the Interview
-// once there is one, all on the origin they opened Job Finder through
+// The full-screen Revision of an Interview (spec #125, « Reading and Revision »)
+function revisionPathOf(reference: string, number: number): string {
+  return `/postings/${encodeURIComponent(reference)}/interviews/${String(number)}/revision`;
+}
+
+// Whom the Candidate meets, then what they review from their phone before the Interview: its Revision, the
+// official ad if the Posting has one, then the Posting page and its sections, all on the origin they opened
+// Job Finder through
 function describeLinks(
-  { posting, interview, visualization }: { posting: Posting; interview: Interview; visualization: Version | undefined },
-  pageUrl: string,
+  { posting, interview }: { posting: Posting; interview: Interview },
+  origin: string,
   locale: Locale,
 ): string {
   const t = tFor(locale, 'posting');
   const labelOf = (artifact: Artifact) => t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' });
-  const interviewUrl = `${pageUrl}/interviews/${String(interview.number)}`;
+  const pageUrl = `${origin}/postings/${encodeURIComponent(posting.reference)}`;
   const linkList = [
+    {
+      label: t('ical.revision', { number: interview.number }),
+      url: origin + revisionPathOf(posting.reference, interview.number),
+    },
     ...(posting.url === null ? [] : [{ label: t('ical.officialAd'), url: posting.url }]),
     { label: t('ical.postingPage'), url: pageUrl },
-    ...REVIEWED_ARTIFACT_LIST.map((artifact) => ({ label: labelOf(artifact), url: `${pageUrl}#${artifact}` })),
-    {
-      label: labelOf('interview_brief'),
-      url: `${pageUrl}#${interviewSectionIdOf(interview.number, 'interview_brief')}`,
-    },
-    ...(visualization === undefined
-      ? []
-      : [{ label: labelOf('visualization'), url: `${interviewUrl}/visualization/${String(visualization.number)}` }]),
+    ...REVIEWED_ARTIFACT_LIST.map((artifact) => ({ label: labelOf(artifact), url: `${pageUrl}?tab=${artifact}` })),
   ];
-  return linkList.map((link) => t('ical.link', link)).join('\n');
+  const interviewers = interview.interviewers.trim();
+  return [
+    ...(interviewers === '' ? [] : [t('ical.interviewers', { interviewers })]),
+    ...linkList.map((link) => t('ical.link', link)),
+  ].join('\n');
 }
 
 // An employer given on several lines stays on the single line of the event's title
@@ -86,8 +90,9 @@ function summarize(posting: Posting, locale: Locale): string {
     : t('ical.summary', { title: posting.title, employer });
 }
 
-export function createInterviewActions({ workspace, artifacts, findPosting, findLocale }: ActionContext) {
-  async function findInterview(rawInput: unknown): Promise<{ posting: Posting; interview: Interview }> {
+// The Interview an input names by its Posting's reference and its number, refused when there is none
+export function interviewFinderOf({ workspace, findPosting, findLocale }: ActionContext) {
+  return async function findInterview(rawInput: unknown): Promise<{ posting: Posting; interview: Interview }> {
     const { reference, number } = INTERVIEW_INPUT_SCHEMA.parse(rawInput);
     const posting = await findPosting(reference);
     const interview = await workspace.findInterview(posting, number);
@@ -95,7 +100,12 @@ export function createInterviewActions({ workspace, artifacts, findPosting, find
       throw codedError('unknown_interview', { reference, number }, { locale: await findLocale(posting.candidateId) });
     }
     return { posting, interview };
-  }
+  };
+}
+
+export function createInterviewActions(context: ActionContext) {
+  const { workspace, findPosting, findLocale } = context;
+  const findInterview = interviewFinderOf(context);
 
   return {
     // By date, each with its number on its Posting
@@ -104,8 +114,9 @@ export function createInterviewActions({ workspace, artifacts, findPosting, find
       return workspace.listInterviews(await findPosting(reference));
     },
 
-    // Only an Application has Interviews: a To Apply Posting would get one before its Letter was sent
-    async addInterview(rawInput: unknown): Promise<void> {
+    // Only an Application has Interviews: a To Apply Posting would get one before its Letter was sent. Gives
+    // the Interview added, which the front lands on.
+    async addInterview(rawInput: unknown): Promise<Interview> {
       const { reference, start, ...fields } = NEW_INTERVIEW_INPUT_SCHEMA.parse(rawInput);
       const posting = await findPosting(reference);
       if (!hasBeenApplied(posting)) {
@@ -115,7 +126,7 @@ export function createInterviewActions({ workspace, artifacts, findPosting, find
           { locale: await findLocale(posting.candidateId) },
         );
       }
-      await workspace.createInterview(posting, { ...fields, startAt: start });
+      return workspace.createInterview(posting, { ...fields, startAt: start });
     },
 
     async editInterview(rawInput: unknown): Promise<void> {
@@ -134,8 +145,6 @@ export function createInterviewActions({ workspace, artifacts, findPosting, find
       const { origin } = ICAL_INPUT_SCHEMA.parse(rawInput);
       const { posting, interview } = await findInterview(rawInput);
       const locale = await findLocale(posting.candidateId);
-      const visualization = await artifacts.find({ posting, artifact: 'visualization', interview: interview.number });
-      const pageUrl = `${origin}/postings/${encodeURIComponent(posting.reference)}`;
       const text = formatCalendar({
         uid: `interview-${String(interview.id)}@job-finder`,
         sequence: interview.editCount,
@@ -143,8 +152,8 @@ export function createInterviewActions({ workspace, artifacts, findPosting, find
         endAt: findInterviewEnd(interview),
         summary: summarize(posting, locale),
         location: interview.place,
-        description: describeLinks({ posting, interview, visualization: visualization.chosenVersion }, pageUrl, locale),
-        url: pageUrl,
+        description: describeLinks({ posting, interview }, origin, locale),
+        url: origin + revisionPathOf(posting.reference, interview.number),
         stampedAt: new Date(),
       });
       return ICAL_FILE_SCHEMA.parse({

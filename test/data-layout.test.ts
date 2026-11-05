@@ -1,11 +1,31 @@
-import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import {
+  chmodSync,
+  closeSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { I18nextProvider } from 'react-i18next';
 import { describe, expect, it } from 'vitest';
 
-import { createActions } from '#/actions/index.ts';
+import { openContext } from '#/actions/context.ts';
+import { i18nOf } from '#/actions/i18n.ts';
+import { createActions, type Actions } from '#/actions/index.ts';
+import { ArtifactText } from '#/web/components/mdx/artifact-text.tsx';
+import { copyAsReadOnly, writeTextFile } from '#/workspace/acl/files.ts';
 
 import { createFakeNotificationChannel, LEA_TARGET } from './fake-notification-channel.ts';
 import { writeOlderDatabase } from './older-database.ts';
@@ -13,6 +33,18 @@ import { createRecordedFetch } from './recorded-http.ts';
 
 // The last migration before the Candidate side spoke English
 const BEFORE_CANDIDATE_MIGRATION = '20261030122214_delai_par_defaut';
+// The last migration before the Visualization went away (ADR-0020)
+const BEFORE_VISUALIZATION_REMOVAL_MIGRATION = '20261031110442_posting_unpublished_at';
+// The last migration before each Version recorded its Inputs (ADR-0021)
+const BEFORE_VERSION_INPUT_MIGRATION = '20261102182655_remove_visualization';
+// The last migration before a detected Posting started New (ADR-0018)
+const BEFORE_NEW_STATUS_MIGRATION = '20261102184315_version_input';
+// The last migration before the Zone went away (ADR-0018)
+const BEFORE_ZONE_REMOVAL_MIGRATION = '20261102194517_posting_status_new';
+// The last migration before a Version was a Draft or Validated (ADR-0019)
+const BEFORE_VERSION_VALIDATION_MIGRATION = '20261102184315_version_input';
+
+const LOCK_HELD_MS = 6000;
 
 const FACTS = '# Faits\n\n## Mobilité\n\n- Lille et alentours\n';
 const CV = '# CV de Léa\n';
@@ -150,7 +182,16 @@ describe('the French data folder', () => {
       expect.objectContaining({ isChosen: true, instructions: LETTER_INSTRUCTIONS, hasCandidateInstructions: true }),
     ]);
     expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([
-      { id: 'lea-1', candidateId: 'lea', source: 'pep', parameters: WATCH_PARAMETERS, detectedAt: DETECTED_AT },
+      // Its Zone gone since (ADR-0018)
+      {
+        id: 'lea-1',
+        candidateId: 'lea',
+        source: 'pep',
+        parameters: { title: 'attaché de justice' },
+        detectedAt: DETECTED_AT,
+        label: 'attaché de justice',
+        nearMissList: [],
+      },
     ]);
     expect(await actions.readDefaultDeadlinePeriod()).toEqual({ months: 6 });
     expect(listSorted(dataDirectory)).toEqual([
@@ -214,7 +255,8 @@ describe('the French data folder', () => {
       },
       {
         reference: '2026-2445600',
-        status: 'to_apply',
+        // To Apply with no Research: New, to be sorted (ADR-0018)
+        status: 'new',
         appliedAt: null,
         isArchived: false,
         deadline: null,
@@ -223,8 +265,8 @@ describe('the French data folder', () => {
       },
       {
         reference: '2026-3',
-        // Archived, never Applied: To Apply, with the Archived mark (ADR-0007)
-        status: 'to_apply',
+        // Archived, never Applied and with no Research: New, with the Archived mark (ADR-0007, ADR-0018)
+        status: 'new',
         appliedAt: null,
         isArchived: true,
         deadline: null,
@@ -260,7 +302,7 @@ describe('the French data folder', () => {
       '2026-1-greffier',
       'letter',
       'v1',
-      'draft.md',
+      'original.md',
     );
     expect(readFileSync(draftPath, 'utf8')).toBe(DRAFT);
     expect(statSync(draftPath).mode & 0o777).toBe(0o444);
@@ -280,7 +322,18 @@ describe('the French data folder', () => {
     ]);
     expect(await actions.listVersions({ reference: '2026-1', artifact: 'letter' })).toEqual([
       expect.objectContaining({
-        inputList: [{ artifact: 'research', number: 2, posting: { reference: '2026-1' }, interview: null }],
+        inputList: [
+          {
+            key: 'artifact:research',
+            readVersion: {
+              artifact: 'research',
+              number: 2,
+              posting: { reference: '2026-1' },
+              interview: null,
+              customArtifact: null,
+            },
+          },
+        ],
       }),
     ]);
     const { artifactList, recipients } = await actions.readPosting({ reference: '2026-1' });
@@ -289,13 +342,9 @@ describe('the French data folder', () => {
       letter: 'ready',
     });
     const research = artifactList.find(({ artifact }) => artifact === 'research');
-    expect(research?.versionList[1]?.documentList).toEqual([
-      expect.objectContaining({ fileName: 'research.md', markdown: RESEARCH }),
-    ]);
+    expect(research?.versionList[1]).toMatchObject({ text: RESEARCH });
     const letter = artifactList.find(({ artifact }) => artifact === 'letter');
-    expect(letter?.versionList[0]?.documentList.map(({ fileName }) => fileName)).toEqual(
-      expect.arrayContaining(['draft.md', 'letter.md']),
-    );
+    expect(letter?.versionList[0]?.original).toBe(DRAFT);
     expect(recipients).toEqual(JSON.parse(RECIPIENTS));
     expect(await actions.runQueuedJobs()).toEqual([]);
     expect(await actions.readInstructions({ candidateId: 'lea', module: 'interview_brief' })).toMatchObject({
@@ -317,8 +366,8 @@ describe('the French data folder', () => {
     });
   });
 
-  // Her daily Detection goes on after the update: no first launch, so a new Posting in her Zone gets
-  // its Research and her phone hears of it, through the Notification Channel she had saved
+  // Her daily Detection goes on after the update: no first launch, so a new Posting is saved New and
+  // her phone hears of it, through the Notification Channel she had saved
   it('keeps the next Detection from being a first launch', async () => {
     const dataDirectory = writeFrenchDataDirectory();
     const notificationChannel = createFakeNotificationChannel();
@@ -347,7 +396,15 @@ describe('the French data folder', () => {
 
     expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa', locale: 'fr' }]);
     expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([
-      { id: 'lea-1', candidateId: 'lea', source: 'pep', parameters: WATCH_PARAMETERS, detectedAt: null },
+      {
+        id: 'lea-1',
+        candidateId: 'lea',
+        source: 'pep',
+        parameters: WATCH_PARAMETERS,
+        detectedAt: null,
+        label: WATCH_PARAMETERS.title,
+        nearMissList: [],
+      },
     ]);
   });
 
@@ -400,4 +457,509 @@ describe('the French data folder', () => {
 
     await expect(createActions({ dataDirectory })).rejects.toMatchObject({ code: 'data_layout_unexpected' });
   });
+});
+
+// Léa's data folder as the jf of the Visualization left it: an Applied Posting whose first Interview has
+// a Chosen Interview Brief, read by two Visualization Versions, one Chosen and one queued, with their
+// folders and her own Visualization Instructions
+function writeVisualizationDataDirectory(): string {
+  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+  const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_VISUALIZATION_REMOVAL_MIGRATION));
+  database.exec(`INSERT INTO Candidate (id, name) VALUES ('lea', 'Léa');
+    INSERT INTO DefaultDeadlinePeriod (id, months) VALUES (1, 6);
+    INSERT INTO Posting (id, candidateId, source, reference, title, status, appliedAt, isInZone)
+    VALUES (1, 'lea', 'pep', '2026-1', 'Greffier', 'applied', '2026-10-20T09:00:00.000+00:00', 1);
+    INSERT INTO Interview (id, postingId, number, startAt, place, interviewers)
+    VALUES (1, 1, 1, '2026-11-19T14:00:00.000+00:00', 'Lille', '');
+    INSERT INTO Job (id, module, postingId, interviewId, state) VALUES (1, 'interview_brief', 1, 1, 'done');
+    INSERT INTO Version (id, postingId, interviewId, artifact, number, isChosen, state, instructions, jobId)
+    VALUES (1, 1, 1, 'interview_brief', 1, 1, 'ready', 'Réviser.', 1);
+    INSERT INTO Job (id, module, postingId, interviewId, state) VALUES (2, 'visualization', 1, 1, 'done');
+    INSERT INTO Version (id, postingId, interviewId, artifact, number, isChosen, state, instructions, jobId)
+    VALUES (2, 1, 1, 'visualization', 1, 1, 'ready', 'Dessiner.', 2);
+    INSERT INTO Job (id, module, postingId, interviewId, state) VALUES (3, 'visualization', 1, 1, 'queued');
+    INSERT INTO Version (id, postingId, interviewId, artifact, number, state, instructions, jobId)
+    VALUES (3, 1, 1, 'visualization', 2, 'running', 'Dessiner.', 3);
+    INSERT INTO _Input (A, B) VALUES (1, 2), (1, 3);`);
+  database.close();
+  const leaDirectory = path.join(dataDirectory, 'candidates', 'lea');
+  const interviewDirectory = path.join(leaDirectory, 'postings', '2026-1-greffier', 'interviews', '1');
+  writeFile(path.join(leaDirectory, 'postings', '2026-1-greffier', 'job-description.md'), '# Greffier\n');
+  writeFile(path.join(interviewDirectory, 'interview_brief', 'v1', 'interview-brief.md'), BRIEF_INSTRUCTIONS);
+  writeFile(path.join(interviewDirectory, 'visualization', 'v1', 'visualization.html'), '<!DOCTYPE html></html>\n');
+  mkdirSync(path.join(interviewDirectory, 'visualization', 'v2'), { recursive: true });
+  writeFile(path.join(leaDirectory, 'instructions', 'visualization.md'), 'Une page courte.');
+  writeFile(path.join(leaDirectory, 'instructions', 'interview_brief.md'), BRIEF_INSTRUCTIONS);
+  return dataDirectory;
+}
+
+function selectAll(dataDirectory: string, sql: string): unknown[] {
+  const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { readOnly: true });
+  try {
+    return database.prepare(sql).all();
+  } finally {
+    database.close();
+  }
+}
+
+// The main checkout migrates Léa's real data/, which holds Visualizations: they go, the Interview Brief
+// they read stays (ADR-0020)
+describe('the Visualization of an older data folder', () => {
+  it('goes with its Versions, its jobs, its folders and its Instructions', async () => {
+    const dataDirectory = writeVisualizationDataDirectory();
+
+    const actions = await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'SELECT id, artifact FROM Version')).toEqual([
+      { id: 1, artifact: 'interview_brief' },
+    ]);
+    expect(selectAll(dataDirectory, 'SELECT id, module FROM Job')).toEqual([{ id: 1, module: 'interview_brief' }]);
+    expect(selectAll(dataDirectory, 'SELECT versionId FROM VersionInput')).toEqual([]);
+    const interviewDirectory = path.join(
+      dataDirectory,
+      'candidates',
+      'lea',
+      'postings',
+      '2026-1-greffier',
+      'interviews',
+      '1',
+    );
+    expect(listSorted(interviewDirectory)).toEqual(['interview_brief']);
+    expect(listSorted(path.join(dataDirectory, 'candidates', 'lea', 'instructions'))).toEqual(['interview_brief.md']);
+    expect(await actions.listVersions({ reference: '2026-1', artifact: 'interview_brief', interview: 1 })).toEqual([
+      expect.objectContaining({ number: 1, isChosen: true }),
+    ]);
+    expect(await actions.runQueuedJobs()).toEqual([]);
+  });
+
+  it('changes nothing when opened again', async () => {
+    const dataDirectory = writeVisualizationDataDirectory();
+    await createActions({ dataDirectory });
+    const entryList = snapshotOf(dataDirectory);
+
+    await createActions({ dataDirectory });
+
+    expect(snapshotOf(dataDirectory)).toEqual(entryList);
+  });
+});
+
+// Léa's Versions as the jf before the Inputs left them, linked to the Versions they read: of their own
+// Posting, on an Interview, the Letter sent for another Posting and the Research a Repost publishes again
+function writeReadVersionDataDirectory(): string {
+  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+  const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_VERSION_INPUT_MIGRATION));
+  database.exec(`INSERT INTO Candidate (id, name) VALUES ('lea', 'Léa');
+    INSERT INTO DefaultDeadlinePeriod (id, months) VALUES (1, 6);
+    INSERT INTO Posting (id, candidateId, source, reference, title, status, appliedAt, isInZone)
+    VALUES (1, 'lea', 'pep', '2026-1', 'Greffier', 'applied', '2026-10-20T09:00:00.000+00:00', 1),
+      (2, 'lea', 'pep', '2026-2', 'Greffier', 'applied', '2026-10-10T09:00:00.000+00:00', 1);
+    INSERT INTO Posting (id, candidateId, source, reference, title, repostOfId, isInZone)
+    VALUES (3, 'lea', 'pep', '2026-3', 'Greffier', 1, 1);
+    INSERT INTO Interview (id, postingId, number, startAt, place, interviewers)
+    VALUES (1, 1, 1, '2026-11-19T14:00:00.000+00:00', 'Lille', '');
+    INSERT INTO Version (id, postingId, interviewId, artifact, number, isChosen, state, instructions) VALUES
+      (1, 1, NULL, 'research', 1, 1, 'ready', 'Chercher.'),
+      (2, 1, NULL, 'letter', 1, 1, 'ready', 'Écrire.'),
+      (3, 2, NULL, 'letter', 1, 1, 'ready', 'Écrire.'),
+      (4, 1, 1, 'interview_brief', 1, 1, 'ready', 'Réviser.'),
+      (5, 1, 1, 'portrait', 1, 1, 'ready', 'Chercher.'),
+      (6, 3, NULL, 'research', 1, 1, 'ready', 'Chercher.');
+    INSERT INTO _Input (A, B) VALUES (2, 1), (2, 3), (4, 1), (4, 5), (6, 1);`);
+  database.close();
+  return dataDirectory;
+}
+
+// The main checkout migrates Léa's real data/, whose Versions read others: each link becomes a
+// recorded Input, and nothing else is known of them (spec #125)
+describe('the read Versions of an older database', () => {
+  it('become recorded Inputs, keyed as the Artifact module resolves them', async () => {
+    const dataDirectory = writeReadVersionDataDirectory();
+
+    await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'SELECT versionId, key, readVersionId FROM VersionInput ORDER BY id')).toEqual([
+      { versionId: 2, key: 'artifact:research', readVersionId: 1 },
+      { versionId: 2, key: 'posting:2026-2/letter', readVersionId: 3 },
+      { versionId: 4, key: 'artifact:research', readVersionId: 1 },
+      { versionId: 4, key: 'artifact:portrait@1', readVersionId: 5 },
+      { versionId: 6, key: 'posting:2026-1/research', readVersionId: 1 },
+    ]);
+  });
+
+  // Every Version is kept, each Chosen one Validated; a Letter without its first draft was brought
+  it('keeps every Version, each given its validation and its origin', async () => {
+    const dataDirectory = writeReadVersionDataDirectory();
+
+    await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'SELECT id, validation, origin FROM Version ORDER BY id')).toEqual([
+      { id: 1, validation: 'validated', origin: 'ai' },
+      { id: 2, validation: 'validated', origin: 'candidate' },
+      { id: 3, validation: 'validated', origin: 'candidate' },
+      { id: 4, validation: 'validated', origin: 'ai' },
+      { id: 5, validation: 'validated', origin: 'ai' },
+      { id: 6, validation: 'validated', origin: 'ai' },
+    ]);
+  });
+
+  // A migrated record only knows the Versions it read: the other Inputs open checked by default
+  it('prefills a regeneration: each Artifact as the Version read it, the other Inputs by default', async () => {
+    const dataDirectory = writeReadVersionDataDirectory();
+    writeFile(path.join(dataDirectory, 'candidates', 'lea', 'profile', 'letter-tj-lille-2025.md'), PAST_LETTER);
+    const { artifacts } = await openContext({ dataDirectory });
+    const brief = await artifacts.find({ reference: '2026-1', artifact: 'interview_brief', interview: 1 });
+
+    const inputList = await brief.readInputs();
+
+    expect(Object.fromEntries(inputList.map(({ key, isChecked }) => [key, isChecked]))).toEqual({
+      job_description: true,
+      'artifact:research': true,
+      'artifact:letter': false,
+      'artifact:portrait@1': true,
+      'profile:letter-tj-lille-2025.md': true,
+      'posting:2026-2/letter': false,
+    });
+  });
+});
+
+// Léa's To Apply Postings as the jf before New left them: one with a Research Version, one whose
+// Research is only queued, one put back To Apply after it was Applied, one nobody looked at, Archived
+// or not, beside an Applied one
+function writeUnsortedDataDirectory(): string {
+  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+  const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_NEW_STATUS_MIGRATION));
+  database.exec(`INSERT INTO Candidate (id, name) VALUES ('lea', 'Léa');
+    INSERT INTO DefaultDeadlinePeriod (id, months) VALUES (1, 6);
+    INSERT INTO Posting (id, candidateId, source, reference, title, status, appliedAt, archivedAt, isInZone) VALUES
+      (1, 'lea', 'pep', '2026-1', 'Greffier', 'to_apply', NULL, NULL, 1),
+      (2, 'lea', 'pep', '2026-2', 'Greffier', 'to_apply', NULL, NULL, 1),
+      (3, 'lea', 'pep', '2026-3', 'Greffier', 'to_apply', '2026-10-20T09:00:00.000+00:00', NULL, 0),
+      (4, 'lea', 'pep', '2026-4', 'Greffier', 'to_apply', NULL, NULL, 0),
+      (5, 'lea', 'pep', '2026-5', 'Greffier', 'to_apply', NULL, '2026-10-21T09:00:00.000+00:00', 0),
+      (6, 'lea', 'pep', '2026-6', 'Greffier', 'applied', '2026-10-20T09:00:00.000+00:00', NULL, 0);
+    INSERT INTO Version (id, postingId, artifact, number, isChosen, state, instructions)
+    VALUES (1, 1, 'research', 1, 1, 'ready', 'Chercher.');
+    INSERT INTO Job (id, module, postingId, state) VALUES (1, 'research', 2, 'queued');
+    INSERT INTO Job (id, module, postingId, state) VALUES (2, 'conversion', NULL, 'done');`);
+  database.close();
+  return dataDirectory;
+}
+
+// The main checkout migrates Léa's real data/, where To Apply filled up with Postings nobody sorted
+// (ADR-0018): those with no Research become New, which she sorts
+describe('the unsorted Postings of an older database', () => {
+  it('become New when To Apply with no Research, never Applied', async () => {
+    const dataDirectory = writeUnsortedDataDirectory();
+
+    await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'SELECT reference, status FROM Posting ORDER BY id')).toEqual([
+      { reference: '2026-1', status: 'to_apply' },
+      { reference: '2026-2', status: 'to_apply' },
+      { reference: '2026-3', status: 'to_apply' },
+      { reference: '2026-4', status: 'new' },
+      { reference: '2026-5', status: 'new' },
+      { reference: '2026-6', status: 'applied' },
+    ]);
+  });
+});
+
+// Léa's Watches as the jf with a Zone left them: the PEP one with its courts of appeal, one of
+// another Source whose Parameters hold none, beside a Posting in the Zone and one out of it
+function writeZonedDataDirectory(): string {
+  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+  const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_ZONE_REMOVAL_MIGRATION));
+  database.exec(`INSERT INTO Candidate (id, name) VALUES ('lea', 'Léa');
+    INSERT INTO DefaultDeadlinePeriod (id, months) VALUES (1, 6);
+    INSERT INTO Watch (id, candidateId, source, parameters, detectedAt) VALUES
+      ('hauts-de-france', 'lea', 'pep', '{"title":"attaché de justice","courtOfAppealList":["Douai","Amiens"]}',
+        '2026-10-30T10:44:22.500+00:00'),
+      ('other', 'lea', 'other', '{"title":"greffier"}', NULL);
+    INSERT INTO Posting (id, candidateId, source, reference, title, status, isInZone) VALUES
+      (1, 'lea', 'pep', '2026-1', 'Greffier', 'new', 1),
+      (2, 'lea', 'pep', '2026-2', 'Greffier', 'to_apply', 0);`);
+  database.close();
+  return dataDirectory;
+}
+
+// The main checkout migrates Léa's real data/: the Candidate's sorting replaces the Zone (ADR-0018)
+describe('the Zone of an older database', () => {
+  it('leaves the Parameters of each Watch and its Postings, idempotently', async () => {
+    const dataDirectory = writeZonedDataDirectory();
+
+    await createActions({ dataDirectory });
+    await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'SELECT id, parameters, detectedAt FROM Watch ORDER BY id')).toEqual([
+      {
+        id: 'hauts-de-france',
+        parameters: '{"title":"attaché de justice"}',
+        detectedAt: '2026-10-30T10:44:22.500+00:00',
+      },
+      { id: 'other', parameters: '{"title":"greffier"}', detectedAt: null },
+    ]);
+    expect(selectAll(dataDirectory, "SELECT name FROM pragma_table_info('Posting') WHERE name = 'isInZone'")).toEqual(
+      [],
+    );
+    expect(selectAll(dataDirectory, 'SELECT reference, status FROM Posting ORDER BY id')).toEqual([
+      { reference: '2026-1', status: 'new' },
+      { reference: '2026-2', status: 'to_apply' },
+    ]);
+  });
+});
+
+const AI_LETTER = '# Lettre telle que l’IA l’a écrite\n';
+// A Letter stays plain Markdown: what MDX reads as syntax stays as she wrote it
+const CORRECTED_LETTER = '# Lettre corrigée par Léa\n\nMoins de <5 ans {sic}.\n';
+const BROUGHT_LETTER = '# Lettre apportée par Léa\n';
+const PORTRAIT = '# Portrait du jury\n';
+// A Markdown Brief holding what MDX reads as syntax, in its text and in code, which keeps it as is
+const BRIEF = [
+  '# Fiche d’entretien',
+  '',
+  'Un délai {raisonnable}, moins de <5 ans, un <b>mot</b>, déjà \\{échappé}.',
+  '',
+  'Le code `a{b}<c>` reste tel quel.',
+  '',
+  '```',
+  '{ "rôle": "<juge>" }',
+  '```',
+  '',
+].join('\n');
+// The same Brief as MDX reads it, escaped by hand
+const ESCAPED_BRIEF = [
+  '# Fiche d’entretien',
+  '',
+  'Un délai \\{raisonnable}, moins de \\<5 ans, un \\<b>mot\\</b>, déjà \\{échappé}.',
+  '',
+  'Le code `a{b}<c>` reste tel quel.',
+  '',
+  '```',
+  '{ "rôle": "<juge>" }',
+  '```',
+  '',
+].join('\n');
+
+// Léa's Versions as the jf before the Draft left them: a Research regenerated after its Chosen Version
+// then failed once, another Posting's Research never chosen, a Letter she corrected beside one she
+// brought, and an Interview's Portrait, chosen, and Brief, not
+function writeChosenDataDirectory(): string {
+  const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
+  const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_VERSION_VALIDATION_MIGRATION));
+  database.exec(`INSERT INTO Candidate (id, name) VALUES ('lea', 'Léa');
+    INSERT INTO DefaultDeadlinePeriod (id, months) VALUES (1, 6);
+    INSERT INTO Posting (id, candidateId, source, reference, title, status, appliedAt, isInZone) VALUES
+      (1, 'lea', 'pep', '2026-1', 'Greffier', 'applied', '2026-10-20T09:00:00.000+00:00', 1),
+      (2, 'lea', 'pep', '2026-2', 'Greffier', 'to_apply', NULL, 1);
+    INSERT INTO Interview (id, postingId, number, startAt, place, interviewers)
+    VALUES (1, 1, 1, '2026-11-19T14:00:00.000+00:00', 'Lille', '');
+    INSERT INTO Version (id, postingId, interviewId, artifact, number, isChosen, state, instructions) VALUES
+      (1, 1, NULL, 'research', 1, 0, 'ready', 'Chercher.'),
+      (2, 1, NULL, 'research', 2, 1, 'ready', 'Chercher.'),
+      (3, 1, NULL, 'research', 3, 0, 'ready', 'Chercher.'),
+      (4, 1, NULL, 'research', 4, 0, 'failed', 'Chercher.'),
+      (5, 2, NULL, 'research', 1, 0, 'ready', 'Chercher.'),
+      (6, 1, NULL, 'letter', 1, 1, 'ready', 'Écrire.'),
+      (7, 1, NULL, 'letter', 2, 0, 'ready', 'Écrire.'),
+      (8, 1, 1, 'portrait', 1, 1, 'ready', 'Chercher.'),
+      (9, 1, 1, 'interview_brief', 1, 0, 'ready', 'Réviser.');`);
+  database.close();
+  const postingsDirectory = path.join(dataDirectory, 'candidates', 'lea', 'postings');
+  const firstDirectory = path.join(postingsDirectory, '2026-1-greffier');
+  const interviewDirectory = path.join(firstDirectory, 'interviews', '1');
+  writeFile(path.join(firstDirectory, 'job-description.md'), '# Greffier\n');
+  writeFile(path.join(postingsDirectory, '2026-2-greffier', 'job-description.md'), '# Greffier\n');
+  for (const number of ['v1', 'v2', 'v3']) {
+    writeFile(path.join(firstDirectory, 'research', number, 'research.md'), RESEARCH);
+  }
+  mkdirSync(path.join(firstDirectory, 'research', 'v4'), { recursive: true });
+  writeFile(path.join(postingsDirectory, '2026-2-greffier', 'research', 'v1', 'research.md'), RESEARCH);
+  writeFile(path.join(firstDirectory, 'letter', 'v1', 'letter.md'), CORRECTED_LETTER);
+  writeFile(path.join(firstDirectory, 'letter', 'v1', 'recipients.json'), RECIPIENTS);
+  writeFile(path.join(firstDirectory, 'letter', 'v1', 'draft.md'), AI_LETTER);
+  chmodSync(path.join(firstDirectory, 'letter', 'v1', 'draft.md'), 0o444);
+  writeFile(path.join(firstDirectory, 'letter', 'v2', 'letter.md'), BROUGHT_LETTER);
+  writeFile(path.join(interviewDirectory, 'portrait', 'v1', 'portrait.md'), PORTRAIT);
+  writeFile(path.join(interviewDirectory, 'interview_brief', 'v1', 'interview-brief.md'), BRIEF);
+  return dataDirectory;
+}
+
+// The text and the Original of each Version of a Posting, its Interviews' included, as the Posting page
+// reads them
+async function readVersionTexts(actions: Actions, reference: string): Promise<Record<string, unknown>> {
+  const { artifactList, interviewList } = await actions.readPosting({ reference });
+  return Object.fromEntries(
+    [...artifactList, ...interviewList.flatMap((interview) => interview.artifactList)].flatMap(
+      ({ artifact, versionList }) =>
+        versionList.map(({ version: { number }, text, original }) => [
+          `${artifact} v${String(number)}`,
+          { text, original },
+        ]),
+    ),
+  );
+}
+
+// The main checkout migrates Léa's real data/: her Chosen Versions and her corrections come through the
+// V1, and every AI Version keeps the AI's text as its Original (spec #125, ADR-0019)
+describe('the Versions of an older data folder', () => {
+  it('are Validated up to the Chosen one, Drafts after it or without one', async () => {
+    const dataDirectory = writeChosenDataDirectory();
+
+    await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'SELECT id, isChosen, validation FROM Version ORDER BY id')).toEqual([
+      { id: 1, isChosen: 0, validation: 'validated' },
+      { id: 2, isChosen: 1, validation: 'validated' },
+      { id: 3, isChosen: 0, validation: 'draft' },
+      { id: 4, isChosen: 0, validation: 'draft' },
+      { id: 5, isChosen: 0, validation: 'draft' },
+      { id: 6, isChosen: 1, validation: 'validated' },
+      { id: 7, isChosen: 0, validation: 'draft' },
+      { id: 8, isChosen: 1, validation: 'validated' },
+      { id: 9, isChosen: 0, validation: 'draft' },
+    ]);
+  });
+
+  it('keep the AI’s text as their Original: a Letter its first draft, a brought Letter none', async () => {
+    const dataDirectory = writeChosenDataDirectory();
+
+    const actions = await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'SELECT id, origin FROM Version ORDER BY id')).toEqual([
+      { id: 1, origin: 'ai' },
+      { id: 2, origin: 'ai' },
+      { id: 3, origin: 'ai' },
+      { id: 4, origin: 'ai' },
+      { id: 5, origin: 'ai' },
+      { id: 6, origin: 'ai' },
+      { id: 7, origin: 'candidate' },
+      { id: 8, origin: 'ai' },
+      { id: 9, origin: 'ai' },
+    ]);
+    expect(await readVersionTexts(actions, '2026-1')).toEqual({
+      'research v1': { text: RESEARCH, original: RESEARCH },
+      'research v2': { text: RESEARCH, original: RESEARCH },
+      'research v3': { text: RESEARCH, original: RESEARCH },
+      'research v4': { text: null, original: null },
+      'letter v1': { text: CORRECTED_LETTER, original: AI_LETTER },
+      'letter v2': { text: BROUGHT_LETTER, original: null },
+      'portrait v1': { text: PORTRAIT, original: PORTRAIT },
+      'interview_brief v1': { text: ESCAPED_BRIEF, original: ESCAPED_BRIEF },
+    });
+    expect(await readVersionTexts(actions, '2026-2')).toEqual({
+      'research v1': { text: RESEARCH, original: RESEARCH },
+    });
+    const portraitOriginalPath = path.join(
+      dataDirectory,
+      'candidates/lea/postings/2026-1-greffier/interviews/1/portrait/v1/original.md',
+    );
+    expect(statSync(portraitOriginalPath).mode & 0o777).toBe(0o444);
+  });
+
+  it('escape, in their text and Original, what MDX reads as syntax, so that each compiles as written', async () => {
+    const dataDirectory = writeChosenDataDirectory();
+
+    const actions = await createActions({ dataDirectory });
+
+    const { interviewList } = await actions.readPosting({ reference: '2026-1' });
+    const brief = interviewList[0]?.artifactList.find(({ artifact }) => artifact === 'interview_brief');
+    const html = renderToStaticMarkup(
+      createElement(
+        I18nextProvider,
+        { i18n: i18nOf('en') },
+        createElement(ArtifactText, { text: brief?.versionList[0]?.text ?? '', format: 'mdx' }),
+      ),
+    );
+    expect(html).toContain(
+      '<p>Un délai {raisonnable}, moins de &lt;5 ans, un &lt;b&gt;mot&lt;/b&gt;, déjà {échappé}.</p>',
+    );
+    expect(html).toContain('<code>a{b}&lt;c&gt;</code>');
+    expect(html).not.toContain('does not compile as MDX');
+    expect(html).not.toContain('Unknown component');
+  });
+
+  it('changes nothing when opened again', async () => {
+    const dataDirectory = writeChosenDataDirectory();
+    await createActions({ dataDirectory });
+    const entryList = snapshotOf(dataDirectory);
+    const versionList = selectAll(dataDirectory, 'SELECT * FROM Version ORDER BY id');
+
+    await createActions({ dataDirectory });
+
+    expect(snapshotOf(dataDirectory)).toEqual(entryList);
+    expect(selectAll(dataDirectory, 'SELECT * FROM Version ORDER BY id')).toEqual(versionList);
+  });
+
+  // The worker and the web open the same data at their first launch: between one's check that an Original is
+  // missing and its copy, the other may have kept it. No action can stop in that gap, hence the copy itself.
+  it('leave the Original another launch has just kept, read-only', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'jf-original-'));
+    const textPath = path.join(directory, 'research.md');
+    const originalPath = path.join(directory, 'original.md');
+    writeFileSync(textPath, RESEARCH);
+    copyAsReadOnly(textPath, originalPath);
+    writeFileSync(textPath, '# Corrected\n');
+
+    copyAsReadOnly(textPath, originalPath);
+
+    expect(readFileSync(originalPath, 'utf8')).toBe(RESEARCH);
+    expect(statSync(originalPath).mode & 0o777).toBe(0o444);
+  });
+
+  // Rewritten in place, the text the other launch is copying would freeze as a truncated Original
+  it('leave whole the text the other launch is copying while rewriting it', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'jf-original-'));
+    const textPath = path.join(directory, 'research.md');
+    writeFileSync(textPath, RESEARCH, { mode: 0o600 });
+    const textBeingCopied = openSync(textPath, 'r');
+
+    writeTextFile(textPath, '# Escaped\n');
+
+    expect(readFileSync(textBeingCopied, 'utf8')).toBe(RESEARCH);
+    expect(readFileSync(textPath, 'utf8')).toBe('# Escaped\n');
+    expect(statSync(textPath).mode & 0o777).toBe(0o600);
+    closeSync(textBeingCopied);
+  });
+
+  it('close an Original the other launch has copied but not closed yet', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'jf-original-'));
+    const textPath = path.join(directory, 'research.md');
+    const originalPath = path.join(directory, 'original.md');
+    writeFileSync(textPath, '# Corrected\n');
+    writeFileSync(originalPath, RESEARCH, { mode: 0o644 });
+
+    copyAsReadOnly(textPath, originalPath);
+
+    expect(readFileSync(originalPath, 'utf8')).toBe(RESEARCH);
+    expect(statSync(originalPath).mode & 0o777).toBe(0o444);
+  });
+});
+
+describe('two launches on a data folder an older jf left', () => {
+  // The worker and the web open the same data at their first launch. Prisma gives up on a database locked
+  // for 5 s: here a process holds the lock longer than that, as a launch migrating at the same time can.
+  it('migrate once the other has let go of the database, rather than crash', async () => {
+    const dataDirectory = mkdtempSync(path.join(tmpdir(), 'jf-locked-'));
+    const databasePath = writeOlderDatabase(dataDirectory, BEFORE_ZONE_REMOVAL_MIGRATION);
+    const holder = spawn(
+      process.execPath,
+      [
+        '--input-type=module',
+        '--eval',
+        `import { DatabaseSync } from 'node:sqlite';
+         const database = new DatabaseSync(${JSON.stringify(databasePath)});
+         database.exec('BEGIN EXCLUSIVE');
+         console.log('held');
+         setTimeout(() => database.exec('COMMIT'), ${String(LOCK_HELD_MS)});`,
+      ],
+      { stdio: ['ignore', 'pipe', 'inherit'] },
+    );
+    await once(holder.stdout, 'data');
+
+    await createActions({ dataDirectory });
+
+    expect(selectAll(dataDirectory, 'PRAGMA table_info(Posting)')).not.toContainEqual(
+      expect.objectContaining({ name: 'isInZone' }),
+    );
+  }, 20_000);
 });

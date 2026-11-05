@@ -2,8 +2,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import type { Actions } from '#/actions/index.ts';
 
+import { applyTo } from './apply.ts';
 import { detectPostings } from './data-directory.ts';
-import { createFakeAiSession } from './fake-ai-session.ts';
 
 // The address the Candidate opened Job Finder through, here over the VPN
 const ORIGIN = 'https://10.8.0.1:5180';
@@ -34,7 +34,7 @@ describe('the iCal file of an Interview', () => {
 
   // An Application's first Interview, on 19 November 2026 at 14:00 in Paris
   async function addInterview(reference: string, other: Record<string, unknown> = {}) {
-    await actions.changeStatus({ reference, status: 'applied' });
+    await applyTo(actions, reference);
     await actions.addInterview({
       reference,
       start: '2026-11-19T14:00',
@@ -83,17 +83,17 @@ describe('the iCal file of an Interview', () => {
     expect(unfold(winter.text)).toContain('BEGIN:VTIMEZONE\r\nTZID:Europe/Paris\r\n');
   });
 
-  it('rings a day before the Interview', async () => {
+  it('rings the day before the Interview, then an hour before', async () => {
     await addInterview('2026-2445183');
 
     const { text } = await actions.readIcalFile({ reference: '2026-2445183', number: 1, origin: ORIGIN });
 
-    expect(unfold(text)).toMatch(
-      /BEGIN:VALARM\r\nACTION:DISPLAY\r\n(?:.*\r\n)*?TRIGGER:-P1D\r\n(?:.*\r\n)*?END:VALARM/,
-    );
+    const alarmList = unfold(text).match(/BEGIN:VALARM\r\n(?:.*\r\n)*?END:VALARM/g) ?? [];
+    expect(alarmList.map((alarm) => /TRIGGER:(.*)\r\n/.exec(alarm)?.[1])).toEqual(['-P1D', '-PT1H']);
+    expect(alarmList.every((alarm) => alarm.includes('ACTION:DISPLAY\r\n'))).toBe(true);
   });
 
-  it('describes the links to the official ad and to the Posting page and its sections, on the origin passed', async () => {
+  it('describes the Interviewers, then the links to the Revision, the official ad and the Posting page and its sections, on the origin passed', async () => {
     await addInterview('2026-2350473');
 
     const { text } = await actions.readIcalFile({
@@ -103,28 +103,34 @@ describe('the iCal file of an Interview', () => {
     });
 
     expect(valueOf(text, 'DESCRIPTION')?.split(String.raw`\n`)).toEqual([
+      'Interlocuteurs : Mme Durand',
+      'Réviser l’Entretien 1 : https://job-finder.example.org/postings/2026-2350473/interviews/1/revision',
       'Annonce officielle : https://choisirleservicepublic.gouv.fr/offre-emploi/2026-2350473/?tracking=1&idOrigine=502',
       'Page Job Finder : https://job-finder.example.org/postings/2026-2350473',
-      'Recherche : https://job-finder.example.org/postings/2026-2350473#research',
-      'Lettre : https://job-finder.example.org/postings/2026-2350473#letter',
-      'Fiche d’entretien : https://job-finder.example.org/postings/2026-2350473#interview-1-interview_brief',
+      'Recherche : https://job-finder.example.org/postings/2026-2350473?tab=research',
+      'Lettre de motivation : https://job-finder.example.org/postings/2026-2350473?tab=letter',
     ]);
-    expect(valueOf(text, 'URL')).toBe('https://job-finder.example.org/postings/2026-2350473');
+    expect(valueOf(text, 'URL')).toBe('https://job-finder.example.org/postings/2026-2350473/interviews/1/revision');
   });
 
-  it('leaves the official ad out of the description of an imported Posting, which has none', async () => {
+  it('leaves out of the description the Interviewers not given, and the official ad an imported Posting lacks', async () => {
     const { posting } = await actions.importJobDescription({
       candidateId: 'lea',
       fileName: 'greffier-lille.md',
       markdown: '# Greffier\n\nTribunal judiciaire de Lille.\n',
     });
-    await addInterview(posting.reference);
+    await addInterview(posting.reference, { interviewers: '' });
 
     const { text } = await actions.readIcalFile({ reference: posting.reference, number: 1, origin: ORIGIN });
 
-    expect(valueOf(text, 'DESCRIPTION')?.split(String.raw`\n`)[0]).toBe(
+    expect(
+      valueOf(text, 'DESCRIPTION')
+        ?.split(String.raw`\n`)
+        .slice(0, 2),
+    ).toEqual([
+      `Réviser l’Entretien 1 : ${ORIGIN}/postings/${posting.reference}/interviews/1/revision`,
       `Page Job Finder : ${ORIGIN}/postings/${posting.reference}`,
-    );
+    ]);
   });
 
   it('keeps its UID across edits and raises its SEQUENCE at each one, so a calendar updates the event', async () => {
@@ -157,50 +163,5 @@ describe('the iCal file of an Interview', () => {
     await expect(actions.readIcalFile({ reference: '2026-2199164', number: 3, origin: ORIGIN })).rejects.toMatchObject({
       code: 'unknown_interview',
     });
-  });
-});
-
-// Story 29: the page she reviews from her phone right before the Interview
-describe('the Visualization link of the iCal file', () => {
-  const REFERENCE = '2026-2445600';
-  const RESEARCH_RUN = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
-  const BRIEF_RUN = { fileByName: { 'interview-brief.md': '# Fiche d’entretien\n' } };
-  const VISUALIZATION_RUN = {
-    fileByName: { 'visualization.html': '<!DOCTYPE html><html lang="fr"><body><h1>PAS</h1></body></html>\n' },
-  };
-
-  async function runModule(actions: Actions, module: string, interview?: number) {
-    await actions.runModule({ module, reference: REFERENCE, interview });
-    await actions.runQueuedJobs();
-  }
-
-  it('leads to the Chosen Version of the Visualization of that Interview, once there is one', async () => {
-    const aiSession = createFakeAiSession(RESEARCH_RUN, BRIEF_RUN, BRIEF_RUN, VISUALIZATION_RUN, VISUALIZATION_RUN);
-    const { actions } = await detectPostings(aiSession);
-    await runModule(actions, 'research');
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
-    for (const start of ['2026-11-19T14:00', '2026-12-03T10:00']) {
-      await actions.addInterview({ reference: REFERENCE, start, place: PLACE, interviewers: '' });
-    }
-    const before = await actions.readIcalFile({ reference: REFERENCE, number: 2, origin: ORIGIN });
-    await runModule(actions, 'brief', 1);
-    await runModule(actions, 'brief', 2);
-    await runModule(actions, 'visualization', 2);
-    await runModule(actions, 'visualization', 2);
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'visualization', interview: 2, number: 1 });
-
-    const second = await actions.readIcalFile({ reference: REFERENCE, number: 2, origin: ORIGIN });
-    const first = await actions.readIcalFile({ reference: REFERENCE, number: 1, origin: ORIGIN });
-
-    expect(valueOf(before.text, 'DESCRIPTION')).not.toContain('Visualisation');
-    expect(
-      valueOf(second.text, 'DESCRIPTION')
-        ?.split(String.raw`\n`)
-        .slice(-2),
-    ).toEqual([
-      `Fiche d’entretien : ${ORIGIN}/postings/${REFERENCE}#interview-2-interview_brief`,
-      `Visualisation : ${ORIGIN}/postings/${REFERENCE}/interviews/2/visualization/1`,
-    ]);
-    expect(valueOf(first.text, 'DESCRIPTION')).not.toContain('Visualisation');
   });
 });

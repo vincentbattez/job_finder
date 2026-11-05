@@ -9,6 +9,7 @@ import {
   type Detection,
   type DetectionOrigin,
   type DetectionOverview,
+  type JobDescription,
   type ListedPosting,
   type Locale,
   type Location,
@@ -20,11 +21,31 @@ import {
 import { readCity } from '#/geo/city.ts';
 import { composeDetectionSummary, type ISummarizedPosting, type ISummarizedWatch } from '#/notification/index.ts';
 import { findRepostedPosting } from '#/repost/index.ts';
-import type { ISourceReadResult } from '#/source/index.ts';
 import { hasBeenApplied } from '#/status/index.ts';
 
 import type { ActionContext } from './context.ts';
 import { createTolerantLocator } from './locator.ts';
+import { watchNamesOf } from './watch-label.ts';
+
+// The Postings a Detection found, outside a Watch's first launch, whose Postings already online are only
+// imported: New's « found » group until the next one (spec #125 « Lists »)
+function foundReferencesOf(detection: RecordedDetection | null): string[] {
+  return (detection?.watchList ?? [])
+    .filter(({ isFirstLaunch }) => !isFirstLaunch)
+    .flatMap(({ newPostingList }) => newPostingList.map(({ reference }) => reference));
+}
+
+// What New's « found » group shows: the running Detection's Postings as it finds them, or those of the
+// last one while no Detection runs on the Candidate's Watches, another Candidate's holding none of them
+export function currentFoundReferencesOf({
+  running,
+  last,
+}: {
+  running: RecordedDetection | null;
+  last: RecordedDetection | null;
+}): string[] {
+  return foundReferencesOf(running !== null && running.watchList.length > 0 ? running : last);
+}
 
 // Every Watch, started from jf detect unless the daily automation says so
 const DETECT_INPUT_SCHEMA = z.object({ origin: DETECTION_ORIGIN_SCHEMA.default('cli') });
@@ -87,7 +108,6 @@ interface IWatchRun {
 // may import (ADR-0003). It knows them only through their family (ADR-0010).
 export function createDetectActions({
   workspace,
-  artifacts,
   sourceList,
   findCandidate,
   findSource,
@@ -95,41 +115,15 @@ export function createDetectActions({
   locate,
   notifyCandidate,
 }: ActionContext) {
-  function descriptionOf({ source }: Watch): SourceModule | undefined {
-    return sourceList.find(({ description: { id } }) => id === source)?.description;
-  }
+  const { labelOf, sourceNameOf } = watchNamesOf(sourceList);
 
-  function sourceNameOf(watch: Watch): string {
-    return descriptionOf(watch)?.name ?? watch.source;
-  }
-
-  // What the Candidate reads to tell a Watch apart: its first text Parameter, such as the searched
-  // title, in the order its Source declares them, never its identifier (#63)
-  function labelOf(watch: Watch): string {
-    const { source, parameters } = watch;
-    const description = descriptionOf(watch);
-    const label = description?.parameterList
-      .map(({ name }) => parameters[name])
-      .find((value): value is string => typeof value === 'string' && value !== '');
-    return label ?? description?.name ?? source;
-  }
-
-  // In the Zone, a Posting gets its Research (ADR-0003)
-  async function startInZone(posting: Posting, repostOf: Posting | undefined): Promise<ISummarizedPosting> {
-    const research = await artifacts.find({ posting, artifact: 'research' });
-    await research.queueRun({ isAutomatic: true });
-    return {
-      posting,
-      repost: repostOf === undefined ? null : { repostedReference: repostOf.reference, isApplied: false },
-    };
-  }
-
-  // The Postings already online at the first launch start nothing (ADR-0003). The Repost of an
-  // Posting once Applied gets no Research whatever the Zone: the Candidate, who applied already, decides.
+  // A detected Posting is saved New, a Repost included, and starts nothing: the Candidate sorts it
+  // (ADR-0018). The Detection Summary tells it, unless it was already online at the first launch; a
+  // Repost tells the Posting it publishes again, and whether the Candidate applied to it.
   async function saveNewPosting(
     { watch: { candidateId, source }, isFirstLaunch, postingList, locale, locate: locateCity }: IWatchRun,
     listedPosting: ListedPosting,
-    { jobDescription, isInZone }: ISourceReadResult,
+    jobDescription: JobDescription,
   ): Promise<{ posting: Posting; summarized: ISummarizedPosting | undefined }> {
     const repostOf = findRepostedPosting({ ...listedPosting, ...jobDescription }, postingList);
     const location = await locateCity(readCity(jobDescription.workplace), locale);
@@ -138,7 +132,7 @@ export function createDetectActions({
       source,
       listedPosting,
       jobDescription,
-      isInZone,
+      status: 'new',
       repostOf,
       location,
     });
@@ -146,22 +140,9 @@ export function createDetectActions({
     if (isFirstLaunch) {
       return { posting, summarized: undefined };
     }
-    if (repostOf !== undefined && hasBeenApplied(repostOf)) {
-      return { posting, summarized: { posting, repost: { repostedReference: repostOf.reference, isApplied: true } } };
-    }
-    return { posting, summarized: isInZone ? await startInZone(posting, repostOf) : undefined };
-  }
-
-  // A Posting another Watch of the Candidate stored out of its Zone, found in the Zone of this one: it
-  // starts what it would have started in the Zone, unless it was online at the first launch of this
-  // Watch. A Repost of a Posting once Applied was told when it was stored.
-  async function enterZone({ isFirstLaunch, postingList }: IWatchRun, posting: Posting) {
-    const inZonePosting = await workspace.setInZone(posting);
-    const repostOf = postingList.find(({ reference }) => reference === posting.repostOf?.reference);
-    if (isFirstLaunch || (repostOf !== undefined && hasBeenApplied(repostOf))) {
-      return;
-    }
-    return startInZone(inZonePosting, repostOf);
+    const repost =
+      repostOf === undefined ? null : { repostedReference: repostOf.reference, isApplied: hasBeenApplied(repostOf) };
+    return { posting, summarized: { posting, repost } };
   }
 
   // A stored Posting of the Watch's Source is Unpublished while the Source no longer lists it, whatever
@@ -177,8 +158,7 @@ export function createDetectActions({
   }
 
   // A Posting is known by its reference, never by its publication date, which the site changes
-  // (ADR-0001). Each Watch has its own Zone: a Posting stored out of the Zone of one is read again
-  // by each other Watch that has not read it yet.
+  // (ADR-0001). A Posting another Watch of the Candidate already stored is not read again.
   // Each Posting to tell goes into summarizedList as soon as it is saved, so that a Detection cut off
   // still tells it
   async function detectWatch(
@@ -189,7 +169,6 @@ export function createDetectActions({
   ): Promise<IFoundPostings> {
     const { candidateId, source } = watch;
     await workspace.updateDetectionWatch(detection, watch.id, { step: 'searching' });
-    const outOfZonePostingList = await workspace.listOutOfZonePostingsSince(watch);
     const locale = await findLocale(candidateId);
     const sourceModule = findSource(source, locale, watch.id);
     const { matchingList, nearMissList, publishedReferenceList } = await sourceModule.search(watch, locale);
@@ -209,10 +188,8 @@ export function createDetectActions({
     const isSame = (posting: Posting, { reference }: ListedPosting) =>
       posting.source === source && posting.reference === reference;
     // Counted before reading, so the front shows how many Job Descriptions are left
-    const toReadList = oldestFirstList.filter(
-      (listedPosting) =>
-        outOfZonePostingList.some((posting) => isSame(posting, listedPosting)) ||
-        run.postingList.every((posting) => !isSame(posting, listedPosting)),
+    const toReadList = oldestFirstList.filter((listedPosting) =>
+      run.postingList.every((posting) => !isSame(posting, listedPosting)),
     );
     await workspace.updateDetectionWatch(detection, watch.id, {
       step: 'reading',
@@ -221,16 +198,10 @@ export function createDetectActions({
       nearMissList: nearMissList.map((posting) => referenceAndTitle(posting)),
     });
     for (const [index, listedPosting] of toReadList.entries()) {
-      const outOfZonePosting = outOfZonePostingList.find((posting) => isSame(posting, listedPosting));
-      const readResult = await sourceModule.readJobDescription(listedPosting.reference, watch, locale);
-      if (outOfZonePosting === undefined) {
-        const { posting, summarized } = await saveNewPosting(run, listedPosting, readResult);
-        newPostingList.push(posting);
-        summarizedList.push(...(summarized === undefined ? [] : [summarized]));
-      } else if (readResult.isInZone) {
-        const summarized = await enterZone(run, outOfZonePosting);
-        summarizedList.push(...(summarized === undefined ? [] : [summarized]));
-      }
+      const jobDescription = await sourceModule.readJobDescription(listedPosting.reference, watch, locale);
+      const { posting, summarized } = await saveNewPosting(run, listedPosting, jobDescription);
+      newPostingList.push(posting);
+      summarizedList.push(...(summarized === undefined ? [] : [summarized]));
       await workspace.updateDetectionWatch(detection, watch.id, {
         readCount: index + 1,
         newPostingList: newPostingList.map((posting) => referenceAndTitle(posting)),
@@ -393,10 +364,7 @@ export function createDetectActions({
       const candidate = await findCandidate(rawInput);
       await workspace.failStaleDetections(staleOption());
       const { running, last } = await workspace.findDetections(candidate.id);
-      const newReferenceList = (last?.watchList ?? [])
-        .filter(({ isFirstLaunch }) => !isFirstLaunch)
-        .flatMap(({ newPostingList }) => newPostingList.map(({ reference }) => reference));
-      return DETECTION_OVERVIEW_SCHEMA.parse({ running, last, newReferenceList });
+      return DETECTION_OVERVIEW_SCHEMA.parse({ running, last, newReferenceList: foundReferencesOf(last) });
     },
   };
 }

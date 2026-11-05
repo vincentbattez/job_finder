@@ -1,11 +1,7 @@
 import type { Actions } from '#/actions/index.ts';
 
-// Léa, the first Candidate: her Watch follows the attaché de justice Postings of the PEP, her Zone the
-// courts of appeal of Douai and Amiens
-export const LEA_WATCH = {
-  source: 'pep',
-  parameters: { title: 'attaché de justice', courtOfAppealList: ['Douai', 'Amiens'] },
-};
+// Léa, the first Candidate: her Watch follows the attaché de justice Postings of the PEP
+export const LEA_WATCH = { source: 'pep', parameters: { title: 'attaché de justice' } };
 
 // The identifier the front gives her first Watch
 export const LEA_WATCH_ID = 'lea-1';

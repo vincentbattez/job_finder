@@ -4,24 +4,28 @@ import { z } from 'zod/v4';
 
 import type { JobFailure } from '#/artifact/index.ts';
 import { codedError, codedErrorOf } from '#/domain/coded-error.ts';
-import type { Job, QueuedJob } from '#/domain/index.ts';
+import { GENERATION_SCHEMA, IMPORT_SOURCE_ID, type Generation, type Job, type QueuedJob } from '#/domain/index.ts';
 import {
   composeResearchFailedNotification,
   composeResearchReadyNotification,
   type NotificationComposer,
 } from '#/notification/index.ts';
 
-import type { ActionContext } from './context.ts';
+import { ARTIFACT_INPUT_SCHEMA, type ActionContext } from './context.ts';
 import { runExtraction } from './import-job-description.ts';
 import { findJobStall } from './stalled-job.ts';
 import { runConversion } from './uploads.ts';
 
 // The Interview, by its number on the Posting, for a module attached to one
+// The Inputs the Candidate checked in the generation panel; without them, the type's default ones (jf run)
+const INPUT_KEY_LIST_SCHEMA = z.array(z.string()).optional();
 const MODULE_INPUT_SCHEMA = z.object({
   module: z.string(),
   reference: z.string(),
   interview: z.coerce.number().int().optional(),
+  inputKeyList: INPUT_KEY_LIST_SCHEMA,
 });
+const GENERATION_INPUT_SCHEMA = ARTIFACT_INPUT_SCHEMA.extend({ inputKeyList: INPUT_KEY_LIST_SCHEMA });
 const JOB_INPUT_SCHEMA = z.object({ jobId: z.coerce.number().int() });
 
 // How often a followed job is read again: a module runs for minutes
@@ -44,7 +48,8 @@ export function createJobActions(context: ActionContext) {
   // A notification not sent stays on the job, which the Posting page shows (CODING_STANDARDS
   // “Visible failure”)
   async function notifyFinished(job: QueuedJob, failure: JobFailure | undefined): Promise<QueuedJob> {
-    if (job.module !== 'research') {
+    // A Research the Candidate brought as a PDF is theirs: no one needs telling it is ready
+    if (job.module !== 'research' || job.upload !== null) {
       return job;
     }
     const composeNotification = composeFinishedNotification(job, failure);
@@ -53,21 +58,43 @@ export function createJobActions(context: ActionContext) {
     return notificationFailure === undefined ? job : workspace.failNotification(job, notificationFailure);
   }
 
+  async function runPostingJob(job: Job): Promise<{ job: Job; failure: JobFailure | undefined }> {
+    const { module, version, upload } = job;
+    if (module === 'extraction') {
+      return { ...(await runExtraction(context, job)), failure: undefined };
+    }
+    if (module !== 'custom') {
+      return artifacts.run({ ...job, module });
+    }
+    if (version === null || upload === null) {
+      throw codedError('unknown_job', { jobId: job.id });
+    }
+    return artifacts.runCustomConversion({ ...job, version, upload });
+  }
+
   return {
     // Only queues the job: the worker runs it, so restarting the front never stops a session
     // (ADR-0003)
     async runModule(rawInput: unknown): Promise<Job> {
-      const { module, reference, interview } = MODULE_INPUT_SCHEMA.parse(rawInput);
+      const { module, reference, interview, inputKeyList } = MODULE_INPUT_SCHEMA.parse(rawInput);
       // The extraction of an imported Posting runs again after a failure
       if (module === 'extraction') {
         const posting = await findPosting(reference);
-        if (posting.source !== 'import') {
+        if (posting.source !== IMPORT_SOURCE_ID) {
           throw codedError('not_imported', { reference }, { locale: await findLocale(posting.candidateId) });
         }
         return workspace.createJob(posting, 'extraction');
       }
       const handle = await artifacts.find({ reference, module, interview });
-      return handle.queueRun();
+      return handle.queueRun({ inputKeyList: inputKeyList ?? null });
+    },
+
+    // What the generation panel shows before Launch: the Inputs, the refusal and the Prompt of the
+    // checked Inputs, which Copy the Prompt copies (spec #125)
+    async readGeneration(rawInput: unknown): Promise<Generation> {
+      const { inputKeyList, ...name } = GENERATION_INPUT_SCHEMA.parse(rawInput);
+      const handle = await artifacts.find(name);
+      return GENERATION_SCHEMA.parse(await handle.describeGeneration(inputKeyList ?? null));
     },
 
     async followJob(rawInput: unknown): Promise<Job> {
@@ -109,11 +136,7 @@ export function createJobActions(context: ActionContext) {
             jobList.push(await runConversion(context, job));
             continue;
           }
-          const { module } = job;
-          const { job: finishedJob, failure } =
-            module === 'extraction'
-              ? { ...(await runExtraction(context, job)), failure: undefined }
-              : await artifacts.run({ ...job, module });
+          const { job: finishedJob, failure } = await runPostingJob(job);
           jobList.push(await notifyFinished(finishedJob, failure));
         } catch (error) {
           // An error fails this job only, the one running, and the worker goes on with the queue

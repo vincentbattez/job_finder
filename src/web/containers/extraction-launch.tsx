@@ -1,14 +1,16 @@
+import { RefreshCwIcon } from 'lucide-react';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
 import type { ErrorCode } from '#/actions/index.ts';
-import { isPending } from '#/actions/state.ts';
-import { StateBadge, type State } from '#/web/components/badge.tsx';
+import { isPending, type State } from '#/actions/state.ts';
+import { StateBadge } from '#/web/components/state-badge.tsx';
+import { Button } from '#/web/components/ui/button.tsx';
 import { useIsHydrated } from '#/web/components/use-is-hydrated.ts';
-import { WorkerTask } from '#/web/components/worker-task.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
+import { useFeedback } from './use-feedback.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
 
 // The worker runs the extraction in its own process (ADR-0003), so its state is read again until done,
@@ -30,22 +32,32 @@ export function ExtractionLaunch({
   const isHydrated = useIsHydrated();
   const labelId = useId();
   const isRunning = isPending(state);
+  useFeedback(fetcher, () => t('extractionRelaunched'));
   useRevalidateWhile(isRunning);
   return (
-    <fetcher.Form method="post" action="/run" aria-labelledby={labelId}>
+    <fetcher.Form method="post" action="/run" aria-labelledby={labelId} className="grid gap-2">
       <input type="hidden" name="reference" value={reference} />
       <input type="hidden" name="module" value="extraction" />
-      <WorkerTask refusal={state === 'failed' ? log : null} error={fetcher.data?.error ?? workerFailure?.message}>
-        <span id={labelId}>{t('extractionLabel')}</span>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span id={labelId} className="text-muted-foreground">
+          {t('extractionLabel')}
+        </span>
         <span role="status">
           <StateBadge state={state} />
         </span>
         {state === 'failed' && (
-          <button className="button button--primary" type="submit" disabled={!isHydrated || fetcher.state !== 'idle'}>
+          <Button type="submit" variant="outline" size="sm" disabled={!isHydrated} isPending={fetcher.state !== 'idle'}>
+            <RefreshCwIcon />
             {t('relaunchExtraction')}
-          </button>
+          </Button>
         )}
-      </WorkerTask>
+      </div>
+      {state === 'failed' && <p className="text-sm text-destructive">{log}</p>}
+      {workerFailure !== null && (
+        <p role="alert" className="text-sm text-destructive">
+          {workerFailure.message}
+        </p>
+      )}
     </fetcher.Form>
   );
 }

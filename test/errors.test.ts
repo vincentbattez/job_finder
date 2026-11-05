@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { createActions, type Actions } from '#/actions/index.ts';
 import { ERROR_CATALOGUE } from '#/domain/error.ts';
 
+import { applyTo } from './apply.ts';
 import { createMigratedDataDirectory, detectPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
@@ -22,19 +23,19 @@ describe('an error', () => {
   it.each([
     { command: 'jf versions', call: 'listVersions' },
     { command: 'jf edit', call: 'openArtifact' },
-    { command: 'jf choose', call: 'chooseVersion' },
+    { command: 'jf validate', call: 'validateVersion' },
   ] as const)('names the Artifacts when $command gets a mistyped one', async ({ call }) => {
     const { actions } = await detectPostings();
 
     await expect(actions[call]({ reference: REFERENCE, artifact: 'lettr', number: '1' })).rejects.toThrow(
-      'Artefact inconnu : lettr. Artefacts : research, letter, portrait, brief, visualization.',
+      'Artefact inconnu : lettr. Artefacts : research, letter, portrait, brief.',
     );
   });
 
   it('takes the alias of an Artifact, as jf run does', async () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
 
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
     await actions.addInterview({ reference: REFERENCE, start: '2026-11-19T14:00', place: '', interviewers: '' });
 
     expect(await actions.listVersions({ reference: REFERENCE, artifact: 'brief', interview: 1 })).toEqual([]);
@@ -45,7 +46,7 @@ describe('an error', () => {
     await actions.runModule({ module: 'research', reference: REFERENCE });
     await actions.runQueuedJobs();
 
-    await expect(actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: 9 })).rejects.toThrow(
+    await expect(actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: 9 })).rejects.toThrow(
       `Version inconnue : research v9 de l'Offre ${REFERENCE}. « jf versions ${REFERENCE} research » liste ses Versions.`,
     );
   });
@@ -129,7 +130,7 @@ describe('an absurd input', () => {
     const { actions } = await detectPostings();
 
     await expect(
-      actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: 'vx' }),
+      actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: 'vx' }),
     ).rejects.toMatchObject({
       code: 'invalid_input',
       message:
@@ -154,7 +155,7 @@ async function createEmma() {
 describe('an error for an English-speaking Candidate', () => {
   it('refuses a Status the Posting cannot move to, in English', async () => {
     const { actions, reference } = await createEmma();
-    await actions.changeStatus({ reference, status: 'applied' });
+    await applyTo(actions, reference);
     await actions.changeStatus({ reference, status: 'rejected' });
 
     await expect(actions.changeStatus({ reference, status: 'to_apply' })).rejects.toThrow(
@@ -166,7 +167,7 @@ describe('an error for an English-speaking Candidate', () => {
     const { actions, reference } = await createEmma();
 
     await expect(actions.runModule({ module: 'letter', reference })).rejects.toThrow(
-      `Posting ${reference} has no Chosen Research, which the Letter relies on. Produce it first: jf run research ${reference}.`,
+      `Posting ${reference} has no Validated Research, which the Letter relies on. Produce it first, “jf run research ${reference}”, then validate one of its Versions.`,
     );
   });
 
@@ -174,7 +175,7 @@ describe('an error for an English-speaking Candidate', () => {
     const { actions, reference } = await createEmma();
 
     await expect(actions.listVersions({ reference, artifact: 'lettr' })).rejects.toThrow(
-      'Unknown Artifact: lettr. Artifacts: research, letter, portrait, brief, visualization.',
+      'Unknown Artifact: lettr. Artifacts: research, letter, portrait, brief.',
     );
   });
 

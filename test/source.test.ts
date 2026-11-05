@@ -19,7 +19,8 @@ function createDataDirectoryWith(watch: object): string {
 
 describe('the Sources a Watch follows', () => {
   // The form of a Watch builds its fields from them, as that of the Notification Channel (ADR-0010)
-  it('describes each Source with the Parameters a Watch gives it, the Zone among them', async () => {
+  // The Zone is gone with its courts of appeal (ADR-0018)
+  it('describes each Source with the Parameters a Watch gives it', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
     const sourceList = await actions.listSources();
@@ -38,22 +39,13 @@ describe('the Sources a Watch follows', () => {
             isSecret: false,
             hasChoices: false,
           },
-          {
-            name: 'courtOfAppealList',
-            label: 'sourcePep:courtOfAppealListLabel',
-            placeholder: 'sourcePep:courtOfAppealListPlaceholder',
-            type: 'list',
-            isRequired: true,
-            isSecret: false,
-            hasChoices: false,
-          },
         ],
       },
     ]);
   });
 
   // The real data/config.json predates the Parameters of a Watch: it needs no rewrite
-  it('reads a Watch of an older config, its criteria and Zone as the Parameters of its Source', async () => {
+  it('reads a Watch of an older config, its criteria as the Parameters of its Source, its Zone dropped', async () => {
     const dataDirectory = createDataDirectoryWith({
       id: 'attache-de-justice-hauts-de-france',
       source: 'pep',
@@ -62,10 +54,13 @@ describe('the Sources a Watch follows', () => {
     });
     const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
 
+    expect(await actions.listWatches({ candidateId: 'lea' })).toMatchObject([
+      { parameters: { title: 'attaché de justice' } },
+    ]);
     await actions.detect();
 
     const postingList = await actions.listPostings({ candidateId: 'lea' });
-    expect(postingList.filter(({ isInZone }) => isInZone).map(({ reference }) => reference)).toContain('2026-2445600');
+    expect(postingList.map(({ reference }) => reference)).toContain('2026-2445600');
   });
 
   it('stops the Detection of a Watch that follows an unknown Source, naming those it may follow', async () => {
@@ -73,20 +68,20 @@ describe('the Sources a Watch follows', () => {
     const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
 
     await expect(actions.detect()).rejects.toThrow(
-      'Source inconnue pour la Veille ailleurs : inconnue. En choisir une parmi pep dans les Veilles du Profil.',
+      'Source inconnue pour la Veille ailleurs : inconnue. En choisir une parmi pep sur la page des Veilles.',
     );
   });
 
   it('stops the Detection of a Watch whose Parameters its Source refuses, naming them as the form does', async () => {
     const dataDirectory = createDataDirectoryWith({
-      id: 'sans-zone',
+      id: 'sans-titre',
       source: 'pep',
-      parameters: { title: 'attaché de justice', courtOfAppealList: [] },
+      parameters: { title: '' },
     });
     const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
 
     await expect(actions.detect()).rejects.toThrow(
-      "La Veille sans-zone ne donne pas à la Source Place de l’Emploi Public les Paramètres qu'elle attend : corriger « Cours d’appel de la Zone »",
+      "La Veille sans-titre ne donne pas à la Source Place de l’Emploi Public les Paramètres qu'elle attend : corriger « Titre recherché »",
     );
   });
 });

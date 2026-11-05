@@ -38,7 +38,7 @@ The generic rules of the code. The why of a decision is in its ADR (`docs/adr/`)
 
 - Node runs TypeScript without a build, so only erasable syntax is allowed. An enumeration is written as a union of literals or as a `z.enum`. **(CI)**
 - An import goes through the `#/` alias or stays in the current folder (`./`), with its `.ts` extension. **(CI)**
-- Exports are named. Only tool configs and React Router route modules, which require it, export by default. **(CI)**
+- Exports are named. Only tool configs, Playwright reporters and React Router route modules, which require it, export by default. **(CI)**
 - For naming, `eslint.config.ts` is the reference: an array ends with `List`, a boolean starts with `is` or `has`, an interface with `I`, and module constants are in `UPPER_CASE`. **(CI)**
 - Everything is in English: identifiers, comments, commits, the schema, routes, the CLI, file and folder names, docs and issues. Identifiers use the terms of `GLOSSARY.md`: `Candidate`, `listCandidates`, `watchList`. **(hook)** **(CI)**
 - User-facing copy (front labels, CLI output, error messages, notifications, default Instructions) goes only through i18next, never inline: its FR/EN resources are in `src/domain/catalogue/{en,fr}/`, one namespace per area, `fr` typed against `en` (ADR-0012). A component uses `useTranslation`, any other code `tFor(locale, namespace)`. An interchangeable module keeps its copy, its Parameter labels included, in its own namespace in `src/modules/<module>/copy.ts` (`addResources`); a Parameter names its label by key (`textKeyOf`), which the error messages and the loader of the front (`translateParameters`) read on the server with `textOf`, since the front's bundle never loads a module (ADR-0010).
@@ -46,29 +46,14 @@ The generic rules of the code. The why of a decision is in its ADR (`docs/adr/`)
 - Spelling is checked by cspell (`scripts/spellcheck.sh`, its English pass `cspell.config.yaml`) with an English dictionary, on the staged files and on the whole repo. French is only allowed in the French resources (`src/domain/catalogue/fr/`), checked with the French dictionary, and in recorded fixtures; narrowly besides, in the string literals of a module's copy file (ADR-0010), checked with the French dictionary by the second pass (`cspell.fr.config.yaml`), in the literals of a test, which drive the French locale, and in the former names that the data migration and the redirects match. A proper noun or a tool name goes in `cspell-words.txt`. **(hook)** **(CI)**
 - A comment gives, in one or two lines, the why that the code does not show, and cites the relevant ADR.
 
-## CSS (ADR-0013)
+## Styles (ADR-0017)
 
-The front's styles are one stylesheet per component, in BEM, ordered by cascade layers. `stylelint.config.ts` and the CSS part of `test/architecture.test.ts` are the reference.
+The front is an orchestration of shadcn components on Tailwind v4; `DESIGN.md` is the visual reference.
 
-- **Layers.** `src/web/app.css` keeps the Hallmark stamp at its head, declares the order once, `@layer vendor, tokens, base, layout, components, utilities;`, and imports each global stylesheet into its layer, Leaflet into `vendor`. `root.tsx` imports `app.css` first, so its `@layer` comes before any other. A rule wins by its layer, never by its line or by force.
-- **Global stylesheets** sit beside the root, for what belongs to no component: `tokens.css` (palette, spacing, type and z-index scales), `base.css` (reset, HTML elements, focus, reduced motion), `layout.css` (the frame of every page), `controls.css` (the shared `.button` and the `.field` form controls, one control box for both), `utilities.css`. A look several components share is a Dumb of its own, with its stylesheet, that they render (`ButtonRow`, `WorkerTask`, `SettingsPanel`, `Deletion`, `EmptyState`), never a copy in each stylesheet nor a component layout in `controls.css`.
-- **Component stylesheets.** A Dumb of `src/web/components/` that has styles gets a `.css` named like it, beside its `.tsx`, which alone imports it; its `@media` rules sit with its rules. Containers and routes carry no stylesheet: a route-specific look becomes a Dumb or goes in `layout.css`.
-- **States** go through `data-*` and ARIA attributes (`[data-status]`, `[data-new]`, `[aria-current]`, `:disabled`), never a state class.
-- A stylesheet sits beside the root (a global one) or in `src/web/components/` (a component's), never beside a route or a container. **(CI)**
-- Every rule of a component stylesheet, `@keyframes` included, sits in `@layer components`. **(CI)**
-- A stylesheet has at most 200 lines: past that, it is split. **(CI)**
-- A component stylesheet has a same-named `.tsx` beside it that imports it, and no other file imports it. **(CI)**
-- A component stylesheet only styles its block, named like the file: `.badge`, `.badge__x`, `.badge--y` in `badge.css`. A library's class (Leaflet's) only appears in the same compound as the block, and never another component's block. **(CI)**
-- A global stylesheet never styles a component's block, even a component without a stylesheet. **(CI)**
-- A Dumb renders in its `className`s only the classes of its own block and of `controls.css` and `utilities.css`: never another component's block (render that component instead), nor the layout's classes, which belong to the routes and the root. **(CI)**
-- A class of `controls.css` is rendered by at least two files: one rendered by a single file is that component's look, in its own stylesheet. **(CI)**
-- Only `app.css` has `@import`. **(CI)**
-- Class names are kebab-case BEM: `block`, `block__element`, `block--modifier`. **(hook)** **(CI)**
-- A color comes from a token: no hex, no named color, no color function outside `tokens.css`; `color-mix()` and relative colors over a token pass. **(hook)** **(CI)**
-- Selectors stay flat: no ID, at most two compound selectors, specificity at most 0,2,1; a guard that must not weigh goes in `:where()`. **(hook)** **(CI)**
-- No `!important`, except in `base.css` and `utilities.css`, which must beat every layer. **(hook)** **(CI)**
-- A selector and a property are written once in a block; a base selector comes before its higher-specificity variants. **(hook)** **(CI)**
-- `stylelint-config-standard` applies too; the hook fixes what Stylelint can, then Prettier formats. **(hook)** **(CI)**
+- **Tokens.** Colors, radii, shadows and the type scale are CSS variables of `src/web/app.css`, light and dark (`.dark`, set by `next-themes`), mapped to Tailwind by `@theme inline`. A color is a token (`bg-primary`, `text-validated-foreground`), never a palette class nor a raw value; a state hue always comes with its label or icon.
+- **Components.** shadcn's live in `src/web/components/ui/`, as its CLI writes them (`components.json`), outside ESLint but under the typecheck; a Dumb composes them with `cn()` and variants. A custom component is written only where shadcn covers nothing.
+- **Feedback.** Every mutation ends in a toast, success or its Error Code's message (`useFeedback`), and its button shows `isPending` meanwhile.
+- **Client dependencies.** Each one the browser loads is listed in `optimizeDeps.include` of `vite.config.ts`, so the first page of the dev server hydrates: the e2e tests run on the build (`test/e2e-server.ts`), so nothing runs into a missing one but the dev server itself.
 
 ## Data
 
@@ -78,12 +63,12 @@ The front's styles are one stylesheet per component, in BEM, ordered by cascade 
 ## Tests
 
 - A test goes through the actions and checks what can be observed: the Postings in the database, the Artifacts on disk, the queued jobs, the notifications sent.
-- Only a rule with many cases also has unit tests, next to its code: the Status (`src/status/`), the Repost (`src/repost/`), the title of a Watch (`src/modules/source-pep/title.ts`), the City of a place of work (`src/geo/city.ts`) and the Sections of the Facts in `facts.md` (`src/profile/facts.ts`). The Artifact module (`src/artifact/`) has its own suite at its interface, `test/artifact.test.ts`, which runs on a temporary data folder with the fake AI session of `test/`: the matrix of verdicts across the Artifacts lives there, and each action test keeps one nominal case and one refusal.
+- Only a rule with many cases also has unit tests, next to its code: the Status (`src/status/`), the Repost (`src/repost/`), the title of a Watch (`src/modules/source-pep/title.ts`), the City of a place of work (`src/geo/city.ts`), the Sections of the Facts in `facts.md` (`src/profile/facts.ts`), the settling of a mutation (`src/web/containers/use-settled.ts`), the groups, filters and map bounds of the lists (`src/web/list-model.ts`) and the MDX compiler of the Artifacts (`src/web/components/mdx/`, ADR-0020), tested on an Artifact's text in and the HTML the server renders out, the one place the front renders React in Vitest. The Artifact module (`src/artifact/`) has its own suite at its interface, `test/artifact.test.ts`, which runs on a temporary data folder with the fake AI session of `test/`: the matrix of verdicts across the Artifacts lives there, and each action test keeps one nominal case and one refusal.
 - Only external boundaries are faked: the HTTP of the Sources (with recorded responses), the Claude launch and the Notification Channel. A fake module of the family (`test/fake-notification-channel.ts`) replaces the registry when a test only looks at the notifications sent. Likewise, the e2e tests add a slow fake Source (`test/fake-slow-source.ts`) beside the registry, to see a Detection's progress and each of its verdicts without network. A module that calls a service over HTTP is tested against a fake server that answers like it, for example `test/fake-home-assistant.ts`: its tests and the e2e go through this server rather than through a replaced `fetch`.
 - Each Notification Channel gives `test/write-only-token.test.ts` Parameters its fake server accepts: the test checks that no action returns one of its secret Parameters, and fails as long as a Channel is missing from it. No Source has a secret Parameter yet: the first one that declares one goes in too.
 - An e2e test that changes data changes its own, which only it touches (its Posting, its Candidate), and resets them at the start, not at the end: it passes alone, repeated (`--repeat-each` with `--workers=1`) or alongside the others. `fullyParallel` fails the one that reads what another left behind. **(CI)**
 - Each architecture rule has a fixture project that breaks it, to prove it catches something.
-- A test keeps under its time budget, and the run under the suite's: 6 s per test and 180 s for the run on the GitHub runner, where `test/time-budget-reporter.ts` fails the run that goes over; elsewhere it only reports. A file whose tests legitimately take longer (a CLI spawned, the Prisma CLI, the archunit graph) is listed in its `SLOW_FILE_LIST` with its own budget and the reason. A fixed cost paid by each test (a Detection, a cspell start) goes in the global setup or in a `beforeAll`, which is what keeps the run under its budget. **(CI)**
+- A test keeps under its time budget, and the run under the suite's: 6 s per test and 180 s for the run on the GitHub runner, where `test/time-budget-reporter.ts` (Vitest) and `test/playwright-time-budget-reporter.ts` (e2e, each shard) fail the run that goes over; elsewhere they only report. A file whose tests legitimately take longer (a CLI spawned, the Prisma CLI, the archunit graph) is listed in its `SLOW_FILE_LIST` with its own budget and the reason. A fixed cost paid by each test (a Detection, a cspell start) goes in the global setup or in a `beforeAll`, which is what keeps the run under its budget. **(CI)**
 
 ## Git
 

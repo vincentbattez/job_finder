@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 import { describe, expect, it, vi } from 'vitest';
 
@@ -23,7 +24,7 @@ Le greffier assiste les magistrats du siège et du parquet.
 
 ## Candidature
 
-Date limite de candidature : 30/11/2026.
+Date limite de candidature : 30/11/2026. Poste à pourvoir au 1er janvier 2027.
 
 Adresser CV et lettre de motivation à greffe.tj-lille@justice.fr
 
@@ -37,6 +38,7 @@ const EXTRACTION = {
   workplace: '13 avenue du Peuple Belge, 59000 Lille',
   city: 'Lille',
   deadline: '2026-11-30',
+  startDate: '2027-01-01',
   applicationEmail: 'greffe.tj-lille@justice.fr',
   contact1: 'Marie Martin, directrice de greffe, 03 20 00 00 00',
   contact2: null,
@@ -95,8 +97,6 @@ describe('import of a Job Description in Markdown', () => {
       employer: null,
       url: null,
       status: 'to_apply',
-      // No Zone of a Watch holds it: the import queues its Research whatever the Zone
-      isInZone: false,
     });
     const { jobDescription, extraction } = await actions.readPosting({ reference: job.posting.reference });
     expect(jobDescription).toBe(JOB_DESCRIPTION);
@@ -132,6 +132,7 @@ describe('import of a Job Description in Markdown', () => {
       employer: 'Ministère de la Justice – Tribunal judiciaire de Lille',
       workplace: '13 avenue du Peuple Belge, 59000 Lille',
       deadline: new Date('2026-11-30T00:00:00Z'),
+      startDate: new Date('2027-01-01T00:00:00Z'),
       applicationEmail: 'greffe.tj-lille@justice.fr',
       contact1: 'Marie Martin, directrice de greffe, 03 20 00 00 00',
       contact2: null,
@@ -303,6 +304,8 @@ describe('import of a Job Description in Markdown', () => {
     await importThenRunWorker(actions);
 
     const [session] = aiSession.headlessSessionList;
+    // It reads the Job Description in its folder, and searches nothing on the web
+    expect(session).toMatchObject({ isReadingDirectory: true, isSearchingWeb: false });
     for (const field of Object.keys(EXTRACTION)) {
       expect(session?.fixedPrompt).toContain(`"${field}"`);
     }
@@ -333,6 +336,7 @@ describe('import of a Job Description in Markdown', () => {
       city: null,
       latitude: null,
       deadline: null,
+      startDate: null,
       applicationEmail: null,
       contact1: null,
       contact2: null,
@@ -420,5 +424,44 @@ describe('import of a Job Description in Markdown', () => {
     await actions.runQueuedJobs();
 
     expect(await actions.followJob({ jobId: job.id })).toMatchObject({ state: 'failed' });
+  });
+
+  // The worker and a Detection work side by side: the Detection read the Posting before its extraction
+  // filled it, and its answer from API Géo must not take back what the extraction wrote
+  it('keeps the city its extraction read while a Detection is locating the Postings it found unlocated', async () => {
+    const dataDirectory = createDataDirectory();
+    const recorded = createRecordedFetch().fetch;
+    let runWorkerOnGeoRequest: (() => Promise<unknown>) | null = null;
+    const actions = await createActions({
+      dataDirectory,
+      aiSession: createFakeAiSession(extractionRun()),
+      fetch: async (input, init) => {
+        const runWorker = runWorkerOnGeoRequest;
+        const url = input instanceof Request ? input.url : input.toString();
+        if (runWorker !== null && url.startsWith('https://geo.api.gouv.fr/')) {
+          runWorkerOnGeoRequest = null;
+          await runWorker();
+        }
+        return recorded(input, init);
+      },
+      notificationChannelList: createFakeNotificationChannel().notificationChannelList,
+    });
+    await actions.detect();
+    // An older Posting left off the map, which the next Detection locates before it reaches the import
+    const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'));
+    database.exec(`UPDATE "Posting" SET "latitude" = NULL WHERE "reference" = '2026-2445600'`);
+    database.close();
+    const { posting } = await actions.importJobDescription({
+      candidateId: 'lea',
+      fileName: FILE_NAME,
+      markdown: JOB_DESCRIPTION,
+    });
+    runWorkerOnGeoRequest = () => actions.runQueuedJobs();
+
+    await actions.detect();
+
+    const { posting: located } = await actions.readPosting({ reference: posting.reference });
+    expect(located.city).toBe('Lille');
+    expect(located.latitude).not.toBeNull();
   });
 });

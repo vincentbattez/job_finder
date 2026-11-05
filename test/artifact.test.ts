@@ -1,10 +1,15 @@
+import { utimesSync } from 'node:fs';
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import { openContext } from '#/actions/context.ts';
 import { createInterviewActions } from '#/actions/interviews.ts';
+import { createNotesActions } from '#/actions/notes.ts';
 import { findWorkerFailure } from '#/actions/stalled-job.ts';
 import { createStatusActions } from '#/actions/status.ts';
 import { createArtifacts } from '#/artifact/index.ts';
+import { PROFILE_FILE_NAME_SCHEMA } from '#/domain/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
 import { copyDetectedDataDirectory } from './data-directory.ts';
@@ -16,7 +21,7 @@ const REFERENCE = '2026-2445600';
 const RESEARCH_RUN = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
 const LETTER_RUN = {
   fileByName: {
-    'draft.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal pour enfants de Béthune.\n',
+    'letter.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal pour enfants de Béthune.\n',
     'recipients.json': JSON.stringify({
       to: { email: 'p.tj-bethune@justice.fr', source: 'applicationEmail' },
       ccList: [],
@@ -27,9 +32,6 @@ const LETTER_RUN = {
 };
 const PORTRAIT_RUN = { fileByName: { 'portrait.md': '# Portrait\n\nMme Durand, RH de la cour d’appel.\n' } };
 const BRIEF_RUN = { fileByName: { 'interview-brief.md': "# Fiche d'entretien\n\n## À réviser\n" } };
-const VISUALIZATION_RUN = {
-  fileByName: { 'visualization.html': '<!DOCTYPE html>\n<html lang="fr"><body><h1>Fiche</h1></body></html>\n' },
-};
 
 const INTERVIEW = {
   start: '2026-11-19T14:00',
@@ -40,7 +42,7 @@ const INTERVIEW = {
 type PlannedRunList = Parameters<typeof createFakeAiSession>;
 
 // The Artifact module on a copy of the detected data folder, the AI session faked: a Chosen Version is
-// only obtained through its interface, by queuing a run, claiming the job and running it
+// only obtained through its interface, by queuing a run, claiming the job, running it and validating its Draft
 async function openArtifacts(...plannedRunList: PlannedRunList) {
   const aiSession = createFakeAiSession(...plannedRunList);
   const context = await openContext({ dataDirectory: copyDetectedDataDirectory(), aiSession });
@@ -50,17 +52,31 @@ async function openArtifacts(...plannedRunList: PlannedRunList) {
 
   async function runNextJob() {
     const job = await workspace.claimNextJob();
-    return job === null || job.module === 'conversion' || job.module === 'extraction'
+    return job === null || job.module === 'conversion' || job.module === 'extraction' || job.module === 'custom'
       ? expect.unreachable('an Artifact job is queued')
       : artifacts.run({ ...job, module: job.module });
   }
 
-  // Each run in order, queued then run, as the worker would
-  async function produce(...nameList: Parameters<typeof artifacts.find>[0][]) {
+  // Each run in order, queued then run, as the worker would, its Draft left to validate
+  async function draft(...nameList: Parameters<typeof artifacts.find>[0][]) {
     for (const name of nameList) {
       const handle = await artifacts.find(name);
       await handle.queueRun();
       await runNextJob();
+    }
+  }
+
+  // Each run in order, its Version validated once ready, as the Candidate would before the next one
+  async function produce(...nameList: Parameters<typeof artifacts.find>[0][]) {
+    for (const name of nameList) {
+      await draft(name);
+      const { versionList } = await artifacts.find(name);
+      const version = versionList.at(-1)?.version;
+      if (version?.state !== 'ready') {
+        continue;
+      }
+      const handle = await artifacts.find(name);
+      await handle.validate(version.number);
     }
   }
 
@@ -69,33 +85,30 @@ async function openArtifacts(...plannedRunList: PlannedRunList) {
     artifacts,
     aiSession,
     runNextJob,
+    draft,
     produce,
-    apply: () => statusActions.changeStatus({ reference: REFERENCE, status: 'applied' }),
+    apply: async (reference = REFERENCE, letterAnswer = {}) => {
+      await statusActions.keep({ reference });
+      await statusActions.changeStatus({ reference, status: 'applied', ...letterAnswer });
+    },
     // An Interview needs an Application
     addInterview: async () => {
+      await statusActions.keep({ reference: REFERENCE });
       await statusActions.changeStatus({ reference: REFERENCE, status: 'applied' });
       await interviewActions.addInterview({ reference: REFERENCE, ...INTERVIEW });
     },
   };
 }
 
-// The Interview, its Portrait, its Interview Brief and its Visualization, on a Posting with a Chosen
+// The Interview, its Portrait and its Interview Brief, on a Posting with a Chosen
 // Research and a Chosen Letter
 async function openPreparedInterview(...extraRunList: PlannedRunList) {
-  const opened = await openArtifacts(
-    RESEARCH_RUN,
-    LETTER_RUN,
-    PORTRAIT_RUN,
-    BRIEF_RUN,
-    VISUALIZATION_RUN,
-    ...extraRunList,
-  );
+  const opened = await openArtifacts(RESEARCH_RUN, LETTER_RUN, PORTRAIT_RUN, BRIEF_RUN, ...extraRunList);
   await opened.produce({ reference: REFERENCE, artifact: 'research' }, { reference: REFERENCE, artifact: 'letter' });
   await opened.addInterview();
   await opened.produce(
     { reference: REFERENCE, artifact: 'portrait', interview: 1 },
     { reference: REFERENCE, artifact: 'interview_brief', interview: 1 },
-    { reference: REFERENCE, artifact: 'visualization', interview: 1 },
   );
   return opened;
 }
@@ -117,7 +130,7 @@ describe('finding an Artifact', () => {
     },
     {
       case: 'an Interview the Posting does not have',
-      name: { reference: REFERENCE, artifact: 'visualization', interview: 2 },
+      name: { reference: REFERENCE, artifact: 'interview_brief', interview: 2 },
       code: 'unknown_interview',
     },
   ])('refuses $case', async ({ name, code }) => {
@@ -157,18 +170,56 @@ describe('finding an Artifact', () => {
       'letter',
       'portrait 1',
       'interview_brief 1',
-      'visualization 1',
     ]);
   });
 });
 
 describe('running an Artifact', () => {
-  it('makes the Version of a run the Chosen Version, numbered on its Interview', async () => {
-    const { artifacts } = await openPreparedInterview();
+  it('makes the Version of a run a Draft by the AI, numbered on its Interview, which nothing chooses yet', async () => {
+    const { artifacts, draft, addInterview, runNextJob } = await openArtifacts(RESEARCH_RUN, PORTRAIT_RUN);
+    await addInterview();
+    // The Research that keeping the Posting queued
+    await runNextJob();
+    const name = { reference: REFERENCE, artifact: 'portrait', interview: 1 };
 
-    const handle = await artifacts.find({ reference: REFERENCE, artifact: 'interview_brief', interview: 1 });
+    await draft(name);
 
-    expect(handle.chosenVersion).toMatchObject({ number: 1, state: 'ready', interview: { number: 1 } });
+    const handle = await artifacts.find(name);
+    expect(handle.versionList.map(({ version }) => version)).toEqual([
+      expect.objectContaining({
+        number: 1,
+        state: 'ready',
+        validation: 'draft',
+        origin: 'ai',
+        isChosen: false,
+        interview: { number: 1 },
+      }),
+    ]);
+    expect(handle.chosenVersion).toBeUndefined();
+  });
+
+  it('keeps the AI text of every Version as its Original, read-only', async () => {
+    const { artifacts, produce } = await openArtifacts(RESEARCH_RUN, LETTER_RUN);
+    await produce({ reference: REFERENCE, artifact: 'research' }, { reference: REFERENCE, artifact: 'letter' });
+
+    const handleList = await Promise.all([
+      artifacts.find({ reference: REFERENCE, artifact: 'research' }),
+      artifacts.find({ reference: REFERENCE, artifact: 'letter' }),
+    ]);
+
+    expect(handleList.map(({ versionList }) => versionList.map(({ text, original }) => ({ text, original })))).toEqual([
+      [{ text: RESEARCH_RUN.fileByName['research.md'], original: RESEARCH_RUN.fileByName['research.md'] }],
+      [{ text: LETTER_RUN.fileByName['letter.md'], original: LETTER_RUN.fileByName['letter.md'] }],
+    ]);
+  });
+
+  it('refuses the Letter while the Research is only a Draft: only a Chosen Version is read', async () => {
+    const { artifacts, draft } = await openArtifacts(RESEARCH_RUN);
+    await draft({ reference: REFERENCE, artifact: 'research' });
+
+    const letter = await artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+
+    await expect(letter.queueRun()).rejects.toMatchObject({ code: 'missing_artifact' });
   });
 
   it.each([
@@ -181,11 +232,6 @@ describe('running an Artifact', () => {
       case: 'the Interview Brief without a Chosen Research',
       name: { reference: REFERENCE, artifact: 'interview_brief', interview: 1 },
       command: `jf run research ${REFERENCE}`,
-    },
-    {
-      case: 'the Visualization without a Chosen Interview Brief of its Interview',
-      name: { reference: REFERENCE, artifact: 'visualization', interview: 1 },
-      command: `jf run interview_brief ${REFERENCE} 1`,
     },
   ])('refuses $case, naming the command that produces it, and queues nothing', async ({ name, command }) => {
     const { artifacts, addInterview } = await openArtifacts();
@@ -280,11 +326,6 @@ describe('editing an Artifact', () => {
 
   it.each([
     {
-      case: 'the Visualization, which its module declares not editable',
-      name: { reference: REFERENCE, artifact: 'visualization', interview: 1 },
-      code: 'visualization_not_editable',
-    },
-    {
       case: 'the Letter, sent once the Posting is Applied',
       name: { reference: REFERENCE, artifact: 'letter' },
       code: 'letter_frozen',
@@ -319,21 +360,21 @@ describe('editing an Artifact', () => {
     });
   });
 
-  it('keeps the read-only files every module declares out of reach of jf edit', async () => {
+  it('keeps the Original of every Version out of reach of jf edit', async () => {
     const { artifacts, aiSession } = await openPreparedInterview();
 
     const research = await artifacts.find({ reference: REFERENCE, artifact: 'research' });
     research.openForEdition();
 
     expect(aiSession.interactiveSessionList[0]?.readOnlyPathList).toEqual([
-      expect.stringMatching(/\/\*\*\/draft\.md$/),
+      expect.stringMatching(/\/\*\*\/original\.md$/),
     ]);
   });
 });
 
-describe('saving a document', () => {
+describe('correcting a Version', () => {
   it.each([
-    { case: 'the Draft, which the Letter module declares read-only', fileName: 'draft.md', code: 'draft_not_editable' },
+    { case: 'its Original, which stays as the AI wrote it', fileName: 'original.md', code: 'original_not_editable' },
     { case: 'a file that is not one of the Version', fileName: 'notes.md', code: 'not_a_version_file' },
     {
       case: 'a path out of the Version, such as the Job Description',
@@ -346,75 +387,99 @@ describe('saving a document', () => {
     const handle = await artifacts.find({ reference: REFERENCE, artifact: 'letter' });
 
     expect(() => {
-      handle.saveDocument(fileName, '# Corrigé\n');
+      handle.saveDocument(1, fileName, '# Corrigé\n');
     }).toThrow(expect.objectContaining({ code }));
   });
 
-  it('checks the edit first: the Letter of an Applied Posting is frozen, its Draft included', async () => {
+  it('refuses any Letter of an Applied Posting first: the Letter sent is frozen, its Original included', async () => {
     const { artifacts, produce, apply } = await openArtifacts(RESEARCH_RUN, LETTER_RUN);
     await produce({ reference: REFERENCE, artifact: 'research' }, { reference: REFERENCE, artifact: 'letter' });
     await apply();
     const handle = await artifacts.find({ reference: REFERENCE, artifact: 'letter' });
 
     expect(() => {
-      handle.saveDocument('draft.md', '# Corrigé\n');
+      handle.saveDocument(1, 'original.md', '# Corrigé\n');
     }).toThrow(expect.objectContaining({ code: 'letter_frozen' }));
+    expect(handle.versionList.map(({ isCorrectable }) => isCorrectable)).toEqual([false]);
   });
 
-  it('tells which document of each Version may be saved: those of the Chosen Version, its read-only ones aside', async () => {
-    const { artifacts, produce } = await openArtifacts(RESEARCH_RUN, RESEARCH_RUN, LETTER_RUN);
-    await produce(
-      { reference: REFERENCE, artifact: 'research' },
-      { reference: REFERENCE, artifact: 'research' },
-      { reference: REFERENCE, artifact: 'letter' },
-    );
-    const handleList = await Promise.all([
-      artifacts.find({ reference: REFERENCE, artifact: 'research' }),
-      artifacts.find({ reference: REFERENCE, artifact: 'letter' }),
-    ]);
+  it('corrects a Draft and a Validated Version in place, the Validated one staying Validated', async () => {
+    const { artifacts, produce, draft } = await openArtifacts(RESEARCH_RUN, RESEARCH_RUN);
+    await produce({ reference: REFERENCE, artifact: 'research' });
+    await draft({ reference: REFERENCE, artifact: 'research' });
+    const handle = await artifacts.find({ reference: REFERENCE, artifact: 'research' });
 
+    handle.saveDocument(1, 'research.md', '# Recherche corrigée\n');
+    handle.saveDocument(2, 'research.md', '# Brouillon corrigé\n');
+
+    const { versionList } = await artifacts.find({ reference: REFERENCE, artifact: 'research' });
     expect(
-      handleList.flatMap(({ artifact, versionList }) =>
-        versionList.map(({ version, documentList }) => ({
-          version: `${artifact} v${String(version.number)}`,
-          refusalByFile: Object.fromEntries(
-            documentList.map(({ fileName, saveRefusal }) => [fileName, saveRefusal?.code ?? null]),
-          ),
-        })),
-      ),
+      versionList.map(({ version: { number, validation, isChosen }, text, original }) => ({
+        number,
+        validation,
+        isChosen,
+        text,
+        original,
+      })),
     ).toEqual([
-      { version: 'research v1', refusalByFile: { 'research.md': 'no_chosen_version_to_edit' } },
-      { version: 'research v2', refusalByFile: { 'research.md': null } },
-      { version: 'letter v1', refusalByFile: { 'draft.md': 'draft_not_editable', 'letter.md': null } },
+      {
+        number: 1,
+        validation: 'validated',
+        isChosen: true,
+        text: '# Recherche corrigée\n',
+        original: RESEARCH_RUN.fileByName['research.md'],
+      },
+      {
+        number: 2,
+        validation: 'draft',
+        isChosen: false,
+        text: '# Brouillon corrigé\n',
+        original: RESEARCH_RUN.fileByName['research.md'],
+      },
     ]);
   });
 });
 
-describe('choosing a Version', () => {
-  it('makes a ready Version the Chosen Version', async () => {
-    const { artifacts, produce } = await openArtifacts(RESEARCH_RUN, RESEARCH_RUN);
-    await produce({ reference: REFERENCE, artifact: 'research' }, { reference: REFERENCE, artifact: 'research' });
+describe('validating a Version', () => {
+  it('makes a ready Draft Validated and Chosen, the previous Chosen Version staying Validated', async () => {
+    const { artifacts, produce, draft } = await openArtifacts(RESEARCH_RUN, RESEARCH_RUN);
+    await produce({ reference: REFERENCE, artifact: 'research' });
+    await draft({ reference: REFERENCE, artifact: 'research' });
 
     const research = await artifacts.find({ reference: REFERENCE, artifact: 'research' });
-    await research.choose(1);
+    await research.validate(2);
 
-    const { chosenVersion } = await artifacts.find({ reference: REFERENCE, artifact: 'research' });
-    expect(chosenVersion?.number).toBe(1);
+    const { versionList } = await artifacts.find({ reference: REFERENCE, artifact: 'research' });
+    expect(versionList.map(({ version: { validation, isChosen } }) => ({ validation, isChosen }))).toEqual([
+      { validation: 'validated', isChosen: false },
+      { validation: 'validated', isChosen: true },
+    ]);
+  });
+
+  it('keeps the Chosen Version while a newer Draft waits for validation', async () => {
+    const { artifacts, produce, draft } = await openArtifacts(RESEARCH_RUN, RESEARCH_RUN);
+    await produce({ reference: REFERENCE, artifact: 'research' });
+
+    await draft({ reference: REFERENCE, artifact: 'research' });
+
+    const handle = await artifacts.find({ reference: REFERENCE, artifact: 'research' });
+    expect(handle.chosenVersion).toMatchObject({ number: 1, validation: 'validated' });
+    expect(handle.versionList.map(({ isValidatable }) => isValidatable)).toEqual([false, true]);
   });
 
   it.each([
     { case: 'an unknown Version', number: 3, code: 'unknown_version' },
     { case: 'a failed Version', number: 2, code: 'version_failed' },
   ])('refuses $case', async ({ number, code }) => {
-    const { artifacts, produce } = await openArtifacts(RESEARCH_RUN, {});
-    await produce({ reference: REFERENCE, artifact: 'research' }, { reference: REFERENCE, artifact: 'research' });
+    const { artifacts, draft } = await openArtifacts(RESEARCH_RUN, {});
+    await draft({ reference: REFERENCE, artifact: 'research' }, { reference: REFERENCE, artifact: 'research' });
     const handle = await artifacts.find({ reference: REFERENCE, artifact: 'research' });
 
-    expect(handle.versionList.map(({ choiceRefusal }) => choiceRefusal?.code ?? null)).toEqual([
+    expect(handle.versionList.map(({ versionRefusal }) => versionRefusal?.code ?? null)).toEqual([
       null,
       'version_failed',
     ]);
-    await expect(handle.choose(number)).rejects.toMatchObject({ code });
+    await expect(handle.validate(number)).rejects.toMatchObject({ code });
   });
 
   it('refuses a Version still running', async () => {
@@ -429,20 +494,384 @@ describe('choosing a Version', () => {
 
     const handle = await artifacts.find({ reference: REFERENCE, artifact: 'research' });
 
-    await expect(handle.choose(1)).rejects.toMatchObject({ code: 'version_running' });
+    await expect(handle.validate(1)).rejects.toMatchObject({ code: 'version_running' });
   });
 
-  it('refuses any Letter once the Posting is Applied, even an unknown one: the Letter sent stays chosen', async () => {
-    const { artifacts, produce, apply } = await openArtifacts(RESEARCH_RUN, LETTER_RUN, LETTER_RUN);
-    await produce(
-      { reference: REFERENCE, artifact: 'research' },
-      { reference: REFERENCE, artifact: 'letter' },
-      { reference: REFERENCE, artifact: 'letter' },
-    );
-    await apply();
+  it('refuses any Letter once the Posting is Applied, even an unknown one', async () => {
+    const { artifacts, produce, draft, apply } = await openArtifacts(RESEARCH_RUN, LETTER_RUN, LETTER_RUN);
+    await produce({ reference: REFERENCE, artifact: 'research' }, { reference: REFERENCE, artifact: 'letter' });
+    await draft({ reference: REFERENCE, artifact: 'letter' });
+    await apply(REFERENCE, { isWithoutLetter: true });
     const handle = await artifacts.find({ reference: REFERENCE, artifact: 'letter' });
 
-    await expect(handle.choose(1)).rejects.toMatchObject({ code: 'letter_frozen' });
-    await expect(handle.choose(9)).rejects.toMatchObject({ code: 'letter_frozen' });
+    await expect(handle.validate(2)).rejects.toMatchObject({ code: 'letter_frozen' });
+    await expect(handle.validate(9)).rejects.toMatchObject({ code: 'letter_frozen' });
+    expect(handle.versionList.map(({ isValidatable }) => isValidatable)).toEqual([false, false]);
+  });
+});
+
+const CV = '# CV\n\nLéa Martin, juriste.\n';
+const FACTS = '# Faits\n\n## Mobilité\n\n- Lille\n';
+const ANNEX = '# Mémoire\n\nLa justice des mineurs.\n';
+const DAY_MS = 86_400_000;
+// A Letter for another Posting, whose fields hold no address to recommend
+const OTHER_LETTER_RUN = {
+  fileByName: {
+    'letter.md': 'Madame, Monsieur,\n\nJe souhaite rejoindre votre juridiction.\n',
+    'recipients.json': JSON.stringify({
+      to: null,
+      ccList: [],
+      salutation: { text: 'Madame, Monsieur,', source: null },
+      justification: 'Aucune adresse publiée.',
+    }),
+  },
+};
+
+// Léa's Profile, each Past Letter of it dated by the day it was added: the nth one n days ago
+function writeProfile(workspace: Workspace, pastLetterCount = 0): void {
+  const now = Date.now();
+  const write = (fileName: string, markdown: string, daysAgo = 0) => {
+    workspace.saveProfileFile('lea', PROFILE_FILE_NAME_SCHEMA.parse(fileName), markdown);
+    const savedAt = new Date(now - daysAgo * DAY_MS);
+    utimesSync(path.join(workspace.profileDirectoryOf('lea'), fileName), savedAt, savedAt);
+  };
+  write('cv.md', CV);
+  write('facts.md', FACTS);
+  write('annex-thesis.md', ANNEX);
+  for (let number = 1; number <= pastLetterCount; number += 1) {
+    write(`letter-${String(number)}.md`, `Lettre ${String(number)}\n`, number);
+  }
+}
+
+// Another Posting of Léa, detected with the Béthune one
+async function findOtherReference(workspace: Workspace): Promise<string> {
+  const postingList = await workspace.listPostings('lea');
+  return postingList.find(({ reference }) => reference !== REFERENCE)?.reference ?? expect.unreachable('two Postings');
+}
+
+const LETTER_CORE_KEY_LIST = ['job_description', 'artifact:research', 'profile:cv.md', 'profile:facts.md'];
+
+describe('the Inputs of a run', () => {
+  it('resolves each Input of the Letter with its mode, reason, content and word count, checked by default', async () => {
+    const opened = await openArtifacts(RESEARCH_RUN);
+    writeProfile(opened.context.workspace);
+    await opened.produce({ reference: REFERENCE, artifact: 'research' });
+    const letter = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+
+    const inputList = await letter.readInputs();
+
+    expect(
+      inputList.map(({ key, kind, mode, reason, isAvailable, wordCount, isChecked }) => ({
+        key,
+        kind,
+        mode,
+        reason,
+        isAvailable,
+        wordCount,
+        isChecked,
+      })),
+    ).toEqual([
+      expect.objectContaining({ key: 'job_description', mode: 'required', reason: 'job_description', isChecked: true }),
+      {
+        key: 'artifact:research',
+        kind: 'artifact',
+        mode: 'required',
+        reason: 'required_artifact',
+        isAvailable: true,
+        wordCount: 6,
+        isChecked: true,
+      },
+      {
+        key: 'profile:cv.md',
+        kind: 'profile_document',
+        mode: 'required',
+        reason: 'profile_core',
+        isAvailable: true,
+        wordCount: 5,
+        isChecked: true,
+      },
+      expect.objectContaining({ key: 'profile:facts.md', mode: 'required', reason: 'profile_core' }),
+      {
+        key: 'profile:annex-thesis.md',
+        kind: 'profile_document',
+        mode: 'optional',
+        reason: null,
+        isAvailable: true,
+        wordCount: 6,
+        isChecked: false,
+      },
+    ]);
+    expect(inputList.find(({ key }) => key === 'profile:cv.md')?.content).toBe(CV);
+    expect(inputList[0]?.content).toMatch(/\S/);
+  });
+
+  it('tells a required Artifact without a Chosen Version unavailable, with no content', async () => {
+    const { artifacts } = await openArtifacts();
+    const letter = await artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+
+    const inputList = await letter.readInputs();
+
+    expect(inputList.find(({ key }) => key === 'artifact:research')).toMatchObject({
+      mode: 'required',
+      isAvailable: false,
+      content: '',
+      wordCount: 0,
+    });
+  });
+
+  it('tells what a Version was produced from, each Input as the generation panel names it', async () => {
+    const opened = await openArtifacts(RESEARCH_RUN, LETTER_RUN);
+    writeProfile(opened.context.workspace, 1);
+    const posting = await opened.context.findPosting(REFERENCE);
+    const custom = await opened.artifacts.createCustom({ posting, title: 'Appel', text: 'Notes.\n' });
+    await opened.produce({ reference: REFERENCE, artifact: 'research' }, { reference: REFERENCE, artifact: 'letter' });
+
+    const { versionList } = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+
+    const none = { fileName: null, title: null, artifact: null, readVersion: null };
+    expect(versionList.at(-1)?.inputList).toEqual([
+      { ...none, key: 'job_description', kind: 'job_description' },
+      {
+        ...none,
+        key: 'artifact:research',
+        kind: 'artifact',
+        artifact: 'research',
+        readVersion: { reference: REFERENCE, artifact: 'research', interviewNumber: null, number: 1 },
+      },
+      {
+        ...none,
+        key: custom.key,
+        kind: 'custom_artifact',
+        title: 'Appel',
+        readVersion: { reference: REFERENCE, artifact: 'custom', interviewNumber: null, number: 1 },
+      },
+      { ...none, key: 'profile:cv.md', kind: 'profile_document', fileName: 'cv.md' },
+      { ...none, key: 'profile:facts.md', kind: 'profile_document', fileName: 'facts.md' },
+      { ...none, key: 'profile:letter-1.md', kind: 'past_letter', fileName: 'letter-1.md' },
+    ]);
+  });
+
+  it('reads for an Interview Brief the optional Artifacts it has, the previous Briefs and the Notes', async () => {
+    const { context, artifacts } = await openPreparedInterview();
+    await createNotesActions(context).saveNotes({ reference: REFERENCE, notes: 'Parler du stage.' });
+    await createInterviewActions(context).addInterview({
+      reference: REFERENCE,
+      ...INTERVIEW,
+      start: '2026-11-26T14:00',
+    });
+    const brief = await artifacts.find({ reference: REFERENCE, artifact: 'interview_brief', interview: 2 });
+
+    const inputList = await brief.readInputs();
+
+    expect(inputList.map(({ key, mode }) => `${key} ${mode}`)).toEqual([
+      'job_description required',
+      'artifact:research required',
+      'artifact:letter default',
+      'artifact:interview_brief@1 default',
+      'notes default',
+    ]);
+  });
+
+  it('makes the Past Letters one set, the Profile’s and the sent ones, and checks the five most recent', async () => {
+    const opened = await openArtifacts(RESEARCH_RUN, OTHER_LETTER_RUN);
+    writeProfile(opened.context.workspace, 5);
+    const otherReference = await findOtherReference(opened.context.workspace);
+    await opened.produce(
+      { reference: otherReference, artifact: 'research' },
+      { reference: otherReference, artifact: 'letter' },
+    );
+    await opened.apply(otherReference);
+    const letter = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+
+    const inputList = await letter.readInputs();
+
+    expect(
+      inputList
+        .filter(({ kind }) => kind === 'past_letter')
+        .map(({ key, mode, isChecked }) => ({ key, mode, isChecked })),
+    ).toEqual([
+      { key: 'profile:letter-1.md', mode: 'default', isChecked: true },
+      { key: 'profile:letter-2.md', mode: 'default', isChecked: true },
+      { key: 'profile:letter-3.md', mode: 'default', isChecked: true },
+      { key: 'profile:letter-4.md', mode: 'default', isChecked: true },
+      { key: 'profile:letter-5.md', mode: 'optional', isChecked: false },
+      { key: `posting:${otherReference}/letter`, mode: 'default', isChecked: true },
+    ]);
+  });
+
+  it.each([
+    { case: 'an unknown Input', keyList: [...LETTER_CORE_KEY_LIST, 'notes'], code: 'unknown_input' },
+    {
+      case: 'a required Input left unchecked',
+      keyList: LETTER_CORE_KEY_LIST.filter((key) => key !== 'profile:cv.md'),
+      code: 'required_input_unchecked',
+    },
+  ])('refuses $case before queueing', async ({ keyList, code }) => {
+    const opened = await openArtifacts(RESEARCH_RUN);
+    writeProfile(opened.context.workspace);
+    await opened.produce({ reference: REFERENCE, artifact: 'research' });
+    const letter = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+
+    await expect(letter.queueRun({ inputKeyList: keyList })).rejects.toMatchObject({ code });
+    expect(await opened.context.workspace.claimNextJob()).toBeNull();
+  });
+
+  it('queues with the default Inputs when none are checked, as jf run does', async () => {
+    const opened = await openArtifacts(RESEARCH_RUN);
+    writeProfile(opened.context.workspace);
+    await opened.produce({ reference: REFERENCE, artifact: 'research' });
+    const letter = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+
+    const job = await letter.queueRun();
+
+    expect(job.inputKeyList).toEqual(LETTER_CORE_KEY_LIST);
+  });
+
+  it('records on the Version the Inputs its run read, and prefills a regeneration with them', async () => {
+    const opened = await openArtifacts(RESEARCH_RUN, LETTER_RUN);
+    writeProfile(opened.context.workspace, 1);
+    await opened.produce({ reference: REFERENCE, artifact: 'research' });
+    const checkedList = [...LETTER_CORE_KEY_LIST, 'profile:annex-thesis.md'];
+    const letter = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+    await letter.queueRun({ inputKeyList: checkedList });
+    await opened.runNextJob();
+
+    const regeneration = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+
+    expect(regeneration.versionList.at(-1)?.version.inputList).toEqual(
+      checkedList.map((key) => ({
+        key,
+        readVersion:
+          key === 'artifact:research'
+            ? {
+                artifact: 'research',
+                number: 1,
+                posting: { reference: REFERENCE },
+                interview: null,
+                customArtifact: null,
+              }
+            : null,
+      })),
+    );
+    const inputList = await regeneration.readInputs();
+    expect(Object.fromEntries(inputList.map(({ key, isChecked }) => [key, isChecked]))).toEqual({
+      job_description: true,
+      'artifact:research': true,
+      'profile:cv.md': true,
+      'profile:facts.md': true,
+      'profile:letter-1.md': false,
+      'profile:annex-thesis.md': true,
+    });
+  });
+
+  it('refuses at its run an Input checked at queueing and gone since, before writing anything', async () => {
+    const opened = await openArtifacts(RESEARCH_RUN, LETTER_RUN);
+    const { workspace } = opened.context;
+    writeProfile(workspace);
+    await opened.produce({ reference: REFERENCE, artifact: 'research' });
+    const letter = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+    await letter.queueRun({ inputKeyList: [...LETTER_CORE_KEY_LIST, 'profile:annex-thesis.md'] });
+    workspace.deleteProfileFile('lea', PROFILE_FILE_NAME_SCHEMA.parse('annex-thesis.md'));
+
+    await expect(opened.runNextJob()).rejects.toMatchObject({ code: 'unknown_input' });
+    expect(opened.aiSession.headlessSessionList).toHaveLength(1);
+  });
+});
+
+describe('Custom Artifacts', () => {
+  const CALL_NOTES = { title: 'Appel avec la greffière', text: 'Elle cherche une personne rigoureuse.\n' };
+
+  it('creates one with a single Version, Validated and Chosen from creation, brought by the Candidate', async () => {
+    const opened = await openArtifacts();
+    const posting = await opened.context.findPosting(REFERENCE);
+
+    const custom = await opened.artifacts.createCustom({ posting, ...CALL_NOTES });
+
+    expect(custom.key).toMatch(/^custom:\d+$/);
+    expect(custom).toMatchObject({ interviewNumber: null, ...CALL_NOTES });
+    expect(await opened.artifacts.listCustomOf(posting)).toEqual([custom]);
+    const research = await opened.artifacts.find({ reference: REFERENCE, artifact: 'research' });
+    const inputList = await research.readInputs();
+    expect(inputList.find(({ key }) => key === custom.key)?.readVersion?.version).toMatchObject({
+      artifact: 'custom',
+      number: 1,
+      state: 'ready',
+      validation: 'validated',
+      isChosen: true,
+      origin: 'candidate',
+    });
+  });
+
+  it('is read by default by every run of its Posting, and one of an Interview by that Interview’s runs only', async () => {
+    const { context, artifacts } = await openPreparedInterview();
+    await createInterviewActions(context).addInterview({
+      reference: REFERENCE,
+      ...INTERVIEW,
+      start: '2026-11-26T14:00',
+    });
+    const posting = await context.findPosting(REFERENCE);
+    const ofPosting = await artifacts.createCustom({ posting, ...CALL_NOTES });
+    const ofInterview = await artifacts.createCustom({
+      posting,
+      interview: 1,
+      title: 'Organigramme',
+      text: 'La cour.',
+    });
+    const customInputsOf = async (name: Parameters<typeof artifacts.find>[0]) => {
+      const handle = await artifacts.find(name);
+      const inputList = await handle.readInputs();
+      return inputList
+        .filter(({ kind }) => kind === 'custom_artifact')
+        .map(({ key, mode, isChecked, title }) => ({ key, mode, isChecked, title }));
+    };
+
+    expect(await customInputsOf({ reference: REFERENCE, artifact: 'letter' })).toEqual([
+      { key: ofPosting.key, mode: 'default', isChecked: true, title: CALL_NOTES.title },
+    ]);
+    expect(await customInputsOf({ reference: REFERENCE, artifact: 'portrait', interview: 1 })).toEqual([
+      { key: ofPosting.key, mode: 'default', isChecked: true, title: CALL_NOTES.title },
+      { key: ofInterview.key, mode: 'default', isChecked: true, title: 'Organigramme' },
+    ]);
+    expect(await customInputsOf({ reference: REFERENCE, artifact: 'interview_brief', interview: 2 })).toEqual([
+      { key: ofPosting.key, mode: 'default', isChecked: true, title: CALL_NOTES.title },
+    ]);
+  });
+
+  it('is inlined in the Prompt under its title, and recorded by the Version that read it', async () => {
+    const opened = await openArtifacts(RESEARCH_RUN, RESEARCH_RUN);
+    await opened.draft({ reference: REFERENCE, artifact: 'research' });
+    const posting = await opened.context.findPosting(REFERENCE);
+    const custom = await opened.artifacts.createCustom({ posting, ...CALL_NOTES });
+
+    const research = await opened.artifacts.find({ reference: REFERENCE, artifact: 'research' });
+    const inputList = await research.readInputs();
+    await research.queueRun({ inputKeyList: inputList.filter(({ isChecked }) => isChecked).map(({ key }) => key) });
+    await opened.runNextJob();
+
+    expect(inputList.find(({ key }) => key === custom.key)?.isChecked).toBe(true);
+    expect(opened.aiSession.headlessSessionList.at(-1)?.message).toContain(
+      `## Input: Custom Artifact: ${CALL_NOTES.title}\n\n${CALL_NOTES.text.trim()}`,
+    );
+    const { versionList } = await opened.artifacts.find({ reference: REFERENCE, artifact: 'research' });
+    expect(versionList.at(-1)?.version.inputList).toContainEqual({
+      key: custom.key,
+      readVersion: {
+        artifact: 'custom',
+        number: 1,
+        posting: { reference: REFERENCE },
+        interview: null,
+        customArtifact: { title: CALL_NOTES.title },
+      },
+    });
+  });
+
+  it('refuses one for an Interview the Posting does not have', async () => {
+    const opened = await openArtifacts();
+    const posting = await opened.context.findPosting(REFERENCE);
+
+    await expect(opened.artifacts.createCustom({ posting, interview: 3, ...CALL_NOTES })).rejects.toMatchObject({
+      code: 'unknown_interview',
+    });
+    expect(await opened.artifacts.listCustomOf(posting)).toEqual([]);
   });
 });

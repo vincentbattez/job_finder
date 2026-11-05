@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -32,6 +32,14 @@ const NOTIFICATION_CHANNEL_MIGRATION = '20261030110155_canal_notification';
 const SETTINGS_MIGRATION = '20261030114047_settings';
 // The last migration before Archived left the Status for a mark beside it (ADR-0007)
 const BEFORE_ARCHIVED_MARK_MIGRATION = '20261031000306_job_started_at_and_worker_heartbeat';
+
+// The last migration before the Start Date of a Posting
+const BEFORE_START_DATE_MIGRATION = '20261031110442_posting_unpublished_at';
+
+function writeJobDescription(postingDirectory: string, markdown: string): void {
+  mkdirSync(postingDirectory, { recursive: true });
+  writeFileSync(path.join(postingDirectory, 'job-description.md'), markdown);
+}
 
 function listLeaProfileFiles(dataDirectory: string): string[] {
   return readdirSync(path.join(dataDirectory, 'candidates', 'lea', 'profile'));
@@ -106,8 +114,8 @@ describe('actions', () => {
   });
 
   // The main checkout migrates the real data/: each Watch keeps its Parameters and its first launch
-  // stays over, so the next Detection triggers as before
-  it('gathers the criteria and the Zone of each Watch into the Parameters of its Source, without loss', () => {
+  // stays over, so the next Detection triggers as before. Its Zone went away since (ADR-0018).
+  it('gathers the criteria of each Watch into the Parameters of its Source, without loss', () => {
     const dataDirectory = createEmptyDataDirectory();
     const databasePath = writeOlderDatabase(dataDirectory, NOTIFICATION_CHANNEL_MIGRATION);
     const database = new DatabaseSync(databasePath);
@@ -125,7 +133,7 @@ describe('actions', () => {
         id: 'attache-de-justice-hauts-de-france',
         candidateId: 'lea',
         source: 'pep',
-        parameters: '{"title":"attaché de justice","courtOfAppealList":["Douai","Amiens"]}',
+        parameters: '{"title":"attaché de justice"}',
         detectedAt: '2026-10-30T10:44:22.500+00:00',
       },
     ]);
@@ -177,9 +185,10 @@ describe('actions', () => {
         })),
     ).toEqual([
       { reference: '2026-1', status: 'applied', appliedAt: new Date('2026-10-20T09:00:00Z'), isArchived: true },
-      { reference: '2026-2', status: 'to_apply', appliedAt: null, isArchived: true },
+      // Never Applied and with no Research, both are New since ADR-0018
+      { reference: '2026-2', status: 'new', appliedAt: null, isArchived: true },
       { reference: '2026-3', status: 'applied', appliedAt: new Date('2026-10-21T09:00:00Z'), isArchived: false },
-      { reference: '2026-4', status: 'to_apply', appliedAt: null, isArchived: false },
+      { reference: '2026-4', status: 'new', appliedAt: null, isArchived: false },
     ]);
     // Dated from the migration, the day it was archived having never been kept; SQLite keeps seconds
     const archivedAt = postingList.find(({ reference }) => reference === '2026-2')?.archivedAt;
@@ -191,6 +200,68 @@ describe('actions', () => {
     expect(await actions.listPostings({ candidateId: 'lea' })).toContainEqual(
       expect.objectContaining({ reference: '2026-1', status: 'applied', archivedAt: null }),
     );
+  });
+
+  // The main checkout migrates the real data/: each Posting gets the Start Date its stored Job
+  // Description gives, and launching again changes nothing
+  it('fills the Start Date of the existing Postings from their Job Descriptions, idempotently', async () => {
+    const dataDirectory = createEmptyDataDirectory();
+    const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_START_DATE_MIGRATION));
+    database.exec(`INSERT INTO Candidate (id, name) VALUES ('lea', 'Léa');
+      INSERT INTO Posting (candidateId, source, reference, title, isInZone) VALUES ('lea', 'pep', '2026-1', 'Greffier', 1);
+      INSERT INTO Posting (candidateId, source, reference, title, isInZone) VALUES ('lea', 'pep', '2026-2', 'Greffier', 1);`);
+    database.close();
+    const postingsDirectory = path.join(dataDirectory, 'candidates', 'lea', 'postings');
+    // As the PEP Source stored them: the day under its heading, or no such heading
+    // cspell:disable
+    writeJobDescription(
+      path.join(postingsDirectory, '2026-1-greffier'),
+      "### Lieu d'affectation\n\nTribunal judiciaire de Lille\n\n### Date de vacance de l'emploi\n\n01/12/2026\n",
+    );
+    writeJobDescription(path.join(postingsDirectory, '2026-2-greffier'), '### Description du poste\n\nGreffier\n');
+    // cspell:enable
+
+    await createActions({ dataDirectory });
+    const actions = await createActions({ dataDirectory });
+
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(
+      postingList
+        .map(({ reference, startDate }) => ({ reference, startDate }))
+        .toSorted((first, second) => first.reference.localeCompare(second.reference)),
+    ).toEqual([
+      { reference: '2026-1', startDate: new Date('2026-12-01T00:00:00Z') },
+      { reference: '2026-2', startDate: null },
+    ]);
+  });
+
+  // No Source of its own: a Job Description pasted from one keeps that Source's format, a free one says nothing
+  it('fills the Start Date of the imported Postings too, whichever Source wrote their Job Description', async () => {
+    const dataDirectory = createEmptyDataDirectory();
+    const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_START_DATE_MIGRATION));
+    database.exec(`INSERT INTO Candidate (id, name) VALUES ('lea', 'Léa');
+      INSERT INTO Posting (candidateId, source, reference, title, isInZone) VALUES ('lea', 'import', 'i-1', 'Greffier', 1);
+      INSERT INTO Posting (candidateId, source, reference, title, isInZone) VALUES ('lea', 'import', 'i-2', 'Greffier', 1);`);
+    database.close();
+    const postingsDirectory = path.join(dataDirectory, 'candidates', 'lea', 'postings');
+    writeJobDescription(
+      path.join(postingsDirectory, 'i-1-greffier'),
+      // cspell:disable-next-line
+      "### Date de vacance de l'emploi\n\n01/12/2026\n",
+    );
+    writeJobDescription(path.join(postingsDirectory, 'i-2-greffier'), 'Registry officer, as soon as possible.\n');
+
+    const actions = await createActions({ dataDirectory });
+
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(
+      postingList
+        .map(({ reference, startDate }) => ({ reference, startDate }))
+        .toSorted((first, second) => first.reference.localeCompare(second.reference)),
+    ).toEqual([
+      { reference: 'i-1', startDate: new Date('2026-12-01T00:00:00Z') },
+      { reference: 'i-2', startDate: null },
+    ]);
   });
 
   it('refuses to list the Postings of an unknown Candidate', async () => {

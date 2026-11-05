@@ -12,12 +12,14 @@ import type { ErrorCode } from '#/domain/error.ts';
 import {
   CANDIDATE_SCHEMA,
   DEFAULT_DEADLINE_PERIOD_SCHEMA,
+  DETECTED_POSTING_SCHEMA,
   INTERVIEW_SCHEMA,
   JOB_SCHEMA,
   POSTING_SCHEMA,
   PROFILE_JOB_SCHEMA,
   QUEUED_JOB_SCHEMA,
   RECORDED_DETECTION_SCHEMA,
+  REVISION_SECTION_SCHEMA,
   SAVED_NOTIFICATION_CHANNEL_SCHEMA,
   STATUS_SCHEMA,
   VERSION_SCHEMA,
@@ -25,6 +27,7 @@ import {
   type Artifact,
   type Candidate,
   type DefaultDeadlinePeriod,
+  type DetectedPosting,
   type DetectionOrigin,
   type DetectionWatch,
   type Interview,
@@ -39,14 +42,16 @@ import {
   type ProfileJob,
   type QueuedJob,
   type RecordedDetection,
+  type RevisionSection,
   type SavedNotificationChannel,
   type Status,
   type UploadFileName,
   type Version,
+  type VersionOrigin,
   type Watch,
 } from '#/domain/index.ts';
 import { findAppliedAt, findStep, isExpired } from '#/status/index.ts';
-import { PrismaClient } from '#/workspace/generated/client.ts';
+import { Prisma, PrismaClient } from '#/workspace/generated/client.ts';
 
 import type { Config } from './config.ts';
 
@@ -58,15 +63,23 @@ const APPLIED_MIGRATION_LIST_SCHEMA = z.array(z.object({ migration_name: z.strin
 const VERSION_INTERVIEW_SELECT = { select: { number: true } };
 const VERSION_INCLUDE = {
   interview: VERSION_INTERVIEW_SELECT,
+  customArtifact: { select: { id: true, title: true } },
   inputList: {
     select: {
-      artifact: true,
-      number: true,
-      posting: { select: { reference: true } },
-      interview: VERSION_INTERVIEW_SELECT,
+      key: true,
+      readVersion: {
+        select: {
+          artifact: true,
+          number: true,
+          posting: { select: { reference: true } },
+          interview: VERSION_INTERVIEW_SELECT,
+          customArtifact: { select: { title: true } },
+        },
+      },
     },
+    orderBy: { id: 'asc' },
   },
-};
+} as const;
 const LINKED_POSTING_SELECT = { select: { reference: true } };
 const POSTING_INCLUDE = {
   repostOf: LINKED_POSTING_SELECT,
@@ -112,6 +125,7 @@ const DEFAULT_DELAY_MONTHS = 6;
 const DETECTION_INCLUDE = { watchList: { orderBy: { id: 'asc' } } } as const;
 
 const MIGRATION_TIMEOUT_MS = 2 * 60_000;
+const MIGRATION_ATTEMPT_COUNT = 5;
 
 // The single row of the worker's heartbeat
 const WORKER_HEARTBEAT_ID = 1;
@@ -147,7 +161,8 @@ export interface INewPosting {
   source: string;
   listedPosting: ListedPosting;
   jobDescription: JobDescription;
-  isInZone: boolean;
+  // New when detected, To Apply when imported (ADR-0018)
+  status: Extract<Status, 'new' | 'to_apply'>;
   repostOf: Posting | undefined;
   location: Location;
 }
@@ -176,18 +191,34 @@ function hasPendingMigration(databasePath: string): boolean {
   }
 }
 
+// The worker and the web starting together both migrate, and Prisma gives up on the database the other
+// holds: it tries again, and finds the migrations applied or applies the rest (ADR-0004)
+function migrate(url: string): void {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      execFileSync(process.execPath, [PRISMA_CLI_PATH, 'migrate', 'deploy'], {
+        cwd: ROOT_DIRECTORY,
+        env: { ...process.env, DATABASE_URL: url, CHECKPOINT_DISABLE: '1' },
+        stdio: 'pipe',
+        // A migration takes seconds: one that hangs fails the launch rather than holding it
+        timeout: MIGRATION_TIMEOUT_MS,
+      });
+      return;
+    } catch (error) {
+      const isLocked = error instanceof Error && error.message.includes('database is locked');
+      if (!isLocked || attempt === MIGRATION_ATTEMPT_COUNT) {
+        throw error;
+      }
+    }
+  }
+}
+
 // Migrates first, but only when a migration is pending: the Prisma CLI takes 0.3 s to start
 // (ADR-0004). Prisma never leaves this file (ADR-0005).
 export function openDatabase(databasePath: string) {
   const url = `file:${databasePath}`;
   if (hasPendingMigration(databasePath)) {
-    execFileSync(process.execPath, [PRISMA_CLI_PATH, 'migrate', 'deploy'], {
-      cwd: ROOT_DIRECTORY,
-      env: { ...process.env, DATABASE_URL: url, CHECKPOINT_DISABLE: '1' },
-      stdio: 'pipe',
-      // A migration takes seconds: one that hangs fails the launch rather than holding it
-      timeout: MIGRATION_TIMEOUT_MS,
-    });
+    migrate(url);
   }
   // Read at launch once the Default Deadline Period exists, then changed by the process that saves them (ADR-0011)
   let defaultDelayMonths = DEFAULT_DELAY_MONTHS;
@@ -407,34 +438,34 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    // The To Apply Postings still followed that arrived last, through a Detection in the Zone or an
-    // import, which no Zone holds but the Candidate chose (ADR-0003)
-    async listLatestPostings(candidateId: string, count: number): Promise<Posting[]> {
-      return z.array(POSTING_READ_SCHEMA).parse(
-        await prisma.posting.findMany({
-          where: {
-            candidateId,
-            status: 'to_apply',
-            archivedAt: null,
-            OR: [{ isInZone: true }, { source: 'import' }],
-          },
-          orderBy: [{ detectedAt: 'desc' }, { id: 'desc' }],
-          take: count,
-          include: POSTING_INCLUDE,
-        }),
-      );
-    },
-
     // A job the Candidate launches is not automatic: they see it run, and fail, on the screen. A module
     // attached to an Interview runs for one.
     async createJob(
       posting: Posting,
       module: Module,
-      { isAutomatic = false, interview = null }: { isAutomatic?: boolean; interview?: Interview | null } = {},
+      {
+        isAutomatic = false,
+        interview = null,
+        inputKeyList = null,
+        upload = null,
+      }: {
+        isAutomatic?: boolean;
+        interview?: Interview | null;
+        inputKeyList?: string[] | null;
+        // The PDF a Candidate brought, which the job converts into their Version
+        upload?: string | null;
+      } = {},
     ): Promise<Job> {
       return JOB_READ_SCHEMA.parse(
         await prisma.job.create({
-          data: { module, postingId: posting.id, interviewId: interview?.id ?? null, isAutomatic },
+          data: {
+            module,
+            postingId: posting.id,
+            interviewId: interview?.id ?? null,
+            isAutomatic,
+            inputKeyList: inputKeyList ?? Prisma.DbNull,
+            upload,
+          },
           include: JOB_INCLUDE,
         }),
       );
@@ -452,17 +483,21 @@ export function openDatabase(databasePath: string) {
     },
 
     // The job runs and its Version is created, numbered after the last Version of its Artifact on its
-    // Interview, or on its Posting without one, with the Versions it reads
+    // Interview, or on its Posting without one, with the Inputs it reads
     async startJob(
       { id, module, posting, interview }: Job & { module: Artifact },
       {
         instructions,
         hasCandidateInstructions,
         inputList,
+        origin = 'ai',
       }: {
         instructions: string;
         hasCandidateInstructions: boolean;
-        inputList: { posting: Posting; version: Version }[];
+        // The conversion of a PDF the Candidate brought makes a Version of theirs (ADR-0019)
+        origin?: VersionOrigin;
+        // Each Input it reads, with the Version read for an Artifact Input
+        inputList: { key: string; version: Version | null }[];
       },
     ): Promise<Version> {
       const interviewId = interview?.id ?? null;
@@ -481,10 +516,13 @@ export function openDatabase(databasePath: string) {
             artifact: module,
             number: (max.number ?? 0) + 1,
             state: 'running',
+            origin,
             instructions,
             hasCandidateInstructions,
             jobId: id,
-            inputList: { connect: inputList.map(({ version: input }) => ({ id: input.id })) },
+            inputList: {
+              create: inputList.map(({ key, version: input }) => ({ key, readVersionId: input?.id ?? null })),
+            },
           },
           include: VERSION_INCLUDE,
         }),
@@ -497,7 +535,7 @@ export function openDatabase(databasePath: string) {
       { job, version }: { job: Job; version: Version },
       { errorCode, log, sessionId }: { errorCode: ErrorCode | null; log: string; sessionId: string | null },
     ): Promise<{ job: Job; version: Version }> {
-      // Ready unless it failed under a code
+      // Ready unless it failed under a code; a ready Version stays a Draft until the Candidate validates it (ADR-0019)
       const isReady = errorCode === null;
       await prisma.$transaction([
         prisma.version.updateMany({ where: { id: version.id }, data: { state: isReady ? 'ready' : 'failed' } }),
@@ -505,7 +543,6 @@ export function openDatabase(databasePath: string) {
           where: { id: job.id },
           data: { state: isReady ? 'done' : 'failed', log, errorCode, sessionId },
         }),
-        ...(isReady ? chooseStatementList(version) : []),
       ]);
       return {
         job: JOB_READ_SCHEMA.parse(await prisma.job.findUniqueOrThrow({ where: { id: job.id }, include: JOB_INCLUDE })),
@@ -513,6 +550,29 @@ export function openDatabase(databasePath: string) {
           await prisma.version.findUniqueOrThrow({ where: { id: version.id }, include: VERSION_INCLUDE }),
         ),
       };
+    },
+
+    // A Version the Candidate brought, ready at once: a Draft of theirs, with no run, no Inputs, no Original
+    async createBroughtVersion(posting: Posting, artifact: Artifact, interview: Interview | null): Promise<Version> {
+      const interviewId = interview?.id ?? null;
+      const { _max: max } = await prisma.version.aggregate({
+        where: { postingId: posting.id, interviewId, artifact },
+        _max: { number: true },
+      });
+      return VERSION_SCHEMA.parse(
+        await prisma.version.create({
+          data: {
+            postingId: posting.id,
+            interviewId,
+            artifact,
+            number: (max.number ?? 0) + 1,
+            state: 'ready',
+            origin: 'candidate',
+            instructions: '',
+          },
+          include: VERSION_INCLUDE,
+        }),
+      );
     },
 
     // A job that ran without a Version, such as an extraction, is done
@@ -621,8 +681,86 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    async chooseVersion(version: Version): Promise<void> {
-      await prisma.$transaction(chooseStatementList(version));
+    // A Custom Artifact and its single Version, Validated and Chosen from creation: the Candidate wrote it
+    // (spec #125). Brought as a PDF, it stays running until the job queued with it converts the PDF.
+    async createCustomArtifact(
+      posting: Posting,
+      interview: Interview | null,
+      title: string,
+      upload: string | null = null,
+    ): Promise<Version> {
+      // By their identifiers rather than connect, which reads them first: a transaction that reads before
+      // it writes fails at once on a lock another process holds, where a write first waits its turn
+      const link = { postingId: posting.id, interviewId: interview?.id ?? null };
+      const { version } = await prisma.$transaction(async (transaction) => {
+        const job =
+          upload === null ? null : await transaction.job.create({ data: { module: 'custom', upload, ...link } });
+        return transaction.customArtifact.create({
+          data: {
+            ...link,
+            title,
+            version: {
+              create: {
+                ...link,
+                jobId: job?.id ?? null,
+                artifact: 'custom',
+                number: 1,
+                state: upload === null ? 'ready' : 'running',
+                validation: 'validated',
+                isChosen: true,
+                origin: 'candidate',
+                instructions: '',
+              },
+            },
+          },
+          include: { version: { include: VERSION_INCLUDE } },
+        });
+      });
+      return VERSION_SCHEMA.parse(version);
+    },
+
+    // The single Version of each Custom Artifact of a Posting and of its Interviews, in the order they were added
+    async listCustomVersions(posting: Posting): Promise<Version[]> {
+      return z.array(VERSION_SCHEMA).parse(
+        await prisma.version.findMany({
+          where: { postingId: posting.id, artifact: 'custom' },
+          orderBy: { customArtifactId: 'asc' },
+          include: VERSION_INCLUDE,
+        }),
+      );
+    },
+
+    // Validated and Chosen at once, the previous Chosen Version staying Validated (ADR-0019)
+    async validateVersion(version: Version): Promise<void> {
+      await prisma.$transaction([
+        prisma.version.update({ where: { id: version.id }, data: { validation: 'validated' } }),
+        ...chooseStatementList(version),
+      ]);
+    },
+
+    async clearChosenVersion(posting: Posting, artifact: Artifact, interview: Interview | null): Promise<void> {
+      await prisma.version.updateMany({
+        where: { postingId: posting.id, artifact, interviewId: interview?.id ?? null, isChosen: true },
+        data: { isChosen: false },
+      });
+    },
+
+    // Every ready Version the AI produced, with its Posting, which keeps an Original (ADR-0019)
+    async listReadyAiVersions(): Promise<{ posting: Posting; version: Version }[]> {
+      const versionList = await prisma.version.findMany({
+        where: { state: 'ready', origin: 'ai' },
+        orderBy: { id: 'asc' },
+        include: { ...VERSION_INCLUDE, posting: { include: POSTING_INCLUDE } },
+      });
+      return versionList.map(({ posting, ...version }) => ({
+        posting: POSTING_READ_SCHEMA.parse(posting),
+        version: VERSION_SCHEMA.parse(version),
+      }));
+    },
+
+    // Brought by the Candidate rather than produced by the AI: it has no Original
+    async setBrought({ id }: Version): Promise<void> {
+      await prisma.version.update({ where: { id }, data: { origin: 'candidate' } });
     },
 
     claimDetection,
@@ -667,23 +805,18 @@ export function openDatabase(databasePath: string) {
       await prisma.watch.update({ where: { id }, data: { detectedAt: new Date() } });
     },
 
-    // The Postings of its Candidate and Source that another Watch stored out of its own Zone since this
-    // one last went through, all of them on its first launch: they may be in the Zone of this one
-    async listOutOfZonePostingsSince({ candidateId, source, detectedAt }: Watch): Promise<Posting[]> {
-      const since = detectedAt === null ? {} : { detectedAt: { gt: detectedAt } };
-      return z.array(POSTING_READ_SCHEMA).parse(
-        await prisma.posting.findMany({
-          where: { candidateId, source, isInZone: false, ...since },
-          include: POSTING_INCLUDE,
-        }),
-      );
-    },
-
-    // A Posting is in the Zone as soon as it is in that of one of its Candidate's Watches
-    async setInZone({ id }: Posting): Promise<Posting> {
-      return POSTING_READ_SCHEMA.parse(
-        await prisma.posting.update({ where: { id }, data: { isInZone: true }, include: POSTING_INCLUDE }),
-      );
+    // The Near Misses of the last Detection that searched the Watch: none until a Detection went through
+    // with its Parameters, a change of them starting its first launch again (ADR-0011)
+    async listNearMisses({ id, detectedAt }: Watch): Promise<DetectedPosting[]> {
+      if (detectedAt === null) {
+        return [];
+      }
+      const last = await prisma.detectionWatch.findFirst({
+        where: { watchId: id, step: { in: ['reading', 'notifying', 'done'] } },
+        orderBy: { id: 'desc' },
+        select: { nearMissList: true },
+      });
+      return z.array(DETECTED_POSTING_SCHEMA).parse(last?.nearMissList ?? []);
     },
 
     async findPostings(reference: string): Promise<Posting[]> {
@@ -698,8 +831,24 @@ export function openDatabase(databasePath: string) {
         .parse(await prisma.posting.findMany({ where: { latitude: null }, include: POSTING_INCLUDE }));
     },
 
-    async setLocation({ id }: Posting, location: Location): Promise<void> {
-      await prisma.posting.update({ where: { id }, data: location });
+    // The Postings of these Sources that have no Start Date yet, which their Job Description may give
+    async listPostingsWithoutStartDate(sourceIdList: string[]): Promise<Posting[]> {
+      return z.array(POSTING_READ_SCHEMA).parse(
+        await prisma.posting.findMany({
+          where: { startDate: null, source: { in: sourceIdList } },
+          include: POSTING_INCLUDE,
+        }),
+      );
+    },
+
+    async setStartDate({ id }: Posting, startDate: Date): Promise<void> {
+      await prisma.posting.update({ where: { id }, data: { startDate } });
+    },
+
+    // Only over the place of work the location was asked for: the worker's extraction may have filled the
+    // Posting since a Detection listed it unlocated, and it knows better than that stale read
+    async setLocation({ id, city, workplace }: Posting, location: Location): Promise<void> {
+      await prisma.posting.updateMany({ where: { id, city, workplace, latitude: null }, data: location });
     },
 
     // The fields read in its Job Description replace those of the Posting, its title included
@@ -707,9 +856,11 @@ export function openDatabase(databasePath: string) {
       { id }: Posting,
       { title, jobDescription, location }: { title: string; jobDescription: JobDescription; location: Location },
     ) {
-      const { deadline, employer, workplace, applicationEmail, contact1, contact2 } = jobDescription;
-      const data = { title, deadline, employer, workplace, applicationEmail, contact1, contact2, ...location };
-      return POSTING_READ_SCHEMA.parse(await prisma.posting.update({ where: { id }, data, include: POSTING_INCLUDE }));
+      const { deadline, startDate, employer, workplace, applicationEmail, contact1, contact2 } = jobDescription;
+      const data = { title, deadline, startDate, employer, workplace, applicationEmail, contact1, contact2 };
+      return POSTING_READ_SCHEMA.parse(
+        await prisma.posting.update({ where: { id }, data: { ...data, ...location }, include: POSTING_INCLUDE }),
+      );
     },
 
     async setStatus(posting: Posting, status: Status): Promise<void> {
@@ -745,15 +896,19 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    // Numbered after the last Interview of its Posting, like a Version
-    async createInterview({ id }: Posting, fields: InterviewFields): Promise<void> {
-      await prisma.$transaction(async (transaction) => {
-        const { _max: max } = await transaction.interview.aggregate({
-          where: { postingId: id },
-          _max: { number: true },
-        });
-        await transaction.interview.create({ data: { ...fields, postingId: id, number: (max.number ?? 0) + 1 } });
-      });
+    // Numbered after the last Interview of its Posting, like a Version. A write first, which takes the
+    // lock: a transaction that reads first fails at once on a lock another process holds.
+    async createInterview({ id }: Posting, fields: InterviewFields): Promise<Interview> {
+      return INTERVIEW_SCHEMA.parse(
+        await prisma.$transaction(async (transaction) => {
+          await transaction.$executeRaw`UPDATE "Posting" SET "id" = "id" WHERE "id" = ${id}`;
+          const { _max: max } = await transaction.interview.aggregate({
+            where: { postingId: id },
+            _max: { number: true },
+          });
+          return transaction.interview.create({ data: { ...fields, postingId: id, number: (max.number ?? 0) + 1 } });
+        }),
+      );
     },
 
     // Each edit counts, so a calendar importing it again updates its event
@@ -766,18 +921,53 @@ export function openDatabase(databasePath: string) {
       await prisma.interview.delete({ where: { id } });
     },
 
+    // In the order the Candidate first wrote them
+    async listRevisionSections({ id }: Interview): Promise<RevisionSection[]> {
+      return z.array(REVISION_SECTION_SCHEMA).parse(
+        await prisma.revisionSection.findMany({
+          where: { interviewId: id },
+          orderBy: { id: 'asc' },
+          select: { title: true, note: true, isMastered: true },
+        }),
+      );
+    },
+
+    // Created at its first note or mark, then kept by its title whatever Version is Chosen
+    async saveRevisionSection(
+      { id }: Interview,
+      title: string,
+      fields: { note: string } | { isMastered: boolean },
+    ): Promise<void> {
+      await prisma.revisionSection.upsert({
+        where: { interviewId_title: { interviewId: id, title } },
+        create: { interviewId: id, title, ...fields },
+        update: fields,
+      });
+    },
+
     async createPosting({
       candidateId,
       source,
       listedPosting,
       jobDescription,
-      isInZone,
+      status,
       repostOf,
       location,
     }: INewPosting): Promise<Posting> {
       const { reference, title, url, publishedAt } = listedPosting;
-      const { deadline, employer, workplace, applicationEmail, contact1, contact2 } = jobDescription;
-      const data = { candidateId, source, reference, title, url, publishedAt, deadline, employer, workplace };
+      const { deadline, startDate, employer, workplace, applicationEmail, contact1, contact2 } = jobDescription;
+      const data = {
+        candidateId,
+        source,
+        reference,
+        title,
+        url,
+        publishedAt,
+        deadline,
+        startDate,
+        employer,
+        workplace,
+      };
       return POSTING_READ_SCHEMA.parse(
         await prisma.posting.create({
           data: {
@@ -786,7 +976,7 @@ export function openDatabase(databasePath: string) {
             applicationEmail,
             contact1,
             contact2,
-            isInZone,
+            status,
             repostOfId: repostOf?.id ?? null,
           },
           include: POSTING_INCLUDE,

@@ -1,41 +1,53 @@
-import path from 'node:path';
-
-import { z } from 'zod/v4';
-
 import { codedError } from '#/domain/coded-error.ts';
 import {
+  LIST_ITEM_SCHEMA,
+  NEW_ITEM_SCHEMA,
   POSTING_DETAIL_SCHEMA,
-  VISUALIZATION_SCHEMA,
   type ArtifactState,
   type Candidate,
+  type ListItem,
+  type NewItem,
   type Posting,
   type PostingDetail,
   type Recipients,
   type Version,
-  type Visualization,
 } from '#/domain/index.ts';
 import { STATE_BY_JOB_STATE } from '#/domain/state.ts';
 import { LETTER_MODULE } from '#/modules/letter/index.ts';
-import { VISUALIZATION_MODULE } from '#/modules/visualization/index.ts';
 import { hasBeenApplied, listStatusChoices } from '#/status/index.ts';
 
-import { ARTIFACT_INPUT_SCHEMA, REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
+import { ARTIFACT_INPUT_SCHEMA, LIST_INPUT_SCHEMA, REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
+import { currentFoundReferencesOf } from './detect.ts';
 import { findWorkerFailure } from './stalled-job.ts';
 
-const VISUALIZATION_INPUT_SCHEMA = REFERENCE_INPUT_SCHEMA.extend({
-  interview: z.coerce.number().int(),
-  number: z.coerce.number().int(),
-});
-
-// The latest Postings of the home: enough to see at a glance what just arrived
-const LATEST_POSTING_COUNT = 6;
-
 export function createPostingActions({ workspace, artifacts, findCandidate, findPosting, findLocale }: ActionContext) {
-  // The Letter module reads the recipients of its Chosen Version
-  async function findRecipients(posting: Posting): Promise<Recipients | null> {
+  // The Letter module reads the recipients of its Chosen Version; the Posting page, those of a Draft
+  // before any is chosen, so they are read with the Letter they go with
+  async function findRecipients(posting: Posting, { isDraftRead = false } = {}): Promise<Recipients | null> {
     const handle = await artifacts.find({ posting, artifact: 'letter' });
-    const version = handle.chosenVersion;
-    return version === undefined ? null : LETTER_MODULE.readRecipients(handle.directoryOf(version));
+    const latestReady = handle.versionList.findLast(({ version }) => version.state === 'ready')?.version;
+    const version = handle.chosenVersion ?? (isDraftRead ? latestReady : undefined);
+    // A Letter the Candidate brought comes with no recommended recipients
+    return version === undefined || version.origin === 'candidate'
+      ? null
+      : LETTER_MODULE.readRecipients(handle.directoryOf(version));
+  }
+
+  // The earlier Postings of its Position, the latest first, each the one the next publishes again
+  async function listEarlierPostings(posting: Posting): Promise<Posting[]> {
+    const earlierPostingList: Posting[] = [];
+    let { repostOf } = posting;
+    while (repostOf !== null) {
+      const { reference } = repostOf;
+      const postingList = await workspace.findPostings(reference);
+      const earlierPosting = postingList.find(({ candidateId }) => candidateId === posting.candidateId);
+      if (earlierPosting === undefined) {
+        break;
+      }
+      earlierPostingList.push(earlierPosting);
+      repostOf = earlierPosting.repostOf;
+    }
+    return earlierPostingList;
   }
 
   return {
@@ -55,10 +67,36 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
       return workspace.listPostings(candidate.id);
     },
 
-    // What the home shows of what just arrived, as tiles and on the map
-    async listLatestPostings(rawInput: unknown): Promise<Posting[]> {
+    // What the Candidate sorts: the New Postings they have not dismissed, those the last Detection found
+    // flagged, which the list shows first (ADR-0018). Its count is the Sidebar's badge. Under the
+    // Archived filter, the dismissed ones instead, which stay New (ADR-0007).
+    async listNew(rawInput: unknown): Promise<NewItem[]> {
       const candidate = await findCandidate(rawInput);
-      return workspace.listLatestPostings(candidate.id, LATEST_POSTING_COUNT);
+      const { isArchived } = LIST_INPUT_SCHEMA.parse(rawInput);
+      const postingList = await workspace.listPostings(candidate.id);
+      const foundReferenceSet = new Set(currentFoundReferencesOf(await workspace.findDetections(candidate.id)));
+      return postingList
+        .filter(({ status, archivedAt }) => status === 'new' && (archivedAt !== null) === isArchived)
+        .map((posting) => NEW_ITEM_SCHEMA.parse({ posting, isFound: foundReferenceSet.has(posting.reference) }));
+    },
+
+    // What the Candidate prepares: the To Apply Postings they still follow, the list groups them; under
+    // the Archived filter, the Archived ones instead
+    async listToApply(rawInput: unknown): Promise<ListItem[]> {
+      const candidate = await findCandidate(rawInput);
+      const { isArchived } = LIST_INPUT_SCHEMA.parse(rawInput);
+      const postingList = await workspace.listPostings(candidate.id);
+      return Promise.all(
+        postingList
+          .filter(({ status, archivedAt }) => status === 'to_apply' && (archivedAt !== null) === isArchived)
+          .map(async (posting) => {
+            const [research, letter] = await Promise.all([
+              artifacts.find({ posting, artifact: 'research' }),
+              artifacts.find({ posting, artifact: 'letter' }),
+            ]);
+            return LIST_ITEM_SCHEMA.parse({ posting, research: research.validation, letter: letter.validation });
+          }),
+      );
     },
 
     async readPosting(rawInput: unknown): Promise<PostingDetail> {
@@ -69,6 +107,8 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
       const extractionJob = jobList.findLast(({ module }) => module === 'extraction');
       const interviewList = await workspace.listInterviews(posting);
       const handleList = await artifacts.listOf(posting);
+      const earlierPostingList = await listEarlierPostings(posting);
+      const earlierApplication = earlierPostingList.find((earlierPosting) => hasBeenApplied(earlierPosting));
       const describedList = await Promise.all(
         handleList.map(async (handle) => ({
           interviewId: handle.interview?.id ?? null,
@@ -84,8 +124,21 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
         hasApplication: hasBeenApplied(posting),
         interviewList: interviewList.map((interview) => ({ ...interview, artifactList: artifactListOf(interview.id) })),
         jobDescription: workspace.readJobDescription(posting, locale),
+        repost: {
+          publicationNumber: earlierPostingList.length + 1,
+          firstPublishedAt: (earlierPostingList.at(-1) ?? posting).publishedAt,
+          earlierApplication:
+            earlierApplication === undefined
+              ? null
+              : {
+                  reference: earlierApplication.reference,
+                  appliedAt: earlierApplication.appliedAt,
+                  step: earlierApplication.step,
+                },
+        },
         artifactList: artifactListOf(null),
-        recipients: await findRecipients(posting),
+        customArtifactList: await artifacts.listCustomOf(posting),
+        recipients: await findRecipients(posting, { isDraftRead: true }),
         extraction:
           extractionJob === undefined
             ? null
@@ -109,19 +162,6 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
     async readArtifactState(rawInput: unknown): Promise<ArtifactState> {
       const handle = await artifacts.find(ARTIFACT_INPUT_SCHEMA.parse(rawInput));
       return handle.readState();
-    },
-
-    async readVisualization(rawInput: unknown): Promise<Visualization> {
-      const { reference, interview, number } = VISUALIZATION_INPUT_SCHEMA.parse(rawInput);
-      const posting = await findPosting(reference);
-      const handle = await artifacts.find({ posting, artifact: 'visualization', interview });
-      const versionDirectory = handle.directoryOf(handle.versionOf(number));
-      const html = workspace.readTextFile(path.join(versionDirectory, VISUALIZATION_MODULE.fileName));
-      if (html === null) {
-        const locale = await findLocale(posting.candidateId);
-        throw codedError('visualization_without_page', { reference, number }, { locale });
-      }
-      return VISUALIZATION_SCHEMA.parse({ html });
     },
 
     async readRecipients(rawInput: unknown): Promise<Recipients> {

@@ -8,6 +8,7 @@ import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructi
 
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { runAndValidate } from './run-module.ts';
 
 // Léa's, in French
 const RESEARCH_DEFAULT_INSTRUCTIONS = DEFAULT_INSTRUCTIONS_FR.research;
@@ -35,11 +36,8 @@ async function detectPostings(aiSession: ReturnType<typeof createFakeAiSession>)
   };
 }
 
-// Launching a module queues its job, which the worker runs (ADR-0003)
 async function runResearch(actions: Actions) {
-  const { id } = await actions.runModule({ module: 'research', reference: REFERENCE });
-  await actions.runQueuedJobs();
-  return actions.followJob({ jobId: id });
+  return runAndValidate(actions, { module: 'research', reference: REFERENCE });
 }
 
 describe('research', () => {
@@ -80,7 +78,7 @@ describe('research', () => {
     await runResearch(actions);
     await runResearch(actions);
 
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: '1' });
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: '1' });
 
     const versionList = await actions.listVersions({ reference: REFERENCE, artifact: 'research' });
     expect(versionList.map(({ number, isChosen }) => ({ number, isChosen }))).toEqual([
@@ -89,21 +87,30 @@ describe('research', () => {
     ]);
   });
 
-  it('sends the fixed part of the prompt and the default Instructions, and keeps them in the Version', async () => {
+  it('sends the fixed part of the prompt, the Job Description inlined, then the default Instructions, and keeps them in the Version', async () => {
     const aiSession = createFakeAiSession({ fileByName: { 'research.md': RESEARCH } });
     const { actions, postingDirectory } = await detectPostings(aiSession);
+    const jobDescription = readFileSync(path.join(postingDirectory, 'job-description.md'), 'utf8');
 
     const { version } = await runResearch(actions);
 
     expect(aiSession.headlessSessionList).toHaveLength(1);
     expect(aiSession.headlessSessionList[0]).toMatchObject({
-      instructions: RESEARCH_DEFAULT_INSTRUCTIONS,
+      message: `# Inputs\n\n## Input: Job Description\n\n${jobDescription.trim()}\n\n# Instructions\n\n${RESEARCH_DEFAULT_INSTRUCTIONS.trim()}`,
       directory: postingDirectory,
       outputDirectory: path.join(postingDirectory, 'research/v1'),
+      // It writes its Version and searches the web, and reads nothing from disk (ADR-0021)
+      isReadingDirectory: false,
+      isSearchingWeb: true,
     });
     expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain('Never invent a fact.');
     expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain('`research/v1/research.md`');
-    expect(version).toMatchObject({ instructions: RESEARCH_DEFAULT_INSTRUCTIONS, inputList: [] });
+    // The session reads no Input from disk (ADR-0021)
+    expect(aiSession.headlessSessionList[0]?.fixedPrompt).not.toContain('job-description.md');
+    expect(version).toMatchObject({
+      instructions: RESEARCH_DEFAULT_INSTRUCTIONS,
+      inputList: [{ key: 'job_description', readVersion: null }],
+    });
   });
 
   it("replaces the default Instructions with the Candidate's own, keeping the fixed part", async () => {
@@ -115,7 +122,9 @@ describe('research', () => {
 
     const { version } = await runResearch(actions);
 
-    expect(aiSession.headlessSessionList[0]?.instructions).toBe(instructions);
+    expect(aiSession.headlessSessionList[0]?.message).toMatch(
+      /# Instructions\n\nInsiste sur la justice des mineurs dans le ressort de Béthune\.$/,
+    );
     expect(aiSession.headlessSessionList[0]?.fixedPrompt).toContain('Never invent a fact.');
     expect(version?.instructions).toBe(instructions);
   });
@@ -127,7 +136,7 @@ describe('a launch refused', () => {
     const { actions } = await detectPostings(aiSession);
 
     await expect(actions.runModule({ module: 'inconnu', reference: REFERENCE })).rejects.toThrow(
-      'Module inconnu : inconnu. Modules : research, letter, portrait, brief, visualization.',
+      'Module inconnu : inconnu. Modules : research, letter, portrait, brief.',
     );
     expect(aiSession.headlessSessionList).toEqual([]);
   });
@@ -186,7 +195,7 @@ describe('a Research that fails', () => {
     const { actions } = await detectPostings(createFakeAiSession({}));
     await runResearch(actions);
 
-    await expect(actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: 1 })).rejects.toThrow(
+    await expect(actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: 1 })).rejects.toThrow(
       /research v1 de l'Offre 2026-2445600 est en échec/,
     );
   });

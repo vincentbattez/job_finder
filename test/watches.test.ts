@@ -8,17 +8,12 @@ import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { LEA_WATCH, LEA_WATCH_ID } from './lea.ts';
 import { createRecordedFetch, DSJ_FEED_URL, feedWithout } from './recorded-http.ts';
 
-// An attaché de justice Posting of the court of appeal of Versailles, out of the Zone of Léa's first
-// Watch, from the responses recorded on 2026-10-29
+// An attaché de justice Posting of the court of appeal of Versailles, from the responses recorded on
+// 2026-10-29
 const VERSAILLES_REFERENCE = '2026-2409247';
 
-// A second Watch of Léa, on the same title, whose Zone is Versailles
-const VERSAILLES_WATCH = {
-  source: 'pep',
-  parameters: { title: 'attaché de justice', courtOfAppealList: ['Versailles'] },
-};
-
-const RESEARCH = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
+// A second Watch of Léa, on a title that also matches the Versailles Posting
+const SECOND_WATCH = { source: 'pep', parameters: { title: 'attaché de justice' } };
 
 // Léa's Postings already online, imported by the first Detection of her Watch
 async function detectLeaPostings() {
@@ -34,8 +29,31 @@ describe('Watches', () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
     expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([
-      { id: LEA_WATCH_ID, candidateId: 'lea', detectedAt: null, ...LEA_WATCH },
+      {
+        id: LEA_WATCH_ID,
+        candidateId: 'lea',
+        detectedAt: null,
+        ...LEA_WATCH,
+        label: 'attaché de justice',
+        nearMissList: [],
+      },
     ]);
+  });
+
+  it('shows the Near Misses of the last Detection of each Watch', async () => {
+    const actions = await detectLeaPostings();
+
+    const [watch] = await actions.listWatches({ candidateId: 'lea' });
+
+    expect(watch?.nearMissList.map(({ reference }) => reference)).toEqual([
+      '2026-2432800',
+      '2026-2431315',
+      '2026-2282889',
+      '2026-2354768',
+    ]);
+    expect(watch?.nearMissList[1]?.title).toBe(
+      'Chef du pôle des attachés de justice et des assistants spécialisés - RHG6 (H/F)',
+    );
   });
 
   it('takes a second Watch into account from the next Detection, on its first launch', async () => {
@@ -44,12 +62,12 @@ describe('Watches', () => {
     await actions.saveWatch({
       candidateId: 'lea',
       source: 'pep',
-      parameters: { title: 'attaché de justice', courtOfAppealList: ['Paris', '', 'Versailles'] },
+      parameters: { title: 'attaché de justice' },
     });
 
     expect(await actions.listWatches({ candidateId: 'lea' })).toMatchObject([
       { id: LEA_WATCH_ID },
-      { id: 'lea-2', parameters: { title: 'attaché de justice', courtOfAppealList: ['Paris', 'Versailles'] } },
+      { id: 'lea-2', parameters: { title: 'attaché de justice' } },
     ]);
     expect(await actions.detect()).toMatchObject([
       { watchId: LEA_WATCH_ID, isFirstLaunch: false },
@@ -69,11 +87,12 @@ describe('Watches', () => {
       candidateId: 'lea',
       watchId: LEA_WATCH_ID,
       source: 'pep',
-      parameters: { title: 'attaché de justice', courtOfAppealList: ['Douai'] },
+      parameters: { title: 'attaché' },
     });
 
+    // Its Near Misses were those of the title it no longer searches
     expect(await actions.listWatches({ candidateId: 'lea' })).toMatchObject([
-      { parameters: { courtOfAppealList: ['Douai'] }, detectedAt: null },
+      { parameters: { title: 'attaché' }, detectedAt: null, nearMissList: [] },
     ]);
   });
 
@@ -89,10 +108,8 @@ describe('Watches', () => {
   it('refuses the Parameters its Source refuses, naming them as the form does', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
-    await expect(
-      actions.saveWatch({ candidateId: 'lea', source: 'pep', parameters: { title: '', courtOfAppealList: [''] } }),
-    ).rejects.toThrow(
-      "La Source Place de l’Emploi Public attend d'autres Paramètres : renseigner « Titre recherché », « Cours d’appel de la Zone ».",
+    await expect(actions.saveWatch({ candidateId: 'lea', source: 'pep', parameters: { title: '' } })).rejects.toThrow(
+      "La Source Place de l’Emploi Public attend d'autres Paramètres : renseigner « Titre recherché ».",
     );
     expect(await actions.listWatches({ candidateId: 'lea' })).toHaveLength(1);
   });
@@ -121,47 +138,42 @@ describe('Watches', () => {
     await actions.createCandidate({ id: 'camille', name: 'Camille' });
 
     await expect(actions.deleteWatch({ candidateId: 'camille', watchId: LEA_WATCH_ID })).rejects.toThrow(
-      `Camille n'a pas de Veille ${LEA_WATCH_ID} : recharger la page de son Profil.`,
+      `Camille n'a pas de Veille ${LEA_WATCH_ID} : recharger la page des Veilles.`,
     );
     expect(await actions.listWatches({ candidateId: 'lea' })).toHaveLength(1);
   });
 
-  // Each Watch has its own Zone: a Posting one stored out of its Zone may be in that of another
-  describe('a Posting in the Zone of another Watch of the Candidate', () => {
-    it('gets its Research and its notification once, when it is new', async () => {
+  // The Zone is gone (ADR-0018): a Posting both Watches list is the same Posting, which the Candidate sorts
+  describe('a Posting another Watch of the Candidate also lists', () => {
+    it('is read and notified once, when it is new, and gets no Research', async () => {
       const dataDirectory = createDataDirectory();
       const notificationChannel = createFakeNotificationChannel();
       const option = {
         dataDirectory,
-        aiSession: createFakeAiSession(RESEARCH),
+        aiSession: createFakeAiSession(),
         notificationChannelList: notificationChannel.notificationChannelList,
       };
       const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout([VERSAILLES_REFERENCE]) } });
       const earlierActions = await createActions({ ...option, fetch: earlierFetch.fetch });
       await notificationChannel.saveFor(earlierActions);
-      await earlierActions.saveWatch({ candidateId: 'lea', ...VERSAILLES_WATCH });
+      await earlierActions.saveWatch({ candidateId: 'lea', ...SECOND_WATCH });
       await earlierActions.detect();
       const recordedFetch = createRecordedFetch();
       const actions = await createActions({ ...option, fetch: recordedFetch.fetch });
 
       await actions.detect();
-      recordedFetch.requestedUrlList.length = 0;
-      await actions.detect();
 
-      // Once read by each Watch, no Posting is read again: each Watch reads only its feed
-      expect(recordedFetch.requestedUrlList).toEqual([DSJ_FEED_URL, DSJ_FEED_URL]);
+      // Read by the first Watch only, the second one reading only its feed
+      expect(recordedFetch.requestedUrlList.filter((url) => url.includes('/offre-de-emploi/'))).toEqual([
+        expect.stringContaining(VERSAILLES_REFERENCE.slice('AAAA-'.length)),
+      ]);
       const postingList = await actions.listPostings({ candidateId: 'lea' });
-      expect(postingList.filter(({ reference }) => reference === VERSAILLES_REFERENCE)).toMatchObject([
-        { isInZone: true },
-      ]);
+      expect(postingList.filter(({ reference }) => reference === VERSAILLES_REFERENCE)).toHaveLength(1);
       expect(notificationChannel.sentList.map(({ title }) => title)).toEqual(['1 nouvelle Offre']);
-      const jobList = await actions.runQueuedJobs();
-      expect(jobList.map((job) => `${job.module} ${'posting' in job ? job.posting.reference : job.upload}`)).toEqual([
-        `research ${VERSAILLES_REFERENCE}`,
-      ]);
+      expect(await actions.runQueuedJobs()).toEqual([]);
     });
 
-    it('is placed in the Zone without anything started, when it was online at the first launch', async () => {
+    it('is not read again by a new Watch, whose first launch starts nothing', async () => {
       const notificationChannel = createFakeNotificationChannel();
       const actions = await createActions({
         dataDirectory: createDataDirectory(),
@@ -171,12 +183,12 @@ describe('Watches', () => {
       });
       await notificationChannel.saveFor(actions);
       await actions.detect();
+      const postingList = await actions.listPostings({ candidateId: 'lea' });
 
-      await actions.saveWatch({ candidateId: 'lea', ...VERSAILLES_WATCH });
+      await actions.saveWatch({ candidateId: 'lea', ...SECOND_WATCH });
       await actions.detect();
 
-      const postingList = await actions.listPostings({ candidateId: 'lea' });
-      expect(postingList.find(({ reference }) => reference === VERSAILLES_REFERENCE)).toMatchObject({ isInZone: true });
+      expect(await actions.listPostings({ candidateId: 'lea' })).toEqual(postingList);
       expect(notificationChannel.sentList).toEqual([]);
       expect(await actions.runQueuedJobs()).toEqual([]);
     });

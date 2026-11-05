@@ -20,13 +20,17 @@ Control of the front's top bar that sets the Locale: that of the chosen Candidat
 _Avoid_: language button, language picker
 
 **Profile**:
-What the tool knows about a Candidate in order to write on their behalf: their CV, the Facts they validated, their past letters and their Annexes.
+What the tool knows about a Candidate in order to write on their behalf: their CV, the Facts they validated, their Past Letters and their Annexes.
 _Avoid_: file, record, CV
 _Formerly_: Profil
 
 **Annex**:
-Document of the Profile beyond the CV, the Facts and the past letters, such as a recommendation letter, a transcript or a thesis.
+Document of the Profile beyond the CV, the Facts and the Past Letters, such as a recommendation letter, a transcript or a thesis; it comes from an Upload or is written by the Candidate, and a Custom Artifact can be made into one to reuse it for other Postings.
 _Avoid_: attachment, appendix, supporting document
+
+**Past Letter**:
+Cover letter the Candidate already sent, whether they put it in their Profile or it is the Letter of a Posting they Applied to with the tool; the two kinds form one set, dated by the day each was sent or added to the Profile.
+_Avoid_: old letter, previous letter, letter sample
 
 **Facts**:
 Part of the Profile that lists, by section, what the Candidate validated about themselves: identity, contact details, degrees, experience, skills, motivations, mobility.
@@ -39,7 +43,7 @@ _Avoid_: heading, category, field
 _Formerly_: Rubrique
 
 **Upload**:
-Original document, such as a CV, a past letter or an Annex as a PDF, that the Candidate drops into their Profile; it is kept as is, and the Profile holds its Markdown conversion.
+Original document, such as a CV, a Past Letter or an Annex as a PDF, that the Candidate drops into their Profile; it is kept as is, and the Profile holds its Markdown conversion.
 _Avoid_: attachment, file, source file
 _Formerly_: Pièce
 
@@ -49,12 +53,12 @@ _Avoid_: Home Assistant connection, integration, provider
 _Formerly_: Canal de notification
 
 **Parameter**:
-Value a Notification Channel or a Source needs to work, such as the address and token of a Home Assistant, or the searched title and the Zone of a Watch; each declares its own, required or optional, and a secret Parameter is never read back.
+Value a Notification Channel or a Source needs to work, such as the address and token of a Home Assistant, or the searched title of a Watch; each declares its own, required or optional, and a secret Parameter is never read back.
 _Avoid_: setting, option, config
 _Formerly_: Paramètre
 
 **Watch**:
-Standing search of a Candidate on a Source, defined by the Parameters that Source asks for, its Zone included.
+Standing search of a Candidate on a Source, defined by the Parameters that Source asks for.
 _Avoid_: alert, subscription, saved search
 _Formerly_: Veille
 
@@ -103,18 +107,13 @@ _Formerly_: Titre écarté de peu
 The one notification a Candidate receives after a Detection that found Postings to notify: when it was started, which Watches it covered, what it found and its Near Misses.
 _Avoid_: digest, report, recap
 
-**Zone**:
-Territory of a Watch where a detected Posting automatically starts its Research; each Source expresses it its own way, and a Posting outside the Zone is kept but not processed.
-_Avoid_: perimeter, area
-_Formerly_: Zone
-
 **City**:
 Municipality of a Posting's place of work, which puts it on the map.
 _Avoid_: town, locality, place
 _Formerly_: Ville
 
 **Region**:
-Administrative region of a Posting's City, by which the Candidate filters their Postings; it has nothing to do with the Zone.
+Administrative region of a Posting's City, by which the Candidate filters their Postings.
 _Avoid_: zone, territory
 _Formerly_: Région
 
@@ -122,6 +121,10 @@ _Formerly_: Région
 Last day to apply to a Posting; when the Posting gives none, its publication date plus the Default Deadline Period, an imported Job Description being published on the day of its import.
 _Avoid_: end date, due date, closing date
 _Formerly_: Date limite
+
+**Start Date**:
+Day the Position of a Posting is to be filled, as its Job Description gives it; a Posting whose Job Description says nothing has none.
+_Avoid_: hiring date, availability, start
 
 **Default Deadline Period**:
 Number of months, shared by all Candidates, that gives its Deadline to a Posting published without one.
@@ -131,9 +134,13 @@ _Formerly_: Délai par défaut
 ## Status of a Posting
 
 **Status**:
-Where a Posting stands in its Application: To Apply, Applied, Invited, Interviewed, Hired or Rejected.
+Where a Posting stands in its Application: New, To Apply, Applied, Invited, Interviewed, Hired or Rejected.
 _Avoid_: state, stage
 _Formerly_: Statut
+
+**New**:
+Status of a detected Posting the Candidate has not sorted yet: keeping it puts it To Apply and starts its Research, dismissing it archives it; an imported Job Description skips it and starts To Apply.
+_Avoid_: unread, inbox, to review, detected
 
 **Step**:
 Status as it stands now: Invited or Interviewed for an Applied Application, from its Interviews, otherwise the Status the Candidate set.
@@ -141,8 +148,8 @@ _Avoid_: stage, computed status
 _Formerly_: Étape
 
 **To Apply**:
-Status of a Posting the Candidate has not applied to yet.
-_Avoid_: new, pending, to process
+Status of a Posting the Candidate decided to pursue and has not applied to yet.
+_Avoid_: pending, to process
 _Formerly_: À traiter
 
 **Applied**:
@@ -212,19 +219,32 @@ _Formerly_: Notes
 ## Artifacts
 
 **Artifact**:
-Document produced for a Posting, or for one of its Interviews, and attached to it: Research, Draft, Letter, Portrait, Interview Brief, Visualization.
+Document produced by the AI or brought by the Candidate for a Posting, or for one of its Interviews, and attached to it: Research, Letter, Portrait, Interview Brief, Custom Artifact.
 _Avoid_: deliverable, output, file
 _Formerly_: Artefact
 
 **Version**:
-One copy of an Artifact, produced each time its generation is run again; a human correction changes the Version without creating a new one.
+One copy of an Artifact, produced each time its generation is run again or the Candidate brings their own; a human correction changes the Version without creating a new one.
 _Avoid_: revision, iteration
 _Formerly_: Version
 
 **Chosen Version**:
-The Version of an Artifact the Candidate picked; the following Artifacts build on it and, for the Letter, it is the one that is sent.
+The Version of an Artifact the Candidate validated last; it stays chosen while a newer Version is still a Draft, the following Artifacts build on it and, for the Letter, it is the one that is sent.
 _Avoid_: current version, active version, selected version
 _Formerly_: Version retenue
+
+**Draft**:
+Version the Candidate has not validated yet, whether the AI produced it or the Candidate brought it; no other Artifact reads it.
+_Avoid_: first version, rough copy, pending version
+_Formerly_: Brouillon
+
+**Validated**:
+Said of a Version the Candidate read and approved, which makes it the Chosen Version; correcting it afterwards keeps it Validated.
+_Avoid_: approved, accepted, final
+
+**Original**:
+Text of a Version as the AI produced it, kept so the Candidate can compare their corrections with it; a Version the Candidate brought has none.
+_Avoid_: draft, AI version, initial text
 
 **Instructions**:
 Directions that tell the AI how to produce a type of Artifact; each type has default Instructions in each Locale, which a Candidate reads in theirs and can replace with their own. Whatever their language, the Artifact is written in the language of the Job Description.
@@ -232,11 +252,11 @@ _Avoid_: prompt, template, guidelines
 _Formerly_: Consignes
 
 **Prompt**:
-Everything an AI session producing an Artifact receives: its Fixed Part, then the Instructions in effect.
+Everything an AI session producing an Artifact receives: its Fixed Part, the Inputs of the run, then the Instructions in effect.
 _Avoid_: instructions, template
 
 **Fixed Part**:
-The part of a Prompt that comes with the type of Artifact and that no Instructions can lift: its objective, the files it reads and writes, its rules.
+The part of a Prompt that comes with the type of Artifact and that no Instructions can lift: its objective, the files it writes, its rules.
 _Avoid_: system prompt, base prompt
 
 **Research**:
@@ -244,13 +264,8 @@ Artifact that establishes, with sources, what the recruiters expect for a Postin
 _Avoid_: analysis, study, report
 _Formerly_: Recherche
 
-**Draft**:
-Cover letter written by the AI for a Posting; it is never changed afterwards.
-_Avoid_: first version, rough copy
-_Formerly_: Brouillon
-
 **Letter**:
-Cover letter corrected by the human from the Draft; it is the one that is sent.
+Cover letter of a Posting, written by the AI or brought by the Candidate; its Chosen Version is the one that is sent.
 _Avoid_: final letter, cover letter, CL
 _Formerly_: Lettre
 
@@ -264,7 +279,18 @@ Artifact that prepares a given Interview by crossing the Posting and its Intervi
 _Avoid_: review sheet, cheat sheet, study notes
 _Formerly_: Fiche d'entretien
 
-**Visualization**:
-HTML rendering of an Interview Brief, with the same content.
-_Avoid_: rendering, HTML version
-_Formerly_: Visualisation
+**Revision**:
+The Candidate's study of the Chosen Version of an Interview Brief before its Interview, section by section; it keeps, for each section, a note of theirs and whether they marked it Mastered. When a newer Version becomes Chosen, the Revision follows it in each section whose title it still has, and keeps the others apart as vanished sections.
+_Avoid_: review, study session, rehearsal
+
+**Mastered**:
+Said of a section of an Interview Brief the Candidate marked as known during their Revision.
+_Avoid_: done, read, learned
+
+**Custom Artifact**:
+Artifact the Candidate writes or drops for one Posting, or one of its Interviews, so a run can read it: a text of their own or a file; it is Validated from the start and has a single Version.
+_Avoid_: note, attachment, extra input
+
+**Input**:
+What a run producing an Artifact reads: the Job Description, the Chosen Version of another Artifact of the Posting, Custom Artifacts included, or a document of the Profile; each type of Artifact checks some by default and requires some, which cannot be unchecked, the Candidate adds the others, and each Version keeps the Inputs it was produced from. An Artifact that reads the Profile requires the CV and the Facts, checks the five most recent Past Letters, and leaves the older ones and the Annexes to add.
+_Avoid_: source, context, data

@@ -34,7 +34,13 @@ interface ICommand {
   run: (
     actions: Actions,
     argumentList: string[],
-    option: { isWaiting: boolean; isAutomation: boolean; interview: IInterviewOption; origin: string | undefined },
+    option: {
+      isWaiting: boolean;
+      isAutomation: boolean;
+      isWithoutLetter: boolean;
+      interview: IInterviewOption;
+      origin: string | undefined;
+    },
   ) => Promise<void>;
 }
 
@@ -66,7 +72,7 @@ function formatAddress({ email, source }: Recipients['ccList'][number], t: Cli):
 }
 
 function formatPosting(posting: Posting, t: Cli): string {
-  const { repostOf, repostList, deadline } = posting;
+  const { repostOf, repostList, deadline, startDate } = posting;
   // The Status as computed, then Expired, Archived and Unpublished beside it, which they leave as it is
   const statusLabelList = [
     t(`statusLabelByStatus.${posting.step}`, { ns: 'common' }),
@@ -79,8 +85,9 @@ function formatPosting(posting: Posting, t: Cli): string {
     posting.title,
     posting.workplace ?? '—',
     deadline === null ? '—' : t('deadline', { deadline }),
+    // Only on the Postings whose Job Description gives one
+    ...(startDate === null ? [] : [t('startDate', { startDate })]),
     statusLabelList.join(', '),
-    posting.isInZone ? t('inZone') : t('outOfZone'),
     // The link of a Repost, both ways, only on the Postings that have one
     ...(repostOf === null ? [] : [t('repostOf', { reference: repostOf.reference })]),
     ...repostList.map(({ reference }) => t('repostedAs', { reference })),
@@ -271,11 +278,11 @@ async function printInterviews(actions: Actions, reference: string, t: Cli): Pro
 function changeStatusCommand(status: Posting['status'], name: string, describe: (t: Cli) => string): ICommand {
   return {
     describe: (t) => t('statusCommandDescription', { description: describe(t), name }),
-    run: async (actions, [reference]) => {
+    run: async (actions, [reference], { isWithoutLetter }) => {
       if (reference === undefined) {
         throw codedError('status_usage', { name });
       }
-      await actions.changeStatus({ reference, status });
+      await actions.changeStatus({ reference, status, isWithoutLetter });
       const t = await cliOfPosting(actions, reference);
       const statusLabel = t(`statusLabelByStatus.${status}`, { ns: 'common' });
       process.stdout.write(t('statusChanged', { reference, statusLabel }));
@@ -438,10 +445,11 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       }
       const versionList = await actions.listVersions({ reference, artifact, interview });
       const t = await cliOfPosting(actions, reference);
-      for (const { number, state, isChosen, hasCandidateInstructions, createdAt } of versionList) {
+      for (const { number, state, validation, isChosen, hasCandidateInstructions, createdAt } of versionList) {
         const columnList = [
           `v${String(number)}`,
           t(`versionStateLabelByState.${state}`),
+          t(`validationLabelByValidation.${validation}`),
           isChosen ? t('chosenVersion') : '—',
           hasCandidateInstructions ? t('candidateInstructions') : t('defaultInstructions'),
           t('createdAt', { createdAt }),
@@ -459,15 +467,15 @@ const COMMAND_BY_NAME: Record<string, ICommand> = {
       }
     },
   },
-  choose: {
-    describe: (t) => t('chooseDescription'),
+  validate: {
+    describe: (t) => t('validateDescription'),
     run: async (actions, [reference, artifact, version, interview]) => {
       if (reference === undefined || artifact === undefined || version === undefined) {
-        throw codedError('choose_usage');
+        throw codedError('validate_usage');
       }
-      await actions.chooseVersion({ reference, artifact, number: version.replace(/^v/, ''), interview });
+      await actions.validateVersion({ reference, artifact, number: version.replace(/^v/, ''), interview });
       const t = await cliOfPosting(actions, reference);
-      process.stdout.write(t('versionChosen', { artifact, version, reference }));
+      process.stdout.write(t('versionValidated', { artifact, version, reference }));
     },
   },
   apply: changeStatusCommand('applied', 'apply', (t) => t('applyDescription')),
@@ -621,6 +629,8 @@ async function run(): Promise<void> {
       help: { type: 'boolean', short: 'h' },
       wait: { type: 'boolean' },
       automation: { type: 'boolean' },
+      // jf apply: no Letter was sent, not even an older Chosen Version
+      'without-letter': { type: 'boolean' },
       // The fields of an Interview, for jf interviews
       start: { type: 'string' },
       duration: { type: 'string' },
@@ -649,6 +659,7 @@ async function run(): Promise<void> {
   await command.run(actions, argumentList, {
     isWaiting: values.wait === true,
     isAutomation: values.automation === true,
+    isWithoutLetter: values['without-letter'] === true,
     origin: values.origin,
     // Only those given: an edit keeps the others
     interview: Object.fromEntries(

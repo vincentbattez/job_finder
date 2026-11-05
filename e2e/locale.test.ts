@@ -1,109 +1,83 @@
 import { expect, test, type IFront } from './candidate.ts';
-import { unfoldChosenVersion } from './version.ts';
 
 // Emma reads the interface in English (test/seed-front.ts): her one Posting, imported, has no
 // Deadline
-test('shows the Posting list in English to a Candidate with the en locale', async ({ page, asCandidate, openPage }) => {
-  await asCandidate('emma');
-  await openPage('/postings');
-
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Postings');
-  await expect(page).toHaveTitle('Postings · Job Finder');
-  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await expect(page.getByRole('columnheader')).toHaveText(['Posting', 'Status', 'Published', 'Deadline']);
-  const row = page.getByRole('row', { name: /court-clerk-lille\.md/ });
-  await expect(row.getByRole('cell')).toHaveText([
-    /^court-clerk-lille\.md/,
-    'To Apply',
-    // Imported on the day of the seed, as en-US writes it, as Oct 30, 2026
-    /^[A-Z][a-z]{2} \d{1,2}, \d{4}$/,
-    'Not specified',
-  ]);
-});
-
-// Emma's pages are read, never changed: she is shared with the test above
+// Emma's pages are read, never changed: she is shared with every test of this file
 // Her home, once asCandidate chose her
 async function openHomeOfEmma({ page, openPage }: IFront) {
   await openPage('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hello Emma');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('New');
 }
 
-test('shows the menu and the Profile in English to a Candidate with the en locale', async ({
+test('shows the Sidebar, the Profile and the Watches in English to a Candidate with the en locale', async ({
   page,
   asCandidate,
   openPage,
 }) => {
   await asCandidate('emma');
   await openHomeOfEmma({ page, openPage });
-  await expect(page.getByRole('combobox', { name: 'Candidate' })).toHaveValue('emma');
-  await expect(page.getByRole('button', { name: 'Choose' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Switch Candidate' })).toContainText('Emma');
   await expect(page.getByRole('navigation', { name: 'Pages' }).getByRole('link')).toHaveText([
-    'Home',
+    'New',
+    'To Apply',
     'Applications',
-    'Postings',
     'Profile',
-    'Instructions',
-    'Candidates',
+    'Watches',
+    'Settings',
   ]);
 
   await page.getByRole('link', { name: 'Profile', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Profile');
   await expect(page).toHaveTitle('Profile · Job Finder');
   await expect(page.getByRole('heading', { level: 2 })).toHaveText([
+    'CV',
     'Facts',
+    'Past Letters',
+    'Annexes',
     'Uploads',
     'New file',
-    'Watches',
-    'Notifications',
   ]);
   await expect(page.getByText('No Upload yet.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save the Facts' })).toBeVisible();
   await expect(
-    page.getByRole('region', { name: 'New file' }).getByRole('textbox', { name: 'File name' }),
+    page.getByRole('region', { name: 'New file' }).getByRole('button', { name: 'Create a file' }),
   ).toBeVisible();
-  const newWatch = page.getByRole('group', { name: 'New Watch' });
+
+  await page.getByRole('link', { name: 'Watches', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Watches');
+  await expect(page).toHaveTitle('Watches · Job Finder');
+  const newWatch = page.getByRole('region', { name: 'New Watch' });
   await expect(newWatch.getByRole('textbox', { name: 'Searched title' })).toBeVisible();
-  await expect(newWatch.getByRole('textbox', { name: 'Courts of appeal of the Zone, one per line' })).toBeVisible();
   await expect(newWatch.getByRole('button', { name: 'Create the Watch' })).toBeVisible();
-  const notifications = page.getByRole('region', { name: 'Notifications' });
-  await expect(notifications.getByRole('combobox', { name: 'Notification Channel' })).toHaveValue('home-assistant');
-  await expect(notifications.getByRole('textbox', { name: 'Home Assistant address' })).toBeVisible();
-  await expect(notifications.getByRole('button', { name: 'Send a test notification' })).toBeVisible();
 });
 
-test('shows the Instructions and the Candidates in English to a Candidate with the en locale', async ({
+test('shows the Instructions and the Settings in English to a Candidate with the en locale', async ({
   page,
   asCandidate,
   openPage,
 }) => {
   await asCandidate('emma');
-  await openHomeOfEmma({ page, openPage });
-
-  await page.getByRole('link', { name: 'Instructions', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Instructions');
-  await expect(page).toHaveTitle('Instructions · Job Finder');
-  const letter = page.getByRole('region', { name: 'Letter' });
-  await expect(letter.getByText('Default Instructions', { exact: true })).toBeVisible();
-  // The default Instructions of her locale; the Letter itself is written in the Job Description's
-  await expect(letter.getByRole('textbox')).toHaveValue(/^Write a one-page cover letter/);
-  await expect(letter.getByRole('button', { name: 'Save my Instructions' })).toBeVisible();
-
-  await page.getByRole('link', { name: 'Candidates', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Candidates');
-  await expect(page).toHaveTitle('Candidates · Job Finder');
+  await openPage('/');
+  await page.getByRole('link', { name: 'Settings', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Settings');
+  await expect(page).toHaveTitle('Settings · Job Finder');
   await expect(page.getByRole('heading', { level: 2 })).toHaveText([
-    'Rename a Candidate',
-    'New Candidate',
+    'Notifications',
+    'Instructions',
+    'Candidates',
     'Default Deadline Period',
   ]);
-});
-
-test('shows the design page in English to a Candidate with the en locale', async ({ page, asCandidate, openPage }) => {
-  await asCandidate('emma');
-  await openHomeOfEmma({ page, openPage });
-  await openPage('/design');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Design system');
-  await expect(page).toHaveTitle('Job Finder design system');
+  // The default Instructions of her locale; the Letter itself is written in the Job Description's
+  const instructions = page.getByRole('region', { name: 'Instructions', exact: true });
+  const letter = instructions.getByRole('region', { name: 'Letter' });
+  await expect(letter.getByText('Default Instructions', { exact: true })).toBeVisible();
+  await expect(letter.getByRole('textbox', { name: 'Instructions · Letter' })).toHaveValue(
+    /^Write a one-page cover letter/,
+  );
+  const notifications = page.getByRole('region', { name: 'Notifications', exact: true });
+  await expect(notifications.getByRole('combobox', { name: 'Notification Channel' })).toHaveValue('home-assistant');
+  await expect(notifications.getByRole('textbox', { name: 'Home Assistant address' })).toBeVisible();
+  await expect(notifications.getByRole('button', { name: 'Send a test notification' })).toBeVisible();
 });
 
 test('shows the tools of the Posting list in English to a Candidate with the en locale', async ({
@@ -112,92 +86,96 @@ test('shows the tools of the Posting list in English to a Candidate with the en 
   openPage,
 }) => {
   await asCandidate('emma');
-  await openPage('/postings');
+  await openPage('/');
 
-  // A Detection another test runs hides the button behind its progress, in English too (ADR-0014)
-  await expect(
-    page
-      .getByRole('button', { name: 'Run a Detection' })
-      .or(page.getByRole('region', { name: 'Detection in progress' })),
-  ).toBeVisible();
-  await expect(page.getByText('Import a Job Description')).toBeVisible();
-  const filters = page.getByRole('search', { name: 'Filters' });
-  await expect(filters.getByRole('combobox', { name: 'City' })).toBeVisible();
-  await expect(filters.getByRole('combobox', { name: 'Region' })).toBeVisible();
-  await expect(filters.getByRole('checkbox', { name: 'Show the Archived' })).toBeVisible();
-  await expect(filters.getByRole('button', { name: 'Filter' })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Map of the Postings' })).toContainText(
-    '1 Posting without coordinates is not on the map.',
-  );
+  // A Detection another test runs changes the button to its progress, in English too (ADR-0014)
+  await expect(page.getByRole('button', { name: /^(?:Run a Detection|Detection in progress…)$/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Import' })).toBeVisible();
+});
+
+test('shows To Apply over the map in English to a Candidate with the en locale', async ({
+  page,
+  asCandidate,
+  openPage,
+}) => {
+  await asCandidate('emma');
+  await openPage('/to-apply');
+
+  await expect(page).toHaveTitle('To Apply · Job Finder');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  const panel = page.getByRole('complementary', { name: 'To Apply' });
+  // Imported without a Deadline, and without a place the map could show
+  await expect(panel.getByRole('heading', { level: 2 })).toHaveText([/^No Deadline/]);
+  await expect(panel.getByRole('listitem')).toHaveText([/^Unknown place/]);
+  await expect(panel.getByLabel('Research: none yet')).toBeVisible();
+  await expect(page.getByText('1 Posting without a known place')).toBeVisible();
+  const filters = panel.getByRole('search', { name: 'Filters' });
+  await expect(filters.getByRole('combobox', { name: 'City: All cities' })).toBeVisible();
+  await expect(filters.getByRole('combobox', { name: 'Region' })).toHaveValue('');
+  await expect(filters.getByRole('button', { name: /^Archived/ })).toHaveAttribute('aria-pressed', 'false');
 });
 
 // Oliver reads the interface in English too, and owns the one Posting this test changes
 // (test/seed-front.ts): imported, its fields unread, with a Research. Archived then unarchived
-// back to To Apply, it ends as it started; Applied, which freezes its Letter, is only asked, then cancelled.
+// back to To Apply, it ends as it started.
 test('takes a Candidate with the en locale through a Posting and its Status in English', async ({
   page,
   asCandidate,
   openPage,
 }) => {
   await asCandidate('oliver');
-  await openPage('/postings');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Oliver’s Postings');
-  await page.getByRole('checkbox', { name: 'Show the Archived' }).check();
-  await page.getByRole('button', { name: 'Filter' }).click();
-  await page.getByRole('link', { name: 'registry-officer-douai.md' }).click();
-  const statusBadge = page.locator('.posting-detail__title .badge');
+  await openPage('/to-apply');
+  const link = page.getByRole('link', { name: 'registry-officer-douai.md' });
+  // Left Archived by a run stopped halfway: under the Archived filter
+  if (!(await link.isVisible())) {
+    await page.getByRole('button', { name: /^Archived/ }).click();
+  }
+  await link.click();
+  const stepBadge = page.locator('main > header [data-step]');
   const unarchive = page.getByRole('button', { name: 'Unarchive' });
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('registry-officer-douai.md');
   // Left Archived by a run stopped halfway
   if (await unarchive.isVisible()) {
     await unarchive.click();
   }
-  await expect(statusBadge).toHaveText('To Apply');
+  await expect(stepBadge).toHaveText('To Apply');
 
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('registry-officer-douai.md');
   await expect(page).toHaveTitle('registry-officer-douai.md · Job Finder');
-  await expect(page.getByRole('term')).toHaveText([
-    'Reference',
-    'Published',
-    'Deadline',
-    'Application email',
-    'Contact 1',
-    'Contact 2',
+  await expect(page.getByRole('tab')).toHaveText([
+    'Posting',
+    'Research (Draft)',
+    'Letter (None)',
+    'Interviews',
+    'Notes',
   ]);
+  await expect(page.getByRole('region', { name: 'Key facts' }).getByRole('term')).toHaveText([
+    'Deadline',
+    'Start date',
+    'Published',
+    'Reference',
+  ]);
+  await expect(page.getByRole('region', { name: 'Contacts' })).toContainText('No contact in the Posting.');
   const extraction = page.getByRole('form', { name: 'Fields read by Claude' });
   await expect(extraction.getByRole('status')).toHaveText('Failed');
   await expect(extraction.getByRole('button', { name: 'Run the extraction again' })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Artifacts' }).getByRole('listitem')).toHaveText([
-    'ResearchReady',
-    'LetterAbsent',
-  ]);
-  await expect(page.getByRole('region', { name: 'Contacts' }).getByRole('definition')).toHaveText([
-    'Not specified',
-    'Not specified',
-    'Not specified',
-  ]);
-  await expect(page.getByRole('region', { name: 'Recommended recipients' })).toContainText(
-    'The Letter recommends them, once written.',
-  );
-  await expect(page.getByText('Read the Job Description')).toBeVisible();
+  await page.getByRole('tab', { name: /^Research/ }).click();
   const research = page.getByRole('region', { name: 'Research', exact: true });
-  await expect(research.getByRole('button', { name: 'Run the Research again' })).toBeVisible();
-  await expect(research.getByText('Default Instructions')).toBeVisible();
-  await expect(research.getByText('Chosen', { exact: true })).toBeVisible();
-  await unfoldChosenVersion(research);
-  await expect(research.getByText('Instructions of this Version')).toBeVisible();
-  await expect(research.getByText('Preview')).toBeVisible();
-  await expect(research.getByRole('button', { name: 'Save' })).toBeVisible();
-  await expect(research.getByRole('button', { name: 'Copy the Markdown' })).toBeVisible();
+  await expect(research.getByRole('button', { name: 'Regenerate' })).toBeVisible();
+  await expect(research.getByRole('combobox', { name: 'Version' })).toHaveText('Version 1 · Draft');
+  await expect(research.getByText('Version 1 is a Draft: read it, then validate it')).toBeVisible();
+  await expect(research.getByRole('button', { name: 'Validate Version 1' })).toBeVisible();
+  await expect(research.getByText('Default Instructions · Instructions of this Version')).toBeVisible();
+  await page.getByRole('tab', { name: /^Letter/ }).click();
   const letter = page.getByRole('region', { name: 'Letter', exact: true });
-  await expect(letter.getByRole('button', { name: 'Run the Letter' })).toBeVisible();
-  await expect(letter.getByText('No Version yet.')).toBeVisible();
+  await expect(letter.getByRole('button', { name: 'Generate' })).toBeVisible();
+  await expect(letter.getByText('No Letter yet')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mark Applied' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Mark as Applied' }).click();
-  await expect(page.getByText('Once Applied, the Chosen Letter no longer changes: it is the one sent.')).toBeVisible();
-  await page.getByRole('button', { name: 'Cancel' }).click();
-  await page.getByRole('button', { name: 'Archive' }).click();
-  await expect(statusBadge).toHaveText(['To Apply', 'Archived']);
-  await expect(page.getByRole('button', { name: 'Mark as Applied' })).toBeVisible();
+  await page.getByRole('button', { name: 'More actions' }).click();
+  await page.getByRole('menuitem', { name: 'Archive' }).click();
+
+  await expect(stepBadge).toHaveText('To Apply · archived');
+  await expect(page.getByText('Posting archived')).toBeVisible();
   await unarchive.click();
-  await expect(statusBadge).toHaveText(['To Apply']);
+  await expect(stepBadge).toHaveText('To Apply');
 });

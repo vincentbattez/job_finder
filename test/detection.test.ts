@@ -8,7 +8,6 @@ import { createActions, type Actions } from '#/actions/index.ts';
 import type { Detection, Posting } from '#/domain/index.ts';
 
 import { createDataDirectory } from './data-directory.ts';
-import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { LEA_WATCH_ID } from './lea.ts';
 import {
@@ -139,22 +138,6 @@ describe('detection on the responses recorded on 2026-10-29', () => {
     ).toEqual(ATTACHE_DE_JUSTICE_REFERENCE_LIST);
   });
 
-  it('places in the Zone the Postings of the courts of appeal of Douai and Amiens, whatever department they show', async () => {
-    const postingList = await actions.listPostings({ candidateId: 'lea' });
-
-    expect(postingList.filter((posting) => posting.isInZone).map((posting) => posting.reference)).toEqual([
-      '2026-2445609',
-      '2026-2445600',
-      '2026-2445183',
-      '2026-2360445',
-      '2026-2360411',
-      '2026-2350473',
-      '2026-2338409',
-      '2026-2231960',
-      '2026-2199164',
-    ]);
-  });
-
   it('records the fields of the detail page as published', async () => {
     expect(await findPosting('2026-2445600')).toMatchObject({
       candidateId: 'lea',
@@ -163,13 +146,14 @@ describe('detection on the responses recorded on 2026-10-29', () => {
       url: 'https://choisirleservicepublic.gouv.fr/offre-emploi/2026-2445600/?tracking=1&idOrigine=502',
       publishedAt: new Date('2026-10-20T09:28:40Z'),
       deadline: new Date('2026-11-20'),
+      startDate: new Date('2026-12-30'),
       employer: "Cour d'Appel de Douai",
       workplace: 'Tribunal Judiciaire de Béthune',
       applicationEmail: 'p.tj-bethune@justice.fr',
       contact1: 'Madame Odile SIMART, présidente du Tribunal Judiciaire de Béthune',
       contact2: 'secrétariat en copie : sec.p.tj-bethune@justice.fr',
-      status: 'to_apply',
-      isInZone: true,
+      // Not sorted yet (ADR-0018)
+      status: 'new',
       isExpired: false,
     });
   });
@@ -185,12 +169,11 @@ describe('detection on the responses recorded on 2026-10-29', () => {
     expect(await findPosting('2026-2350473')).toMatchObject({ city: 'Boulogne-sur-Mer', region: 'Hauts-de-France' });
   });
 
-  it('locates every Posting, those out of the Zone too', async () => {
+  it('locates every Posting, overseas too', async () => {
     const postingList = await actions.listPostings({ candidateId: 'lea' });
 
     expect(postingList.filter(({ latitude, longitude }) => latitude === null || longitude === null)).toEqual([]);
     expect(await findPosting('2026-2430337')).toMatchObject({
-      isInZone: false,
       city: 'Nouméa',
       region: 'Nouvelle-Calédonie',
       latitude: -22.3363,
@@ -314,7 +297,7 @@ describe('a Posting its Source no longer publishes', () => {
     expect(unpublishedReferenceListOf(postingList)).toEqual([UNPUBLISHED_REFERENCE]);
     expect(postingList.find(({ reference }) => reference === UNPUBLISHED_REFERENCE)).toMatchObject({
       unpublishedAt: new Date('2026-10-29T12:00:00Z'),
-      status: 'to_apply',
+      status: 'new',
       archivedAt: null,
     });
     const republishedActions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
@@ -332,7 +315,7 @@ describe('a Posting its Source no longer publishes', () => {
       candidateId: 'lea',
       watchId: LEA_WATCH_ID,
       source: 'pep',
-      parameters: { title: 'astronaute', courtOfAppealList: ['Douai'] },
+      parameters: { title: 'astronaute' },
     });
 
     await actions.detect();
@@ -369,7 +352,7 @@ describe('a first launch cut off mid-way', () => {
   });
 });
 
-// The two Béthune Postings, both in the Zone, read in this order: the second one's page fails
+// The two Béthune Postings, read in this order: the second one's page fails
 const SAVED_BEFORE_CUT_REFERENCE = '2026-2445600';
 const CUT_REFERENCE = '2026-2445609';
 
@@ -436,25 +419,25 @@ describe('a city API Géo does not know', () => {
   });
 });
 
-// The two Béthune Postings, both in the Zone, published after a first Detection
+// The two Béthune Postings, published after a first Detection
 const BETHUNE_REFERENCE_LIST = ['2026-2445600', '2026-2445609'];
 
-const RESEARCH = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
+// A Béthune Posting and an overseas one
+const NEW_REFERENCE_LIST = ['2026-2445600', '2026-2430337'];
 
 describe('a detection while API Géo is down', () => {
   it.each([
     { failure: 'unreachable' as const, report: /\[api_geo_unreachable\] API Géo est injoignable/ },
     { failure: 500, report: /\[api_geo_status\] API Géo a répondu HTTP 500/ },
   ])(
-    'saves its Postings without coordinates, queues their Research, notifies, and reports the outage when API Géo is $failure',
+    'saves its Postings New without coordinates, notifies, and reports the outage when API Géo is $failure',
     async ({ failure, report }) => {
       const dataDirectory = createDataDirectory();
       const notificationChannel = createFakeNotificationChannel();
       const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout(BETHUNE_REFERENCE_LIST) } });
       const earlierActions = await createActions({ dataDirectory, fetch: earlierFetch.fetch });
       await earlierActions.detect();
-      const aiSession = createFakeAiSession(RESEARCH, RESEARCH);
-      const option = { dataDirectory, aiSession, notificationChannelList: notificationChannel.notificationChannelList };
+      const option = { dataDirectory, notificationChannelList: notificationChannel.notificationChannelList };
       const actions = await createActions({ ...option, fetch: fetchWithApiGeoDown(failure) });
       await notificationChannel.saveFor(actions);
 
@@ -476,10 +459,6 @@ describe('a detection while API Géo is down', () => {
       const { last } = await actions.followDetection({ candidateId: 'lea' });
       expect(last).toMatchObject({ error: null, watchList: [{ step: 'done' }] });
       expect(last?.watchList[0]?.locationFailure).toMatch(report);
-      const jobList = await actions.runQueuedJobs();
-      expect(jobList.map((job) => ('posting' in job ? `${job.module} ${job.posting.reference}` : job.module))).toEqual(
-        BETHUNE_REFERENCE_LIST.map((reference) => `research ${reference}`),
-      );
 
       const nextActions = await createActions({ ...option, fetch: createRecordedFetch().fetch });
       const nextDetectionList = await nextActions.detect();
@@ -508,6 +487,26 @@ describe('a detection while API Géo is down', () => {
     expect(detectionList[0]?.locationFailure).toMatch(
       /\[api_geo_format_changed\] API Géo a répondu dans un format inattendu/,
     );
+  });
+});
+
+// The Candidate sorts what the Detection found (ADR-0018): keeping a Posting starts its Research
+describe('a Detection after the first launch', () => {
+  // The Zone is gone: a Posting of the courts of appeal Léa once chose and one overseas alike
+  it('saves its Postings New and queues no Research, whatever their court of appeal', async () => {
+    const dataDirectory = createDataDirectory();
+    const earlierFetch = createRecordedFetch({ [DSJ_FEED_URL]: { body: feedWithout(NEW_REFERENCE_LIST) } });
+    const earlierActions = await createActions({ dataDirectory, fetch: earlierFetch.fetch });
+    await earlierActions.detect();
+    const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
+
+    await actions.detect();
+
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(
+      NEW_REFERENCE_LIST.map((reference) => postingList.find((posting) => posting.reference === reference)),
+    ).toMatchObject([{ status: 'new' }, { status: 'new' }]);
+    expect(await actions.runQueuedJobs()).toEqual([]);
   });
 });
 
@@ -553,4 +552,24 @@ it('reads pages holding invalid UTF-8 and private-use characters', async () => {
   expect(postingList.find(({ reference }) => reference === '2026-2445600')?.workplace).toBe(
     'Tribunal Judiciaire de B\u{FFFD}ethune',
   );
+});
+
+// The Start Date is the day under the heading of the vacancy, which an offer may leave out
+it('leaves a Posting without a Start Date when its page gives none', async () => {
+  const page = new TextDecoder()
+    .decode(readRecordedFile('posting-2026-2445600.html'))
+    // cspell:disable-next-line
+    .replace(/<h3>\s*Date de vacance de l'emploi\s*<\/h3><p id="fldorigin_beginningdate">[^<]*<\/p>/, '');
+  const recordedFetch = createRecordedFetch({
+    'https://place-ep-recrute.talent-soft.com/offre-de-emploi/emploi_2445600.aspx': { body: page },
+  });
+  const actions = await createActions({ dataDirectory: createDataDirectory(), fetch: recordedFetch.fetch });
+
+  await actions.detect();
+
+  const postingList = await actions.listPostings({ candidateId: 'lea' });
+  expect(postingList.find(({ reference }) => reference === '2026-2445600')).toMatchObject({
+    deadline: new Date('2026-11-20'),
+    startDate: null,
+  });
 });

@@ -10,14 +10,16 @@ import { addResources, textKeyOf } from '#/domain/catalogue/i18n.ts';
 import { defineNotificationChannel, type INotificationChannel } from '#/notification/index.ts';
 import { parameter } from '#/parameter/index.ts';
 
-import { createDataDirectory } from './data-directory.ts';
+import { applyTo } from './apply.ts';
+import { copyDetectedDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { startFakeHomeAssistant } from './fake-home-assistant.ts';
 import { startFakeSmtpServer } from './fake-smtp-server.ts';
 import { LEA_WATCH, LEA_WATCH_ID } from './lea.ts';
 import { createRecordedFetch } from './recorded-http.ts';
+import { runAndValidate } from './run-module.ts';
 
-// A Béthune Posting in Léa's Zone, from the responses recorded on 2026-10-29
+// A Béthune Posting, from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
 // A Version of each Artifact, as the fake Claude writes them, so that every action reading one has it
@@ -25,7 +27,7 @@ const RUN_BY_MODULE = {
   research: { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } },
   letter: {
     fileByName: {
-      'draft.md': 'Madame, Monsieur,\n',
+      'letter.md': 'Madame, Monsieur,\n',
       'recipients.json': JSON.stringify({
         to: null,
         ccList: [],
@@ -35,16 +37,18 @@ const RUN_BY_MODULE = {
     },
   },
   interview_brief: { fileByName: { 'interview-brief.md': '# Fiche d’entretien\n' } },
-  visualization: { fileByName: { 'visualization.html': '<!DOCTYPE html>\n<title>Fiche</title>\n' } },
 };
 
 // What an action needs beyond the shared input of the check, such as an Upload, named in .pdf
 const UPLOAD = { fileName: 'cv.pdf' };
+const PDF = {
+  ...UPLOAD,
+  content: new Uint8Array(readFileSync(path.join(import.meta.dirname, 'fixtures/profile/cv.pdf'))),
+};
 const INPUT_BY_ACTION: Record<string, object> = {
-  saveUpload: {
-    ...UPLOAD,
-    content: new Uint8Array(readFileSync(path.join(import.meta.dirname, 'fixtures/profile/cv.pdf'))),
-  },
+  saveUpload: PDF,
+  bringPdf: PDF,
+  addCustomArtifactPdf: { ...PDF, title: 'Appel en PDF' },
   convertUpload: UPLOAD,
   deleteUpload: UPLOAD,
   createCandidate: { id: 'camille', name: 'Camille' },
@@ -57,8 +61,13 @@ const INPUT_BY_ACTION: Record<string, object> = {
   // The Posting is Applied by changeStatus first, which runs before: an Interview needs an Application
   addInterview: { start: '2026-11-19T14:00', place: 'Béthune', interviewers: 'Mme Durand' },
   readIcalFile: { origin: 'https://10.8.0.1:5180' },
-  // The Visualization belongs to the Interview added above
-  readVisualization: { interview: 1 },
+  // Before deleteInterview: on the Interview the check's setup adds
+  writeRevisionNote: { title: 'Questions probables', note: 'Parler du stage.' },
+  markMastered: { title: 'Questions probables', isMastered: true },
+  addCustomArtifact: { title: 'Appel', text: 'Rappeler lundi.' },
+  addAnnex: { title: 'Relevé de notes', markdown: 'Licence.' },
+  // The Posting of the check was kept before it was Applied: another one, still New
+  keep: { reference: '2026-2445609' },
 };
 
 type ActionMap = Record<string, (rawInput: unknown) => Promise<unknown>>;
@@ -140,28 +149,26 @@ const FAKE_VAULT_PARAMETERS = {
   password: 'mot-de-passe-secret',
 };
 
-// Léa's Postings detected, a Version of each Artifact ready, and her Notification Channel saved with
-// the given Parameters. The input of the check gives back its non-secret Parameters only: a save
+// Léa's Postings of the run's first Detection, a Version of each Artifact ready, and her Notification
+// Channel saved with the given Parameters. The input of the check gives back its non-secret Parameters only: a save
 // without the secrets keeps them.
 async function saveChannel(module: INotificationChannel, parameters: Record<string, string>) {
   const actions = await createActions({
-    dataDirectory: createDataDirectory(),
+    dataDirectory: copyDetectedDataDirectory(),
     aiSession: createFakeAiSession(...Object.values(RUN_BY_MODULE)),
     fetch: createRecordedFetch().fetch,
     notificationChannelList: [module],
   });
   const { id, parameterList } = module.description;
   await actions.saveNotificationChannel({ candidateId: 'lea', channel: id, parameters });
-  await actions.detect();
   for (const artifactModule of Object.keys(RUN_BY_MODULE)) {
-    // The Interview Brief and the Visualization prepare an Interview, which only an Application has
-    const interview = artifactModule === 'interview_brief' || artifactModule === 'visualization' ? 1 : undefined;
+    // The Interview Brief prepares an Interview, which only an Application has
+    const interview = artifactModule === 'interview_brief' ? 1 : undefined;
     if (artifactModule === 'interview_brief') {
-      await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+      await applyTo(actions, REFERENCE);
       await actions.addInterview({ reference: REFERENCE, ...INPUT_BY_ACTION.addInterview });
     }
-    await actions.runModule({ module: artifactModule, reference: REFERENCE, interview });
-    await actions.runQueuedJobs();
+    await runAndValidate(actions, { module: artifactModule, reference: REFERENCE, interview });
   }
   const secretSet = new Set(parameterList.filter(({ isSecret }) => isSecret).map(({ name }) => name));
   const input = {
@@ -191,22 +198,17 @@ async function saveChannel(module: INotificationChannel, parameters: Record<stri
 
 describe('the write-only secret Parameters of a Notification Channel', () => {
   it('catches an action that returns any secret Parameter', async () => {
-    const { actions, input, secretByName } = await saveChannel(FAKE_VAULT, FAKE_VAULT_PARAMETERS);
-    const leakyActionMap = {
-      ...actions,
-      readFullChannel: () => Promise.resolve({ password: FAKE_VAULT_PARAMETERS.password }),
-    };
+    const leakyActionMap = { readFullChannel: () => Promise.resolve({ password: FAKE_VAULT_PARAMETERS.password }) };
 
-    expect(await findSecretLeaks(leakyActionMap, input, secretByName)).toEqual([
+    expect(await findSecretLeaks(leakyActionMap, {}, FAKE_VAULT_PARAMETERS)).toEqual([
       'readFullChannel returns the secret Parameter password',
     ]);
   });
 
   it('catches an action the check cannot call', async () => {
-    const { actions, input, secretByName } = await saveChannel(FAKE_VAULT, FAKE_VAULT_PARAMETERS);
-    const uncalledActionMap = { ...actions, renameChannel: () => Promise.reject(new Error('Nom manquant.')) };
+    const uncalledActionMap = { renameChannel: () => Promise.reject(new Error('Nom manquant.')) };
 
-    expect(await findSecretLeaks(uncalledActionMap, input, secretByName)).toEqual([
+    expect(await findSecretLeaks(uncalledActionMap, {}, FAKE_VAULT_PARAMETERS)).toEqual([
       'renameChannel fails on the input of the check (Nom manquant.): give it what it needs',
     ]);
   });

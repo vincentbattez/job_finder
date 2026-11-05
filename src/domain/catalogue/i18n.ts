@@ -2,33 +2,33 @@ import { createInstance, type FlatNamespace, type i18n, type ParseKeys, type Res
 
 import { LOCALE_LIST, type Locale } from '#/domain/locale.ts';
 
-import { APPLICATIONS_EN } from './en/applications.ts';
 import { CLI_EN } from './en/cli.ts';
 import { COMMON_EN } from './en/common.ts';
 import { DEFAULT_INSTRUCTIONS_EN } from './en/default-instructions.ts';
 import { ERROR_EN } from './en/error.ts';
-import { HOME_EN } from './en/home.ts';
+import { LISTS_EN } from './en/lists.ts';
+import { MDX_EN } from './en/mdx.ts';
 import { NOTIFICATION_EN } from './en/notification.ts';
 import { POSTING_LIST_EN } from './en/posting-list.ts';
 import { POSTING_EN } from './en/posting.ts';
 import { SETTINGS_EN } from './en/settings.ts';
-import { APPLICATIONS_FR } from './fr/applications.ts';
+import { SHELL_EN } from './en/shell.ts';
 import { CLI_FR } from './fr/cli.ts';
 import { COMMON_FR } from './fr/common.ts';
 import { DEFAULT_INSTRUCTIONS_FR } from './fr/default-instructions.ts';
 import { ERROR_FR } from './fr/error.ts';
-import { HOME_FR } from './fr/home.ts';
+import { LISTS_FR } from './fr/lists.ts';
+import { MDX_FR } from './fr/mdx.ts';
 import { NOTIFICATION_FR } from './fr/notification.ts';
 import { POSTING_LIST_FR } from './fr/posting-list.ts';
 import { POSTING_FR } from './fr/posting.ts';
 import { SETTINGS_FR } from './fr/settings.ts';
+import { SHELL_FR } from './fr/shell.ts';
 
 // Every word a Candidate reads, one i18next namespace per area (ADR-0012). The areas of en/ give their
 // shape to those of fr/: a key missing on either side fails the typecheck.
 const EN = {
   common: COMMON_EN,
-  home: HOME_EN,
-  applications: APPLICATIONS_EN,
   postingList: POSTING_LIST_EN,
   cli: CLI_EN,
   error: ERROR_EN,
@@ -36,6 +36,9 @@ const EN = {
   defaultInstructions: DEFAULT_INSTRUCTIONS_EN,
   posting: POSTING_EN,
   settings: SETTINGS_EN,
+  shell: SHELL_EN,
+  lists: LISTS_EN,
+  mdx: MDX_EN,
 };
 
 type Resources = typeof EN;
@@ -44,8 +47,6 @@ const RESOURCES_BY_LOCALE: Record<Locale, Resources> = {
   en: EN,
   fr: {
     common: COMMON_FR,
-    home: HOME_FR,
-    applications: APPLICATIONS_FR,
     postingList: POSTING_LIST_FR,
     cli: CLI_FR,
     error: ERROR_FR,
@@ -53,6 +54,9 @@ const RESOURCES_BY_LOCALE: Record<Locale, Resources> = {
     defaultInstructions: DEFAULT_INSTRUCTIONS_FR,
     posting: POSTING_FR,
     settings: SETTINGS_FR,
+    shell: SHELL_FR,
+    lists: LISTS_FR,
+    mdx: MDX_FR,
   },
 };
 

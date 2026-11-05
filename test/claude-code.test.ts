@@ -10,8 +10,9 @@ const FAKE_CLAUDE_DIRECTORY = path.join(import.meta.dirname, 'fixtures', 'claude
 
 const SESSION: Omit<IHeadlessSession, 'directory' | 'outputDirectory'> = {
   fixedPrompt: "Tu produis la Recherche d'une Offre.\nN'invente jamais un fait.",
-  instructions: 'Va droit au but.\n',
-  readDirectoryList: [],
+  message: 'Va droit au but.\n',
+  isReadingDirectory: false,
+  isSearchingWeb: true,
   locale: 'fr',
 };
 
@@ -72,37 +73,66 @@ describe('the headless launch of Claude Code', () => {
     expect(argumentList).toEqual(expect.arrayContaining(['-p', 'dontAsk', 'Edit(//donnees/research/v1/**)']));
     expect(argumentList).not.toContain('--add-dir');
     expect(argumentList[argumentList.indexOf('--append-system-prompt') + 1]).toBe(SESSION.fixedPrompt);
-    expect(readRecord(recordDirectory, 'message')).toBe(SESSION.instructions);
+    expect(readRecord(recordDirectory, 'message')).toBe(SESSION.message);
     expect(readRecord(recordDirectory, 'directory').trim()).toBe(realpathSync(directory));
     expect(readRecord(recordDirectory, 'environment')).not.toMatch(/^(?:ANTHROPIC_API_KEY|CLAUDECODE)=/m);
   });
 
-  // A long Annex of the Profile is read by a subagent, which reports only what serves the Artifact
-  it('lets the session delegate its reading to subagents', async () => {
+  // Its Inputs come inlined in its message (ADR-0021): it may only write its Version, and search the web
+  it("lets an Artifact's session write its Version and search the web, and read nothing else", async () => {
     const recordDirectory = stubClaude({ subtype: 'success', is_error: false, session_id: 'session-4' });
 
     await CLAUDE_CODE.runHeadless({ ...SESSION, directory: createDirectory(), outputDirectory: '/v1' });
 
     const argumentList = readRecord(recordDirectory, 'arguments').split('\0');
-    expect(argumentList[argumentList.indexOf('--tools') + 1]?.split(',')).toContain('Agent');
-    expect(argumentList.slice(argumentList.indexOf('--allowedTools'))).toContain('Agent');
+    expect(argumentList[argumentList.indexOf('--tools') + 1]).toBe('WebSearch,WebFetch,Write,Edit');
+    expect(
+      argumentList.slice(argumentList.indexOf('--allowedTools') + 1, argumentList.indexOf('--append-system-prompt')),
+    ).toEqual(['WebSearch', 'WebFetch', 'Edit(//v1/**)']);
   });
 
-  // The Letter reads the Profile and the Letters already sent, outside the folder of its Posting
-  it('lets the session read the folders it is given besides its own', async () => {
-    const recordDirectory = stubClaude({ subtype: 'success', is_error: false, session_id: 'session-3' });
-    const readDirectoryList = ['/donnees/profile', '/donnees/postings/2026-2445609/letter/v1'];
+  it('gives a session that searches nothing no web tool', async () => {
+    const recordDirectory = stubClaude({ subtype: 'success', is_error: false, session_id: 'session-5' });
 
     await CLAUDE_CODE.runHeadless({
       ...SESSION,
-      readDirectoryList,
+      isSearchingWeb: false,
       directory: createDirectory(),
       outputDirectory: '/v1',
     });
 
     const argumentList = readRecord(recordDirectory, 'arguments').split('\0');
-    const addedDirectoryList = argumentList.filter((argument, index) => argumentList[index - 1] === '--add-dir');
-    expect(addedDirectoryList).toEqual(readDirectoryList);
+    expect(argumentList[argumentList.indexOf('--tools') + 1]).toBe('Write,Edit');
+    expect(argumentList).not.toContain('WebSearch');
+  });
+
+  // A conversion or an extraction reads the file it works on, in its folder
+  it('lets a session that reads its folder read, search and list it', async () => {
+    const recordDirectory = stubClaude({ subtype: 'success', is_error: false, session_id: 'session-6' });
+
+    await CLAUDE_CODE.runHeadless({
+      ...SESSION,
+      isReadingDirectory: true,
+      isSearchingWeb: false,
+      directory: createDirectory(),
+      outputDirectory: '/v1',
+    });
+
+    const argumentList = readRecord(recordDirectory, 'arguments').split('\0');
+    expect(argumentList[argumentList.indexOf('--tools') + 1]).toBe('Read,Glob,Grep,Write,Edit');
+    expect(
+      argumentList.slice(argumentList.indexOf('--allowedTools') + 1, argumentList.indexOf('--append-system-prompt')),
+    ).toEqual(['Read', 'Glob', 'Grep', 'Edit(//v1/**)']);
+  });
+
+  // Its Inputs come inlined in its message: it reads no folder besides its own (ADR-0021)
+  it('gives the session no folder besides its own, and its fixed part as system prompt', async () => {
+    const recordDirectory = stubClaude({ subtype: 'success', is_error: false, session_id: 'session-3' });
+
+    await CLAUDE_CODE.runHeadless({ ...SESSION, directory: createDirectory(), outputDirectory: '/v1' });
+
+    const argumentList = readRecord(recordDirectory, 'arguments').split('\0');
+    expect(argumentList).not.toContain('--add-dir');
     expect(argumentList[argumentList.indexOf('--append-system-prompt') + 1]).toBe(SESSION.fixedPrompt);
   });
 

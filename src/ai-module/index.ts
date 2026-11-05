@@ -1,34 +1,67 @@
-import type { ErrorCode } from '#/domain/error.ts';
-import { JOB_DESCRIPTION_FILE_NAME, type Artifact, type Interview, type Locale, type Posting } from '#/domain/index.ts';
+import type { Artifact, Interview, Locale, Posting } from '#/domain/index.ts';
 
 // An Artifact is written for the employer: in the language of the Job Description, whatever the
 // Candidate's locale and the language of their Instructions (spec #65). Each fixed part states it.
 export function describeArtifactLanguage(artifactName: string): string {
-  return `Write the ${artifactName} in the language of the Job Description, \`${JOB_DESCRIPTION_FILE_NAME}\`, whatever the language of this prompt and of the Candidate's Instructions.`;
+  return `Write the ${artifactName} in the language of the Job Description, whatever the language of this prompt and of the Candidate's Instructions.`;
+}
+
+// The closed catalogue of the MDX Artifacts (ADR-0020), one line per component as the Fixed Part teaches it.
+// The front renders each (src/web/components/mdx/catalogue.tsx): a component goes into both, or neither.
+const MDX_CATALOGUE_LINE_LIST = [
+  '`<Callout type="note|info|tip|warning|danger" title="…">…</Callout>`: a point to stand out',
+  '`<Tabs><Tab title="…">…</Tab>…</Tabs>`: views of one subject side by side',
+  '`<Accordion><AccordionItem title="…">…</AccordionItem>…</Accordion>`: details folded until opened',
+  '`<Cards><Card title="…" description="…">…</Card>…</Cards>`: a grid of cards; a `<Card>` also stands alone',
+  '`<Badge tone="default|secondary|outline">…</Badge>`: a short label, within a line',
+  '`<Table caption="…">` around a Markdown table, to caption it; every Markdown table is styled anyway',
+  '`<Steps><Step title="…">…</Step>…</Steps>`: an ordered procedure',
+  '`<Timeline><Event date="…" title="…">…</Event>…</Timeline>`: dated events',
+  '`<Quote author="…" source="…">…</Quote>`: a quotation and who said it',
+  '`<Checklist title="…">` around a Markdown list: items the Candidate ticks while revising',
+  '`<Diagram title="…">` around a ` ```mermaid ` fence: a Mermaid diagram; a bare mermaid fence draws too',
+];
+
+// What a Fixed Part says of the MDX it expects: Markdown, plus the catalogue and nothing else (ADR-0020)
+export function describeMdxFormat(): string {
+  return `The file is MDX: Markdown, plus these components and no other, each written with plain string attributes and Markdown inside:
+${MDX_CATALOGUE_LINE_LIST.map((line) => `- ${line}`).join('\n')}
+
+No import, export or JavaScript expression: they are stripped. In the text, write \`\\{\` for a brace and \`\\<\` for a less-than sign, which MDX would read as code.`;
+}
+
+// The headings of the message that follows the Fixed Part, its Inputs inlined (ADR-0021); each Input's own
+// starts with its prefix, which the headings inside its content do not
+export const INPUTS_HEADING = 'Inputs';
+export const INPUT_HEADING_PREFIX = 'Input: ';
+export const INSTRUCTIONS_HEADING = 'Instructions';
+
+// What a Fixed Part says of the message that follows it, its Inputs inlined: the session reads nothing from disk
+export function describeMessage(): string {
+  return `The next message holds everything you read, under \`# ${INPUTS_HEADING}\`: each Input under its own heading, \`## ${INPUT_HEADING_PREFIX}…\`, with its full content. Look for no other file to read. Then come the Candidate's Instructions, under \`# ${INSTRUCTIONS_HEADING}\`.`;
 }
 
 // A Chosen Version the module reads: of its Posting, of its Interview or of a previous one (interviewNumber),
 // or of another Posting
-export interface IReadVersion {
+interface IReadVersion {
   reference: string;
   artifact: Artifact;
   // The number of the Interview the Version is attached to, null for a Version of the Posting
   interviewNumber: number | null;
-  directory: string;
-  filePath: string;
 }
 
-// The output folder is relative to the Posting's folder, where the session runs; what it reads is
-// named by absolute paths
+// The output folder is relative to the Posting's folder, where the session runs; what it reads comes
+// inlined in its message (ADR-0021)
 export interface IPromptInput {
   posting: Posting;
   // The Interview it prepares, for a module attached to one; null otherwise
   interview: Interview | null;
-  // The Notes of the Posting, for a module that reads them; null otherwise
-  notes: string | null;
   outputDirectory: string;
+  // The Chosen Versions among its checked Inputs
   readVersionList: IReadVersion[];
-  profileDirectory: string;
+  // Wraps each value the composer substitutes, where it puts it, so that the preview highlights it; the
+  // run's leaves it as is (spec #125)
+  mark: (value: string) => string;
 }
 
 interface IOutputFile {
@@ -44,11 +77,11 @@ export interface IAiModule {
   alias?: string;
   // The file of the Version the Candidate reads
   fileName: string;
+  // MDX through the closed catalogue, or plain Markdown for the Letter (ADR-0020)
+  format: 'mdx' | 'markdown';
   // The files the session writes in the folder of the Version
   outputFileList: IOutputFile[];
   composePrompt(input: IPromptInput): string;
-  // Runs once the files are valid, before the Version is ready
-  completeVersion?(versionDirectory: string): void;
   // Whether its Versions are attached to an Interview, numbered and chosen per Interview, rather than
   // to the Posting: it then runs for a given Interview
   isAttachedToInterview?: boolean;
@@ -59,19 +92,18 @@ export interface IAiModule {
   optionalArtifactList?: readonly Artifact[];
   // The Artifacts whose Chosen Version it reads on each Interview of the Posting before its own
   previousInterviewArtifactList?: readonly Artifact[];
+  // Whether its session searches the web; it reads nothing from disk either way, its Inputs inlined (ADR-0021)
+  isSearchingWeb?: boolean;
   // Whether it reads the Notes of the Posting
   isReadingNotes?: boolean;
-  // Whether the module reads the Profile of the Candidate
+  // Whether the module reads the Profile of the Candidate, its Past Letters included: those of the Profile
+  // and the Chosen Letters of the other Postings once Applied, what the Candidate sent
   isReadingProfile?: boolean;
+  // Whether it reads each Letter sent with its Original, the text the AI wrote: the Candidate's corrections
+  // show their style and what they reject
+  isReadingOriginals?: boolean;
   // Whether it reads the Chosen Artifacts of the Posting that a Repost publishes again
   isReadingRepostedPosting?: boolean;
-  // Whether it reads its own Chosen Artifact of each Posting once Applied: what the Candidate sent
-  isReadingSentVersions?: boolean;
   // Whether its Chosen Version is what the Candidate sends: frozen once the Posting is Applied
   isFrozenOnceApplied?: boolean;
-  // The code that refuses any correction by hand, for an Artifact regenerated rather than corrected
-  notEditableErrorCode?: ErrorCode;
-  // The files of a Version kept as the AI wrote them, each with the code that refuses to modify it; jf
-  // edit keeps them out of reach of its session too
-  readOnlyFileList?: readonly { name: string; errorCode: ErrorCode }[];
 }

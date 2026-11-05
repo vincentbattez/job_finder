@@ -16,15 +16,13 @@ const CONFIG_FILE_NAME = 'config.json';
 const SLUG_SCHEMA = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
 // Only the Source a Watch follows knows its Parameters: the Detection parses them (ADR-0010). A
-// config written before the Sources became a family split them into criteria and zone.
+// config written before the Sources became a family split them into criteria and zone; the Zone is
+// gone since, replaced by the Candidate's sorting (ADR-0018).
 const WATCH_SCHEMA = z.union([
   z.strictObject({ id: SLUG_SCHEMA, source: z.string().min(1), parameters: PARAMETERS_SCHEMA }),
   z
     .strictObject({ id: SLUG_SCHEMA, source: z.string().min(1), criteria: PARAMETERS_SCHEMA, zone: PARAMETERS_SCHEMA })
-    .transform(({ criteria, zone, ...watch }) => ({
-      ...watch,
-      parameters: PARAMETERS_SCHEMA.parse({ ...criteria, ...zone }),
-    })),
+    .transform(({ id, source, criteria }) => ({ id, source, parameters: criteria })),
 ]);
 
 const CANDIDATE_SCHEMA = z.strictObject({

@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createActions, type Actions } from '#/actions/index.ts';
 
 import { createDataDirectory, createMigratedDataDirectory } from './data-directory.ts';
+import { createFakeAiSession } from './fake-ai-session.ts';
 import { LEA_WATCH } from './lea.ts';
 import { createRecordedFetch } from './recorded-http.ts';
 
@@ -19,6 +20,11 @@ async function findPosting(actions: Actions, reference: string) {
   return postingList.find((posting) => posting.reference === reference);
 }
 
+async function researchStateOf(actions: Actions, reference: string) {
+  const { artifactList } = await actions.readPosting({ reference });
+  return artifactList.find(({ artifact }) => artifact === 'research')?.state;
+}
+
 // Expired depends on the day: the clock stays on the day the responses were recorded
 beforeAll(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -33,8 +39,31 @@ afterAll(() => {
 describe('status of a Posting', () => {
   let actions: Actions;
 
+  // The Postings Léa kept, To Apply; the others stay New
+  const KEPT_REFERENCE_LIST = [
+    '2026-2445600',
+    '2026-2231960',
+    '2026-2338409',
+    '2026-2445609',
+    '2026-2445183',
+    '2026-2350473',
+    '2026-2199164',
+    '2026-2360411',
+    '2026-2445584',
+    '2026-2445629',
+    '2026-2445671',
+    '2026-2448056',
+    '2026-2448209',
+    '2026-2448213',
+    '2026-2448215',
+    '2026-2360445',
+  ];
+
   beforeAll(async () => {
     actions = await detectWithDefaultDelay(6);
+    for (const reference of KEPT_REFERENCE_LIST) {
+      await actions.keep({ reference });
+    }
   });
 
   async function findStatus(reference: string) {
@@ -56,6 +85,47 @@ describe('status of a Posting', () => {
       { status: 'applied', isExpired: true },
       { status: 'applied', isExpired: true },
     ]);
+  });
+
+  // Sorting New (ADR-0018): keeping a Posting puts it To Apply and starts its Research
+  it('keeps a New Posting: To Apply, its Research queued', async () => {
+    await actions.keep({ reference: '2026-2445266' });
+
+    expect(await findPosting(actions, '2026-2445266')).toMatchObject({
+      status: 'to_apply',
+      appliedAt: null,
+      statusChangedAt: new Date('2026-10-29T12:00:00Z'),
+    });
+    expect(await researchStateOf(actions, '2026-2445266')).toBe('queued');
+  });
+
+  it('refuses to keep a Posting no longer New', async () => {
+    await actions.keep({ reference: '2026-2445213' });
+
+    await expect(actions.keep({ reference: '2026-2445213' })).rejects.toThrow(
+      "L'Offre 2026-2445213 n'est plus Nouvelle : elle a déjà été triée.",
+    );
+  });
+
+  // Dismissing archives it: its Status stays New, so unarchiving brings it back to be sorted
+  it('dismisses a New Posting, which stays New, and unarchives it as New', async () => {
+    await actions.archive({ reference: '2026-2445218' });
+    const dismissed = await findPosting(actions, '2026-2445218');
+
+    await actions.unarchive({ reference: '2026-2445218' });
+
+    expect([dismissed, await findPosting(actions, '2026-2445218')]).toMatchObject([
+      { status: 'new', archivedAt: new Date('2026-10-29T12:00:00Z') },
+      { status: 'new', archivedAt: null },
+    ]);
+    expect(await researchStateOf(actions, '2026-2445218')).toBe('absent');
+  });
+
+  it('refuses any other move to a New Posting', async () => {
+    await expect(actions.changeStatus({ reference: '2026-2445223', status: 'applied' })).rejects.toThrow(
+      "L'Offre 2026-2445223 est Nouvelle : garde-la ou écarte-la d'abord.",
+    );
+    expect(await findStatus('2026-2445223')).toBe('new');
   });
 
   // Archived is a mark beside the Status, never a Status (ADR-0007)
@@ -198,7 +268,11 @@ describe('status of a Posting', () => {
     await expect(actions.changeStatus({ reference: '2026-2448213', status: 'hired' })).rejects.toThrow(
       "L'Offre 2026-2448213 est À traiter : elle ne peut passer qu'en Postulée.",
     );
-    expect(await findPosting(actions, '2026-2448213')).toMatchObject({ status: 'to_apply', statusChangedAt: null });
+    expect(await findPosting(actions, '2026-2448213')).toMatchObject({
+      status: 'to_apply',
+      // The day Léa kept it
+      statusChangedAt: new Date('2026-10-29T12:00:00Z'),
+    });
   });
 
   // The employer answered, so the Letter was sent
@@ -237,6 +311,24 @@ describe('status of a Posting', () => {
   });
 });
 
+// The Candidate may run the Research of a New Posting before sorting it: keeping it then queues no other
+it('keeps a New Posting whose Research already ran without queueing another', async () => {
+  const research = { fileByName: { 'research.md': '# Recherche\n\n## Sources\n\n- https://www.justice.fr/\n' } };
+  const actions = await createActions({
+    dataDirectory: createDataDirectory(),
+    fetch: createRecordedFetch().fetch,
+    aiSession: createFakeAiSession(research),
+  });
+  await actions.detect();
+  await actions.runModule({ module: 'research', reference: '2026-2445600' });
+  await actions.runQueuedJobs();
+
+  await actions.keep({ reference: '2026-2445600' });
+
+  expect(await actions.runQueuedJobs()).toEqual([]);
+  expect(await findPosting(actions, '2026-2445600')).toMatchObject({ status: 'to_apply' });
+});
+
 it('refuses a reference shared by the Postings of two Candidates', async () => {
   const actions = await createActions({
     dataDirectory: createMigratedDataDirectory(),
@@ -252,7 +344,7 @@ it('refuses a reference shared by the Postings of two Candidates', async () => {
     /Plusieurs Offres ont la référence 2026-2445600, chez des Candidats différents : .*Veille/,
   );
   const posting = await findPosting(actions, '2026-2445600');
-  expect(posting?.status).toBe('to_apply');
+  expect(posting?.status).toBe('new');
 });
 
 describe('Expired', () => {

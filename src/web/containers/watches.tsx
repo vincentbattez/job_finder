@@ -1,45 +1,154 @@
+import { PlusIcon, SaveIcon, Trash2Icon } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
-import { SettingsPanel } from '#/web/components/settings-panel.tsx';
-import { useIsHydrated } from '#/web/components/use-is-hydrated.ts';
-import { WatchFields, type SourceModule, type Watch } from '#/web/components/watches.tsx';
+import { SettingsSection } from '#/web/components/settings-section.tsx';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '#/web/components/ui/alert-dialog.tsx';
+import { Button } from '#/web/components/ui/button.tsx';
+import {
+  NEAR_MISSES_ANCHOR,
+  NearMisses,
+  WatchFields,
+  WatchSummary,
+  type SourceModule,
+  type Watch,
+} from '#/web/components/watches.tsx';
+import { isRefused, type IRefusal } from '#/web/failure.ts';
 
-// What /watch answers a save or a deletion: a message or a refusal, in the words of the action
-interface IOutcome {
-  message: string | null;
-  error: string | null;
-}
+import { useFeedback } from './use-feedback.ts';
+import { useSettled } from './use-settled.ts';
 
-// A Watch, or a new one without watch, saved or deleted through /watch
-function WatchForm({ watch, sourceList }: Readonly<{ watch: Watch | null; sourceList: SourceModule[] }>) {
-  const fetcher = useFetcher<IOutcome>();
-  const isHydrated = useIsHydrated();
-  const isIdle = fetcher.state === 'idle';
+// A Watch saved through the Watches page, its deletion asked of the page, which outlives its card
+function WatchCard({
+  watch,
+  sourceList,
+  onDelete,
+}: Readonly<{ watch: Watch; sourceList: SourceModule[]; onDelete: () => void }>) {
+  const { t } = useTranslation('settings');
+  const fetcher = useFetcher<IRefusal>();
+  useFeedback(fetcher, () => t('watches.saved'));
+  const sourceName = sourceList.find(({ id }) => id === watch.source)?.name ?? watch.source;
   return (
-    <fetcher.Form method="post" action="/watch">
-      <WatchFields
-        watch={watch}
-        sourceList={sourceList}
-        isDisabled={!isHydrated || !isIdle}
-        error={isIdle ? (fetcher.data?.error ?? null) : null}
-        message={isIdle ? (fetcher.data?.message ?? null) : null}
-      />
-    </fetcher.Form>
+    <SettingsSection heading={watch.label} description={<WatchSummary watch={watch} sourceName={sourceName} />}>
+      <fetcher.Form method="post" action="/watches" className="grid gap-6">
+        <input type="hidden" name="intent" value="save" />
+        <input type="hidden" name="watchId" value={watch.id} />
+        <WatchFields watch={watch} sourceList={sourceList} />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="text-destructive hover:text-destructive"
+            aria-label={t('watches.deleteOf', { label: watch.label })}
+            onClick={onDelete}
+          >
+            <Trash2Icon />
+            {t('watches.delete')}
+          </Button>
+          <Button type="submit" isPending={fetcher.state !== 'idle'}>
+            <SaveIcon />
+            {t('watches.save')}
+          </Button>
+        </div>
+      </fetcher.Form>
+    </SettingsSection>
   );
 }
 
-// The Watches of the Candidate, each on its Source; a deleted Watch leaves its Postings behind
+// A new Watch; once created, the form starts blank again, a refusal keeping what was typed
+function WatchCreation({ sourceList }: Readonly<{ sourceList: SourceModule[] }>) {
+  const { t } = useTranslation('settings');
+  const formReference = useRef<HTMLFormElement>(null);
+  const fetcher = useFetcher<IRefusal>();
+  useFeedback(fetcher, () => t('watches.created'));
+  useSettled(fetcher, (answer) => {
+    if (!isRefused(answer)) {
+      formReference.current?.reset();
+    }
+  });
+  return (
+    <SettingsSection heading={t('watches.newWatch')} description={t('watches.newWatchDescription')}>
+      <fetcher.Form ref={formReference} method="post" action="/watches" className="grid gap-6">
+        <input type="hidden" name="intent" value="save" />
+        <WatchFields watch={null} sourceList={sourceList} />
+        <div className="flex justify-end">
+          <Button type="submit" isPending={fetcher.state !== 'idle'}>
+            <PlusIcon />
+            {t('watches.create')}
+          </Button>
+        </div>
+      </fetcher.Form>
+    </SettingsSection>
+  );
+}
+
+// The Watches of the Candidate, each a plain form, then a new one, then the Near Misses of their last
+// Detection under the anchor the Detection's verdict links to. Deleting one goes through an AlertDialog;
+// its Postings stay with the Candidate.
 export function Watches({ watchList, sourceList }: Readonly<{ watchList: Watch[]; sourceList: SourceModule[] }>) {
   const { t } = useTranslation('settings');
+  const [deletion, setDeletion] = useState<{ isOpen: boolean; watch: Watch | null }>({ isOpen: false, watch: null });
+  const removalFetcher = useFetcher<IRefusal>();
+  useFeedback(removalFetcher, () => t('watches.deleted'));
+  const label = deletion.watch?.label ?? '';
   return (
-    <SettingsPanel heading={t('watches.heading')}>
-      <p>{t('watches.intro')}</p>
+    <>
+      {watchList.length === 0 && <p className="text-sm text-muted-foreground">{t('watches.noWatch')}</p>}
       {watchList.map((watch) => (
-        <WatchForm key={watch.id} watch={watch} sourceList={sourceList} />
+        <WatchCard
+          key={watch.id}
+          watch={watch}
+          sourceList={sourceList}
+          onDelete={() => {
+            setDeletion({ isOpen: true, watch });
+          }}
+        />
       ))}
-      {/* Remounted once a Watch is created, so the form starts blank again */}
-      <WatchForm key={watchList.map(({ id }) => id).join('/')} watch={null} sourceList={sourceList} />
-    </SettingsPanel>
+      <WatchCreation sourceList={sourceList} />
+      <SettingsSection
+        heading={t('watches.nearMisses.heading')}
+        description={t('watches.nearMisses.description')}
+        anchor={NEAR_MISSES_ANCHOR}
+      >
+        <NearMisses watchList={watchList} />
+      </SettingsSection>
+      <AlertDialog
+        open={deletion.isOpen}
+        onOpenChange={(isOpen) => {
+          setDeletion({ ...deletion, isOpen });
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('watches.deleteTitle', { label })}</AlertDialogTitle>
+            <AlertDialogDescription>{t('watches.deleteDescription')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('watches.keep')}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                void removalFetcher.submit(
+                  { intent: 'delete', watchId: deletion.watch?.id ?? '' },
+                  { method: 'post', action: '/watches', preventScrollReset: true },
+                );
+              }}
+            >
+              {t('watches.confirmDelete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

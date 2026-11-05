@@ -52,7 +52,7 @@ model Watch {
   id          String    @id
   candidate   Candidate @relation(fields: [candidateId], references: [id])
   candidateId String
-  // The Source the Watch follows, and its Parameters, its Zone among them: they are those of the
+  // The Source the Watch follows, and its Parameters: they are those of the
   // Source, parsed by the Source's schema (ADR-0010)
   source      String
   parameters  Json
@@ -62,46 +62,48 @@ model Watch {
 }
 
 model Posting {
-  id               Int           @id @default(autoincrement())
-  candidate        Candidate     @relation(fields: [candidateId], references: [id])
-  candidateId      String
-  source           String
-  reference        String
-  title            String
-  url              String?
-  publishedAt      DateTime?
-  deadline         DateTime?
-  employer         String?
-  workplace        String?
-  city             String?
-  region           String?
-  latitude         Float?
-  longitude        Float?
-  applicationEmail String?
-  contact1         String?
-  contact2         String?
-  status           PostingStatus @default(to_apply)
+  id                 Int              @id @default(autoincrement())
+  candidate          Candidate        @relation(fields: [candidateId], references: [id])
+  candidateId        String
+  source             String
+  reference          String
+  title              String
+  url                String?
+  publishedAt        DateTime?
+  deadline           DateTime?
+  // The day its Position is to be filled, when its Job Description says so
+  startDate          DateTime?
+  employer           String?
+  workplace          String?
+  city               String?
+  region             String?
+  latitude           Float?
+  longitude          Float?
+  applicationEmail   String?
+  contact1           String?
+  contact2           String?
+  status             PostingStatus    @default(to_apply)
   // When the Posting was first marked Applied: its Chosen Letter, the one sent, stays frozen even
   // once it is Archived
-  appliedAt        DateTime?
+  appliedAt          DateTime?
   // When its stored Status last changed, null if never: it sorts the Applications
-  statusChangedAt  DateTime?
+  statusChangedAt    DateTime?
   // When the Candidate archived it, null while they follow it: a mark beside the Status, which
   // unarchiving leaves as it was (ADR-0007)
-  archivedAt       DateTime?
+  archivedAt         DateTime?
   // When a Detection found its Source no longer publishes it, null while online: a mark beside the
   // Status, which the Detection removes once the Source publishes it again (ADR-0001)
-  unpublishedAt    DateTime?
+  unpublishedAt      DateTime?
   // Free Markdown the Candidate keeps on it, whatever its Status, and rewrites at will
-  notes            String        @default("")
-  repostOf         Posting?      @relation("Repost", fields: [repostOfId], references: [id])
-  repostOfId       Int?
-  repostList       Posting[]     @relation("Repost")
-  detectedAt       DateTime      @default(now())
-  isInZone         Boolean
-  versionList      Version[]
-  jobList          Job[]
-  interviewList    Interview[]
+  notes              String           @default("")
+  repostOf           Posting?         @relation("Repost", fields: [repostOfId], references: [id])
+  repostOfId         Int?
+  repostList         Posting[]        @relation("Repost")
+  detectedAt         DateTime         @default(now())
+  versionList        Version[]
+  jobList            Job[]
+  interviewList      Interview[]
+  customArtifactList CustomArtifact[]
 
   @@unique([candidateId, source, reference])
 }
@@ -109,27 +111,45 @@ model Posting {
 // An Interview of an Application, one per round, numbered per Posting like a Version. Only a Posting
 // that has an Application gets one; the Status reads them to show Invited or Interviewed (ADR-0009).
 model Interview {
-  id              Int       @id @default(autoincrement())
-  posting         Posting   @relation(fields: [postingId], references: [id])
-  postingId       Int
-  number          Int
-  startAt         DateTime
-  durationMinutes Int       @default(60)
+  id                  Int               @id @default(autoincrement())
+  posting             Posting           @relation(fields: [postingId], references: [id])
+  postingId           Int
+  number              Int
+  startAt             DateTime
+  durationMinutes     Int               @default(60)
   // Free text, prefilled by the front with the place of work and the City of the Posting
-  place           String
+  place               String
   // Free text: name, role, anything the Candidate knows of them
-  interviewers    String
+  interviewers        String
   // Grows at each edit: the SEQUENCE of its iCal event, so a calendar updates the event
-  editCount       Int       @default(0)
-  // Its Interview Brief and Visualization, and the jobs that make them: deleted with it
-  versionList     Version[]
-  jobList         Job[]
+  editCount           Int               @default(0)
+  // Its Artifacts, its Custom Artifacts, and the jobs that make them: deleted with it
+  versionList         Version[]
+  jobList             Job[]
+  customArtifactList  CustomArtifact[]
+  // The Candidate's Revision of it, section by section: deleted with it
+  revisionSectionList RevisionSection[]
 
   @@unique([postingId, number])
 }
 
-// Invited and Interviewed are computed from the Interviews, never stored (ADR-0009)
+// A section of the Revision of an Interview (GLOSSARY.md « Revision »), keyed by its title rather than by a
+// Version: the note and the Mastered mark follow a newer Chosen Interview Brief wherever the title remains
+model RevisionSection {
+  id          Int       @id @default(autoincrement())
+  interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  interviewId Int
+  title       String
+  note        String    @default("")
+  isMastered  Boolean   @default(false)
+
+  @@unique([interviewId, title])
+}
+
+// Invited and Interviewed are computed from the Interviews, never stored (ADR-0009). A detected
+// Posting starts New, an imported one To Apply (ADR-0018).
 enum PostingStatus {
+  new
   to_apply
   applied
   hired
@@ -140,29 +160,64 @@ enum PostingStatus {
 // of an Artifact attached to an Interview, such as the Interview Brief, are numbered and chosen per
 // Interview; the others, such as the Research, per Posting, without an Interview.
 model Version {
-  id                       Int          @id @default(autoincrement())
-  posting                  Posting      @relation(fields: [postingId], references: [id])
+  id                       Int               @id @default(autoincrement())
+  posting                  Posting           @relation(fields: [postingId], references: [id])
   postingId                Int
-  interview                Interview?   @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  interview                Interview?        @relation(fields: [interviewId], references: [id], onDelete: Cascade)
   interviewId              Int?
   artifact                 Artifact
   number                   Int
-  isChosen                 Boolean      @default(false)
+  isChosen                 Boolean           @default(false)
   state                    VersionState
+  // A Draft until the Candidate validates it, whoever produced it (ADR-0019)
+  validation               VersionValidation @default(draft)
+  // Produced by the AI, which keeps its Original, or brought by the Candidate, with none
+  origin                   VersionOrigin     @default(ai)
   instructions             String
   // Whether those Instructions are the Candidate's own rather than the module's default ones
-  hasCandidateInstructions Boolean      @default(false)
-  // The Versions this one read as input
-  inputList                Version[]    @relation("Input")
-  readByList               Version[]    @relation("Input")
-  createdAt                DateTime     @default(now())
+  hasCandidateInstructions Boolean           @default(false)
+  // The Inputs its run read (ADR-0021)
+  inputList                VersionInput[]    @relation("Input")
+  readByList               VersionInput[]    @relation("ReadVersion")
+  createdAt                DateTime          @default(now())
   // The job that produced this Version, so a job can be followed to its Version
-  job                      Job?         @relation(fields: [jobId], references: [id])
-  jobId                    Int?         @unique
+  job                      Job?              @relation(fields: [jobId], references: [id])
+  jobId                    Int?              @unique
+  // The single Version of a Custom Artifact, numbered 1 like the first of any Artifact
+  customArtifact           CustomArtifact?   @relation(fields: [customArtifactId], references: [id], onDelete: Cascade)
+  customArtifactId         Int?              @unique
 
-  // SQLite tells two NULLs apart: the Versions of a Posting, without an Interview, need their own index
-  @@unique([postingId, interviewId, artifact, number])
-  @@unique([postingId, artifact, number], where: { interviewId: null })
+  // SQLite tells two NULLs apart: the Versions of a Posting, without an Interview, need their own index.
+  // A Custom Artifact's Version is unique on it instead.
+  @@unique([postingId, interviewId, artifact, number], where: { customArtifactId: null })
+  @@unique([postingId, artifact, number], where: { interviewId: null, customArtifactId: null })
+}
+
+// A document the Candidate adds for a Posting, or for one of its Interviews, which the runs of its
+// Posting, or of its Interview, read by default (spec #125). Its single Version is Validated and Chosen
+// from creation, written only through the Artifact module (ADR-0016).
+model CustomArtifact {
+  id          Int        @id @default(autoincrement())
+  posting     Posting    @relation(fields: [postingId], references: [id])
+  postingId   Int
+  interview   Interview? @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  interviewId Int?
+  title       String
+  version     Version?
+}
+
+// An Input a Version's run read, named by its key as the Artifact module resolves it: `job_description`,
+// `notes`, `artifact:<artifact>[@<interview>]`, `posting:<reference>/<artifact>` or `profile:<file name>`.
+// A read Version is linked too, so a record still tells which Version it was.
+model VersionInput {
+  id            Int      @id @default(autoincrement())
+  version       Version  @relation("Input", fields: [versionId], references: [id], onDelete: Cascade)
+  versionId     Int
+  key           String
+  readVersion   Version? @relation("ReadVersion", fields: [readVersionId], references: [id], onDelete: SetNull)
+  readVersionId Int?
+
+  @@unique([versionId, key])
 }
 
 enum Artifact {
@@ -170,13 +225,23 @@ enum Artifact {
   letter
   portrait
   interview_brief
-  visualization
+  custom
 }
 
 enum VersionState {
   running
   ready
   failed
+}
+
+enum VersionValidation {
+  draft
+  validated
+}
+
+enum VersionOrigin {
+  ai
+  candidate
 }
 
 // A job works on a Posting, or on the Profile of a Candidate: the conversion of one of its Uploads
@@ -203,6 +268,8 @@ model Job {
   notificationErrorCode String?
   notificationFailure   String?
   sessionId             String?
+  // The keys of the Inputs the Candidate checked for an Artifact job; null for the type's default Inputs
+  inputKeyList          Json?
   // When the worker claimed it: past its maximum duration, a running job tells that the worker is stuck
   startedAt             DateTime?
   version               Version?

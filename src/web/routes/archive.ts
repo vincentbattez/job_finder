@@ -1,11 +1,12 @@
-import { redirect, type ActionFunctionArgs } from 'react-router';
+import type { ActionFunctionArgs } from 'react-router';
 
 import { codedError } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
+import { readCandidate } from '#/web/candidate.server.ts';
 import { relayAction } from '#/web/relay-action.server.ts';
 
-// The Archive button of the Posting page posts here, beside the Status buttons since Archived is a
-// mark and not a Status (ADR-0007); a refusal goes back to the button
+// Archive and unarchive post here through a fetcher, beside the Status since Archived is a mark and not
+// a Status (ADR-0007); the fetcher revalidates the page it is on, a refusal goes back to it
 export function action({ params, request }: ActionFunctionArgs) {
   return relayAction(request, async () => {
     const input = { reference: params.reference };
@@ -20,9 +21,10 @@ export function action({ params, request }: ActionFunctionArgs) {
         break;
       }
       default: {
-        throw codedError('unknown_intent');
+        const { locale } = await readCandidate(request);
+        throw codedError('unknown_intent', {}, { locale });
       }
     }
-    return redirect(`/postings/${String(params.reference)}`);
+    return null;
   });
 }

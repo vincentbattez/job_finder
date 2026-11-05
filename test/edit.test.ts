@@ -2,8 +2,10 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { applyTo } from './apply.ts';
 import { detectPostings as detectRecordedPostings, LEA_POSTINGS_PATH } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
+import { runAndValidate } from './run-module.ts';
 
 // The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
@@ -19,7 +21,7 @@ const RESEARCH = {
 // A Letter Version as the Letter module writes it: the Draft and the recommended recipients
 const LETTER = {
   fileByName: {
-    'draft.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal pour enfants de Béthune.\n',
+    'letter.md': 'Madame la Présidente,\n\nJe souhaite rejoindre le tribunal pour enfants de Béthune.\n',
     'recipients.json': JSON.stringify({
       to: { email: 'p.tj-bethune@justice.fr', source: 'applicationEmail' },
       ccList: [],
@@ -40,9 +42,8 @@ describe('edit', () => {
     const aiSession = createFakeAiSession(RESEARCH, RESEARCH);
     const { actions, postingDirectory } = await detectPostings(aiSession);
     await actions.runModule({ module: 'research', reference: REFERENCE });
-    await actions.runModule({ module: 'research', reference: REFERENCE });
-    await actions.runQueuedJobs();
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: 1 });
+    await runAndValidate(actions, { module: 'research', reference: REFERENCE });
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: 1 });
 
     await actions.openArtifact({ reference: REFERENCE, artifact: 'research' });
 
@@ -54,8 +55,7 @@ describe('edit', () => {
   it('tells the session the Candidate, the Posting, its files and the rules', async () => {
     const aiSession = createFakeAiSession(RESEARCH);
     const { actions } = await detectPostings(aiSession);
-    await actions.runModule({ module: 'research', reference: REFERENCE });
-    await actions.runQueuedJobs();
+    await runAndValidate(actions, { module: 'research', reference: REFERENCE });
 
     await actions.openArtifact({ reference: REFERENCE, artifact: 'research' });
 
@@ -65,43 +65,40 @@ describe('edit', () => {
       '2026-2445600, "Attaché de justice affecté auprès des magistrats du siège – Tribunal pour enfants- TJ BETHUNE"',
     );
     expect(prompt).toContain('`job-description.md`');
-    expect(prompt).toContain('Never modify a Draft');
+    expect(prompt).toContain('Never modify an Original');
     expect(prompt).toContain('Talk with Léa in French.');
     expect(prompt).toContain('Keep the Research in its own language, that of the Job Description');
   });
 
-  // The Draft stays as the AI wrote it, so that the tool learns from the corrections (spec « Letter »)
-  it('keeps every Draft of the Posting out of reach of the session', async () => {
+  // The Original stays as the AI wrote it, so that the tool learns from the corrections (ADR-0019)
+  it('keeps every Original of the Posting out of reach of the session', async () => {
     const aiSession = createFakeAiSession(RESEARCH);
     const { actions, postingDirectory } = await detectPostings(aiSession);
-    await actions.runModule({ module: 'research', reference: REFERENCE });
-    await actions.runQueuedJobs();
+    await runAndValidate(actions, { module: 'research', reference: REFERENCE });
 
     await actions.openArtifact({ reference: REFERENCE, artifact: 'research' });
 
     expect(aiSession.interactiveSessionList[0]?.readOnlyPathList).toEqual([
-      path.join(postingDirectory, '**', 'draft.md'),
+      path.join(postingDirectory, '**', 'original.md'),
     ]);
   });
 
-  // The Candidate corrects the Letter, never its Draft (spec « Versions »)
-  it('opens the Chosen Letter of a Version from the Letter module, never its Draft', async () => {
+  // The Candidate corrects the Letter, never its Original (ADR-0019)
+  it('opens the Chosen Letter of a Version from the Letter module, never its Original', async () => {
     const aiSession = createFakeAiSession(RESEARCH, LETTER, LETTER);
     const { actions, postingDirectory } = await detectPostings(aiSession);
-    await actions.runModule({ module: 'research', reference: REFERENCE });
-    await actions.runQueuedJobs();
+    await runAndValidate(actions, { module: 'research', reference: REFERENCE });
     await actions.runModule({ module: 'letter', reference: REFERENCE });
-    await actions.runModule({ module: 'letter', reference: REFERENCE });
-    await actions.runQueuedJobs();
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'letter', number: 1 });
+    await runAndValidate(actions, { module: 'letter', reference: REFERENCE });
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'letter', number: 1 });
 
     await actions.openArtifact({ reference: REFERENCE, artifact: 'letter' });
 
     const { prompt = '', readOnlyPathList = [] } = aiSession.interactiveSessionList[0] ?? {};
-    expect(prompt).toContain('The Letter to correct is `letter/v1/letter.md`');
+    expect(prompt).toContain('`letter/v1/original.md`, when there is one, is its Original');
     expect(prompt).not.toContain('letter/v2');
     const isReadOnly = (filePath: string) => readOnlyPathList.some((pattern) => path.matchesGlob(filePath, pattern));
-    expect(isReadOnly(path.join(postingDirectory, 'letter/v1/draft.md'))).toBe(true);
+    expect(isReadOnly(path.join(postingDirectory, 'letter/v1/original.md'))).toBe(true);
     expect(isReadOnly(path.join(postingDirectory, 'letter/v1/letter.md'))).toBe(false);
   });
 });
@@ -111,7 +108,7 @@ describe('an edit refused', () => {
   it('refuses to edit the Letter of an Applied Posting, saying why, without opening a session', async () => {
     const aiSession = createFakeAiSession();
     const { actions } = await detectPostings(aiSession);
-    await actions.changeStatus({ reference: REFERENCE, status: 'applied' });
+    await applyTo(actions, REFERENCE);
 
     await expect(actions.openArtifact({ reference: REFERENCE, artifact: 'letter' })).rejects.toThrow(
       /L'Offre 2026-2445600 a été Postulée : sa Lettre retenue est figée telle qu'envoyée/,
@@ -124,9 +121,8 @@ describe('the Artifacts to edit', () => {
   it('lists the Chosen Version of each Artifact of a Posting, for jf edit to offer them', async () => {
     const { actions } = await detectPostings(createFakeAiSession(RESEARCH, RESEARCH));
     await actions.runModule({ module: 'research', reference: REFERENCE });
-    await actions.runModule({ module: 'research', reference: REFERENCE });
-    await actions.runQueuedJobs();
-    await actions.chooseVersion({ reference: REFERENCE, artifact: 'research', number: 1 });
+    await runAndValidate(actions, { module: 'research', reference: REFERENCE });
+    await actions.validateVersion({ reference: REFERENCE, artifact: 'research', number: 1 });
 
     const versionList = await actions.listChosenVersions({ reference: REFERENCE });
 

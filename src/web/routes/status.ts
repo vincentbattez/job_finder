@@ -6,17 +6,20 @@ import { relayAction } from '#/web/relay-action.server.ts';
 // A path of Job Finder only, never another site nor a protocol-relative URL (`//host`)
 const LOCAL_PATH_PATTERN = /^\/(?![/\\])/;
 
-// The outcome selector posts here, then the page it was on shows the new status: an Application row
-// sends its own in returnTo, else the Posting page; a refusal goes back to the selector
+// The Status changes post here: an Application row sends its page in returnTo, which a plain form
+// comes back to; the Posting page posts through a fetcher, which revalidates it in its tab. A refusal
+// goes back to what posted it.
 export function action({ params, request }: ActionFunctionArgs) {
   return relayAction(request, async () => {
     const formData = await request.formData();
-    await ACTIONS.changeStatus({ reference: params.reference, status: formData.get('status') });
+    // Marking Applied may settle the Letter first, so the Letter sent is the one recorded
+    await ACTIONS.changeStatus({
+      reference: params.reference,
+      status: formData.get('status'),
+      letterNumber: formData.get('letterNumber') ?? undefined,
+      isWithoutLetter: formData.get('isWithoutLetter') ?? undefined,
+    });
     const returnTo = formData.get('returnTo');
-    return redirect(
-      typeof returnTo === 'string' && LOCAL_PATH_PATTERN.test(returnTo)
-        ? returnTo
-        : `/postings/${String(params.reference)}`,
-    );
+    return typeof returnTo === 'string' && LOCAL_PATH_PATTERN.test(returnTo) ? redirect(returnTo) : null;
   });
 }

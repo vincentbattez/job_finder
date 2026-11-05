@@ -13,10 +13,13 @@ function findFormatError(markdown: string, locale: Locale): string | undefined {
 // known of its Interviewers, which the Candidate corrects before the Interview Brief builds on it (ADR-0003)
 export const PORTRAIT_MODULE = {
   fileName: PORTRAIT_FILE_NAME,
+  format: 'mdx',
   outputFileList: [{ name: PORTRAIT_FILE_NAME, findFormatError }],
   composePrompt: composePortraitPrompt,
   // Each Interview has its own Interviewers
   isAttachedToInterview: true,
   // The Research situates the Interviewers in their department, when the Candidate has one
   optionalArtifactList: ['research'],
+  // What is publicly known of the Interviewers is on the web
+  isSearchingWeb: true,
 } satisfies IAiModule;

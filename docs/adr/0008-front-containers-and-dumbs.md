@@ -1,5 +1,7 @@
 # The front separates Containers, which carry the data, from Dumbs, which only display their props
 
+> Partly superseded by ADR-0017: the front may now require hydration for its interactive components; loaders and actions stay where this ADR puts them.
+
 The components of `src/web/` follow the business Container / Dumb pattern: only a Container reads data or runs an action, and a Dumb only displays what it receives as props. This is what lets the home page and `/postings` share the list, the tiles and the map without duplicating code. In React Router, only a route has a `loader`. A data Container is therefore a file of `src/web/containers/` that exports both its loading function and its component. The page's `loader` calls the loading functions of its Containers and passes them the result. An action Container uses `useFetcher`. Dumbs live in `src/web/components/`. The architecture test forbids them from importing the actions and React Router's data hooks, and a fixture project that breaks the rule proves the test catches it, as for the other architecture rules.
 
 ## Considered Options

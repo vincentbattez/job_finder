@@ -1,7 +1,0 @@
-/* A date not known yet, said in words rather than in the figures of a date */
-@layer components {
-  .date[data-missing] {
-    color: var(--color-muted);
-    font-family: var(--font-body);
-  }
-}

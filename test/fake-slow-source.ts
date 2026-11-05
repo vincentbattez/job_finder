@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { setTimeout } from 'node:timers/promises';
 
 import { z } from 'zod/v4';
@@ -29,8 +30,8 @@ addResources('fakeSlowSource', {
   },
 });
 
-// As many Postings as a first launch of the PEP imports: enough to check that the result stays short
-const SLOW_SOURCE_POSTING_COUNT = 81;
+// Enough to check that the result stays short; more would only make a Detection cost the other tests
+const SLOW_SOURCE_POSTING_COUNT = 21;
 // Every reference the fake Source ever listed: like a real Source, it keeps them published whatever the
 // Watch, so none of its Postings is Unpublished
 const LISTED_REFERENCE_SET = new Set<string>();
@@ -43,18 +44,32 @@ const FAIL_AFTER_PARAMETER = parameter(z.string().optional(), {
   label: textKeyOf('fakeSlowSource', 'failAfterLabel'),
 });
 
-// How long each search and each Job Description read take: the front's Source waits long enough for
-// e2e/detection.test.ts to see each step of the progress, the seed of test/seed-front.ts not at all
-interface ISlowSourceDelays {
+// While the hold file exists, a Detection of the front stays on its first reads: how
+// e2e/detection.test.ts looks at one in progress, without racing it
+const HELD_AFTER_READ_COUNT = 3;
+const HOLD_POLL_MS = 50;
+// A test that dies holding it must not stop the next ones for long
+const HOLD_LIMIT_MS = 15_000;
+
+// How long each search and each Job Description read take, the seed of test/seed-front.ts not at all,
+// and the file that holds the Detection, for the front's Source
+interface ISlowSourceOption {
   searchMs: number;
   readMs: number;
+  holdFilePath?: string | undefined;
+}
+
+async function waitWhileExists(filePath: string): Promise<void> {
+  const limit = Date.now() + HOLD_LIMIT_MS;
+  while (existsSync(filePath) && Date.now() < limit) {
+    await setTimeout(HOLD_POLL_MS);
+  }
 }
 
 // Stands in for a Source, an external boundary, in the e2e tests: a slow module of the family, without
 // network, declared as a real one (ADR-0010). Each search lists Postings never seen before, or always
-// the same ones given referencePrefix, and one near-miss Posting, out of the Zone so that nothing is
-// queued nor notified; given failAfter, reading fails once that many Job Descriptions are read.
-export function defineSlowSource({ searchMs, readMs }: ISlowSourceDelays): SourceFactory {
+// the same ones given referencePrefix, and one near-miss Posting; given failAfter, reading fails once that many Job Descriptions are read.
+export function defineSlowSource({ searchMs, readMs, holdFilePath }: ISlowSourceOption): SourceFactory {
   return defineSource({
     id: 'slow',
     name: 'Slow Source',
@@ -97,21 +112,24 @@ export function defineSlowSource({ searchMs, readMs }: ISlowSourceDelays): Sourc
 
     async readJobDescription(reference, { failAfter }) {
       await setTimeout(readMs);
+      if (holdFilePath !== undefined && Number(reference.slice(-3)) > HELD_AFTER_READ_COUNT) {
+        await waitWhileExists(holdFilePath);
+      }
       if (failAfter !== undefined && Number(reference.slice(-3)) > Number(failAfter)) {
         throw new Error(`The slow Source failed on ${reference}.`);
       }
-      return {
-        jobDescription: JOB_DESCRIPTION_SCHEMA.parse({
-          deadline: null,
-          employer: null,
-          workplace: null,
-          applicationEmail: null,
-          contact1: null,
-          contact2: null,
-          markdown: `# ${reference}\n`,
-        }),
-        isInZone: false,
-      };
+      return JOB_DESCRIPTION_SCHEMA.parse({
+        deadline: null,
+        startDate: null,
+        employer: null,
+        workplace: null,
+        applicationEmail: null,
+        contact1: null,
+        contact2: null,
+        markdown: `# ${reference}\n`,
+      });
     },
+
+    readStartDate: () => null,
   });
 }

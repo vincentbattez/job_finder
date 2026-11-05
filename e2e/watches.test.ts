@@ -2,55 +2,86 @@ import type { Page } from '@playwright/test';
 
 import { expect, test } from './candidate.ts';
 
-// Jade's Watches, which this test alone changes (test/seed-front.ts): any an earlier run left is
-// deleted first
-async function openJadeWatches(page: Page) {
-  await page.goto('/profile');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Profil de Jade');
-  const watches = page.getByRole('region', { name: 'Veilles' });
-  // Disabled until React hydrates: a click before would go nowhere
-  await expect(watches.getByRole('button', { name: 'Créer la Veille' })).toBeEnabled();
-  const leftList = watches.getByRole('group', { name: /^Veille jade-/ });
-  while ((await leftList.count()) > 0) {
-    const count = await leftList.count();
-    await leftList.first().getByRole('button', { name: 'Supprimer la Veille' }).click();
-    await expect(leftList).toHaveCount(count - 1);
-  }
-  return watches;
+// The toast a mutation ends in (DESIGN.md « Feedback »)
+function toastOf(page: Page, text: string | RegExp) {
+  return page.locator('[data-sonner-toast]').filter({ hasText: text });
 }
 
-// The form of a Watch, built from the descriptor of its Source (ADR-0010)
-test('creates, changes and deletes a Watch of the Profile', async ({ page, asCandidate }) => {
+// Deletes a Watch through its AlertDialog
+async function deleteWatch(page: Page, label: string) {
+  await page.getByRole('button', { name: `Supprimer la Veille « ${label} »` }).click();
+  const dialog = page.getByRole('alertdialog', { name: `Supprimer la Veille « ${label} » ?` });
+  await dialog.getByRole('button', { name: 'Supprimer la Veille' }).click();
+  await expect(dialog).toBeHidden();
+}
+
+// Jade's Watches, which this test alone changes (test/seed-front.ts): any an earlier run left is
+// deleted first
+test('creates, changes and deletes a Watch', async ({ page, asCandidate, openPage }) => {
   await asCandidate('jade');
-  const watches = await openJadeWatches(page);
-  const creation = watches.getByRole('group', { name: 'Nouvelle Veille' });
+  await openPage('/watches');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Veilles');
+  const creation = page.getByRole('region', { name: 'Nouvelle Veille' });
+  for (const label of ['greffier', 'attaché de justice']) {
+    if ((await page.getByRole('region', { name: label, exact: true }).count()) > 0) {
+      await deleteWatch(page, label);
+    }
+  }
+  await expect(page.getByText('Aucune Veille pour l’instant')).toBeVisible();
 
   await creation.getByRole('combobox', { name: 'Source' }).selectOption('Place de l’Emploi Public');
   await creation.getByRole('textbox', { name: 'Titre recherché' }).fill('greffier');
-  await creation.getByRole('textbox', { name: 'Cours d’appel de la Zone, une par ligne' }).fill('Douai\nAmiens');
   await creation.getByRole('button', { name: 'Créer la Veille' }).click();
 
-  const watch = watches.getByRole('group', { name: 'Veille jade-1' });
-  await expect(watch.getByRole('textbox', { name: 'Titre recherché' })).toHaveValue('greffier');
-  await expect(watch.getByRole('textbox', { name: 'Cours d’appel de la Zone, une par ligne' })).toHaveValue(
-    'Douai\nAmiens',
-  );
+  await expect(toastOf(page, 'Veille créée.')).toBeVisible();
+  const created = page.getByRole('region', { name: 'greffier', exact: true });
+  await expect(created.getByRole('textbox', { name: 'Titre recherché' })).toHaveValue('greffier');
+  await expect(created).toContainText('Pas encore détectée');
   await expect(creation.getByRole('textbox', { name: 'Titre recherché' })).toHaveValue('');
 
-  await watch.getByRole('textbox', { name: 'Cours d’appel de la Zone, une par ligne' }).fill('Paris');
-  await watch.getByRole('button', { name: 'Enregistrer' }).click();
-  await expect(watch.getByRole('status')).toHaveText('Veille enregistrée.');
-  await page.reload();
-  await expect(watch.getByRole('textbox', { name: 'Cours d’appel de la Zone, une par ligne' })).toHaveValue('Paris');
-  // React hydrating a textarea puts back its saved text over what was typed: wait for it first
-  await expect(watch.getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
+  await created.getByRole('textbox', { name: 'Titre recherché' }).fill('attaché de justice');
+  await created.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(toastOf(page, 'Veille enregistrée.')).toBeVisible();
+  const changed = page.getByRole('region', { name: 'attaché de justice', exact: true });
+  await expect(changed).toBeVisible();
+  // React hydrating a field puts back its saved value over what was typed: openPage waits for it
+  await openPage('/watches');
+  await expect(changed.getByRole('textbox', { name: 'Titre recherché' })).toHaveValue('attaché de justice');
 
-  await watch.getByRole('textbox', { name: 'Cours d’appel de la Zone, une par ligne' }).fill(' \n ');
-  await watch.getByRole('button', { name: 'Enregistrer' }).click();
-  await expect(watch.getByRole('alert')).toHaveText(
-    "La Source Place de l’Emploi Public attend d'autres Paramètres : renseigner « Cours d’appel de la Zone ».",
-  );
+  // Blank, which the field's required lets through, but not the Source
+  await changed.getByRole('textbox', { name: 'Titre recherché' }).fill(' ');
+  await changed.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(toastOf(page, /attend d'autres Paramètres\s: renseigner « Titre recherché »/)).toBeVisible();
 
-  await watch.getByRole('button', { name: 'Supprimer la Veille' }).click();
-  await expect(watches.getByRole('group', { name: /^Veille jade-/ })).toHaveCount(0);
+  // Kept when the dialog is dismissed
+  await page.getByRole('button', { name: 'Supprimer la Veille « attaché de justice »' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Garder la Veille' }).click();
+  await expect(changed).toBeVisible();
+
+  await deleteWatch(page, 'attaché de justice');
+  await expect(toastOf(page, 'Veille supprimée.')).toBeVisible();
+  await expect(changed).toHaveCount(0);
+});
+
+// Léa's Watch, past its first launch in the seed, whose recorded PEP search set four titles aside
+test('shows the last Detection of a Watch and its Near Misses under their anchor', async ({
+  page,
+  asCandidate,
+  openPage,
+}) => {
+  await asCandidate('lea');
+  await openPage('/watches');
+  const watch = page.getByRole('region', { name: 'attaché de justice', exact: true });
+  await expect(watch).toContainText('Place de l’Emploi Public');
+  await expect(watch).toContainText('Dernière Détection le');
+
+  await watch.getByRole('link', { name: '4 titres écartés de peu' }).click();
+
+  await expect(page).toHaveURL(/\/watches#near-misses$/);
+  const nearMisses = page.getByRole('region', { name: 'Titres écartés de peu' });
+  await expect(nearMisses).toBeInViewport();
+  await expect(nearMisses.getByRole('heading', { level: 3 })).toHaveText(['attaché de justice']);
+  await expect(nearMisses.getByRole('listitem')).toHaveCount(4);
+  await expect(nearMisses).toContainText('Chef du pôle des attachés de justice et des assistants spécialisés');
+  await expect(nearMisses).toContainText('2026-2431315');
 });

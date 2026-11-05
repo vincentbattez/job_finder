@@ -1,81 +1,86 @@
 import { readFileSync } from 'node:fs';
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './candidate.ts';
+import { findInterviews, prepareApplication, prepareInterview } from './interview.ts';
 
-import { deleteEveryInterview, findInterviews } from './interview.ts';
-
-// Applications test/seed-front.ts marks Applied, whose Interviews only these tests change: one with JS,
-// one without
+// An Application test/seed-front.ts marks Applied, whose Interviews only this test changes
 const REFERENCE = '2026-2448213';
-const NO_JS_REFERENCE = '2026-2448215';
 
-test('adds an Interview to an Application, which becomes Invited, then edits and deletes it', async ({ page }) => {
-  await page.goto(`/postings/${REFERENCE}`);
-  // A form typed in before React runs the page would be reset: the Research button waits for it
-  await expect(page.getByRole('button', { name: 'Lancer la Recherche' })).toBeEnabled();
-  await deleteEveryInterview(page);
-  const interviews = findInterviews(page);
-  const newInterview = interviews.getByRole('group', { name: 'Nouvel Entretien' });
+// The tests that add one each start from a single Interview of that Application: one after the other
+test.describe.configure({ mode: 'serial' });
+
+test('adds an Interview from the header, offers its iCal file, then lands on it', async ({ page, openPage }) => {
+  await prepareApplication(page, REFERENCE);
+  // Added from the Posting tab, it lands on the Interviews tab all the same
+  await openPage(`/postings/${REFERENCE}`);
+  await page.locator('main > header').getByRole('button', { name: 'Ajouter un Entretien' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Ajouter un Entretien' });
   // The place starts on the place of work of the Posting, and the duration on an hour
-  await expect(newInterview.getByRole('textbox', { name: 'Lieu' })).toHaveValue(/Caen/);
-  await expect(newInterview.getByRole('spinbutton', { name: 'Durée (minutes)' })).toHaveValue('60');
+  await expect(dialog.getByRole('textbox', { name: 'Lieu' })).toHaveValue(/Caen/);
+  await expect(dialog.getByRole('spinbutton', { name: 'Durée (min)' })).toHaveValue('60');
+  await dialog.getByLabel('Jour').fill('2099-11-19');
+  await dialog.getByLabel('Heure (Paris)').fill('14:00');
+  await dialog.getByRole('textbox', { name: 'Interlocuteurs' }).fill('Mme Durand, directrice de greffe');
+  await dialog.getByRole('button', { name: 'Ajouter l’Entretien' }).click();
 
-  await newInterview.getByLabel('Début').fill('2099-11-19T14:00');
-  await newInterview.getByRole('textbox', { name: 'Interlocuteurs' }).fill('Mme Durand, directrice de greffe');
-  await newInterview.getByRole('button', { name: 'Ajouter l’Entretien' }).click();
-
-  const interview = interviews.getByRole('article', { name: 'Entretien 1' });
-  await expect(interview).toContainText('19 nov. 2099, 14:00');
-  await expect(interview).toContainText('Mme Durand, directrice de greffe');
-  await expect(page.locator('.badge[data-status]').first()).toHaveText('Convoquée');
-
-  // The iCal file, its links on the address the page was opened through
-  const icalLink = interview.getByRole('link', { name: 'Ajouter à l’agenda (iCal)' });
+  // The Interview-added step offers the iCal file first
+  const added = page.getByRole('dialog', { name: 'Entretien ajouté' });
+  await expect(added).toContainText('Mme Durand, directrice de greffe');
+  await expect(page.getByText('Entretien 1 ajouté')).toBeVisible();
   const downloadPromise = page.waitForEvent('download');
-  await icalLink.click();
+  await added.getByRole('link', { name: 'Télécharger le fichier iCal (.ics)' }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe(`interview-${REFERENCE}-1.ics`);
   const ical = readFileSync(await download.path(), 'utf8').replaceAll('\r\n ', '');
   expect(ical).toContain('DTSTART;TZID=Europe/Paris:20991119T140000\r\n');
+  expect(ical).toContain('Interlocuteurs : Mme Durand\\, directrice de greffe');
   expect(ical).toContain(`Page Job Finder : ${new URL(page.url()).origin}/postings/${REFERENCE}`);
-  const response = await page.request.get(String(await icalLink.getAttribute('href')));
-  expect(response.headers()['content-type']).toBe('text/calendar; charset=utf-8');
+  expect(ical.match(/TRIGGER:.*\r\n/g)).toEqual(['TRIGGER:-P1D\r\n', 'TRIGGER:-PT1H\r\n']);
 
-  await interview.getByText('Modifier l’Entretien 1').click();
-  await interview.getByRole('textbox', { name: 'Lieu' }).fill('En visioconférence');
-  await interview.getByRole('button', { name: 'Enregistrer l’Entretien' }).click();
-  await expect(interview.getByRole('definition')).toContainText(['En visioconférence']);
+  await added.getByRole('button', { name: 'Voir l’Entretien' }).click();
+  await expect(page).toHaveURL(/\?tab=interviews&interview=1$/);
+  const interviews = findInterviews(page);
+  await expect(interviews.getByRole('heading', { level: 2, name: /19 novembre 2099/ })).toHaveText(
+    'jeudi 19 novembre 2099 à 14:00',
+  );
+  await expect(page.locator('main > header [data-step]')).toHaveText('Convoquée');
+});
 
-  await interview.getByText('Supprimer l’Entretien 1…').click();
-  await interview.getByRole('button', { name: 'Supprimer définitivement l’Entretien 1' }).click();
-  await expect(interviews.getByRole('article')).toHaveCount(0);
-  await expect(interviews).toContainText('Aucun Entretien pour l’instant.');
-  await expect(page.locator('.badge[data-status]').first()).toHaveText('Postulée');
+test('edits an Interview, keeps its tabs in the URL, then deletes it', async ({ page }) => {
+  await prepareInterview(page, REFERENCE);
+  const interviews = findInterviews(page);
+
+  // Edited in the same Dialog
+  await interviews.getByRole('button', { name: 'Modifier l’Entretien 1' }).click();
+  const edit = page.getByRole('dialog', { name: 'Modifier l’Entretien 1' });
+  await expect(edit.getByLabel('Heure (Paris)')).toHaveValue('14:00');
+  await edit.getByRole('textbox', { name: 'Lieu' }).fill('En visioconférence');
+  await edit.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page.getByText('Entretien 1 enregistré')).toBeVisible();
+  await expect(edit).toBeHidden();
+  await expect(interviews.getByRole('definition')).toContainText(['En visioconférence']);
+
+  // Its Interview Brief and its Portrait, each a tab the URL keeps
+  await expect(interviews.getByRole('tab', { name: /^Fiche d’entretien/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(interviews.getByRole('region', { name: 'Fiche d’entretien' })).toBeVisible();
+  await interviews.getByRole('tab', { name: /^Portrait/ }).click();
+  await expect(page).toHaveURL(/\?tab=interviews&interview=1&doc=portrait$/);
+  await expect(interviews.getByRole('region', { name: 'Portrait' })).toBeVisible();
+
+  // Deleted after confirming
+  await interviews.getByRole('button', { name: 'Supprimer l’Entretien 1' }).click();
+  await page
+    .getByRole('alertdialog', { name: 'Supprimer l’Entretien 1 ?' })
+    .getByRole('button', { name: 'Supprimer' })
+    .click();
+  await expect(page.getByText('Entretien 1 supprimé')).toBeVisible();
+  await expect(interviews).toContainText('Aucun Entretien pour l’instant');
+  await expect(page.locator('main > header [data-step]')).toHaveText('Postulée');
 });
 
 test('asks to mark a To Apply Posting Applied before adding an Interview', async ({ page }) => {
-  await page.goto('/postings/2026-2445600');
+  await page.goto('/postings/2026-2445600?tab=interviews');
 
-  await expect(findInterviews(page)).toContainText('marquer l’Offre Postulée pour en ajouter un');
-  await expect(findInterviews(page).getByRole('button', { name: 'Ajouter l’Entretien' })).toHaveCount(0);
-});
-
-test.describe('without JavaScript', () => {
-  test.use({ javaScriptEnabled: false });
-
-  // The forms post on their own and the action route brings the Candidate back to the Posting page
-  test('adds and deletes an Interview through plain form posts', async ({ page }) => {
-    await page.goto(`/postings/${NO_JS_REFERENCE}`);
-    await deleteEveryInterview(page);
-    const newInterview = findInterviews(page).getByRole('group', { name: 'Nouvel Entretien' });
-
-    await newInterview.getByLabel('Début').fill('2099-12-01T09:30');
-    await newInterview.getByRole('button', { name: 'Ajouter l’Entretien' }).click();
-
-    await expect(page).toHaveURL(new RegExp(`/postings/${NO_JS_REFERENCE}$`));
-    await expect(findInterviews(page).getByRole('article', { name: 'Entretien 1' })).toContainText(
-      '1 déc. 2099, 09:30',
-    );
-    await deleteEveryInterview(page);
-  });
+  await expect(findInterviews(page)).toContainText('marque l’Offre Postulée pour en ajouter un');
+  await expect(findInterviews(page).getByRole('button', { name: 'Ajouter un Entretien' })).toHaveCount(0);
 });
