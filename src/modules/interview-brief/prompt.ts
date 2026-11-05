@@ -1,4 +1,4 @@
-import { describeArtifactLanguage, describeMessage, type IPromptInput } from '#/ai-module/index.ts';
+import { describeArtifactLanguage, describeMdxFormat, describeMessage, type IPromptInput } from '#/ai-module/index.ts';
 import { parisDateTimeOf } from '#/domain/paris-time.ts';
 import { describeProfile } from '#/profile/prompt.ts';
 
@@ -78,7 +78,9 @@ ${describePreviousBriefs(input)}
 
 ## What you produce
 
-A single Markdown file: \`${outputPath}\`, which starts with a level 1 heading (\`# …\`). The Candidate's Instructions say how to organize it.
+A single MDX file: \`${outputPath}\`, which starts with a level 1 heading (\`# …\`). The Candidate's Instructions say how to organize it.
+
+${describeMdxFormat()}
 
 ## Non-negotiable rules
 

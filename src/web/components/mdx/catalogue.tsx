@@ -1,5 +1,6 @@
 // The closed catalogue of the MDX Artifacts, on shadcn (ADR-0020). Only plain string attributes and
-// children reach a component (compile.ts strips the rest), so each one is written by composition:
+// children reach a component (compile.ts strips the rest), so each one is written by composition. The Fixed
+// Part of each MDX Artifact lists the same components to the AI (src/ai-module/index.ts): add one to both.
 //
 //   <Callout type="note|info|tip|warning|danger" title="…">…</Callout>
 //   <Tabs><Tab title="…">…</Tab>…</Tabs>
