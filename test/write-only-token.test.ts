@@ -11,7 +11,7 @@ import { defineNotificationChannel, type INotificationChannel } from '#/notifica
 import { parameter } from '#/parameter/index.ts';
 
 import { applyTo } from './apply.ts';
-import { createDataDirectory } from './data-directory.ts';
+import { copyDetectedDataDirectory } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { startFakeHomeAssistant } from './fake-home-assistant.ts';
 import { startFakeSmtpServer } from './fake-smtp-server.ts';
@@ -149,19 +149,18 @@ const FAKE_VAULT_PARAMETERS = {
   password: 'mot-de-passe-secret',
 };
 
-// Léa's Postings detected, a Version of each Artifact ready, and her Notification Channel saved with
-// the given Parameters. The input of the check gives back its non-secret Parameters only: a save
+// Léa's Postings of the run's first Detection, a Version of each Artifact ready, and her Notification
+// Channel saved with the given Parameters. The input of the check gives back its non-secret Parameters only: a save
 // without the secrets keeps them.
 async function saveChannel(module: INotificationChannel, parameters: Record<string, string>) {
   const actions = await createActions({
-    dataDirectory: createDataDirectory(),
+    dataDirectory: copyDetectedDataDirectory(),
     aiSession: createFakeAiSession(...Object.values(RUN_BY_MODULE)),
     fetch: createRecordedFetch().fetch,
     notificationChannelList: [module],
   });
   const { id, parameterList } = module.description;
   await actions.saveNotificationChannel({ candidateId: 'lea', channel: id, parameters });
-  await actions.detect();
   for (const artifactModule of Object.keys(RUN_BY_MODULE)) {
     // The Interview Brief prepares an Interview, which only an Application has
     const interview = artifactModule === 'interview_brief' ? 1 : undefined;
@@ -199,22 +198,17 @@ async function saveChannel(module: INotificationChannel, parameters: Record<stri
 
 describe('the write-only secret Parameters of a Notification Channel', () => {
   it('catches an action that returns any secret Parameter', async () => {
-    const { actions, input, secretByName } = await saveChannel(FAKE_VAULT, FAKE_VAULT_PARAMETERS);
-    const leakyActionMap = {
-      ...actions,
-      readFullChannel: () => Promise.resolve({ password: FAKE_VAULT_PARAMETERS.password }),
-    };
+    const leakyActionMap = { readFullChannel: () => Promise.resolve({ password: FAKE_VAULT_PARAMETERS.password }) };
 
-    expect(await findSecretLeaks(leakyActionMap, input, secretByName)).toEqual([
+    expect(await findSecretLeaks(leakyActionMap, {}, FAKE_VAULT_PARAMETERS)).toEqual([
       'readFullChannel returns the secret Parameter password',
     ]);
   });
 
   it('catches an action the check cannot call', async () => {
-    const { actions, input, secretByName } = await saveChannel(FAKE_VAULT, FAKE_VAULT_PARAMETERS);
-    const uncalledActionMap = { ...actions, renameChannel: () => Promise.reject(new Error('Nom manquant.')) };
+    const uncalledActionMap = { renameChannel: () => Promise.reject(new Error('Nom manquant.')) };
 
-    expect(await findSecretLeaks(uncalledActionMap, input, secretByName)).toEqual([
+    expect(await findSecretLeaks(uncalledActionMap, {}, FAKE_VAULT_PARAMETERS)).toEqual([
       'renameChannel fails on the input of the check (Nom manquant.): give it what it needs',
     ]);
   });
