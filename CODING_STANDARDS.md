@@ -54,7 +54,6 @@ The front is an orchestration of shadcn components on Tailwind v4; `DESIGN.md` i
 - **Components.** shadcn's live in `src/web/components/ui/`, as its CLI writes them (`components.json`), outside ESLint but under the typecheck; a Dumb composes them with `cn()` and variants. A custom component is written only where shadcn covers nothing.
 - **Feedback.** Every mutation ends in a toast, success or its Error Code's message (`useFeedback`), and its button shows `isPending` meanwhile.
 - **Client dependencies.** Each one the browser loads is listed in `optimizeDeps.include` of `vite.config.ts`, so the first e2e page hydrates.
-- **The POC stylesheets** (BEM, one per POC component) sit in the `poc` cascade layer, below every Tailwind layer, until the ticket that replaces each page deletes them; no new one is written.
 
 ## Data
 

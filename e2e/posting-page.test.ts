@@ -204,3 +204,22 @@ test.describe('the tabs of the Posting page', () => {
     await expect(editor).toHaveValue(notes);
   });
 });
+
+test('reads the latest Version of an Artifact, and any other from its Version Select', async ({ page, openPage }) => {
+  await openPage(`/postings/${BETHUNE_REFERENCE}?tab=research`);
+
+  const research = page.getByRole('region', { name: 'Recherche' });
+  const versionSelect = research.getByRole('combobox', { name: 'Version' });
+  await expect(versionSelect).toHaveText('Version 2 · Brouillon');
+  await expect(research.getByRole('heading', { name: /^Recherche relancée/ })).toBeVisible();
+  await versionSelect.click();
+  await expect(page.getByRole('option')).toHaveText([
+    /^Version 2\s*Brouillon · IA/,
+    /^Version 1\s*Validée · retenue · IA/,
+  ]);
+  await page.getByRole('option', { name: /^Version 1/ }).click();
+  await expect(research.getByRole('heading', { name: /^Recherche retenue/ })).toBeVisible();
+  await expect(research.getByRole('heading', { name: /^Recherche relancée/ })).toBeHidden();
+  await page.getByRole('tab', { name: /^Lettre de motivation/ }).click();
+  await expect(page.getByRole('region', { name: 'Lettre de motivation' })).toContainText('Madame la Présidente,');
+});

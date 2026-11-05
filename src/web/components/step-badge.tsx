@@ -1,9 +1,14 @@
 import { cn } from 'cn';
 import { useTranslation } from 'react-i18next';
 
+import type { Actions } from '#/actions/index.ts';
 import { Badge } from '#/web/components/ui/badge.tsx';
 
-import type { Step } from './badge.tsx';
+// The stored Status, as the actions give it
+export type Status = Awaited<ReturnType<Actions['listPostings']>>[number]['status'];
+
+// The Status as the actions compute it, Invited or Interviewed from the Interviews (ADR-0009)
+export type Step = Awaited<ReturnType<Actions['listPostings']>>[number]['step'];
 
 // Each Step in its state hue (DESIGN.md « State hues »), always beside its label
 const TONE_BY_STEP: Record<Step, string> = {

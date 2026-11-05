@@ -6,7 +6,6 @@ export default [
   index('routes/new.tsx'),
   route('applications', 'routes/applications.tsx'),
   route('to-apply', 'routes/to-apply.tsx'),
-  route('postings', 'routes/postings.tsx'),
   route('postings/:reference', 'routes/posting.tsx'),
   route('postings/:reference/status', 'routes/status.ts'),
   route('postings/:reference/archive', 'routes/archive.ts'),

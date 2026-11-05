@@ -19,9 +19,9 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useFetcher } from 'react-router';
 
-import type { Status, Step } from '#/web/components/badge.tsx';
 import { revisionPathOf } from '#/web/components/interviews.tsx';
 import { HeaderActionLabel } from '#/web/components/page-header.tsx';
+import type { Status, Step } from '#/web/components/step-badge.tsx';
 import {
   AlertDialog,
   AlertDialogAction,

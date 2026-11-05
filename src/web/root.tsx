@@ -1,5 +1,4 @@
-// First of all: app.css declares the order of the cascade layers, which the first @layer to appear
-// sets, and the POC components imported below bring their own CSS into the poc layer
+// First of all: app.css declares the order of the cascade layers, which the first @layer to appear sets
 import './app.css';
 
 import { ThemeProvider } from 'next-themes';
