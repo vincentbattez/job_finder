@@ -1,6 +1,5 @@
 import type { Actions, Artifact, ErrorCode } from '#/actions/index.ts';
-
-import type { State } from './badge.tsx';
+import type { State } from '#/actions/state.ts';
 
 // The Versions of an Artifact as readPosting gives them, shared by the views of its tabs
 type VersionState = 'running' | 'ready' | 'failed';

@@ -29,7 +29,7 @@ const WORDS_PER_MINUTE = 200;
 // The reading size, its headings as DESIGN.md « Typography » sets them; the column holds 65 to 75
 // characters per line at that size (DESIGN.md « The Reading Column Rule »)
 const READING_PROSE = cn(
-  'max-w-[32em] text-reading prose-neutral prose-headings:max-w-none',
+  'max-w-[34em] text-reading prose-neutral prose-headings:max-w-none',
   'prose-h1:text-headline prose-h2:mt-14 prose-h2:mb-4 prose-h2:text-[1.35rem] prose-h3:mt-9 prose-h3:text-[1.08rem]',
   'prose-li:my-1 prose-a:text-primary prose-hr:my-10',
 );
@@ -271,7 +271,7 @@ export function LetterPage({ text, recipients }: Readonly<{ text: string; recipi
     <div className="mx-auto max-w-[42rem] space-y-6">
       {recipients !== null && <Recipients recipients={recipients} />}
       <article className="rounded-xl border bg-card px-6 py-8 shadow-whisper sm:p-12">
-        <ArtifactText text={text} format="markdown" className="max-w-[32em] prose-lg prose-neutral prose-p:my-3" />
+        <ArtifactText text={text} format="markdown" className="max-w-[34em] prose-lg prose-neutral prose-p:my-3" />
       </article>
     </div>
   );

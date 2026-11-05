@@ -13,8 +13,8 @@ import { useTranslation } from 'react-i18next';
 import { useFetcher, useSearchParams } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
-import type { Status } from '#/web/components/badge.tsx';
 import { PostingSheet as PostingSheetView } from '#/web/components/posting-sheet.tsx';
+import type { Status } from '#/web/components/step-badge.tsx';
 import { Button } from '#/web/components/ui/button.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 

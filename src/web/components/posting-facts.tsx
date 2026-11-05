@@ -5,7 +5,7 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import { Link } from 'react-router';
 import remarkGfm from 'remark-gfm';
 
-import type { Step } from './badge.tsx';
+import type { Step } from './step-badge.tsx';
 
 interface ILinkedPosting {
   reference: string;

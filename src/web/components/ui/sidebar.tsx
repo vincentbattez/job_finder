@@ -289,7 +289,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
   );
 }
 
-// A div rather than shadcn's main: each page renders its own main landmark, a POC page included
+// A div rather than shadcn's main: each page renders its own main landmark
 function SidebarInset({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div

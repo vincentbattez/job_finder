@@ -94,7 +94,7 @@ export interface IListFilters {
 
 const CITY_PARAMETER = 'city';
 const REGION_PARAMETER = 'region';
-// Any value turns it on: « on » is what the POC's checkbox sent, which saved links still carry
+// Any value turns it on: « on » is what the former checkbox sent, which saved links still carry
 const ARCHIVED_PARAMETER = 'archived';
 const ARCHIVED_VALUE = 'on';
 

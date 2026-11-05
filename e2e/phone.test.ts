@@ -152,6 +152,18 @@ test.describe('The lists on a phone', () => {
     await expect.poll(() => findOverflowing(page)).toEqual([]);
   });
 
+  test('fits the Posting page on a phone, its Artifact tabs included', async ({ page, asCandidate, openPage }) => {
+    await page.setViewportSize(PHONE);
+    await asCandidate('lea');
+
+    await openPage('/postings/2026-2445600');
+    await expect.poll(() => findOverflowing(page)).toEqual([]);
+
+    await openPage('/postings/2026-2445600?tab=research');
+    await expect(page.getByRole('combobox', { name: 'Version' })).toBeVisible();
+    await expect.poll(() => findOverflowing(page)).toEqual([]);
+  });
+
   for (const colorScheme of ['light', 'dark'] as const) {
     test(`fits a phone screen in the ${colorScheme} theme`, async ({ page, asCandidate, openPage }) => {
       await page.emulateMedia({ colorScheme });

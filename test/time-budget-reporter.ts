@@ -38,7 +38,7 @@ const SLOW_FILE_LIST: ISlowFile[] = [
     budgetMs: 10_000,
     reason: 'migrates an older layout with the Prisma CLI (ADR-0004)',
   },
-  { file: 'test/architecture.test.ts', budgetMs: 8000, reason: 'builds the archunit graph of the whole project' },
+  { file: 'test/architecture.test.ts', budgetMs: 12_000, reason: 'builds the archunit graph of the whole project' },
   {
     file: 'test/time-budget.test.ts',
     budgetMs: 15_000,
@@ -49,6 +49,7 @@ const SLOW_FILE_LIST: ISlowFile[] = [
 // Calibrated on the GitHub runner, 2 vCPU and both Vitest workers busy, which stretches every test
 // (#108). Per test: 1.5 times the slowest unlisted test seen there (3.9 s). Suite: 1.25 times the
 // slowest of three runs (142 s), the runner itself varying by about 30 % from one run to the next.
+// The suite budget holds per CI shard (.github/workflows/ci.yml).
 const BUDGET: ITimeBudget = { testBudgetMs: 6000, suiteBudgetMs: 180_000, slowFileList: SLOW_FILE_LIST };
 
 export function findOverBudget({ testList, suiteMs }: ITestRun, budget: ITimeBudget): string[] {

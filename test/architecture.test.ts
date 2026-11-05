@@ -58,7 +58,7 @@ function findCrossModuleImports(tsconfigPath: string) {
 // (ADR-0003)
 const RELAY_LIST = [
   { folder: 'cli', filePath: 'src/cli/jf.ts' },
-  { folder: 'web', filePath: 'src/web/routes/postings.tsx' },
+  { folder: 'web', filePath: 'src/web/routes/new.tsx' },
   { folder: 'worker', filePath: 'src/worker/worker.ts' },
 ];
 
@@ -292,6 +292,15 @@ const CONTAINER_ONLY_ACCESS_LIST = [
 ];
 
 const CONTAINER_DIRECTORY = 'src/web/containers';
+
+// The one stylesheet of the front holds the tokens and the base; everything else is Tailwind classes (ADR-0017)
+const FRONT_STYLESHEET_PATH = 'src/web/app.css';
+
+function findStrayStylesheets(projectDirectory: string): string[] {
+  return globSync('src/**/*.css', { cwd: projectDirectory })
+    .filter((filePath) => filePath !== FRONT_STYLESHEET_PATH)
+    .map((filePath) => `${filePath} is a stylesheet beside ${FRONT_STYLESHEET_PATH} (ADR-0017)`);
+}
 
 function findDataAccessInDumbs(projectDirectory: string): string[] {
   const filePathList = globSync(`${COMPONENT_DIRECTORY}/**/*.{ts,tsx}`, {
@@ -626,7 +635,7 @@ describe('architecture', () => {
     const projectDirectory = path.dirname(
       createProject({
         'src/web/root.tsx': 'export function loader({ request }) {\n  return readCandidate(request);\n}\n',
-        'src/web/routes/postings.tsx': 'export const loader = () => ACTIONS.listPostings({});\n',
+        'src/web/routes/new.tsx': 'export const loader = () => ACTIONS.listPostings({});\n',
         'src/web/routes/posting.tsx':
           'export function loader({ request }) {\n  return relayLoader(request, () => ACTIONS.readPosting({}));\n}\n',
         'src/web/routes/run.ts': 'export function action() {\n  return ACTIONS.runModule({});\n}\n',
@@ -637,7 +646,7 @@ describe('architecture', () => {
 
     expect(sortedList(violationList).map((violation) => violation.split(' exports', 1)[0])).toEqual([
       'src/web/root.tsx',
-      'src/web/routes/postings.tsx',
+      'src/web/routes/new.tsx',
     ]);
     expect(violationList[0]).toMatch(/“Visible failure”/);
   });
@@ -648,10 +657,10 @@ describe('architecture', () => {
 
   it('catches the front running the queued jobs', () => {
     const projectDirectory = path.dirname(
-      createProject({ 'src/web/routes/postings.tsx': 'export const run = (actions) => actions.runQueuedJobs();\n' }),
+      createProject({ 'src/web/routes/new.tsx': 'export const run = (actions) => actions.runQueuedJobs();\n' }),
     );
 
-    expect(findJobsRunOutsideWorker(projectDirectory)).toEqual(['src/web/routes/postings.tsx']);
+    expect(findJobsRunOutsideWorker(projectDirectory)).toEqual(['src/web/routes/new.tsx']);
   });
 
   it('runs the queued jobs only in the worker', () => {
@@ -834,6 +843,23 @@ describe('architecture', () => {
         ),
       ),
     );
+  });
+
+  it('catches a stylesheet beside the one of the front', () => {
+    const projectDirectory = path.dirname(
+      createProject({
+        [FRONT_STYLESHEET_PATH]: '',
+        [`${COMPONENT_DIRECTORY}/badge.css`]: '.badge {}\n',
+      }),
+    );
+
+    expect(findStrayStylesheets(projectDirectory)).toEqual([
+      `${COMPONENT_DIRECTORY}/badge.css is a stylesheet beside ${FRONT_STYLESHEET_PATH} (ADR-0017)`,
+    ]);
+  });
+
+  it('has one stylesheet for the whole front', () => {
+    expect(findStrayStylesheets(ROOT_DIRECTORY)).toEqual([]);
   });
 
   it('has the Dumbs only display their props', () => {

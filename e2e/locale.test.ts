@@ -2,25 +2,7 @@ import { expect, test, type IFront } from './candidate.ts';
 
 // Emma reads the interface in English (test/seed-front.ts): her one Posting, imported, has no
 // Deadline
-test('shows the Posting list in English to a Candidate with the en locale', async ({ page, asCandidate, openPage }) => {
-  await asCandidate('emma');
-  await openPage('/postings');
-
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Postings');
-  await expect(page).toHaveTitle('Postings · Job Finder');
-  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await expect(page.getByRole('columnheader')).toHaveText(['Posting', 'Status', 'Published', 'Deadline']);
-  const row = page.getByRole('row', { name: /court-clerk-lille\.md/ });
-  await expect(row.getByRole('cell')).toHaveText([
-    /^court-clerk-lille\.md/,
-    'To Apply',
-    // Imported on the day of the seed, as en-US writes it, as Oct 30, 2026
-    /^[A-Z][a-z]{2} \d{1,2}, \d{4}$/,
-    'Not specified',
-  ]);
-});
-
-// Emma's pages are read, never changed: she is shared with the test above
+// Emma's pages are read, never changed: she is shared with every test of this file
 // Her home, once asCandidate chose her
 async function openHomeOfEmma({ page, openPage }: IFront) {
   await openPage('/');
@@ -120,6 +102,7 @@ test('shows To Apply over the map in English to a Candidate with the en locale',
   await openPage('/to-apply');
 
   await expect(page).toHaveTitle('To Apply · Job Finder');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   const panel = page.getByRole('complementary', { name: 'To Apply' });
   // Imported without a Deadline, and without a place the map could show
   await expect(panel.getByRole('heading', { level: 2 })).toHaveText([/^No Deadline/]);

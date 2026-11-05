@@ -29,7 +29,6 @@ export { profileDocumentKindOf } from '#/domain/index.ts';
 export { codedError, codedErrorOf, formatError, formatFailure } from '#/domain/coded-error.ts';
 export type { ErrorCode } from '#/domain/error.ts';
 export type { Artifact } from '#/domain/index.ts';
-export { ARTIFACT_RENAME_LIST } from '#/domain/artifact-rename.ts';
 
 // The single entry point of every feature, so no business rule lives in the CLI or the front
 // (ADR-0003); `satisfies` holds each action to unknown input and domain output (ADR-0005)

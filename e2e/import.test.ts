@@ -49,10 +49,13 @@ test('imports a Job Description dropped from the header: To Apply at once, then 
   await notifications.getByRole('button', { name: 'Voir dans À traiter' }).click();
   await expect(page).toHaveURL(/\/to-apply$/);
 
-  await openPage('/postings');
+  // Its file's name or already its title, whichever the worker has reached
+  const name = new RegExp(`${FILE_NAME}|${TITLE}`);
   await page
-    .getByRole('row', { name: new RegExp(FILE_NAME) })
-    .getByRole('link', { name: FILE_NAME })
+    .getByRole('complementary')
+    .getByRole('listitem')
+    .filter({ hasText: name })
+    .getByRole('link', { name })
     .click();
   const extraction = page.getByRole('form', { name: 'Champs relevés par Claude' });
   await expect(extraction.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });

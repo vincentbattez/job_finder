@@ -152,7 +152,7 @@ components:
 
 # Design System: Job Finder
 
-Derived on 2026-11-02 from the shipped code and the rendering, light and dark, of the V1 prototype the product owner validated (branch `prototype/v1-ux`, `src/web/prototype/`, its `DECISIONS.md` and Verdicts). The prototype is the visual authority; the POC pages still on this branch (BEM stylesheets quarantined in the `poc` cascade layer) are an anti-reference. Product truth lives in `PRODUCT.md`; French UI copy is quoted in « ».
+Derived on 2026-11-02 from the shipped code and the rendering, light and dark, of the V1 prototype the product owner validated (branch `prototype/v1-ux`, `src/web/prototype/`, its `DECISIONS.md` and Verdicts). The prototype is the visual authority. Product truth lives in `PRODUCT.md`; French UI copy is quoted in « ».
 
 ## Overview
 

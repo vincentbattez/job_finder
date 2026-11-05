@@ -1,17 +1,10 @@
 /* The V1 front: Tailwind v4 and shadcn's CSS-variable tokens, light and dark through the .dark class
  * that next-themes sets on <html> (ADR-0017). The values are DESIGN.md's. */
 
-/* The cascade order, once. The POC's BEM stylesheets sit in the poc layer, below every Tailwind layer:
- * they keep the POC pages working until their ticket replaces them, and can never override a
- * shadcn style. Leaflet's own !important guards keep its tiles out of Tailwind's preflight. */
-@layer vendor, poc, theme, base, components, utilities;
+/* The cascade order, once. Leaflet's own !important guards keep its tiles out of Tailwind's preflight. */
+@layer vendor, theme, base, components, utilities;
 
 @import 'leaflet/dist/leaflet.css' layer(vendor);
-@import './tokens.css' layer(poc);
-@import './base.css' layer(poc);
-@import './layout.css' layer(poc);
-@import './controls.css' layer(poc);
-@import './utilities.css' layer(poc);
 
 @import 'tailwindcss';
 @import 'tw-animate-css';
@@ -205,11 +198,49 @@
     @apply border-border outline-ring/50;
   }
 
+  /* A wide element never scrolls the page sideways, on a phone least of all */
+  html,
+  body {
+    overflow-x: clip;
+  }
+
   html {
     @apply font-sans;
   }
 
   body {
     @apply bg-background text-body text-foreground antialiased;
+  }
+
+  :focus-visible {
+    outline-style: solid;
+    outline-width: 2px;
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 22%, transparent);
+  }
+
+  h1,
+  h2,
+  h3 {
+    overflow-wrap: break-word;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

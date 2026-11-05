@@ -3,9 +3,9 @@ import { useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
-import { StateBadge, type State } from '#/web/components/badge.tsx';
-import { DateText } from '#/web/components/date.tsx';
+import type { State } from '#/actions/state.ts';
 import { DropZone } from '#/web/components/drop-zone.tsx';
+import { StateBadge } from '#/web/components/state-badge.tsx';
 import { Button } from '#/web/components/ui/button.tsx';
 import { useIsHydrated } from '#/web/components/use-is-hydrated.ts';
 import type { IRefusal } from '#/web/failure.ts';
@@ -101,7 +101,8 @@ export function Uploads({
               <div className="flex flex-wrap items-center gap-2">
                 <span className="w-full truncate font-mono text-sm sm:w-auto sm:min-w-0 sm:flex-1">{fileName}</span>
                 <span className="text-xs text-muted-foreground">
-                  {t('uploads.savedOn')} <DateText date={savedAt} />
+                  {t('uploads.savedOn')}{' '}
+                  <time dateTime={savedAt.toISOString()}>{t('date', { ns: 'common', date: savedAt })}</time>
                 </span>
                 <Button
                   type="button"

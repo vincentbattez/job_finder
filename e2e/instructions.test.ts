@@ -114,7 +114,7 @@ test('replaces the Instructions of each type of Artifact from the Settings, then
   await letter.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(toastOf(page, 'Consignes enregistrées')).toBeVisible();
   await expect(letter.getByText('Tes Consignes', { exact: true })).toBeVisible();
-  await page.reload();
+  await openPage('/settings');
   await expect(editor).toHaveValue('Une lettre courte, au ton direct.\n');
   await expect(
     section.getByRole('region', { name: 'Recherche' }).getByText('Consignes par défaut', { exact: true }),

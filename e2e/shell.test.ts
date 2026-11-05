@@ -42,6 +42,17 @@ test('switches Candidate and stays on the same page', async ({ page, asCandidate
   await expect(page.getByRole('button', { name: 'Changer de Candidat' })).toContainText('Camille');
 });
 
+test('remembers the chosen Candidate on the next visit', async ({ page, asCandidate, openPage }) => {
+  await asCandidate('lea');
+  await openPage('/applications');
+  await switchCandidate(page, 'Camille');
+  await expect(page.getByRole('button', { name: 'Changer de Candidat' })).toContainText('Camille');
+
+  await openPage('/applications');
+
+  await expect(page.getByRole('button', { name: 'Changer de Candidat' })).toContainText('Camille');
+});
+
 // The Posting belongs to the Candidate left: the switch leads to New instead
 test('switches Candidate from a Posting page to New', async ({ page, asCandidate, openPage }) => {
   await asCandidate('lea');
