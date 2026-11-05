@@ -10,6 +10,7 @@ import { PostingFacts } from '#/web/components/posting-facts.tsx';
 import { POSTING_TAB_LIST, PostingTabs, type PostingTab, type TabSummary } from '#/web/components/posting-tabs.tsx';
 import { StepBadge } from '#/web/components/step-badge.tsx';
 import { ArtifactView } from '#/web/containers/artifact-view.tsx';
+import { Documents } from '#/web/containers/documents.tsx';
 import { ExtractionLaunch } from '#/web/containers/extraction-launch.tsx';
 import { Interviews } from '#/web/containers/interviews.tsx';
 import { Notes } from '#/web/containers/notes.tsx';
@@ -91,7 +92,12 @@ export default function Posting() {
     switch (tab) {
       case 'posting': {
         return (
-          <PostingFacts posting={posting} jobDescription={detail.jobDescription} repost={detail.repost}>
+          <PostingFacts
+            posting={posting}
+            jobDescription={detail.jobDescription}
+            repost={detail.repost}
+            documents={<Documents reference={posting.reference} customArtifactList={detail.customArtifactList} />}
+          >
             {detail.extraction !== null && <ExtractionLaunch reference={posting.reference} {...detail.extraction} />}
           </PostingFacts>
         );

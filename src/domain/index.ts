@@ -285,6 +285,13 @@ export const ARTIFACT_SCHEMA = z.enum(['research', 'letter', 'portrait', 'interv
 
 export type Artifact = z.infer<typeof ARTIFACT_SCHEMA>;
 
+// What a Version belongs to: an Artifact an AI module produces, or a Custom Artifact, the Candidate's own
+// document with its single Version (spec #125)
+const VERSION_ARTIFACT_SCHEMA = z.enum([...ARTIFACT_SCHEMA.options, 'custom']);
+
+// The file of a Custom Artifact's Version, MDX like every Artifact but the Letter (ADR-0020)
+export const CUSTOM_ARTIFACT_FILE_NAME = 'document.mdx';
+
 // The fixed part of the prompt is not among the Instructions: no one changes it (ADR-0003)
 export const MODULE_INSTRUCTIONS_SCHEMA = z
   .object({ module: ARTIFACT_SCHEMA, defaultInstructions: z.string(), candidateInstructions: z.string().nullable() })
@@ -297,7 +304,7 @@ const VERSION_INTERVIEW_SCHEMA = z.object({ number: z.int() }).nullable();
 
 // A Version that another Version read as input, of its own Posting or of another one
 const READ_VERSION_SCHEMA = z.object({
-  artifact: ARTIFACT_SCHEMA,
+  artifact: VERSION_ARTIFACT_SCHEMA,
   number: z.int(),
   posting: z.object({ reference: z.string() }),
   interview: VERSION_INTERVIEW_SCHEMA,
@@ -313,7 +320,9 @@ export const VERSION_SCHEMA = z
   .object({
     id: z.int(),
     interview: VERSION_INTERVIEW_SCHEMA,
-    artifact: ARTIFACT_SCHEMA,
+    artifact: VERSION_ARTIFACT_SCHEMA,
+    // The Custom Artifact it is the single Version of, null for any other Artifact
+    customArtifact: z.object({ id: z.int(), title: z.string() }).nullable(),
     number: z.int(),
     isChosen: z.boolean(),
     state: z.enum(['running', 'ready', 'failed']),
@@ -432,7 +441,7 @@ export type Section = z.infer<typeof SECTION_SCHEMA>;
 // it reads, named by its Posting, its Interview if attached to one, its Artifact and its number
 const PROMPT_READ_VERSION_SCHEMA = z.object({
   reference: z.string(),
-  artifact: ARTIFACT_SCHEMA,
+  artifact: VERSION_ARTIFACT_SCHEMA,
   interviewNumber: z.int().nullable(),
   number: z.int(),
 });
@@ -526,6 +535,20 @@ const EARLIER_APPLICATION_SCHEMA = z.object({
 
 // What the Posting page shows: the Posting with its raw contacts, its Job Description, every
 // Version of each Artifact with its files, and the recipients its Chosen Letter recommends
+// A document the Candidate added for a Posting, or one of its Interviews, as the Documents section lists it:
+// the key a run's Input names it by, and the text of its single Version
+export const CUSTOM_ARTIFACT_SCHEMA = z
+  .object({
+    key: z.string(),
+    title: z.string(),
+    interviewNumber: z.int().nullable(),
+    text: z.string(),
+    createdAt: z.date(),
+  })
+  .brand<'Domain'>();
+
+export type CustomArtifact = z.infer<typeof CUSTOM_ARTIFACT_SCHEMA>;
+
 export const POSTING_DETAIL_SCHEMA = z
   .object({
     posting: POSTING_SCHEMA,
@@ -545,6 +568,8 @@ export const POSTING_DETAIL_SCHEMA = z
     }),
     // The Artifacts attached to the Posting
     artifactList: z.array(ARTIFACT_VERSIONS_SCHEMA),
+    // Its Custom Artifacts and those of its Interviews, in the order they were added
+    customArtifactList: z.array(CUSTOM_ARTIFACT_SCHEMA),
     recipients: RECIPIENTS_SCHEMA.nullable(),
     // That of its latest extraction job, null for a Posting that was not imported; the log says why
     // it failed, workerFailure why it makes no progress
@@ -566,7 +591,14 @@ const INPUT_MODE_SCHEMA = z.enum(['required', 'default', 'optional']);
 // Why an Input cannot be unchecked, which the front words
 const INPUT_REASON_SCHEMA = z.enum(['job_description', 'required_artifact', 'profile_core']);
 // A Past Letter is one of the Profile's or the Chosen Letter of another Applied Posting: one set either way
-const INPUT_KIND_SCHEMA = z.enum(['job_description', 'artifact', 'notes', 'profile_document', 'past_letter']);
+const INPUT_KIND_SCHEMA = z.enum([
+  'job_description',
+  'artifact',
+  'custom_artifact',
+  'notes',
+  'profile_document',
+  'past_letter',
+]);
 
 export type InputMode = z.infer<typeof INPUT_MODE_SCHEMA>;
 export type InputReason = z.infer<typeof INPUT_REASON_SCHEMA>;
@@ -587,6 +619,8 @@ const GENERATION_INPUT_SCHEMA = z.object({
   content: z.string(),
   wordCount: z.int(),
   fileName: z.string().nullable(),
+  // The title of a Custom Artifact
+  title: z.string().nullable(),
   datedAt: z.date().nullable(),
   artifact: ARTIFACT_SCHEMA.nullable(),
   readVersion: PROMPT_READ_VERSION_SCHEMA.extend({ title: z.string() }).nullable(),
@@ -598,6 +632,8 @@ export const GENERATION_SCHEMA = z
     refusal: z.string().nullable(),
     // Research and Portrait search the web; the others read only their Inputs
     isSearchingWeb: z.boolean(),
+    // Whether it reads the Profile, where an Annex added from the panel goes
+    isReadingProfile: z.boolean(),
     nextNumber: z.int(),
     chosenNumber: z.int().nullable(),
     inputList: z.array(GENERATION_INPUT_SCHEMA),

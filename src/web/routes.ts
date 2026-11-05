@@ -12,6 +12,7 @@ export default [
   route('postings/:reference/archive', 'routes/archive.ts'),
   route('postings/:reference/keep', 'routes/keep.ts'),
   route('postings/:reference/notes', 'routes/notes.ts'),
+  route('postings/:reference/documents', 'routes/documents.ts'),
   route('postings/:reference/interviews', 'routes/interviews.ts'),
   route('postings/:reference/interviews/:number/ical', 'routes/ical.ts'),
   route('postings/:reference/interviews/:number/revision', 'routes/revision.tsx'),

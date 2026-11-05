@@ -15,7 +15,7 @@ import {
 import { hasBeenApplied } from '#/status/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
-import { AI_MODULE_BY_ARTIFACT, isAttachedToInterview } from './registry.ts';
+import { AI_MODULE_BY_ARTIFACT, isAttachedToInterview, versionFileNameOf } from './registry.ts';
 
 // Where an Artifact is attached: its Posting, and the Interview it prepares for an Artifact attached to
 // one, else null
@@ -42,6 +42,8 @@ export interface IInput {
   readVersion: { posting: Posting; version: Version } | null;
   // The file of the Profile, for a document of the Profile
   fileName: string | null;
+  // The title of a Custom Artifact
+  title: string | null;
   // The day a Past Letter was added to the Profile or sent
   datedAt: Date | null;
 }
@@ -69,6 +71,7 @@ function inputOf(
     artifact: null,
     readVersion: null,
     fileName: null,
+    title: null,
     datedAt: null,
     ...fields,
     wordCount: countWords(fields.content),
@@ -92,7 +95,7 @@ export async function findChosenVersion(workspace: Workspace, { posting, intervi
 }
 
 function readVersionContent(workspace: Workspace, posting: Posting, version: Version): string {
-  return workspace.readVersionFile(posting, version, AI_MODULE_BY_ARTIFACT[version.artifact].fileName) ?? '';
+  return workspace.readVersionFile(posting, version, versionFileNameOf(version)) ?? '';
 }
 
 // A Letter as sent, then its Original as the AI wrote it, for a run that learns from the Candidate's
@@ -164,6 +167,28 @@ async function listPreviousInterviews(workspace: Workspace, { posting, interview
     0,
     interviewList.findIndex(({ id }) => id === interview.id),
   );
+}
+
+// The Custom Artifacts of the Posting, and those of the Interview the run is for: every run of their
+// Posting, or of their Interview, reads them by default (spec #125)
+async function listCustomInputs(workspace: Workspace, { posting, interview }: ITarget): Promise<IInput[]> {
+  const versionList = await workspace.listCustomVersions(posting);
+  return versionList
+    .filter((version) => version.interview === null || version.interview.number === interview?.number)
+    .flatMap((version) =>
+      version.customArtifact === null
+        ? []
+        : [
+            inputOf({
+              key: `custom:${String(version.customArtifact.id)}`,
+              kind: 'custom_artifact',
+              mode: 'default',
+              content: readVersionContent(workspace, posting, version),
+              title: version.customArtifact.title,
+              readVersion: { posting, version },
+            }),
+          ],
+    );
 }
 
 // A Repost starts from the work done for the Posting it publishes again
@@ -254,6 +279,7 @@ export async function resolveInputs(workspace: Workspace, target: ITarget, artif
     aiModule.isReadingNotes === true && posting.notes.trim() !== ''
       ? inputOf({ key: 'notes', kind: 'notes', mode: 'default', content: posting.notes })
       : null,
+    ...(await listCustomInputs(workspace, target)),
     ...(aiModule.isReadingRepostedPosting === true ? await listRepostedInputs(workspace, posting) : []),
     ...(aiModule.isReadingProfile === true
       ? await listProfileInputs(workspace, posting, aiModule.isReadingOriginals === true)
@@ -275,6 +301,10 @@ export function isInitiallyChecked(input: IInput, previousVersion: Version | und
     return isDefault;
   }
   const isRead = previousVersion.inputList.some(({ key }) => key === input.key);
+  // A Custom Artifact added since is new to the run: read by default
+  if (input.kind === 'custom_artifact' && (input.readVersion?.version.createdAt ?? 0) > previousVersion.createdAt) {
+    return isDefault;
+  }
   // Every run records its Job Description: a record without it holds only the Versions read
   const isFullRecord = previousVersion.inputList.some(({ key }) => key === JOB_DESCRIPTION_KEY);
   return isFullRecord || input.readVersion !== null ? isRead : isDefault;
