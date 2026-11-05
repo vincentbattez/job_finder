@@ -30,8 +30,8 @@ addResources('fakeSlowSource', {
   },
 });
 
-// As many Postings as a first launch of the PEP imports: enough to check that the result stays short
-const SLOW_SOURCE_POSTING_COUNT = 81;
+// Enough to check that the result stays short; more would only make a Detection cost the other tests
+const SLOW_SOURCE_POSTING_COUNT = 21;
 // Every reference the fake Source ever listed: like a real Source, it keeps them published whatever the
 // Watch, so none of its Postings is Unpublished
 const LISTED_REFERENCE_SET = new Set<string>();

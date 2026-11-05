@@ -8,7 +8,7 @@ import { expect, test, type IFront } from './candidate.ts';
 
 // A single Detection runs at a time, whoever starts it (ADR-0014): these tests run one after the other,
 // each on Candidates of its own, which no other test file detects. They follow the slow fake Source
-// (test/fake-slow-source.ts), which lists 81 Postings and a near-miss one: Lou's, always the same and
+// (test/fake-slow-source.ts), which lists 21 Postings and a near-miss one: Lou's, always the same and
 // already detected by test/seed-front.ts; Jules', new at each search; Iris's, on its first launch;
 // Théo's, failing after two Job Descriptions.
 test.describe.configure({ mode: 'serial' });
@@ -67,7 +67,7 @@ test('starts from the header, then tells a Detection of no new Posting, its Near
   await expect(verdict).toBeVisible({ timeout: VERDICT_TIMEOUT_MS });
   await expect(page.locator('main').getByRole('status')).toHaveText('Aucune nouvelle Offre');
   await expect(verdict).toContainText('lancée depuis le bouton');
-  await expect(verdict).toContainText('Greffier placé : la Source a listé 81 Offres, toutes déjà connues.');
+  await expect(verdict).toContainText('Greffier placé : la Source a listé 21 Offres, toutes déjà connues.');
   await expect(verdict.locator('time')).toHaveAttribute('datetime', /^\d{4}-/);
   // The Watch goes by its label, never by its identifier
   await expect(page.locator('main')).not.toContainText('lou-1');
@@ -116,7 +116,7 @@ test('shows the progress of each Watch, after a reload too, the button held, the
   await expect(progress).toBeVisible();
   await expect(page.locator('main').getByRole('status')).toHaveText(/^Détection en cours : /);
   await expect(progress).toContainText('Greffier placé');
-  await expect(progress).toContainText(/Lecture des Fiches de poste \d+ \/ 81/, { timeout: VERDICT_TIMEOUT_MS });
+  await expect(progress).toContainText(/Lecture des Fiches de poste \d+ \/ 21/, { timeout: VERDICT_TIMEOUT_MS });
   await expect(progress).toContainText(/Lancée à \d{2}:\d{2} · \d+ min \d+ s écoulées/);
   await expect(progress.getByRole('progressbar')).toBeVisible();
   // The Card survives a reload, and no second Detection can start
@@ -125,10 +125,10 @@ test('shows the progress of each Watch, after a reload too, the button held, the
   await expect(page.getByRole('button', { name: RUNNING_NAME })).toBeDisabled();
   releaseDetection();
 
-  const verdict = page.getByRole('region', { name: '81 Offres importées' });
+  const verdict = page.getByRole('region', { name: '21 Offres importées' });
   await expect(verdict).toBeVisible({ timeout: VERDICT_TIMEOUT_MS });
   await expect(verdict).toContainText(
-    'Greffier placé : premier lancement, 81 Offres importées, sans Recherche ni notification.',
+    'Greffier placé : premier lancement, 21 Offres importées, sans Recherche ni notification.',
   );
   await expect(page.getByRole('button', { name: START_NAME })).toBeEnabled();
 });
@@ -151,10 +151,10 @@ test('fills the found group at the top of New while it reads, then tells how man
   await expect(page.getByRole('region', { name: RUNNING_NAME })).toBeVisible();
   releaseDetection();
 
-  const verdict = page.getByRole('region', { name: '81 nouvelles Offres' });
+  const verdict = page.getByRole('region', { name: '21 nouvelles Offres' });
   await expect(verdict).toBeVisible({ timeout: VERDICT_TIMEOUT_MS });
-  await expect(page.locator('main').getByRole('status')).toHaveText('81 nouvelles Offres');
-  await expect(verdict).toContainText('Greffier placé : 81 nouvelles Offres.');
+  await expect(page.locator('main').getByRole('status')).toHaveText('21 nouvelles Offres');
+  await expect(verdict).toContainText('Greffier placé : 21 nouvelles Offres.');
   await expect(foundGroup).toBeVisible();
 });
 
