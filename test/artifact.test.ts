@@ -619,6 +619,38 @@ describe('the Inputs of a run', () => {
     });
   });
 
+  it('tells what a Version was produced from, each Input as the generation panel names it', async () => {
+    const opened = await openArtifacts(RESEARCH_RUN, LETTER_RUN);
+    writeProfile(opened.context.workspace, 1);
+    const posting = await opened.context.findPosting(REFERENCE);
+    const custom = await opened.artifacts.createCustom({ posting, title: 'Appel', text: 'Notes.\n' });
+    await opened.produce({ reference: REFERENCE, artifact: 'research' }, { reference: REFERENCE, artifact: 'letter' });
+
+    const { versionList } = await opened.artifacts.find({ reference: REFERENCE, artifact: 'letter' });
+
+    const none = { fileName: null, title: null, artifact: null, readVersion: null };
+    expect(versionList.at(-1)?.inputList).toEqual([
+      { ...none, key: 'job_description', kind: 'job_description' },
+      {
+        ...none,
+        key: 'artifact:research',
+        kind: 'artifact',
+        artifact: 'research',
+        readVersion: { reference: REFERENCE, artifact: 'research', interviewNumber: null, number: 1 },
+      },
+      {
+        ...none,
+        key: custom.key,
+        kind: 'custom_artifact',
+        title: 'Appel',
+        readVersion: { reference: REFERENCE, artifact: 'custom', interviewNumber: null, number: 1 },
+      },
+      { ...none, key: 'profile:cv.md', kind: 'profile_document', fileName: 'cv.md' },
+      { ...none, key: 'profile:facts.md', kind: 'profile_document', fileName: 'facts.md' },
+      { ...none, key: 'profile:letter-1.md', kind: 'past_letter', fileName: 'letter-1.md' },
+    ]);
+  });
+
   it('reads for an Interview Brief the optional Artifacts it has, the previous Briefs and the Notes', async () => {
     const { context, artifacts } = await openPreparedInterview();
     await createNotesActions(context).saveNotes({ reference: REFERENCE, notes: 'Parler du stage.' });
@@ -711,7 +743,13 @@ describe('the Inputs of a run', () => {
         key,
         readVersion:
           key === 'artifact:research'
-            ? { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null }
+            ? {
+                artifact: 'research',
+                number: 1,
+                posting: { reference: REFERENCE },
+                interview: null,
+                customArtifact: null,
+              }
             : null,
       })),
     );
@@ -817,7 +855,13 @@ describe('Custom Artifacts', () => {
     const { versionList } = await opened.artifacts.find({ reference: REFERENCE, artifact: 'research' });
     expect(versionList.at(-1)?.version.inputList).toContainEqual({
       key: custom.key,
-      readVersion: { artifact: 'custom', number: 1, posting: { reference: REFERENCE }, interview: null },
+      readVersion: {
+        artifact: 'custom',
+        number: 1,
+        posting: { reference: REFERENCE },
+        interview: null,
+        customArtifact: { title: CALL_NOTES.title },
+      },
     });
   });
 

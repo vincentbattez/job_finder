@@ -31,6 +31,7 @@ import {
   defaultKeysOf,
   findChosenVersion,
   isInitiallyChecked,
+  recordedInputDetailOf,
   resolveInputs,
   type IInput,
   type ITarget,
@@ -268,6 +269,7 @@ export function createArtifacts({
       const versionRefusal = versionRefusalOf(version.number);
       return {
         version,
+        inputList: version.inputList.map((input) => recordedInputDetailOf(input)),
         versionRefusal,
         // A Draft is validated; a Validated Version no longer chosen is chosen again the same way
         isValidatable: !version.isChosen && versionRefusal === null,
@@ -398,13 +400,16 @@ export function createArtifacts({
           fileName: aiModule.fileName,
           format: aiModule.format,
           isFrozen: freeze !== null,
-          versionList: detailVersionList.map(({ version, isValidatable, isCorrectable, text, original }) => ({
-            version,
-            isValidatable,
-            isCorrectable,
-            text,
-            original,
-          })),
+          versionList: detailVersionList.map(
+            ({ version, inputList, isValidatable, isCorrectable, text, original }) => ({
+              version,
+              inputList,
+              isValidatable,
+              isCorrectable,
+              text,
+              original,
+            }),
+          ),
         };
       },
 

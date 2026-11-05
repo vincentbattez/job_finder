@@ -32,6 +32,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tooltip, TooltipContent, TooltipTrigger } from '#/web/components/ui/tooltip.tsx';
 
 import type { Generation, GenerationInput } from './artifact.ts';
+import { inputLabelOf } from './input-label.ts';
 
 type InputGroup = 'posting' | 'profile' | 'annex';
 
@@ -62,55 +63,6 @@ function groupOf({ kind, mode }: GenerationInput): InputGroup {
     return 'annex';
   }
   return kind === 'profile_document' || kind === 'past_letter' ? 'profile' : 'posting';
-}
-
-// An Artifact read, of this Posting, of one of its Interviews or of the Posting a Repost publishes again
-function artifactLabelOf(
-  t: TFunction<'posting'>,
-  reference: string,
-  { readVersion, artifact }: GenerationInput,
-): string {
-  const artifactLabel = artifact === null ? '' : t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' });
-  if (readVersion === null) {
-    return t('generation.inputLabel.artifactMissing', { artifactLabel });
-  }
-  const { number, interviewNumber } = readVersion;
-  if (readVersion.reference !== reference) {
-    return t('generation.inputLabel.artifactOfPosting', { artifactLabel, number, reference: readVersion.reference });
-  }
-  return interviewNumber === null
-    ? t('generation.inputLabel.artifact', { artifactLabel, number })
-    : t('generation.inputLabel.artifactOfInterview', { artifactLabel, number, interviewNumber });
-}
-
-// An Input as the Candidate names it, the Profile's documents told apart by their name
-function labelOf(t: TFunction<'posting'>, reference: string, input: GenerationInput): string {
-  const { kind, fileName, readVersion } = input;
-  switch (kind) {
-    case 'job_description': {
-      return t('generation.inputLabel.jobDescription');
-    }
-    case 'notes': {
-      return t('generation.inputLabel.notes');
-    }
-    case 'profile_document': {
-      if (fileName === 'cv.md' || fileName === 'facts.md') {
-        return t(fileName === 'cv.md' ? 'generation.inputLabel.cv' : 'generation.inputLabel.facts');
-      }
-      return t('generation.inputLabel.annex', { name: fileName });
-    }
-    case 'past_letter': {
-      return fileName === null
-        ? t('generation.inputLabel.sentLetter', { title: readVersion?.title })
-        : t('generation.inputLabel.pastLetter', { name: fileName });
-    }
-    case 'artifact': {
-      return artifactLabelOf(t, reference, input);
-    }
-    case 'custom_artifact': {
-      return t('generation.inputLabel.customArtifact', { title: input.title });
-    }
-  }
 }
 
 // The icon of an Input's kind
@@ -738,7 +690,7 @@ export function GenerationPanel({
   const artifactLabel = t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' });
   const inputList: IPanelInput[] = (generation?.inputList ?? []).map((input) => ({
     ...input,
-    label: labelOf(t, reference, input),
+    label: inputLabelOf(t, reference, input),
     isRead: input.mode === 'required' || (checkOverride[input.key] ?? input.isChecked),
   }));
   const readList = inputList.filter(({ isRead }) => isRead);

@@ -73,6 +73,7 @@ const VERSION_INCLUDE = {
           number: true,
           posting: { select: { reference: true } },
           interview: VERSION_INTERVIEW_SELECT,
+          customArtifact: { select: { title: true } },
         },
       },
     },

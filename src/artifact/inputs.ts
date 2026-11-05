@@ -4,7 +4,6 @@ import {
   ARTIFACT_SCHEMA,
   JOB_DESCRIPTION_FILE_NAME,
   ORIGINAL_FILE_NAME,
-  profileDocumentKindOf,
   type Artifact,
   type InputKind,
   type InputMode,
@@ -13,6 +12,7 @@ import {
   type Posting,
   type Version,
 } from '#/domain/index.ts';
+import { profileDocumentKindOf } from '#/domain/profile-document.ts';
 import { hasBeenApplied } from '#/status/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
@@ -54,6 +54,7 @@ export interface IInput {
 const RECENT_PAST_LETTER_COUNT = 5;
 
 const JOB_DESCRIPTION_KEY = 'job_description';
+const PROFILE_KEY_PREFIX = 'profile:';
 
 function countWords(text: string): number {
   return text.split(/\s+/u).filter((word) => word !== '').length;
@@ -215,7 +216,7 @@ async function listProfileInputs(
     const isCore = documentKind === 'cv' || documentKind === 'facts';
     const isLetter = documentKind === 'past_letter';
     return inputOf({
-      key: `profile:${fileName}`,
+      key: `${PROFILE_KEY_PREFIX}${fileName}`,
       kind: isLetter ? 'past_letter' : 'profile_document',
       mode: isCore ? 'required' : 'optional',
       reason: isCore ? 'profile_core' : null,
@@ -286,6 +287,41 @@ export async function resolveInputs(workspace: Workspace, target: ITarget, artif
       : []),
   ];
   return inputList.filter((input) => input !== null);
+}
+
+// An Input a Version recorded, as its key names it: what the front needs to word it (spec #125). The Version
+// it read goes null once deleted, so the key alone tells which Artifact it was.
+export function recordedInputDetailOf({ key, readVersion }: Version['inputList'][number]) {
+  const named = {
+    key,
+    fileName: null,
+    title: readVersion?.customArtifact?.title ?? null,
+    artifact: null,
+    readVersion:
+      readVersion === null
+        ? null
+        : {
+            reference: readVersion.posting.reference,
+            artifact: readVersion.artifact,
+            interviewNumber: readVersion.interview?.number ?? null,
+            number: readVersion.number,
+          },
+  };
+  if (key === JOB_DESCRIPTION_KEY || key === 'notes') {
+    return { ...named, kind: key };
+  }
+  if (key.startsWith(PROFILE_KEY_PREFIX)) {
+    const fileName = key.slice(PROFILE_KEY_PREFIX.length);
+    const kind: InputKind = profileDocumentKindOf(fileName) === 'past_letter' ? 'past_letter' : 'profile_document';
+    return { ...named, kind, fileName };
+  }
+  if (key.startsWith('custom:')) {
+    return { ...named, kind: 'custom_artifact' as const };
+  }
+  // `artifact:<artifact>[@<interview>]` or `posting:<reference>/<artifact>`
+  const [name] = key.slice(Math.max(key.indexOf(':'), key.lastIndexOf('/')) + 1).split('@', 1);
+  const artifact = ARTIFACT_SCHEMA.parse(name);
+  return { ...named, kind: 'artifact' as const, artifact };
 }
 
 // The keys a run checks by default, as jf run and an automatic run take them

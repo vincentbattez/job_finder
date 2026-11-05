@@ -76,4 +76,8 @@ test('generates the Letter from the panel: Inputs checked, Prompt copied, run fo
   await expect(panel).toBeHidden();
   await expect(letter.getByRole('combobox', { name: 'Version' })).toHaveText(/^Version \d+ · Brouillon$/);
   await expect(page.getByRole('tab', { name: 'Lettre de motivation (Brouillon)' })).toBeVisible();
+  // The Version names what it was produced from: the four Inputs left, without the past letter
+  await expect(letter.getByText(/^Produite à partir de : /)).toHaveText(
+    /^Produite à partir de : Fiche de poste, Recherche v\d+, CV, Faits$/,
+  );
 });

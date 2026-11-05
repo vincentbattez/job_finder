@@ -214,6 +214,7 @@ export function ArtifactView({
       {generation.panel}
       <ArtifactViewView
         {...artifactVersions}
+        reference={reference}
         recipients={recipients}
         selectedNumber={current.number}
         mode={current.mode}
