@@ -18,7 +18,6 @@ import { Notes } from '#/web/containers/notes.tsx';
 import { PostingActions } from '#/web/containers/posting-actions.tsx';
 import { relayLoader } from '#/web/relay-action.server.ts';
 
-
 export function loader({ params, request }: LoaderFunctionArgs) {
   return relayLoader(request, async () => {
     const [{ candidate, locale }, detail] = await Promise.all([
@@ -77,9 +76,7 @@ export default function Posting() {
   const letterList = letter?.versionList ?? [];
   const latestLetter = letterList.findLast(({ version }) => version.state === 'ready');
   const now = new Date();
-  const nextInterview =
-    interviewList.find((interview) => !hasTakenPlace(interview, now)) ??
-    interviewList.at(-1);
+  const nextInterview = interviewList.find((interview) => !hasTakenPlace(interview, now)) ?? interviewList.at(-1);
   const description = [
     posting.employer,
     posting.city,

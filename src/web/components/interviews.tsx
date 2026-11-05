@@ -28,7 +28,6 @@ export const INTERVIEW_DOCUMENT_LIST = ['interview_brief', 'portrait'] as const;
 
 export type InterviewDocument = (typeof INTERVIEW_DOCUMENT_LIST)[number];
 
-
 // The Interview on its Posting page, and its full-screen Revision (spec #125, « Reading and Revision »)
 export function interviewPathOf(reference: string, number: number): string {
   return `/postings/${encodeURIComponent(reference)}?tab=interviews&interview=${String(number)}`;

@@ -20,9 +20,9 @@ import {
   VanishedSections,
   type RevisionSide,
 } from '#/web/components/revision.tsx';
-import { useNow } from '#/web/components/use-now.ts';
 import { Button } from '#/web/components/ui/button.tsx';
 import { Textarea } from '#/web/components/ui/textarea.tsx';
+import { useNow } from '#/web/components/use-now.ts';
 import type { IRefusal } from '#/web/failure.ts';
 
 import { useValidation } from './artifact-view.tsx';
