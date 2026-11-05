@@ -44,9 +44,8 @@ export default defineConfig({
   forbidOnly: process.env.CI !== undefined,
   // Even the tests of one file run side by side: one that reads what another left fails here first
   fullyParallel: true,
-  // The GitHub runner has 2 vCPUs, so Playwright's default of half the cores ran the tests one at a
-  // time; they mostly wait on the front, so two side by side fit
-  ...(process.env.CI !== undefined && { workers: 2 }),
+  // Playwright's default of half the cores runs them one at a time on the 2 vCPUs of the GitHub runner:
+  // two side by side doubled a test's time on a slow runner, over its budget
   // Each test with its duration, in CI as well; the second fails a run over the time budgets
   reporter: [['list'], ['./test/playwright-time-budget-reporter.ts']],
   use: {
