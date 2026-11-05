@@ -18,8 +18,6 @@ import { FactsForm } from '#/web/components/facts-form.tsx';
 import { ProfileFile, ProfileFileCreation } from '#/web/components/profile-file.tsx';
 import { renderPostForm } from '#/web/containers/post-form.tsx';
 import { Uploads } from '#/web/containers/uploads.tsx';
-import { Watches } from '#/web/containers/watches.tsx';
-import { translateParameters } from '#/web/parameters.server.ts';
 import { relayAction, relayLoader } from '#/web/relay-action.server.ts';
 
 export function loader({ request }: LoaderFunctionArgs) {
@@ -31,8 +29,6 @@ export function loader({ request }: LoaderFunctionArgs) {
       profileFileList: candidate === null ? [] : await ACTIONS.listProfileFiles({ candidateId: candidate.id }),
       uploadList: candidate === null ? [] : await ACTIONS.listUploads({ candidateId: candidate.id }),
       sectionList: candidate === null ? [] : await ACTIONS.readFacts({ candidateId: candidate.id }),
-      watchList: candidate === null ? [] : await ACTIONS.listWatches({ candidateId: candidate.id }),
-      sourceList: translateParameters(await ACTIONS.listSources(), locale),
     };
   });
 }
@@ -107,7 +103,7 @@ export function meta({ loaderData }: MetaArgs<typeof loader>) {
 }
 
 export default function Profile() {
-  const { candidate, profileFileList, uploadList, sectionList, watchList, sourceList } = useLoaderData<typeof loader>();
+  const { candidate, profileFileList, uploadList, sectionList } = useLoaderData<typeof loader>();
   const refusal = useActionData<typeof action>()?.refusal ?? null;
   const { t } = useTranslation('settings');
   return (
@@ -154,7 +150,6 @@ export default function Profile() {
             error={refusal?.isCreation === true ? refusal.message : null}
             renderForm={renderPostForm}
           />
-          <Watches watchList={watchList} sourceList={sourceList} />
         </>
       )}
     </main>

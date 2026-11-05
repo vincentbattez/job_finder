@@ -509,8 +509,8 @@ export const POSTING_EN = {
     failedWatch_other:
       '{{label}}: stopped at “{{step}}”, Job Descriptions read: {{readCount}}. {{count}} new Postings saved before.',
     seeNewPostings: 'See them in the list, marked “New”',
-    nearMissSummary_one: '{{count}} title narrowly left out',
-    nearMissSummary_other: '{{count}} titles narrowly left out',
+    nearMissSummary_one: '{{count}} Near Miss',
+    nearMissSummary_other: '{{count}} Near Misses',
   },
   importIntro: 'Drop here a Job Description in Markdown found elsewhere: it becomes one of your Postings.',
   importLabel: 'Import a Job Description',

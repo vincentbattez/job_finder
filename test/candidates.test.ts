@@ -138,6 +138,8 @@ describe('the config an older jf left', () => {
         source: 'pep',
         parameters: { title: 'attaché de justice' },
         detectedAt: null,
+        label: 'attaché de justice',
+        nearMissList: [],
       },
     ]);
     // Left in place, but no longer read: jf says so until it is deleted

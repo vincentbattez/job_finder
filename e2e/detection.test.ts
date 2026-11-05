@@ -51,14 +51,16 @@ test('shows the last Detection on landing, then a Detection of no new Posting as
   await expect(result).toContainText('lancée depuis le bouton');
   await expect(result).toContainText('Greffier placé : la Source a listé 81 Offres, toutes déjà connues.');
   await expect(result.locator('time')).toHaveAttribute('datetime', /^\d{4}-/);
-  // The near-miss Postings, collapsed
-  const nearMiss = result.getByText('1 titre écarté de peu');
-  await expect(nearMiss).toBeVisible();
-  await expect(result.getByText('lou-near')).toBeHidden();
-  await nearMiss.click();
-  await expect(result.getByText('lou-near')).toBeVisible();
   // The Watch goes by its label, never by its identifier
   await expect(page.locator('main')).not.toContainText('lou-1');
+  // The Near Misses wait on the Watches page, under the Watch they could widen
+  await result.getByRole('link', { name: '1 titre écarté de peu' }).click();
+  await expect(page).toHaveURL(/\/watches#near-misses$/);
+  const nearMisses = page.getByRole('region', { name: 'Titres écartés de peu' });
+  await expect(nearMisses).toBeInViewport();
+  await expect(nearMisses.getByRole('heading', { level: 3 })).toHaveText(['Greffier placé']);
+  await expect(nearMisses).toContainText('Greffier placé adjoint');
+  await expect(nearMisses).toContainText('lou-near');
 });
 
 test('shows the progress of a first launch, after a reload too, then what it imported in one screen', async ({

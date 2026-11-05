@@ -29,8 +29,31 @@ describe('Watches', () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 
     expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([
-      { id: LEA_WATCH_ID, candidateId: 'lea', detectedAt: null, ...LEA_WATCH },
+      {
+        id: LEA_WATCH_ID,
+        candidateId: 'lea',
+        detectedAt: null,
+        ...LEA_WATCH,
+        label: 'attaché de justice',
+        nearMissList: [],
+      },
     ]);
+  });
+
+  it('shows the Near Misses of the last Detection of each Watch', async () => {
+    const actions = await detectLeaPostings();
+
+    const [watch] = await actions.listWatches({ candidateId: 'lea' });
+
+    expect(watch?.nearMissList.map(({ reference }) => reference)).toEqual([
+      '2026-2432800',
+      '2026-2431315',
+      '2026-2282889',
+      '2026-2354768',
+    ]);
+    expect(watch?.nearMissList[1]?.title).toBe(
+      'Chef du pôle des attachés de justice et des assistants spécialisés - RHG6 (H/F)',
+    );
   });
 
   it('takes a second Watch into account from the next Detection, on its first launch', async () => {
@@ -67,8 +90,9 @@ describe('Watches', () => {
       parameters: { title: 'attaché' },
     });
 
+    // Its Near Misses were those of the title it no longer searches
     expect(await actions.listWatches({ candidateId: 'lea' })).toMatchObject([
-      { parameters: { title: 'attaché' }, detectedAt: null },
+      { parameters: { title: 'attaché' }, detectedAt: null, nearMissList: [] },
     ]);
   });
 
@@ -114,7 +138,7 @@ describe('Watches', () => {
     await actions.createCandidate({ id: 'camille', name: 'Camille' });
 
     await expect(actions.deleteWatch({ candidateId: 'camille', watchId: LEA_WATCH_ID })).rejects.toThrow(
-      `Camille n'a pas de Veille ${LEA_WATCH_ID} : recharger la page de son Profil.`,
+      `Camille n'a pas de Veille ${LEA_WATCH_ID} : recharger la page des Veilles.`,
     );
     expect(await actions.listWatches({ candidateId: 'lea' })).toHaveLength(1);
   });

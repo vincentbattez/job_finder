@@ -25,6 +25,7 @@ import { hasBeenApplied } from '#/status/index.ts';
 
 import type { ActionContext } from './context.ts';
 import { createTolerantLocator } from './locator.ts';
+import { watchNamesOf } from './watch-label.ts';
 
 // The Postings a Detection found, outside a Watch's first launch, whose Postings already online are only
 // imported: New's « found » group until the next one (spec #125 « Lists »)
@@ -102,24 +103,7 @@ export function createDetectActions({
   locate,
   notifyCandidate,
 }: ActionContext) {
-  function descriptionOf({ source }: Watch): SourceModule | undefined {
-    return sourceList.find(({ description: { id } }) => id === source)?.description;
-  }
-
-  function sourceNameOf(watch: Watch): string {
-    return descriptionOf(watch)?.name ?? watch.source;
-  }
-
-  // What the Candidate reads to tell a Watch apart: its first text Parameter, such as the searched
-  // title, in the order its Source declares them, never its identifier (#63)
-  function labelOf(watch: Watch): string {
-    const { source, parameters } = watch;
-    const description = descriptionOf(watch);
-    const label = description?.parameterList
-      .map(({ name }) => parameters[name])
-      .find((value): value is string => typeof value === 'string' && value !== '');
-    return label ?? description?.name ?? source;
-  }
+  const { labelOf, sourceNameOf } = watchNamesOf(sourceList);
 
   // A detected Posting is saved New, a Repost included, and starts nothing: the Candidate sorts it
   // (ADR-0018). The Detection Summary tells it, unless it was already online at the first launch; a

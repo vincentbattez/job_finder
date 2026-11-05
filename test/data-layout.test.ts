@@ -166,6 +166,8 @@ describe('the French data folder', () => {
         source: 'pep',
         parameters: { title: 'attaché de justice' },
         detectedAt: DETECTED_AT,
+        label: 'attaché de justice',
+        nearMissList: [],
       },
     ]);
     expect(await actions.readDefaultDeadlinePeriod()).toEqual({ months: 6 });
@@ -365,7 +367,15 @@ describe('the French data folder', () => {
 
     expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa', locale: 'fr' }]);
     expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([
-      { id: 'lea-1', candidateId: 'lea', source: 'pep', parameters: WATCH_PARAMETERS, detectedAt: null },
+      {
+        id: 'lea-1',
+        candidateId: 'lea',
+        source: 'pep',
+        parameters: WATCH_PARAMETERS,
+        detectedAt: null,
+        label: WATCH_PARAMETERS.title,
+        nearMissList: [],
+      },
     ]);
   });
 

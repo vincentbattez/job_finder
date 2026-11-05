@@ -175,17 +175,13 @@ function WatchVerdict({ watch }: Readonly<{ watch: IDetectionWatch }>) {
           <Link to={{ pathname: '/', hash: 'posting-list' }}>{t('detection.seeNewPostings')}</Link>
         </>
       )}
+      {/* Shown with the Watch they could widen, on the Watches page */}
       {nearMissList.length > 0 && (
-        <details className="detection__near-miss">
-          <summary>{t('detection.nearMissSummary', { count: nearMissList.length })}</summary>
-          <ul className="detection__posting-list">
-            {nearMissList.map(({ reference, title }) => (
-              <li key={reference}>
-                <span className="num">{reference}</span> {title}
-              </li>
-            ))}
-          </ul>
-        </details>
+        <p>
+          <Link to={{ pathname: '/watches', hash: 'near-misses' }}>
+            {t('detection.nearMissSummary', { count: nearMissList.length })}
+          </Link>
+        </p>
       )}
       {notificationFailureList.map((failure) => (
         <p key={failure} className="detection__error">

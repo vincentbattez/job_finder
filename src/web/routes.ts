@@ -22,7 +22,7 @@ export default [
   route('locale', 'routes/locale.ts'),
   route('profile', 'routes/profile.tsx'),
   route('notification-channel', 'routes/notification-channel.ts'),
-  route('watch', 'routes/watch.ts'),
+  route('watches', 'routes/watches.tsx'),
   route('settings', 'routes/settings.tsx'),
   route('run', 'routes/run.ts'),
   route('detect', 'routes/detect.ts'),

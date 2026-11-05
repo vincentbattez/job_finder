@@ -24,22 +24,20 @@ type LinkKey = 'new' | 'toApply' | 'applications' | 'profile' | 'watches' | 'set
 interface IEntry {
   key: LinkKey;
   pathname: string;
-  hash: string;
   icon: ReactNode;
 }
 
 // The lists of the journey, then the Candidate's settings (spec #125, « Navigation and URL state »).
-// Until its own ticket replaces it, an entry leads to the POC page that holds its features.
 const LIST_ENTRY_LIST: IEntry[] = [
-  { key: 'new', pathname: '/', hash: '', icon: <InboxIcon /> },
-  { key: 'toApply', pathname: '/to-apply', hash: '', icon: <ListTodoIcon /> },
-  { key: 'applications', pathname: '/applications', hash: '', icon: <BriefcaseIcon /> },
+  { key: 'new', pathname: '/', icon: <InboxIcon /> },
+  { key: 'toApply', pathname: '/to-apply', icon: <ListTodoIcon /> },
+  { key: 'applications', pathname: '/applications', icon: <BriefcaseIcon /> },
 ];
 
 const SETTINGS_ENTRY_LIST: IEntry[] = [
-  { key: 'profile', pathname: '/profile', hash: '', icon: <UserRoundIcon /> },
-  { key: 'watches', pathname: '/profile', hash: '#watches', icon: <RadarIcon /> },
-  { key: 'settings', pathname: '/settings', hash: '', icon: <SettingsIcon /> },
+  { key: 'profile', pathname: '/profile', icon: <UserRoundIcon /> },
+  { key: 'watches', pathname: '/watches', icon: <RadarIcon /> },
+  { key: 'settings', pathname: '/settings', icon: <SettingsIcon /> },
 ];
 
 // What each entry counts, shown as a badge beside it: New counts the Postings left to sort
@@ -52,14 +50,14 @@ function SidebarEntries({ entryList, countByKey = {} }: Readonly<{ entryList: IE
     <SidebarGroup>
       <SidebarGroupContent>
         <SidebarMenu>
-          {entryList.map(({ key, pathname, hash, icon }) => {
+          {entryList.map(({ key, pathname, icon }) => {
             const label = t(`link.${key}`);
-            const isActive = location.pathname === pathname && location.hash === hash;
+            const isActive = location.pathname === pathname;
             const count = countByKey[key] ?? 0;
             return (
               <SidebarMenuItem key={key}>
                 <SidebarMenuButton asChild isActive={isActive} tooltip={label}>
-                  <Link to={`${pathname}${hash}`} aria-current={isActive ? 'page' : undefined}>
+                  <Link to={pathname} aria-current={isActive ? 'page' : undefined}>
                     {icon}
                     <span>{label}</span>
                   </Link>
