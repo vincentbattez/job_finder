@@ -5,14 +5,11 @@ import type { Page } from '@playwright/test';
 import { z } from 'zod/v4';
 
 import { expect, test } from './candidate.ts';
-import { prepareApplication } from './interview.ts';
+import { prepareApplication, runVersion } from './interview.ts';
 import { findOverflowing } from './overflow.ts';
 
 // How long a raw read waits for the server's own writes to release the database
 const BUSY_TIMEOUT_MS = 5000;
-
-// The e2e worker takes the job, then its fake session lasts a second (test/e2e-actions.server.ts)
-const READY_TIMEOUT_MS = 15_000;
 
 // The Interview Brief the fake Claude writes, its last section renamed by the Candidate
 // (test/e2e-actions.server.ts)
@@ -37,37 +34,13 @@ function findReference(): string {
   return z.object({ reference: z.string() }).parse(row).reference;
 }
 
-function countReadyBriefs(reference: string): number {
-  const database = openDatabase();
-  const row = database
-    .prepare(
-      `SELECT count(*) AS "count" FROM "Version" JOIN "Posting" ON "Posting"."id" = "Version"."postingId"
-       WHERE "Posting"."reference" = ? AND "Version"."artifact" = 'interview_brief' AND "Version"."state" = 'ready'`,
-    )
-    .get(reference);
-  database.close();
-  return z.object({ count: z.number() }).parse(row).count;
-}
-
-// Another Version of the Interview Brief of Interview 1, run by the worker, a Draft until validated
-async function runBrief(page: Page, reference: string, number: number): Promise<void> {
-  const response = await page.request.post('/run', {
-    form: { module: 'interview_brief', reference, interview: '1' },
-  });
-  expect(response.ok()).toBe(true);
-  await expect.poll(() => countReadyBriefs(reference), { timeout: READY_TIMEOUT_MS }).toBe(number);
-}
-
 async function post(page: Page, url: string, form: Record<string, string>): Promise<void> {
   const response = await page.request.post(url, { form });
   expect(response.ok()).toBe(true);
 }
 
-test('keeps notes and Mastered marks across reloads, and carries them over to a newer Chosen Interview Brief', async ({
-  page,
-  openPage,
-}) => {
-  const reference = findReference();
+// An Interview with a Validated Interview Brief, whatever the previous test left
+async function prepareRevision(page: Page, reference: string): Promise<string> {
   await prepareApplication(page, reference);
   await post(page, `/postings/${reference}/interviews`, {
     intent: 'add',
@@ -76,11 +49,16 @@ test('keeps notes and Mastered marks across reloads, and carries them over to a 
     place: 'Tribunal judiciaire, Colmar',
     interviewers: 'Mme Klein, directrice de greffe',
   });
-  await runBrief(page, reference, 1);
+  await runVersion(page, { module: 'interview_brief', reference, interview: '1', readyCount: 1 });
   await post(page, `/postings/${reference}/interview_brief/validate`, { number: '1', interview: '1' });
-  const revisionPath = `/postings/${reference}/interviews/1/revision`;
+  return `/postings/${reference}/interviews/1/revision`;
+}
 
-  await openPage(revisionPath);
+// Each test prepares its own start, on the one Posting of Ruth: one after the other
+test.describe.configure({ mode: 'serial' });
+
+test('keeps notes and Mastered marks across reloads', async ({ page, openPage }) => {
+  await openPage(await prepareRevision(page, findReference()));
 
   await expect(page.getByRole('heading', { name: 'Réviser l’Entretien 1' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'L’Entretien' })).toContainText('avant l’Entretien');
@@ -91,7 +69,8 @@ test('keeps notes and Mastered marks across reloads, and carries them over to a 
   await note.fill('Parler du stage au greffe.');
   await cardOf('Questions probables').getByRole('button', { name: 'Enregistrer la note' }).click();
   await expect(page.getByText('Note de « Questions probables » enregistrée')).toBeVisible();
-  await margin.getByRole('button', { name: 'Maîtrisée · À réviser' }).click();
+  // By the keyboard: the toast above covers this button until it leaves, all a click would wait for
+  await margin.getByRole('button', { name: 'Maîtrisée · À réviser' }).press('Enter');
   await expect(page.getByText('« À réviser » maîtrisée')).toBeVisible();
   await expect(page.getByText('1 sur 4 maîtrisées')).toBeVisible();
 
@@ -99,16 +78,24 @@ test('keeps notes and Mastered marks across reloads, and carries them over to a 
 
   await expect(note).toHaveValue('Parler du stage au greffe.');
   await expect(margin.getByRole('button', { name: 'Maîtrisée · À réviser' })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('carries notes and Mastered marks over to a newer Chosen Interview Brief', async ({ page, openPage }) => {
+  const reference = findReference();
+  const revisionPath = await prepareRevision(page, reference);
+  await post(page, revisionPath, { intent: 'note', title: 'Questions probables', note: 'Parler du stage au greffe.' });
+  await post(page, revisionPath, { intent: 'mastered', title: 'À réviser', isMastered: 'true' });
 
   // A newer Draft waits: the Revision keeps the Chosen Version until it is validated
-  await runBrief(page, reference, 2);
+  await runVersion(page, { module: 'interview_brief', reference, interview: '1', readyCount: 2 });
   await post(page, `/postings/${reference}/interview_brief/document`, {
     number: '2',
     interview: '1',
     fileName: 'interview-brief.md',
     markdown: RENAMED_BRIEF,
   });
-  await page.reload();
+  await openPage(revisionPath);
+  const margin = page.getByRole('complementary', { name: 'Notes de marge' });
   const banner = page.getByRole('status').filter({ hasText: 'La Version 2, plus récente, attend ta validation.' });
   await expect(banner).toBeVisible();
   await banner.getByRole('button', { name: 'Relire la Version 2' }).click();
@@ -121,8 +108,11 @@ test('keeps notes and Mastered marks across reloads, and carries them over to a 
   await expect(margin.getByRole('button', { name: 'Maîtrisée · À réviser' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByText('1 sur 4 maîtrisées')).toBeVisible();
   await expect(margin.getByRole('region', { name: 'Sections disparues' })).toContainText('Parler du stage au greffe.');
+});
 
-  // The Posting at hand, in the side Sheet
+test('shows the Posting at hand in a side Sheet, and folds the rail on a phone', async ({ page, openPage }) => {
+  await openPage(await prepareRevision(page, findReference()));
+
   await page.getByRole('button', { name: 'Offre' }).click();
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'Greffier – Colmar' })).toBeVisible();
   await page.keyboard.press('Escape');

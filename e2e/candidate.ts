@@ -3,10 +3,6 @@ import { z } from 'zod/v4';
 
 import { CANDIDATE_COOKIE } from '#/web/cookies.server.ts';
 
-// The dev server compiles a route on its first request: on the 2 vCPU runner, the first page of a
-// worker takes longer to hydrate than the 5 s an expect waits by default
-const HYDRATION_TIMEOUT_MS = 15_000;
-
 export type AsCandidate = (candidateId: string) => Promise<void>;
 export type OpenPage = (path: string) => Promise<void>;
 // What a helper of a spec file takes to open the pages of a test
@@ -17,7 +13,7 @@ export interface IFront {
 
 // A test whose subject is not the switcher chooses its Candidate as the switcher would have: through the
 // candidate cookie, set on the browser before its first page. It spares each test a page load and a
-// form submission on a dev server that is CPU-bound in CI (#112). The value comes from the app's own
+// form submission on a server that is CPU-bound in CI (#112). The value comes from the app's own
 // cookie, so it follows its encoding; were the cookie signed one day, this fixture would sign it too.
 // Only the tests of the switcher go through it, with switchCandidate.
 //
@@ -38,7 +34,7 @@ export const test = base.extend<{ asCandidate: AsCandidate; openPage: OpenPage }
     await use(async (path) => {
       await page.goto(path);
       if (javaScriptEnabled) {
-        await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true', { timeout: HYDRATION_TIMEOUT_MS });
+        await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
       }
     });
   },
@@ -48,7 +44,7 @@ export const { expect } = base;
 
 // Through the Candidate switcher at the head of the Sidebar, as the Candidate would; once React runs it
 export async function switchCandidate(page: Page, name: string): Promise<void> {
-  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true', { timeout: HYDRATION_TIMEOUT_MS });
+  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   await page.getByRole('button', { name: 'Changer de Candidat' }).click();
   await page.getByRole('menuitem', { name, exact: true }).click();
 }

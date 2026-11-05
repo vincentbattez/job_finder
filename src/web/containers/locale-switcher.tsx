@@ -10,7 +10,7 @@ import { useFeedback } from './use-feedback.ts';
 // The switch posts to /locale, which saves the Locale and brings back the same page, translated
 export function LocaleSwitcher() {
   const { t } = useTranslation();
-  const fetcher = useFetcher<IRefusal | null>();
+  const fetcher = useFetcher<IRefusal>();
   useFeedback(fetcher, () => t('localeSwitched', { ns: 'shell' }));
   return (
     <fetcher.Form method="post" action="/locale" aria-label={t('localeSwitcherLabel')}>

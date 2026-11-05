@@ -671,31 +671,32 @@ export function openDatabase(databasePath: string) {
       title: string,
       upload: string | null = null,
     ): Promise<Version> {
-      const postingLink = { connect: { id: posting.id } };
-      const interviewLink = interview === null ? {} : { interview: { connect: { id: interview.id } } };
-      const { version } = await prisma.customArtifact.create({
-        data: {
-          posting: postingLink,
-          ...interviewLink,
-          title,
-          version: {
-            create: {
-              posting: postingLink,
-              ...interviewLink,
-              artifact: 'custom',
-              number: 1,
-              state: upload === null ? 'ready' : 'running',
-              validation: 'validated',
-              isChosen: true,
-              origin: 'candidate',
-              instructions: '',
-              ...(upload !== null && {
-                job: { create: { module: 'custom', upload, posting: postingLink, ...interviewLink } },
-              }),
+      // By their identifiers rather than connect, which reads them first: a transaction that reads before
+      // it writes fails at once on a lock another process holds, where a write first waits its turn
+      const link = { postingId: posting.id, interviewId: interview?.id ?? null };
+      const { version } = await prisma.$transaction(async (transaction) => {
+        const job =
+          upload === null ? null : await transaction.job.create({ data: { module: 'custom', upload, ...link } });
+        return transaction.customArtifact.create({
+          data: {
+            ...link,
+            title,
+            version: {
+              create: {
+                ...link,
+                jobId: job?.id ?? null,
+                artifact: 'custom',
+                number: 1,
+                state: upload === null ? 'ready' : 'running',
+                validation: 'validated',
+                isChosen: true,
+                origin: 'candidate',
+                instructions: '',
+              },
             },
           },
-        },
-        include: { version: { include: VERSION_INCLUDE } },
+          include: { version: { include: VERSION_INCLUDE } },
+        });
       });
       return VERSION_SCHEMA.parse(version);
     },
@@ -819,8 +820,10 @@ export function openDatabase(databasePath: string) {
       await prisma.posting.update({ where: { id }, data: { startDate } });
     },
 
-    async setLocation({ id }: Posting, location: Location): Promise<void> {
-      await prisma.posting.update({ where: { id }, data: location });
+    // Only over the place of work the location was asked for: the worker's extraction may have filled the
+    // Posting since a Detection listed it unlocated, and it knows better than that stale read
+    async setLocation({ id, city, workplace }: Posting, location: Location): Promise<void> {
+      await prisma.posting.updateMany({ where: { id, city, workplace, latitude: null }, data: location });
     },
 
     // The fields read in its Job Description replace those of the Posting, its title included
@@ -868,10 +871,12 @@ export function openDatabase(databasePath: string) {
       );
     },
 
-    // Numbered after the last Interview of its Posting, like a Version
+    // Numbered after the last Interview of its Posting, like a Version. A write first, which takes the
+    // lock: a transaction that reads first fails at once on a lock another process holds.
     async createInterview({ id }: Posting, fields: InterviewFields): Promise<Interview> {
       return INTERVIEW_SCHEMA.parse(
         await prisma.$transaction(async (transaction) => {
+          await transaction.$executeRaw`UPDATE "Posting" SET "id" = "id" WHERE "id" = ${id}`;
           const { _max: max } = await transaction.interview.aggregate({
             where: { postingId: id },
             _max: { number: true },

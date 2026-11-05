@@ -1,5 +1,5 @@
 import { PlusIcon, SaveIcon, Trash2Icon } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
@@ -26,6 +26,7 @@ import {
 import type { IRefusal } from '#/web/failure.ts';
 
 import { useFeedback } from './use-feedback.ts';
+import { useSettled } from './use-settled.ts';
 
 // A Watch saved through the Watches page, its deletion asked of the page, which outlives its card
 function WatchCard({
@@ -34,7 +35,7 @@ function WatchCard({
   onDelete,
 }: Readonly<{ watch: Watch; sourceList: SourceModule[]; onDelete: () => void }>) {
   const { t } = useTranslation('settings');
-  const fetcher = useFetcher<IRefusal | null>();
+  const fetcher = useFetcher<IRefusal>();
   useFeedback(fetcher, () => t('watches.saved'));
   const sourceName = sourceList.find(({ id }) => id === watch.source)?.name ?? watch.source;
   return (
@@ -68,13 +69,13 @@ function WatchCard({
 function WatchCreation({ sourceList }: Readonly<{ sourceList: SourceModule[] }>) {
   const { t } = useTranslation('settings');
   const formReference = useRef<HTMLFormElement>(null);
-  const fetcher = useFetcher<IRefusal | null>();
+  const fetcher = useFetcher<IRefusal>();
   useFeedback(fetcher, () => t('watches.created'));
-  useEffect(() => {
-    if (fetcher.state === 'idle' && fetcher.data === null) {
+  useSettled(fetcher, (answer) => {
+    if (typeof answer?.error !== 'string') {
       formReference.current?.reset();
     }
-  }, [fetcher.state, fetcher.data]);
+  });
   return (
     <SettingsSection heading={t('watches.newWatch')} description={t('watches.newWatchDescription')}>
       <fetcher.Form ref={formReference} method="post" action="/watches" className="grid gap-6">
@@ -97,7 +98,7 @@ function WatchCreation({ sourceList }: Readonly<{ sourceList: SourceModule[] }>)
 export function Watches({ watchList, sourceList }: Readonly<{ watchList: Watch[]; sourceList: SourceModule[] }>) {
   const { t } = useTranslation('settings');
   const [deletion, setDeletion] = useState<{ isOpen: boolean; watch: Watch | null }>({ isOpen: false, watch: null });
-  const removalFetcher = useFetcher<IRefusal | null>();
+  const removalFetcher = useFetcher<IRefusal>();
   useFeedback(removalFetcher, () => t('watches.deleted'));
   const label = deletion.watch?.label ?? '';
   return (

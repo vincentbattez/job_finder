@@ -1,16 +1,15 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { generate } from './generation.ts';
-import { findInterviews, prepareInterview } from './interview.ts';
+import { findInterviews, forgetResearch, prepareInterview, runVersion } from './interview.ts';
 import { findOverflowing } from './overflow.ts';
 
 // A Posting that test/seed-front.ts leaves without any Artifact and that no other test touches: the
 // test marks it Applied, gives it an Interview and produces its Research first. The e2e worker runs
-// the jobs with the fake Claude, whose sessions last a second (test/e2e-actions.server.ts).
+// the jobs with the fake Claude (test/e2e-actions.server.ts).
 const REFERENCE = '2026-2416437';
 
-// The worker takes the job, then its session lasts a second, and the Posting page reads the state again
-// every two seconds
+// The worker takes the job, its session runs, and the Posting page reads the state again
 const READY_TIMEOUT_MS = 15_000;
 
 // The Interview Brief the fake Claude writes, its « [à compléter : …] » filled in by the Candidate
@@ -21,9 +20,11 @@ const CORRECTED_BRIEF = `# Fiche d’entretien factice
 Titulaire d’un master 2 de droit privé, je souhaite rejoindre votre juridiction.
 `;
 
-test('launches the Interview Brief of an Interview once the Posting has a Chosen Research, then corrects it', async ({
-  page,
-}) => {
+// Each test prepares its own start, on the one Posting of this file: one after the other
+test.describe.configure({ mode: 'serial' });
+
+test('refuses the Interview Brief of an Interview until the Posting has a Chosen Research', async ({ page }) => {
+  forgetResearch(REFERENCE);
   await prepareInterview(page, REFERENCE);
   const research = page.getByRole('region', { name: 'Recherche' });
   // The first tab of the selected Interview
@@ -38,6 +39,32 @@ test('launches the Interview Brief of an Interview once the Posting has a Chosen
   await research.getByRole('button', { name: 'Valider la Version 1' }).click();
   await expect(page.getByRole('tab', { name: 'Recherche (Validée)' })).toBeVisible();
   await page.getByRole('tab', { name: /^Entretiens/ }).click();
+  await expect(brief).toBeVisible();
+  await expect(brief).not.toContainText("n'a pas de Recherche validée");
+});
+
+// An Interview whose Interview Brief can run, on a page reloaded once they are produced
+async function prepareBriefOf(page: Page): Promise<void> {
+  forgetResearch(REFERENCE);
+  await prepareInterview(page, REFERENCE);
+  await runVersion(page, { module: 'research', reference: REFERENCE, readyCount: 1 });
+  await validate(page, 'research', { number: '1' });
+}
+
+async function validate(page: Page, artifact: string, form: Record<string, string>): Promise<void> {
+  const response = await page.request.post(`/postings/${REFERENCE}/${artifact}/validate`, { form });
+  expect(response.ok()).toBe(true);
+}
+
+async function reload(page: Page): Promise<void> {
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
+}
+
+test('launches the Interview Brief of an Interview, then validates it', async ({ page }) => {
+  await prepareBriefOf(page);
+  await reload(page);
+  const brief = findInterviews(page).getByRole('region', { name: 'Fiche d’entretien' });
 
   await generate(page, brief);
 
@@ -48,6 +75,14 @@ test('launches the Interview Brief of an Interview once the Posting has a Chosen
   await brief.getByRole('button', { name: 'Valider la Version 1' }).click();
   await expect(brief.getByText('Validée · retenue')).toBeVisible();
   await expect(findInterviews(page).getByRole('tab', { name: 'Fiche d’entretien (Validée)' })).toBeVisible();
+});
+
+test('corrects the Validated Interview Brief, which still fits a phone', async ({ page }) => {
+  await prepareBriefOf(page);
+  await runVersion(page, { module: 'interview_brief', reference: REFERENCE, interview: '1', readyCount: 1 });
+  await validate(page, 'interview_brief', { number: '1', interview: '1' });
+  await reload(page);
+  const brief = findInterviews(page).getByRole('region', { name: 'Fiche d’entretien' });
   await brief.getByRole('button', { name: 'Modifier' }).click();
   const textbox = brief.getByRole('textbox', { name: 'Texte de la Version 1' });
   await expect(textbox).toBeEnabled();

@@ -66,9 +66,16 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
 };
 
 // Long enough for the front to show the Artifact in progress before it is ready
-const SESSION_DURATION_MS = 1000;
-// Long enough for the front to show each step of a Detection's progress, short enough for an e2e test
-const SLOW_SOURCE_DELAYS = { searchMs: 1500, readMs: 60 };
+const SESSION_DURATION_MS = 300;
+// e2e/profile.test.ts reads the status of a conversion in progress, on a page that has to come back first
+const CONVERSION_DURATION_MS = 1000;
+// A test that needs a Detection in progress holds it (test/fake-slow-source.ts), so these only spread its
+// steps: e2e/detection.test.ts keeps within its time budget
+const SLOW_SOURCE_DELAYS = {
+  searchMs: 100,
+  readMs: 5,
+  holdFilePath: process.env.E2E_DETECTION_HOLD_PATH,
+};
 
 // A session's module is the Artifact its Version folder belongs to: <posting>/<artifact>/v<n>, or
 // <posting>/interviews/<number>/<artifact>/v<n> for an Artifact of an Interview. The
@@ -86,8 +93,8 @@ function moduleOf({ outputDirectory }: IHeadlessSession): string {
 const aiSession = {
   ...createFakeAiSession(),
   async runHeadless(session: IHeadlessSession) {
-    await setTimeout(SESSION_DURATION_MS);
     const module = moduleOf(session);
+    await setTimeout(module === 'conversion' ? CONVERSION_DURATION_MS : SESSION_DURATION_MS);
     return createFakeAiSession({ fileByName: FILE_BY_NAME_BY_MODULE[module] ?? {} }).runHeadless(session);
   },
 };

@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type { Actions } from '#/actions/index.ts';
 
 import { applyTo } from './apply.ts';
-import { detectPostings } from './data-directory.ts';
+import { detectPostings, holdDatabaseLock } from './data-directory.ts';
 
 const PLACE = 'Tribunal judiciaire, Béthune';
 
@@ -12,9 +12,10 @@ const INTERVIEWERS = 'Mme Durand, directrice de greffe';
 // Each test works on its own Posting, so they share one Detection on the responses recorded on 2026-10-29
 describe('the Interviews of an Application', () => {
   let actions: Actions;
+  let dataDirectory: string;
 
   beforeAll(async () => {
-    ({ actions } = await detectPostings());
+    ({ actions, dataDirectory } = await detectPostings());
   });
 
   async function apply(reference: string): Promise<void> {
@@ -29,6 +30,24 @@ describe('the Interviews of an Application', () => {
     const { posting } = await actions.readPosting({ reference });
     return posting.step;
   }
+
+  it('wait for the write of another process', async () => {
+    await apply('2026-2233332');
+    await holdDatabaseLock(dataDirectory);
+
+    await expect(addInterview('2026-2233332', '2030-11-19T14:00')).resolves.toMatchObject({ number: 1 });
+  });
+
+  it('take the next numbers when added together', async () => {
+    await apply('2026-2278425');
+
+    const interviewList = await Promise.all([
+      addInterview('2026-2278425', '2030-11-19T14:00'),
+      addInterview('2026-2278425', '2030-11-20T14:00'),
+    ]);
+
+    expect(interviewList.map(({ number }) => number).toSorted((a, b) => a - b)).toEqual([1, 2]);
+  });
 
   it('are refused on a To Apply Posting, which has no Application yet', async () => {
     await expect(addInterview('2026-2445600', '2030-11-19T14:00')).rejects.toMatchObject({

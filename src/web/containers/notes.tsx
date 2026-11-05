@@ -14,7 +14,7 @@ export function Notes({
   isCompact = false,
 }: Readonly<{ reference: string; notes: string; isCompact?: boolean }>) {
   const { t } = useTranslation('posting');
-  const fetcher = useFetcher<IRefusal | null>();
+  const fetcher = useFetcher<IRefusal>();
   useFeedback(fetcher, () => t('notes.saved'));
   return (
     <NotesView

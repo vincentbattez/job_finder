@@ -1,3 +1,5 @@
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { copyFileSync, cpSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -9,6 +11,8 @@ import { createActions } from '#/actions/index.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { createFakeNotificationChannel } from './fake-notification-channel.ts';
 import { createRecordedFetch } from './recorded-http.ts';
+
+const LOCK_HELD_MS = 300;
 
 // Where the folder of each of Léa's Postings lives, in a data folder
 export const LEA_POSTINGS_PATH = 'candidates/lea/postings';
@@ -36,6 +40,21 @@ export function copyDetectedDataDirectory(): string {
   const dataDirectory = mkdtempSync(path.join(tmpdir(), 'job-finder-'));
   cpSync(inject('detectedDataDirectory'), dataDirectory, { recursive: true });
   return dataDirectory;
+}
+
+// Another process holding the write lock of the database for a moment, as the worker or a Detection
+// does all the time. Resolved once it holds it.
+export async function holdDatabaseLock(dataDirectory: string): Promise<void> {
+  const holder = spawn(process.execPath, [
+    '--eval',
+    `const { DatabaseSync } = require('node:sqlite');
+     const database = new DatabaseSync(process.argv[1]);
+     database.exec('BEGIN IMMEDIATE');
+     console.log('held');
+     setTimeout(() => database.exec('COMMIT'), ${String(LOCK_HELD_MS)});`,
+    path.join(dataDirectory, 'job_finder.sqlite'),
+  ]);
+  await once(holder.stdout, 'data');
 }
 
 // The Postings already online, imported by a first Detection on the responses recorded on 2026-10-29,

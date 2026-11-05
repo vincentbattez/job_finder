@@ -1,5 +1,5 @@
 import { PencilIcon, UserPlusIcon } from 'lucide-react';
-import { useEffect, useId, useRef } from 'react';
+import { useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
@@ -13,6 +13,7 @@ import { Separator } from '#/web/components/ui/separator.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
 import { useFeedback } from './use-feedback.ts';
+import { useSettled } from './use-settled.ts';
 
 type Candidate = Awaited<ReturnType<Actions['listCandidates']>>[number];
 
@@ -20,7 +21,7 @@ type Candidate = Awaited<ReturnType<Actions['listCandidates']>>[number];
 function CandidateRename({ candidate: { id, name } }: Readonly<{ candidate: Candidate }>) {
   const { t } = useTranslation('settings');
   const fieldId = useId();
-  const fetcher = useFetcher<IRefusal | null>();
+  const fetcher = useFetcher<IRefusal>();
   useFeedback(fetcher, () => t('candidates.renamed'));
   return (
     <fetcher.Form
@@ -56,14 +57,14 @@ function CandidateCreation() {
   const identifierId = useId();
   const hintId = useId();
   const formReference = useRef<HTMLFormElement>(null);
-  const fetcher = useFetcher<IRefusal | null>();
+  const fetcher = useFetcher<IRefusal>();
   useFeedback(fetcher, () => t('candidates.created'));
   // Once the Candidate is created, the form starts blank again; a refusal keeps what was typed
-  useEffect(() => {
-    if (fetcher.state === 'idle' && fetcher.data === null) {
+  useSettled(fetcher, (answer) => {
+    if (typeof answer?.error !== 'string') {
       formReference.current?.reset();
     }
-  }, [fetcher.state, fetcher.data]);
+  });
   return (
     <fetcher.Form ref={formReference} method="post" action="/settings" className="grid gap-4">
       <input type="hidden" name="intent" value="create" />

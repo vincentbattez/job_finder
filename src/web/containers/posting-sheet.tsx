@@ -64,9 +64,9 @@ function SheetActions({ posting, statusChoiceList }: Readonly<Pick<SheetPosting,
   const { reference, step } = posting;
   const isArchived = posting.archivedAt !== null;
   const isNew = step === 'new';
-  const statusFetcher = useFetcher<IRefusal | null>();
-  const archiveFetcher = useFetcher<IRefusal | null>();
-  const keepFetcher = useFetcher<IRefusal | null>();
+  const statusFetcher = useFetcher<IRefusal>();
+  const archiveFetcher = useFetcher<IRefusal>();
+  const keepFetcher = useFetcher<IRefusal>();
   const submittedStatus = useRef<Status>('applied');
   useFeedback(keepFetcher, () => t('page.kept'));
   useFeedback(statusFetcher, () =>

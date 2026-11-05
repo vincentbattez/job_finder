@@ -3,10 +3,11 @@ import path from 'node:path';
 
 import { z } from 'zod/v4';
 
-const FIXTURE_DIRECTORY = path.join(import.meta.dirname, 'fixtures', 'pep');
+// From the working directory, always the repo's root: e2e/ bundles this file, and import.meta.dirname would name the bundle's folder
+const FIXTURE_DIRECTORY = path.resolve('test', 'fixtures', 'pep');
 
 // API Géo's answer to each city the recorded Postings name, by URL
-const API_GEO_FILE = readFileSync(path.join(import.meta.dirname, 'fixtures', 'api-geo', 'communes.json'), 'utf8');
+const API_GEO_FILE = readFileSync(path.resolve('test', 'fixtures', 'api-geo', 'communes.json'), 'utf8');
 const apiGeoBodyByUrl = z.record(z.string(), z.unknown()).parse(JSON.parse(API_GEO_FILE));
 const API_GEO_BODY_BY_URL = new Map(Object.entries(apiGeoBodyByUrl));
 

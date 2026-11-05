@@ -1,7 +1,8 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
 import { expect, test } from './candidate.ts';
+import { findDataDirectory, openDatabase } from './interview.ts';
 
 // The fake Claude of test/e2e-actions.server.ts extracts this Job Description, in Grenoble
 const JOB_DESCRIPTION = readFileSync(
@@ -12,68 +13,97 @@ const TITLE = 'Greffier placé – Tribunal judiciaire de Grenoble';
 
 const FILE_NAME = 'greffier-grenoble.md';
 
-// The worker takes the extraction, then the Research, each session lasting a second, and the Posting page
-// reads the state again every two seconds
+const DROPPING_CANDIDATE = 'hugo';
+
+function forgetPostingsOf(candidateId: string): void {
+  const database = openDatabase();
+  const postingsOf = 'SELECT "id" FROM "Posting" WHERE "candidateId" = ?';
+  database.prepare(`DELETE FROM "Version" WHERE "postingId" IN (${postingsOf})`).run(candidateId);
+  database.prepare(`DELETE FROM "Job" WHERE "postingId" IN (${postingsOf})`).run(candidateId);
+  database.prepare('DELETE FROM "Posting" WHERE "candidateId" = ?').run(candidateId);
+  database.close();
+  rmSync(path.join(findDataDirectory(), 'candidates', candidateId, 'postings'), { recursive: true, force: true });
+}
+
+// The worker takes the extraction, then the Research, each with its session, and the Posting page reads
+// the state again
 const READY_TIMEOUT_MS = 15_000;
 
 // Hugo and Lina, whose Postings these tests alone add (test/seed-front.ts): until the worker reads its
 // city, an imported Posting has no point on the map, which another test would see on Léa's
-test('imports a Job Description dropped from the header: To Apply at once, then the worker reads its fields and runs its Research', async ({
-  page,
-  asCandidate,
-  openPage,
-}) => {
-  // The tiles of the map come from OpenStreetMap over the internet: its points show without them
-  await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
-  await asCandidate('hugo');
-  await openPage('/');
-  await page.getByRole('button', { name: 'Importer' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Importer une Fiche de poste' });
+test.describe('a dropped Job Description', () => {
+  // Each starts without any Posting of Hugo's: one after the other
+  test.describe.configure({ mode: 'serial' });
+  test.beforeEach(() => {
+    forgetPostingsOf(DROPPING_CANDIDATE);
+  });
 
-  const dataTransfer = await page.evaluateHandle(
-    ({ fileName, markdown }) => {
-      const transfer = new DataTransfer();
-      transfer.items.add(new File([markdown], fileName, { type: 'text/markdown' }));
-      return transfer;
-    },
-    { fileName: FILE_NAME, markdown: JOB_DESCRIPTION },
-  );
-  await dialog.getByText('Dépose un fichier ici').dispatchEvent('drop', { dataTransfer });
-  await expect(dialog.getByRole('textbox', { name: 'Texte de la Fiche de poste' })).toHaveValue(JOB_DESCRIPTION);
-  await dialog.getByRole('button', { name: 'Importer' }).click();
+  test('imports a Job Description dropped from the header: To Apply at once, then the worker reads its fields and runs its Research', async ({
+    page,
+    asCandidate,
+    openPage,
+  }) => {
+    // The tiles of the map come from OpenStreetMap over the internet: its points show without them
+    await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
+    await asCandidate(DROPPING_CANDIDATE);
+    await openPage('/');
+    await page.getByRole('button', { name: 'Importer' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Importer une Fiche de poste' });
 
-  await expect(dialog).toBeHidden();
-  // Named after its file until Claude has read its title
-  const notifications = page.getByRole('region', { name: 'Notifications alt+T' });
-  await expect(notifications).toContainText(new RegExp(`Offre importée\\s: ${FILE_NAME}`));
-  await notifications.getByRole('button', { name: 'Voir dans À traiter' }).click();
-  await expect(page).toHaveURL(/\/to-apply$/);
+    const dataTransfer = await page.evaluateHandle(
+      ({ fileName, markdown }) => {
+        const transfer = new DataTransfer();
+        transfer.items.add(new File([markdown], fileName, { type: 'text/markdown' }));
+        return transfer;
+      },
+      { fileName: FILE_NAME, markdown: JOB_DESCRIPTION },
+    );
+    await dialog.getByText('Dépose un fichier ici').dispatchEvent('drop', { dataTransfer });
+    await expect(dialog.getByRole('textbox', { name: 'Texte de la Fiche de poste' })).toHaveValue(JOB_DESCRIPTION);
+    await dialog.getByRole('button', { name: 'Importer' }).click();
 
-  // Its file's name or already its title, whichever the worker has reached
-  const name = new RegExp(`${FILE_NAME}|${TITLE}`);
-  await page
-    .getByRole('complementary')
-    .getByRole('listitem')
-    .filter({ hasText: name })
-    .getByRole('link', { name })
-    .click();
-  const extraction = page.getByRole('form', { name: 'Champs relevés par Claude' });
-  await expect(extraction.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(TITLE);
-  await page.getByRole('tab', { name: /^Recherche/ }).click();
-  await expect(page.getByRole('region', { name: 'Recherche' }).getByRole('combobox', { name: 'Version' })).toHaveText(
-    'Version 1 · Brouillon',
-    { timeout: READY_TIMEOUT_MS },
-  );
+    await expect(dialog).toBeHidden();
+    // Named after its file until Claude has read its title
+    const notifications = page.getByRole('region', { name: 'Notifications alt+T' });
+    await expect(notifications).toContainText(new RegExp(`Offre importée\\s: ${FILE_NAME}`));
+    await notifications.getByRole('button', { name: 'Voir dans À traiter' }).click();
+    await expect(page).toHaveURL(/\/to-apply$/);
 
-  await page.goto('/to-apply');
-  // Located in Grenoble by API Géo's recorded answer, with its Deadline read by Claude
-  const row = page.getByRole('listitem').filter({ hasText: TITLE });
-  await expect(row).toHaveText(/^Grenoble/);
-  await expect(row).toContainText('15 déc.');
-  await expect(
-    page.getByRole('region', { name: 'Carte des Offres' }).getByRole('button', { name: `Grenoble · ${TITLE}` }),
-  ).toHaveCount(1);
+    // Its file's name or already its title, whichever the worker has reached
+    const name = new RegExp(`${FILE_NAME}|${TITLE}`);
+    await page
+      .getByRole('complementary')
+      .getByRole('listitem')
+      .filter({ hasText: name })
+      .getByRole('link', { name })
+      .click();
+    const extraction = page.getByRole('form', { name: 'Champs relevés par Claude' });
+    await expect(extraction.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(TITLE);
+    await page.getByRole('tab', { name: /^Recherche/ }).click();
+    await expect(page.getByRole('region', { name: 'Recherche' }).getByRole('combobox', { name: 'Version' })).toHaveText(
+      'Version 1 · Brouillon',
+      { timeout: READY_TIMEOUT_MS },
+    );
+  });
+
+  test('locates a Job Description once read, on the list and the map', async ({ page, asCandidate, openPage }) => {
+    await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
+    await asCandidate(DROPPING_CANDIDATE);
+    await openPage('/to-apply');
+    const imported = await page.request.post('/import', { form: { fileName: FILE_NAME, markdown: JOB_DESCRIPTION } });
+    expect(imported.ok()).toBe(true);
+    // Located in Grenoble by API Géo's recorded answer, with its Deadline read by Claude
+    const row = page.getByRole('listitem').filter({ hasText: TITLE });
+    await expect(async () => {
+      await page.reload();
+      await expect(row).toHaveText(/^Grenoble/, { timeout: 500 });
+    }).toPass({ timeout: READY_TIMEOUT_MS });
+    await expect(row).toContainText('15 déc.');
+    await expect(
+      page.getByRole('region', { name: 'Carte des Offres' }).getByRole('button', { name: `Grenoble · ${TITLE}` }),
+    ).toHaveCount(1);
+  });
 });
 
 test('imports a pasted Job Description: it skips New for To Apply, its name that of a paste until its title is read', async ({
@@ -82,6 +112,7 @@ test('imports a pasted Job Description: it skips New for To Apply, its name that
   openPage,
 }) => {
   await page.route('https://tile.openstreetmap.org/**', (route) => route.abort());
+  forgetPostingsOf('lina');
   await asCandidate('lina');
   await openPage('/');
   await page.getByRole('button', { name: 'Importer' }).click();

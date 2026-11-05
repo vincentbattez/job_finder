@@ -1,5 +1,5 @@
 import { CheckIcon, DownloadIcon } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher, useNavigate } from 'react-router';
 
@@ -16,6 +16,7 @@ import {
 import type { IRefusal } from '#/web/failure.ts';
 
 import { useFeedback } from './use-feedback.ts';
+import { useSettled } from './use-settled.ts';
 
 // What the Dialog reads of the Posting: where it posts, its title, and where its Interviews most often take place
 export interface IInterviewPosting {
@@ -56,22 +57,16 @@ function InterviewForm({
       : t('interviews.savedToast', { number: interview.number }),
   );
   // Once its answer is in: an addition turns the Dialog into its Interview-added step, an edit closes it
-  const submission = useRef({ isSent: false });
-  useEffect(() => {
-    if (fetcher.state !== 'idle') {
-      submission.current.isSent = true;
+  useSettled(fetcher, (answer) => {
+    if (typeof answer?.error === 'string') {
       return;
     }
-    if (!submission.current.isSent || typeof fetcher.data?.error === 'string') {
-      return;
-    }
-    submission.current.isSent = false;
-    if (fetcher.data?.added === undefined) {
+    if (answer?.added === undefined) {
       onDone();
     } else {
-      onAdded(fetcher.data.added);
+      onAdded(answer.added);
     }
-  }, [fetcher.state, fetcher.data, onAdded, onDone]);
+  });
   return (
     <form
       className="grid gap-6"

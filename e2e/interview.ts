@@ -1,3 +1,4 @@
+import { readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -6,17 +7,19 @@ import { z } from 'zod/v4';
 
 // How long a raw write waits for the server's own writes to release the database
 const BUSY_TIMEOUT_MS = 5000;
-
-// The dev server compiles a route on its first request: the first page of a worker hydrates late in CI
-const HYDRATION_TIMEOUT_MS = 15_000;
+// The worker takes the job, then its fake session runs (test/e2e-actions.server.ts)
+const READY_TIMEOUT_MS = 15_000;
 
 export function findInterviews(page: Page): Locator {
   return page.getByRole('region', { name: 'Entretiens' });
 }
 
-function openDatabase(): DatabaseSync {
-  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
-  return new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
+export function findDataDirectory(): string {
+  return z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata).dataDirectory;
+}
+
+export function openDatabase(): DatabaseSync {
+  return new DatabaseSync(path.join(findDataDirectory(), 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
 }
 
 // A detected Posting of the seed is New: put To Apply as keeping it would, without the Research keeping
@@ -64,6 +67,68 @@ export async function prepareApplication(page: Page, reference: string): Promise
   await deleteEveryInterview(page, reference);
 }
 
+// The folders of the Versions past the first ones
+function readVersionFolders(research: string, keptCount: number): string[] {
+  return readdirSync(research)
+    .filter((name) => Number(name.slice(1)) > keptCount)
+    .map((name) => path.join(research, name));
+}
+
+// A test that produces the Research of its Posting starts without one, whatever a previous run left:
+// its Versions, and their folders, which a new Version 1 could not take over. A seed's failed Version
+// stays, when told how many to keep.
+export function forgetResearch(reference: string, keptCount = 0): void {
+  const database = openDatabase();
+  const row = database.prepare('SELECT "id", "candidateId" FROM "Posting" WHERE "reference" = ?').get(reference);
+  const { id, candidateId } = z.object({ id: z.number(), candidateId: z.string() }).parse(row);
+  database
+    .prepare(`DELETE FROM "Version" WHERE "artifact" = 'research' AND "postingId" = ? AND "number" > ?`)
+    .run(id, keptCount);
+  // Their jobs too: the state of an Artifact is that of its last job
+  database
+    .prepare(
+      `DELETE FROM "Job" WHERE "module" = 'research' AND "postingId" = ? AND "id" NOT IN
+       (SELECT "jobId" FROM "Version" WHERE "postingId" = ? AND "jobId" IS NOT NULL)`,
+    )
+    .run(id, id);
+  database.close();
+  const postingsDirectory = path.join(findDataDirectory(), 'candidates', candidateId, 'postings');
+  for (const folder of readdirSync(postingsDirectory)) {
+    if (!folder.startsWith(reference)) {
+      continue;
+    }
+    const research = path.join(postingsDirectory, folder, 'research');
+    const forgottenList = keptCount === 0 ? [research] : readVersionFolders(research, keptCount);
+    for (const version of forgottenList) {
+      rmSync(version, { recursive: true, force: true });
+    }
+  }
+}
+
+function countReadyVersions(reference: string, artifact: string): number {
+  const database = openDatabase();
+  const row = database
+    .prepare(
+      `SELECT count(*) AS "count" FROM "Version" JOIN "Posting" ON "Posting"."id" = "Version"."postingId"
+       WHERE "Posting"."reference" = ? AND "Version"."artifact" = ? AND "Version"."state" = 'ready'`,
+    )
+    .get(reference, artifact);
+  database.close();
+  return z.object({ count: z.number() }).parse(row).count;
+}
+
+// A Version run by the worker, a Draft until validated, once the Posting has that many ready
+export async function runVersion(
+  page: Page,
+  { readyCount, ...form }: Readonly<{ module: string; reference: string; interview?: string; readyCount: number }>,
+): Promise<void> {
+  const response = await page.request.post('/run', { form });
+  expect(response.ok()).toBe(true);
+  await expect
+    .poll(() => countReadyVersions(form.reference, form.module), { timeout: READY_TIMEOUT_MS, intervals: [100] })
+    .toBe(readyCount);
+}
+
 // The Posting page open on a single Interview, freshly added: what a Portrait and an Interview Brief
 // prepare
 export async function prepareInterview(page: Page, reference: string): Promise<void> {
@@ -80,5 +145,5 @@ export async function prepareInterview(page: Page, reference: string): Promise<v
   expect(response.ok()).toBe(true);
   await page.goto(`/postings/${reference}?tab=interviews&interview=1`);
   // A click before React runs the page would go nowhere: wait for it
-  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true', { timeout: HYDRATION_TIMEOUT_MS });
+  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
 }

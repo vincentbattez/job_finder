@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
@@ -8,6 +8,7 @@ import { SettingsSection } from '#/web/components/settings-section.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
 import { useFeedback } from './use-feedback.ts';
+import { useSettled } from './use-settled.ts';
 
 export type ModuleInstructions = Awaited<ReturnType<Actions['readInstructions']>>;
 
@@ -18,23 +19,17 @@ export function useInstructions(instructions: ModuleInstructions | null) {
   type Intent = 'save-instructions' | 'restore-instructions';
   const { t } = useTranslation('settings');
   const [draft, setDraft] = useState<string | null>(null);
-  const fetcher = useFetcher<IRefusal | null>();
+  const fetcher = useFetcher<IRefusal>();
   const sentIntent = useRef<Intent | null>(null);
   useFeedback(fetcher, () =>
     sentIntent.current === 'restore-instructions' ? t('instructions.restored') : t('instructions.saved'),
   );
   // Once saved or restored, the editor shows the Instructions in effect again; a refusal keeps the edit
-  const submittedReference = useRef(false);
-  useEffect(() => {
-    if (fetcher.state !== 'idle') {
-      submittedReference.current = true;
-      return;
-    }
-    if (submittedReference.current && typeof fetcher.data?.error !== 'string') {
+  useSettled(fetcher, (answer) => {
+    if (typeof answer?.error !== 'string') {
       setDraft(null);
     }
-    submittedReference.current = false;
-  }, [fetcher.state, fetcher.data]);
+  });
 
   const inEffect =
     instructions === null ? '' : (instructions.candidateInstructions ?? instructions.defaultInstructions);

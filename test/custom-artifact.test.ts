@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import type { Actions } from '#/actions/index.ts';
 
-import { detectPostings } from './data-directory.ts';
+import { detectPostings, holdDatabaseLock } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 
 // The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
@@ -16,9 +16,10 @@ const REPORT_PDF = new Uint8Array(readFileSync(path.join(import.meta.dirname, 'f
 // Each test adds to its own Posting or names its own Annex, so they share one Detection
 describe('adding a document', () => {
   let actions: Actions;
+  let dataDirectory: string;
 
   beforeAll(async () => {
-    ({ actions } = await detectPostings());
+    ({ actions, dataDirectory } = await detectPostings());
   });
 
   it('lists a Custom Artifact in the Posting’s Documents, as the Candidate wrote it', async () => {
@@ -38,6 +39,20 @@ describe('adding a document', () => {
         text: 'Elle cherche une personne rigoureuse.',
       },
     ]);
+  });
+
+  // Prisma's transaction begins deferred: one that reads before it writes fails at once on a lock
+  // another process holds, where a write first waits its turn
+  it('waits for the write of another process, as the worker and a Detection write all the time', async () => {
+    await holdDatabaseLock(dataDirectory);
+
+    const custom = await actions.addCustomArtifact({
+      reference: '2026-2445609',
+      title: 'Écrit pendant une Détection',
+      text: 'Attend son tour.',
+    });
+
+    expect(custom.title).toBe('Écrit pendant une Détection');
   });
 
   it('refuses a Custom Artifact without a text', async () => {

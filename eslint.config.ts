@@ -98,7 +98,7 @@ export default defineConfig(
   },
   {
     // Tools load their config through a default export
-    files: ['*.config.ts'],
+    files: ['*.config.ts', 'test/playwright-time-budget-reporter.ts'],
     rules: { 'no-restricted-exports': 'off' },
   },
   {

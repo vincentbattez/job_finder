@@ -7,7 +7,7 @@ import { defineConfig, devices } from '@playwright/test';
 import { FAKE_HOME_ASSISTANT_TOKEN } from './test/fake-home-assistant.ts';
 import { stopLeftoverWebServers } from './test/stop-leftover-web-servers.ts';
 
-// Each git worktree starts its own dev server: without E2E_PORT, a port derived from the checkout
+// Each git worktree starts its own server: without E2E_PORT, a port derived from the checkout
 // path keeps parallel worktrees apart, and stays the same in every process that loads this config
 const PORT =
   process.env.E2E_PORT ??
@@ -21,7 +21,7 @@ const PORT =
   );
 const BASE_URL = `http://localhost:${PORT}`;
 // The front runs on a temporary data folder, never data/: test/seed-front.ts fills it through the
-// actions with the fakes before the dev server starts
+// actions with the fakes before the server starts
 const DATA_DIRECTORY = path.join(tmpdir(), `job-finder-e2e-${PORT}`);
 // The seed saves Notification Channels through the fake Home Assistant, never a real phone; its port
 // follows E2E_PORT so parallel runs stay apart
@@ -31,8 +31,11 @@ const FAKE_HOME_ASSISTANT_URL = `http://localhost:${HOME_ASSISTANT_PORT}`;
 if (process.env.TEST_WORKER_INDEX === undefined) {
   stopLeftoverWebServers({ portList: [PORT, HOME_ASSISTANT_PORT], checkoutDirectory: import.meta.dirname });
 }
+// Beside the data folder, for e2e/detection.test.ts to hold a Detection in progress (test/fake-slow-source.ts)
+const DETECTION_HOLD_PATH = `${DATA_DIRECTORY}-hold-detection`;
 const ENV = {
   JF_DATA_DIRECTORY: DATA_DIRECTORY,
+  E2E_DETECTION_HOLD_PATH: DETECTION_HOLD_PATH,
   FAKE_HOME_ASSISTANT_URL,
 };
 
@@ -41,11 +44,10 @@ export default defineConfig({
   forbidOnly: process.env.CI !== undefined,
   // Even the tests of one file run side by side: one that reads what another left fails here first
   fullyParallel: true,
-  // The GitHub runner has 2 vCPUs, so Playwright's default of half the cores ran the tests one at a
-  // time; they mostly wait on the front, so two side by side fit
-  ...(process.env.CI !== undefined && { workers: 2 }),
-  // Each test with its duration, in CI as well: the time budgets are read from there
-  reporter: 'list',
+  // Playwright's default of half the cores runs them one at a time on the 2 vCPUs of the GitHub runner:
+  // two side by side doubled a test's time on a slow runner, over its budget
+  // Each test with its duration, in CI as well; the second fails a run over the time budgets
+  reporter: [['list'], ['./test/playwright-time-budget-reporter.ts']],
   use: {
     baseURL: BASE_URL,
   },
@@ -56,6 +58,7 @@ export default defineConfig({
     homeAssistantUrl: FAKE_HOME_ASSISTANT_URL,
     homeAssistantToken: FAKE_HOME_ASSISTANT_TOKEN,
     dataDirectory: DATA_DIRECTORY,
+    detectionHoldPath: DETECTION_HOLD_PATH,
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
@@ -65,14 +68,13 @@ export default defineConfig({
       wait: { stdout: /Fake Home Assistant ready/ },
     },
     {
-      // The e2e mode serves the actions with the fakes of the external boundaries (vite.config.ts)
-      command: `node test/seed-front.ts && react-router dev --mode e2e --port ${PORT} --strictPort`,
+      // The e2e mode builds the actions with the fakes of the external boundaries (vite.config.ts). Built
+      // once rather than on the dev server (test/e2e-server.ts)
+      command: `node test/seed-front.ts && react-router build --mode e2e && node test/e2e-server.ts ${PORT}`,
       env: ENV,
       url: `${BASE_URL}/`,
       // A server already running on the port may read data/: always start the one seeded above
       reuseExistingServer: false,
-      // In CI the dev server's log goes to the job's: it says when Vite re-optimizes and reloads
-      ...(process.env.CI !== undefined && { stdout: 'pipe' as const }),
     },
     {
       // The worker, in its own process like the lpm service: it runs the jobs the front queues,

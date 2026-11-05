@@ -16,6 +16,7 @@ import { useGeneration } from './generation.tsx';
 import { InterviewField } from './interview-field.tsx';
 import { useFeedback } from './use-feedback.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
+import { useSettled } from './use-settled.ts';
 
 interface IArtifactName {
   reference: string;
@@ -28,7 +29,7 @@ interface IArtifactName {
 // validation, while its toast must still tell it.
 export function useValidation({ reference, interviewNumber, artifact }: IArtifactName) {
   const { t } = useTranslation('posting');
-  const fetcher = useFetcher<IRefusal | null>();
+  const fetcher = useFetcher<IRefusal>();
   const submitted = useRef({ number: 0 });
   useFeedback(fetcher, () => t('artifactView.validated', { number: submitted.current.number }));
   const isPending = fetcher.state !== 'idle';
@@ -73,22 +74,16 @@ function VersionEditor({
   IArtifactName & { fileName: string; format: 'mdx' | 'markdown'; detail: IVersionDetail; onDone: () => void }
 >) {
   const { t } = useTranslation('posting');
-  const fetcher = useFetcher<IRefusal | null>();
+  const fetcher = useFetcher<IRefusal>();
   const { number } = detail.version;
   const text = detail.text ?? '';
   const [draft, setDraft] = useState(text);
   useFeedback(fetcher, () => t('artifactView.saved', { number }));
-  const submission = useRef({ isSent: false });
-  useEffect(() => {
-    if (fetcher.state !== 'idle') {
-      submission.current.isSent = true;
-      return;
-    }
-    if (submission.current.isSent && fetcher.data == null) {
+  useSettled(fetcher, (answer) => {
+    if (typeof answer?.error !== 'string') {
       onDone();
     }
-    submission.current.isSent = false;
-  }, [fetcher.state, fetcher.data, onDone]);
+  });
   return (
     <ArtifactEditor
       text={text}

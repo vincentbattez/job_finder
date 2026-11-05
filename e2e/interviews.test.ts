@@ -1,15 +1,15 @@
 import { readFileSync } from 'node:fs';
 
 import { expect, test } from './candidate.ts';
-import { findInterviews, prepareApplication } from './interview.ts';
+import { findInterviews, prepareApplication, prepareInterview } from './interview.ts';
 
 // An Application test/seed-front.ts marks Applied, whose Interviews only this test changes
 const REFERENCE = '2026-2448213';
 
-test('adds an Interview from the header, offers its iCal file, lands on it, then edits and deletes it', async ({
-  page,
-  openPage,
-}) => {
+// The tests that add one each start from a single Interview of that Application: one after the other
+test.describe.configure({ mode: 'serial' });
+
+test('adds an Interview from the header, offers its iCal file, then lands on it', async ({ page, openPage }) => {
   await prepareApplication(page, REFERENCE);
   // Added from the Posting tab, it lands on the Interviews tab all the same
   await openPage(`/postings/${REFERENCE}`);
@@ -44,6 +44,11 @@ test('adds an Interview from the header, offers its iCal file, lands on it, then
     'jeudi 19 novembre 2099 à 14:00',
   );
   await expect(page.locator('main > header [data-step]')).toHaveText('Convoquée');
+});
+
+test('edits an Interview, keeps its tabs in the URL, then deletes it', async ({ page }) => {
+  await prepareInterview(page, REFERENCE);
+  const interviews = findInterviews(page);
 
   // Edited in the same Dialog
   await interviews.getByRole('button', { name: 'Modifier l’Entretien 1' }).click();

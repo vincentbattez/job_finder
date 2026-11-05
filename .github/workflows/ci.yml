@@ -42,6 +42,10 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Vitest
         run: mise run test:unit -- --shard=${{ matrix.shard }}
+        env:
+          # The data folders of the tests in memory: SQLite's syncs on the runner's disk made a test
+          # of 1 s last up to 8 s, over its time budget
+          TMPDIR: /dev/shm
 
   # Three shards, each within the 180 s of a run: two reached 3.5 min (#115, #156). Each VM seeds its
   # own data folder and starts its own servers, so each shard has its own Detection lock (ADR-0014). Playwright shards
@@ -70,6 +74,9 @@ jobs:
         run: npx playwright install --only-shell chromium
       - name: Playwright
         run: mise run test:e2e -- --shard=${{ matrix.shard }}
+        env:
+          # As for Vitest above
+          TMPDIR: /dev/shm
       # The page snapshot and the trace of each failed test, to read a failure the log does not explain
       - uses: actions/upload-artifact@v6
         if: failure()
