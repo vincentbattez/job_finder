@@ -55,8 +55,8 @@ function SectionCard({
   // What the Candidate typed, until it is the saved note
   const [editedNote, setEditedNote] = useState<string | null>(null);
   const note = editedNote ?? section.note;
-  const noteFetcher = useFetcher<IRefusal | null>();
-  const masteredFetcher = useFetcher<IRefusal | null>();
+  const noteFetcher = useFetcher<IRefusal>();
+  const masteredFetcher = useFetcher<IRefusal>();
   useFeedback(noteFetcher, () => t('revision.noteSaved', { title: section.title }));
   // Shown as asked while the mark is on its way
   const pendingMark = masteredFetcher.formData?.get('isMastered');

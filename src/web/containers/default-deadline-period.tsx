@@ -16,7 +16,7 @@ import { useFeedback } from './use-feedback.ts';
 export function DefaultDeadlinePeriod({ months }: Readonly<{ months: number }>) {
   const { t } = useTranslation('settings');
   const fieldId = useId();
-  const fetcher = useFetcher<IRefusal | null>();
+  const fetcher = useFetcher<IRefusal>();
   useFeedback(fetcher, () => t('defaultDeadlinePeriod.saved'));
   return (
     <SettingsSection heading={t('defaultDeadlinePeriod.heading')} description={t('defaultDeadlinePeriod.hint')}>

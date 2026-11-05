@@ -72,7 +72,7 @@ export function Interviews({
     interview: null,
   });
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const removalFetcher = useFetcher<IRefusal | null>();
+  const removalFetcher = useFetcher<IRefusal>();
   const deleted = useRef({ number: 0 });
   useFeedback(removalFetcher, () => t('interviews.deletedToast', { number: deleted.current.number }));
   const now = Date.now();

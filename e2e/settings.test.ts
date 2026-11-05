@@ -119,6 +119,22 @@ test.describe('Notification Channel of a Candidate', () => {
 });
 
 // Any visitor of the front creates or renames a Candidate, and sets the Default Deadline Period (ADR-0011)
+// Counts on <body> each toast ever shown: Sonner takes one out of the page after a few seconds, so what
+// the page holds at one instant does not tell how many there were
+const COUNT_TOASTS_SCRIPT = `
+  let count = 0;
+  new MutationObserver((recordList) => {
+    for (const { addedNodes } of recordList) {
+      for (const node of addedNodes) {
+        if (node instanceof Element) {
+          count += node.matches('[data-sonner-toast]') ? 1 : node.querySelectorAll('[data-sonner-toast]').length;
+        }
+      }
+    }
+    document.body.dataset.toastCount = String(count);
+  }).observe(document.body, { childList: true, subtree: true });
+`;
+
 test.describe('Candidates and the Default Deadline Period', () => {
   test('creates a Candidate, who joins the switcher, then renames them', async ({ page, openPage }) => {
     // A Candidate of its own on each run, since none is ever deleted
@@ -171,5 +187,19 @@ test.describe('Candidates and the Default Deadline Period', () => {
     await expect(toastOf(page, 'Délai par défaut enregistré.')).toBeVisible();
     await openPage('/settings');
     await expect(period.getByRole('spinbutton', { name: 'Délai par défaut, en mois' })).toHaveValue('6');
+  });
+
+  // On a slow machine React skips the renders of a mutation: each save still has to end in its toast
+  test('tells every save in a toast, on a slow machine too', async ({ page, openPage }) => {
+    await openPage('/settings');
+    const client = await page.context().newCDPSession(page);
+    await client.send('Emulation.setCPUThrottlingRate', { rate: 20 });
+    await page.evaluate(COUNT_TOASTS_SCRIPT);
+    const save = page.getByRole('button', { name: 'Enregistrer le Délai par défaut' });
+
+    for (const count of [1, 2, 3]) {
+      await save.click();
+      await expect(page.locator('body')).toHaveAttribute('data-toast-count', String(count));
+    }
   });
 });

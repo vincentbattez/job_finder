@@ -132,9 +132,9 @@ export function PostingActions({
   letter,
 }: Readonly<IPostingActions>) {
   const { t } = useTranslation('posting');
-  const statusFetcher = useFetcher<IRefusal | null>();
-  const archiveFetcher = useFetcher<IRefusal | null>();
-  const keepFetcher = useFetcher<IRefusal | null>();
+  const statusFetcher = useFetcher<IRefusal>();
+  const archiveFetcher = useFetcher<IRefusal>();
+  const keepFetcher = useFetcher<IRefusal>();
   const submittedStatus = useRef<Status>('applied');
   useFeedback(keepFetcher, () => t('page.kept'));
   // Archiving a New Posting is dismissing it: the menu and the toast say so

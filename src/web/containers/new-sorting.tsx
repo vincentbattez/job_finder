@@ -31,7 +31,7 @@ function SortRequest({
   onUndo,
 }: Readonly<{ sort: ISort; onSettled: () => void; onUndo: (reference: string) => void }>) {
   const { t } = useTranslation('lists');
-  const fetcher = useFetcher<IRefusal | null>();
+  const fetcher = useFetcher<IRefusal>();
   // Whether its sorting was posted: once, even when React runs the effect twice
   const sentReference = useRef(false);
   useFeedback(
@@ -74,7 +74,7 @@ export function NewSorting({
 }: Readonly<{ itemList: NewItem[]; now: Date; isArchived: boolean; filtering: IMapListFiltering } & ISheetSelection>) {
   const { t } = useTranslation('lists');
   const [sortList, setSortList] = useState<ISort[]>([]);
-  const undoFetcher = useFetcher<IRefusal | null>();
+  const undoFetcher = useFetcher<IRefusal>();
   useFeedback(undoFetcher, () => t('new.restored'));
   const sortingSet = new Set(sortList.map(({ reference }) => reference));
 
