@@ -179,7 +179,9 @@ export function Revision({
 
   function renderReader() {
     if (isReadingDraft) {
-      return <ArtifactReader key={`draft-${String(draft.version.number)}`} text={draft.text ?? ''} format="mdx" />;
+      return (
+        <ArtifactReader key={`draft-${String(draft.version.number)}`} text={draft.text ?? ''} format="mdx" isRevising />
+      );
     }
     if (chosen === undefined) {
       return <RevisionEmpty backTo={backTo} />;
@@ -189,6 +191,7 @@ export function Revision({
         key={`chosen-${String(chosen.version.number)}`}
         text={chosen.text ?? ''}
         format={brief?.format ?? 'mdx'}
+        isRevising
         margin={{
           onTitleListChange: setTitleList,
           render: ({ activeIndex }) => (

@@ -3,7 +3,7 @@ import { TriangleAlertIcon } from 'lucide-react';
 import { createElement, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { MDX_CATALOGUE, UNFOLD_CONTEXT } from './catalogue.tsx';
+import { MDX_CATALOGUE, REVISING_CONTEXT, UNFOLD_CONTEXT } from './catalogue.tsx';
 import { compileArtifactText, UNKNOWN_COMPONENT_NAME, type ArtifactTextFormat } from './compile.ts';
 
 export type { ArtifactTextFormat } from './compile.ts';
@@ -43,12 +43,15 @@ export function ArtifactText({
   format,
   className,
   isUnfolded = false,
+  isRevising = false,
 }: Readonly<{
   text: string;
   format: ArtifactTextFormat;
   className?: string;
   // Every Tab and Accordion item shown, as comparing needs
   isUnfolded?: boolean;
+  // A Checklist's items can be ticked, as in the Revision only
+  isRevising?: boolean;
 }>) {
   const { t } = useTranslation('mdx');
   const { content, hasFailed } = useMemo(() => compileArtifactText(text, format, COMPONENT_NAME_SET), [text, format]);
@@ -63,7 +66,9 @@ export function ArtifactText({
           {t('notCompiled')}
         </p>
       ) : null}
-      <UNFOLD_CONTEXT value={isUnfolded}>{createElement(content, { components: COMPONENTS })}</UNFOLD_CONTEXT>
+      <UNFOLD_CONTEXT value={isUnfolded}>
+        <REVISING_CONTEXT value={isRevising}>{createElement(content, { components: COMPONENTS })}</REVISING_CONTEXT>
+      </UNFOLD_CONTEXT>
     </div>
   );
 }

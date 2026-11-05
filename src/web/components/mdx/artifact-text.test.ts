@@ -8,9 +8,9 @@ import { i18nOf } from '#/actions/i18n.ts';
 import { ArtifactText, type ArtifactTextFormat } from './artifact-text.tsx';
 
 // Seam 3 of spec #125: an Artifact's text in, the HTML the server renders out (ADR-0020)
-function htmlOf(text: string, format: ArtifactTextFormat = 'mdx'): string {
+function htmlOf(text: string, format: ArtifactTextFormat = 'mdx', isRevising = false): string {
   return renderToStaticMarkup(
-    createElement(I18nextProvider, { i18n: i18nOf('en') }, createElement(ArtifactText, { text, format })),
+    createElement(I18nextProvider, { i18n: i18nOf('en') }, createElement(ArtifactText, { text, format, isRevising })),
   );
 }
 
@@ -220,8 +220,19 @@ describe('The catalogue', () => {
     expect(html).toMatch(/<figcaption[^>]*>— The mayor, 2025 report<\/figcaption>/u);
   });
 
-  it('makes a Checklist of a Markdown list, its own checkboxes replacing the task list ones', () => {
+  it('keeps a Checklist read only outside the Revision', () => {
     const html = htmlOf('<Checklist title="Bring">\n\n- [ ] ID card\n- Diploma\n\n</Checklist>');
+
+    expect(html).toMatch(/<p[^>]*><svg[^>]*>.*<\/svg>Bring<\/p>/u);
+    expect(html).toContain('ID card');
+    expect(html).toContain('Diploma');
+    expect(html).not.toContain('role="checkbox"');
+    expect(html).not.toContain('0 of 2 done');
+    expect(html).not.toMatch(/<input/u);
+  });
+
+  it('makes a Checklist of a Markdown list, checkable while revising', () => {
+    const html = htmlOf('<Checklist title="Bring">\n\n- [ ] ID card\n- Diploma\n\n</Checklist>', 'mdx', true);
 
     expect(html).toMatch(/<p[^>]*><svg[^>]*>.*<\/svg>Bring<\/p>/u);
     expect(html).toContain('0 of 2 done');

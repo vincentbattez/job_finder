@@ -127,6 +127,9 @@ function Callout({ type = 'note', title, children }: Readonly<{ type?: string; t
 // Comparing with the Original unfolds what a component hides, so that every changed passage shows
 export const UNFOLD_CONTEXT = createContext(false);
 
+// The Revision is where a Checklist's items get ticked: any other reading shows them as a plain list
+export const REVISING_CONTEXT = createContext(false);
+
 // Tab, AccordionItem, Step and Event only carry their attributes to the component around them
 function Part({ children }: Readonly<IWithChildren>) {
   return <>{children}</>;
@@ -338,6 +341,7 @@ function checklistItemsOf(children: ReactNode): ReactNode[] {
 // Checked while revising only: the ticks are not saved
 function Checklist({ title, children }: Readonly<{ title?: string } & IWithChildren>) {
   const { t } = useTranslation('mdx');
+  const isRevising = useContext(REVISING_CONTEXT);
   const itemList = checklistItemsOf(children);
   const [checkedIndexSet, setCheckedIndexSet] = useState<ReadonlySet<number>>(new Set());
   const toggle = (index: number, isChecked: boolean) => {
@@ -358,12 +362,21 @@ function Checklist({ title, children }: Readonly<{ title?: string } & IWithChild
           <CheckCircle2Icon aria-hidden className="size-4 text-primary" />
           {title ?? t('checklist')}
         </p>
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {t('checklistProgress', { checkedCount: checkedIndexSet.size, count: itemList.length })}
-        </span>
+        {isRevising && (
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {t('checklistProgress', { checkedCount: checkedIndexSet.size, count: itemList.length })}
+          </span>
+        )}
       </div>
       <ul className="divide-y">
         {itemList.map((item, index) => {
+          if (!isRevising) {
+            return (
+              <li key={index} className="px-4 py-2.5 text-sm leading-relaxed [&_p]:inline">
+                {item}
+              </li>
+            );
+          }
           const isChecked = checkedIndexSet.has(index);
           return (
             <li key={index}>
