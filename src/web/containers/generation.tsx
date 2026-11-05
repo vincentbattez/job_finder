@@ -5,9 +5,16 @@ import { toast } from 'sonner';
 
 import { isPending } from '#/actions/state.ts';
 import type { Generation, IArtifactVersions } from '#/web/components/artifact.ts';
-import { GenerateButton, GenerationPanel, RunFailure, type IRunView } from '#/web/components/generation-panel.tsx';
+import {
+  AddInputButton,
+  GenerateButton,
+  GenerationPanel,
+  RunFailure,
+  type IRunView,
+} from '#/web/components/generation-panel.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
+import { AddDocumentDialog } from './add-document.tsx';
 import { useInstructions, type ModuleInstructions } from './instructions.tsx';
 import { useFeedback } from './use-feedback.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
@@ -52,6 +59,7 @@ export function useGeneration({ reference, title, interviewNumber, artifactVersi
   const [step, setStep] = useState(0);
   const [checkOverride, setCheckOverride] = useState<Record<string, boolean>>({});
   const [launchedNumber, setLaunchedNumber] = useState<number | null>(null);
+  const [isAddOpen, setIsAddOpen] = useState(false);
   // One fetcher per opening: it starts empty, then keeps its Inputs shown while a save of the Instructions
   // or the polling reads them again
   const [openCount, setOpenCount] = useState(0);
@@ -168,6 +176,28 @@ export function useGeneration({ reference, title, interviewNumber, artifactVersi
         runState === null || launchedNumber === null
           ? null
           : { state: runState, number: launchedNumber, failure: failureMessage }
+      }
+      addInput={
+        <>
+          <AddInputButton
+            onClick={() => {
+              setIsAddOpen(true);
+            }}
+          />
+          <AddDocumentDialog
+            reference={reference}
+            interviewNumber={interviewNumber}
+            isAnnexAllowed={inputFetcher.data?.isReadingProfile === true}
+            isFromPanel
+            isOpen={isAddOpen}
+            onOpenChange={setIsAddOpen}
+            onAdded={(key) => {
+              // Checked at once in the panel that added it (spec #125)
+              setCheckOverride((current) => ({ ...current, [key]: true }));
+              void inputFetcher.load(urlOf());
+            }}
+          />
+        </>
       }
       onCheck={(keyList, isChecked) => {
         setCheckOverride((current) => ({

@@ -78,13 +78,24 @@ export async function openWorkspace(dataDirectory: string) {
   }
 
   // Each Version of an Artifact has its own folder, so a new launch never overwrites the others; the
-  // preview of a Prompt names that of the Version still to be created by a placeholder for its number
+  // preview of a Prompt names that of the Version still to be created by a placeholder for its number. A
+  // Custom Artifact has a folder of its own, by its id, for its single Version.
   function versionDirectoryOf(
     posting: Posting,
-    { interview, artifact, number }: Pick<Version, 'interview' | 'artifact'> & { number: number | string },
+    {
+      interview,
+      artifact,
+      number,
+      customArtifact = null,
+    }: Pick<Version, 'interview' | 'artifact'> & {
+      number: number | string;
+      customArtifact?: Version['customArtifact'];
+    },
   ): string {
     const directory = interview === null ? postingDirectoryOf(posting) : interviewDirectoryOf(posting, interview);
-    return path.join(directory, artifact, `v${String(number)}`);
+    return customArtifact === null
+      ? path.join(directory, artifact, `v${String(number)}`)
+      : path.join(directory, artifact, String(customArtifact.id), `v${String(number)}`);
   }
 
   return {

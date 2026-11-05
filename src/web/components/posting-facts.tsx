@@ -45,14 +45,23 @@ const REMARK_PLUGIN_LIST = [remarkGfm];
 
 const LINK_CLASS_NAME = 'text-primary underline-offset-4 hover:underline';
 
-function AsideSection({ title, icon, children }: Readonly<{ title: string; icon: ReactNode; children: ReactNode }>) {
+// A card of the aside, its action, such as an add button, beside its heading
+export function AsideSection({
+  title,
+  icon,
+  action,
+  children,
+}: Readonly<{ title: string; icon: ReactNode; action?: ReactNode; children: ReactNode }>) {
   const headingId = useId();
   return (
     <section aria-labelledby={headingId} className="rounded-xl border bg-card p-4 shadow-whisper">
-      <h2 id={headingId} className="mb-2 flex max-w-none items-center gap-2 text-sm font-semibold">
-        <span className="text-muted-foreground [&_svg]:size-4">{icon}</span>
-        {title}
-      </h2>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h2 id={headingId} className="flex max-w-none items-center gap-2 text-sm font-semibold">
+          <span className="text-muted-foreground [&_svg]:size-4">{icon}</span>
+          {title}
+        </h2>
+        {action}
+      </div>
       {children}
     </section>
   );
@@ -165,13 +174,15 @@ function RepostSection({ posting, repost }: Readonly<Pick<IPostingFacts, 'postin
 }
 
 // The Posting tab: the Job Description to read, and beside it what the Candidate checks at a glance;
-// children come first in the aside, such as the state of an imported Posting's extraction
+// children come first in the aside, such as the state of an imported Posting's extraction, and the
+// Documents section follows the facts
 export function PostingFacts({
   posting,
   jobDescription,
   repost,
+  documents,
   children,
-}: Readonly<IPostingFacts & { children?: ReactNode }>) {
+}: Readonly<IPostingFacts & { documents?: ReactNode; children?: ReactNode }>) {
   const { t } = useTranslation('posting');
   const jobDescriptionId = useId();
   return (
@@ -214,6 +225,7 @@ export function PostingFacts({
               </Fact>
             </dl>
           </AsideSection>
+          {documents}
           <AsideSection title={t('contactsHeading')} icon={<MailIcon />}>
             <ContactList {...posting} />
           </AsideSection>
