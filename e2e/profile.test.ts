@@ -45,7 +45,6 @@ test.describe('Profile of a Candidate', () => {
       'cv.md',
       'facts.md',
       'Nouveau fichier',
-      'Veilles',
     ]);
     const facts = page.getByRole('region', { name: 'facts.md' });
     await expect(contentOf(facts)).toHaveValue('# Faits\n\n## Mobilité\n\n- Lille et alentours\n');
@@ -94,7 +93,6 @@ test.describe('Profile of a Candidate', () => {
       'cv.md',
       'facts.md',
       'Nouveau fichier',
-      'Veilles',
     ]);
   });
 
@@ -159,7 +157,6 @@ test.describe('Profile of a Candidate', () => {
       'cv.md',
       'facts.md',
       'Nouveau fichier',
-      'Veilles',
     ]);
     await expect(uploads.getByRole('listitem')).toContainText('cv.pdf');
 

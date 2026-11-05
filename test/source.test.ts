@@ -68,7 +68,7 @@ describe('the Sources a Watch follows', () => {
     const actions = await createActions({ dataDirectory, fetch: createRecordedFetch().fetch });
 
     await expect(actions.detect()).rejects.toThrow(
-      'Source inconnue pour la Veille ailleurs : inconnue. En choisir une parmi pep dans les Veilles du Profil.',
+      'Source inconnue pour la Veille ailleurs : inconnue. En choisir une parmi pep sur la page des Veilles.',
     );
   });
 

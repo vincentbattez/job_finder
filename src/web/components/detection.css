@@ -72,13 +72,6 @@
     font-size: var(--text-sm);
   }
 
-  .detection__near-miss summary {
-    width: fit-content;
-    color: var(--color-ink-2);
-    font-size: var(--text-sm);
-    cursor: pointer;
-  }
-
   .detection__error {
     color: var(--color-error);
   }
