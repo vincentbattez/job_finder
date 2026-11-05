@@ -11,12 +11,12 @@ interface IFetcherState {
 // The front's one feedback convention (spec #125, DESIGN.md « Feedback »): every mutation a fetcher
 // posts ends in a toast, its success's message or, when relayAction refused it, the message of its
 // Error Code. Its button shows isPending meanwhile: fetcher.state !== 'idle'. The success message is
-// read once the mutation settles, so a switch of Locale words it in the new one. A success that acts at
-// once, such as archiving, offers its undo as the toast's action (spec #125, « Front »).
+// read once the mutation settles, so a switch of Locale words it in the new one. A success may offer an
+// action in its toast, such as the undo of an archiving, which acts at once (spec #125, « Front »).
 export function useFeedback(
   fetcher: IFetcherState,
   successMessage: () => string,
-  undo?: () => { label: string; onClick: () => void },
+  action?: () => { label: string; onClick: () => void },
 ): void {
   const sentReference = useRef<{ data: unknown } | null>(null);
   // What the fetcher held before its mutation: under load React may skip the submitting render and
@@ -24,8 +24,8 @@ export function useFeedback(
   const idleDataReference = useRef<unknown>(fetcher.data);
   const successMessageReference = useRef(successMessage);
   successMessageReference.current = successMessage;
-  const undoReference = useRef(undo);
-  undoReference.current = undo;
+  const actionReference = useRef(action);
+  actionReference.current = action;
   useEffect(() => {
     if (fetcher.state !== 'idle') {
       sentReference.current ??= { data: idleDataReference.current };
@@ -46,7 +46,7 @@ export function useFeedback(
     if (typeof error === 'string') {
       toast.error(error);
     } else {
-      toast.success(successMessageReference.current(), { action: undoReference.current?.() });
+      toast.success(successMessageReference.current(), { action: actionReference.current?.() });
     }
   }, [fetcher.state, fetcher.data]);
 }

@@ -5,6 +5,8 @@ import { localeOf, tFor } from '#/actions/i18n.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { PageHeader } from '#/web/components/page-header.tsx';
+import { DetectionFollow, DetectionStart } from '#/web/containers/detection.tsx';
+import { JobDescriptionImport } from '#/web/containers/job-description-import.tsx';
 import { useListFilters } from '#/web/containers/list-filters.tsx';
 import { NewSorting } from '#/web/containers/new-sorting.tsx';
 import { PostingSheet, useSheetSelection } from '#/web/containers/posting-sheet.tsx';
@@ -30,6 +32,8 @@ export function loader({ request }: LoaderFunctionArgs) {
       isArchived,
       itemList,
       archivedCount: archivedList.length,
+      // The progress of the running Detection, or the verdict of the last one, for the Card under the header
+      detection: candidate === null ? null : await ACTIONS.followDetection({ candidateId: candidate.id }),
       // The Posting of the Sheet the URL opens
       sheetPosting: await readSheetPosting(request, candidate?.id ?? null),
       // The day the groups are counted from, the same for the server's render and the browser's
@@ -53,7 +57,8 @@ export function meta({ loaderData }: MetaArgs<typeof loader>) {
 }
 
 export default function New() {
-  const { candidate, isArchived, itemList, archivedCount, now, sheetPosting } = useLoaderData<typeof loader>();
+  const { candidate, isArchived, itemList, archivedCount, detection, now, sheetPosting } =
+    useLoaderData<typeof loader>();
   const { t } = useTranslation('lists');
   const filtered = useListFilters(itemList, archivedCount);
   const { selectedReference, onSelect, onClose } = useSheetSelection();
@@ -62,7 +67,16 @@ export default function New() {
       <PageHeader
         title={t('new.heading')}
         description={candidate === null || isArchived ? undefined : t('new.description', { count: itemList.length })}
+        actions={
+          detection === null ? undefined : (
+            <>
+              <JobDescriptionImport />
+              <DetectionStart running={detection.running} />
+            </>
+          )
+        }
       />
+      {detection === null ? null : <DetectionFollow overview={detection} />}
       {candidate === null ? (
         <div className="p-4 sm:p-6">
           <p className="text-body font-semibold">{t('noCandidateHeading', { ns: 'postingList' })}</p>
