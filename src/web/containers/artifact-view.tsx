@@ -1,18 +1,21 @@
-import { CheckIcon } from 'lucide-react';
+import { CheckIcon, FilePlusIcon, SaveIcon, XIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFetcher } from 'react-router';
 
+import type { Artifact } from '#/actions/index.ts';
+import { ArtifactEditor } from '#/web/components/artifact-editor.tsx';
 import { ArtifactView as ArtifactViewView, type ArtifactMode } from '#/web/components/artifact-view.tsx';
 import type { IArtifactVersions, IVersionDetail } from '#/web/components/artifact.ts';
+import { BringDialog, type Brought } from '#/web/components/bring-dialog.tsx';
 import type { IRecipients } from '#/web/components/recipients.tsx';
 import { Button } from '#/web/components/ui/button.tsx';
-import { Textarea } from '#/web/components/ui/textarea.tsx';
 import type { IRefusal } from '#/web/failure.ts';
 
 import { useGeneration } from './generation.tsx';
 import { InterviewField } from './interview-field.tsx';
 import { useFeedback } from './use-feedback.ts';
+import { useRevalidateWhile } from './use-revalidate-while.ts';
 
 interface IArtifactName {
   reference: string;
@@ -56,19 +59,24 @@ export function useValidation({ reference, interviewNumber, artifact }: IArtifac
   };
 }
 
-// Corrects a Version in place, Draft or Validated, its Original kept as the AI wrote it (ADR-0019); the
-// MDX editor of the toolbar ticket replaces this plain text field
+// Corrects a Version in place, Draft or Validated, its Original kept as the AI wrote it (ADR-0019): MDXEditor
+// for an MDX Artifact, the Letter as plain Markdown
 function VersionEditor({
   reference,
   interviewNumber,
   artifact,
   fileName,
+  format,
   detail,
   onDone,
-}: Readonly<IArtifactName & { fileName: string; detail: IVersionDetail; onDone: () => void }>) {
+}: Readonly<
+  IArtifactName & { fileName: string; format: 'mdx' | 'markdown'; detail: IVersionDetail; onDone: () => void }
+>) {
   const { t } = useTranslation('posting');
   const fetcher = useFetcher<IRefusal | null>();
   const { number } = detail.version;
+  const text = detail.text ?? '';
+  const [draft, setDraft] = useState(text);
   useFeedback(fetcher, () => t('artifactView.saved', { number }));
   const submission = useRef({ isSent: false });
   useEffect(() => {
@@ -82,30 +90,98 @@ function VersionEditor({
     submission.current.isSent = false;
   }, [fetcher.state, fetcher.data, onDone]);
   return (
-    <fetcher.Form
-      method="post"
-      action={`/postings/${reference}/${artifact}/document`}
-      preventScrollReset
-      className="mx-auto max-w-[72ch] space-y-3"
-    >
-      <input type="hidden" name="number" value={number} />
-      <input type="hidden" name="fileName" value={fileName} />
-      <InterviewField interviewNumber={interviewNumber} />
-      <Textarea
-        name="markdown"
-        aria-label={t('artifactView.textLabel', { number })}
-        defaultValue={detail.text ?? ''}
-        className="min-h-96 font-mono text-sm"
+    <ArtifactEditor
+      text={text}
+      original={detail.original}
+      format={format}
+      number={number}
+      onChange={setDraft}
+      actions={
+        <>
+          <Button type="button" variant="ghost" size="sm" onClick={onDone}>
+            <XIcon aria-hidden />
+            {t('artifactView.cancel')}
+          </Button>
+          <fetcher.Form method="post" action={`/postings/${reference}/${artifact}/document`} preventScrollReset>
+            <input type="hidden" name="number" value={number} />
+            <input type="hidden" name="fileName" value={fileName} />
+            <input type="hidden" name="markdown" value={draft} />
+            <InterviewField interviewNumber={interviewNumber} />
+            <Button type="submit" size="sm" disabled={draft === text} isPending={fetcher.state !== 'idle'}>
+              <SaveIcon aria-hidden />
+              {t('artifactView.save')}
+            </Button>
+          </fetcher.Form>
+        </>
+      }
+    />
+  );
+}
+
+// Bringing my own Version: its button and its dialog; a text lands at once, a PDF once the worker converted it,
+// which the page follows meanwhile. A frozen Letter takes none (ADR-0019).
+function useBring({
+  reference,
+  interviewNumber,
+  artifact,
+  isFrozen,
+  isRunning,
+}: Readonly<Omit<IArtifactName, 'artifact'> & { artifact: Artifact; isFrozen: boolean; isRunning: boolean }>) {
+  const { t } = useTranslation('posting');
+  const fetcher = useFetcher<IRefusal & { brought?: 'text' | 'pdf' }>();
+  const [isOpen, setIsOpen] = useState(false);
+  useFeedback(fetcher, () =>
+    fetcher.data?.brought === 'pdf' ? t('artifactView.bringDialog.pdfQueued') : t('artifactView.bringDialog.added'),
+  );
+  useRevalidateWhile(fetcher.data?.brought === 'pdf' && isRunning);
+  // The dialog closes once its Version is on its way; a refusal keeps it open with what was brought
+  const answer = fetcher.data;
+  useEffect(() => {
+    if (fetcher.state === 'idle' && answer?.brought !== undefined) {
+      setIsOpen(false);
+    }
+  }, [fetcher.state, answer]);
+  if (isFrozen) {
+    return null;
+  }
+  function bring(brought: Brought): void {
+    const formData = new FormData();
+    if (brought.kind === 'pdf') {
+      formData.set('pdf', brought.file);
+    } else {
+      formData.set('markdown', brought.markdown);
+    }
+    if (interviewNumber !== null) {
+      formData.set('interview', String(interviewNumber));
+    }
+    void fetcher.submit(formData, {
+      method: 'post',
+      action: `/postings/${reference}/${artifact}/bring`,
+      encType: 'multipart/form-data',
+      preventScrollReset: true,
+    });
+  }
+  return (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          setIsOpen(true);
+        }}
+      >
+        <FilePlusIcon aria-hidden />
+        {t('artifactView.bring')}
+      </Button>
+      <BringDialog
+        artifactLabel={t(`artifactLabelByArtifact.${artifact}`, { ns: 'common' })}
+        isOpen={isOpen}
+        isPending={fetcher.state !== 'idle'}
+        onOpenChange={setIsOpen}
+        onBring={bring}
       />
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onDone}>
-          {t('artifactView.cancel')}
-        </Button>
-        <Button type="submit" isPending={fetcher.state !== 'idle'}>
-          {t('artifactView.save')}
-        </Button>
-      </div>
-    </fetcher.Form>
+    </>
   );
 }
 
@@ -125,7 +201,7 @@ export function ArtifactView({
     recipients?: IRecipients | null;
   }
 >) {
-  const { artifact, versionList, fileName } = artifactVersions;
+  const { artifact, versionList, fileName, format, isFrozen, state } = artifactVersions;
   const generation = useGeneration({ reference, title, interviewNumber, artifactVersions });
   const latestNumber = versionList.at(-1)?.version.number ?? null;
   // A choice holds only while the latest Version is the one it was made beside
@@ -137,6 +213,7 @@ export function ArtifactView({
   const current = choice.latestNumber === latestNumber ? choice : { number: latestNumber ?? 0, mode: 'read' as const };
   const name = { reference, interviewNumber, artifact };
   const renderValidateButton = useValidation(name);
+  const bring = useBring({ ...name, artifact, isFrozen, isRunning: state === 'queued' || state === 'in_progress' });
   return (
     <>
       {generation.panel}
@@ -152,12 +229,14 @@ export function ArtifactView({
           setChoice({ number: current.number, mode, latestNumber });
         }}
         launch={generation.launch}
+        bring={bring}
         failure={generation.failure}
         validateButton={renderValidateButton}
         editor={(detail) => (
           <VersionEditor
             {...name}
             fileName={fileName}
+            format={format}
             detail={detail}
             onDone={() => {
               setChoice({ number: detail.version.number, mode: 'read', latestNumber });

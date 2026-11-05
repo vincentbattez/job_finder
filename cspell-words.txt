@@ -3,6 +3,7 @@
 # Glossary terms
 Validatable
 repost
+Insertable
 reposted
 reposts
 unarchive
@@ -26,6 +27,7 @@ isbot
 knip
 cmdk
 lefthook
+mdxeditor
 mdxjs
 nums
 oklab
