@@ -1,4 +1,4 @@
-import { describeArtifactLanguage, describeMessage, type IPromptInput } from '#/ai-module/index.ts';
+import { describeArtifactLanguage, describeMdxFormat, describeMessage, type IPromptInput } from '#/ai-module/index.ts';
 
 export const RESEARCH_FILE_NAME = 'research.md';
 
@@ -41,10 +41,12 @@ ${describeMessage()} Start with the Job Description, as it was published.
 ${describeRepostedPosting(input)}
 ## What you produce
 
-A single Markdown file: \`${outputPath}\`.
+A single MDX file: \`${outputPath}\`.
 - It starts with a level 1 heading (\`# …\`).
 - Each claim is followed by its source: a Markdown link to the page that establishes it.
 - It ends with a \`## Sources\` section listing each cited source, with its URL.
+
+${describeMdxFormat()}
 
 ## Research discipline
 

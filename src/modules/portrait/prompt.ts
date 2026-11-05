@@ -1,4 +1,4 @@
-import { describeArtifactLanguage, describeMessage, type IPromptInput } from '#/ai-module/index.ts';
+import { describeArtifactLanguage, describeMdxFormat, describeMessage, type IPromptInput } from '#/ai-module/index.ts';
 import { parisDateTimeOf } from '#/domain/paris-time.ts';
 
 export const PORTRAIT_FILE_NAME = 'portrait.md';
@@ -46,7 +46,9 @@ ${describeMessage()} The Job Description is as it was published. ${describeResea
 
 ## What you produce
 
-A single Markdown file: \`${outputPath}\`, which starts with a level 1 heading (\`# …\`). The Candidate's Instructions say what to look for and how to present it.
+A single MDX file: \`${outputPath}\`, which starts with a level 1 heading (\`# …\`). The Candidate's Instructions say what to look for and how to present it.
+
+${describeMdxFormat()}
 
 ## Non-negotiable rules
 

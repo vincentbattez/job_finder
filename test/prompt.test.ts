@@ -6,6 +6,7 @@ import { DEFAULT_INSTRUCTIONS_EN } from '#/domain/catalogue/en/default-instructi
 import { DEFAULT_INSTRUCTIONS_FR } from '#/domain/catalogue/fr/default-instructions.ts';
 import type { Artifact } from '#/domain/index.ts';
 import { MARK_END, MARK_START } from '#/domain/substitution.ts';
+import { MDX_CATALOGUE } from '#/web/components/mdx/catalogue.tsx';
 
 import { applyTo } from './apply.ts';
 import { detectPostings } from './data-directory.ts';
@@ -166,5 +167,36 @@ describe('the Prompt beside an Artifact', () => {
     expect(withoutResearch).toBeNull();
     expect(await readPrompt(actions, 'letter')).toBeNull();
     expect(await readPrompt(actions, 'research')).not.toBeNull();
+  });
+});
+
+// The components the front renders, as its catalogue declares them: the Markdown elements it restyles aside
+const CATALOGUE_COMPONENT_NAME_LIST = Object.keys(MDX_CATALOGUE).filter((name) => /^[A-Z]/u.test(name));
+
+describe('the Fixed Part of an MDX Artifact', () => {
+  it.each(['research', 'portrait', 'interview_brief'] satisfies Artifact[])(
+    'names, for the %s, every component of the catalogue',
+    async (artifact) => {
+      const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
+      await runModule(actions, 'research');
+      await addInterview(actions);
+
+      const prompt = await readPrompt(actions, artifact);
+      const fixedPart = prompt?.fixedPart ?? '';
+
+      expect(CATALOGUE_COMPONENT_NAME_LIST.filter((name) => !fixedPart.includes(`<${name}`))).toEqual([]);
+      expect(fixedPart).toContain('MDX');
+    },
+  );
+
+  it('leaves the Letter in plain Markdown, naming no component', async () => {
+    const { actions } = await detectPostings(createFakeAiSession(RESEARCH_RUN));
+    await runModule(actions, 'research');
+
+    const prompt = await readPrompt(actions, 'letter');
+    const fixedPart = prompt?.fixedPart ?? '';
+
+    expect(CATALOGUE_COMPONENT_NAME_LIST.filter((name) => fixedPart.includes(`<${name}`))).toEqual([]);
+    expect(fixedPart).not.toContain('MDX');
   });
 });
