@@ -1,3 +1,5 @@
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -11,14 +13,17 @@ import { createFakeAiSession } from './fake-ai-session.ts';
 // The Béthune juvenile court Posting, detected from the responses recorded on 2026-10-29
 const REFERENCE = '2026-2445600';
 
+const LOCK_HELD_MS = 300;
+
 const REPORT_PDF = new Uint8Array(readFileSync(path.join(import.meta.dirname, 'fixtures/profile/cv.pdf')));
 
 // Each test adds to its own Posting or names its own Annex, so they share one Detection
 describe('adding a document', () => {
   let actions: Actions;
+  let dataDirectory: string;
 
   beforeAll(async () => {
-    ({ actions } = await detectPostings());
+    ({ actions, dataDirectory } = await detectPostings());
   });
 
   it('lists a Custom Artifact in the Posting’s Documents, as the Candidate wrote it', async () => {
@@ -38,6 +43,29 @@ describe('adding a document', () => {
         text: 'Elle cherche une personne rigoureuse.',
       },
     ]);
+  });
+
+  // Prisma's transaction begins deferred: one that reads before it writes fails at once on a lock
+  // another process holds, where a write first waits its turn
+  it('waits for the write of another process, as the worker and a Detection write all the time', async () => {
+    const holder = spawn(process.execPath, [
+      '--eval',
+      `const { DatabaseSync } = require('node:sqlite');
+       const database = new DatabaseSync(process.argv[1]);
+       database.exec('BEGIN IMMEDIATE');
+       console.log('held');
+       setTimeout(() => database.exec('COMMIT'), ${String(LOCK_HELD_MS)});`,
+      path.join(dataDirectory, 'job_finder.sqlite'),
+    ]);
+    await once(holder.stdout, 'data');
+
+    const custom = await actions.addCustomArtifact({
+      reference: '2026-2445609',
+      title: 'Écrit pendant une Détection',
+      text: 'Attend son tour.',
+    });
+
+    expect(custom.title).toBe('Écrit pendant une Détection');
   });
 
   it('refuses a Custom Artifact without a text', async () => {
