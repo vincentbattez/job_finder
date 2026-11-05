@@ -27,7 +27,7 @@ async function openHomeOfEmma({ page, openPage }: IFront) {
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('New');
 }
 
-test('shows the Sidebar and the Profile in English to a Candidate with the en locale', async ({
+test('shows the Sidebar, the Profile and the Watches in English to a Candidate with the en locale', async ({
   page,
   asCandidate,
   openPage,
@@ -47,13 +47,17 @@ test('shows the Sidebar and the Profile in English to a Candidate with the en lo
   await page.getByRole('link', { name: 'Profile', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Emma’s Profile');
   await expect(page).toHaveTitle('Profile · Job Finder');
-  await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Facts', 'Uploads', 'New file', 'Watches']);
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Facts', 'Uploads', 'New file']);
   await expect(page.getByText('No Upload yet.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save the Facts' })).toBeVisible();
   await expect(
     page.getByRole('region', { name: 'New file' }).getByRole('textbox', { name: 'File name' }),
   ).toBeVisible();
-  const newWatch = page.getByRole('group', { name: 'New Watch' });
+
+  await page.getByRole('link', { name: 'Watches', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Watches');
+  await expect(page).toHaveTitle('Watches · Job Finder');
+  const newWatch = page.getByRole('region', { name: 'New Watch' });
   await expect(newWatch.getByRole('textbox', { name: 'Searched title' })).toBeVisible();
   await expect(newWatch.getByRole('button', { name: 'Create the Watch' })).toBeVisible();
 });

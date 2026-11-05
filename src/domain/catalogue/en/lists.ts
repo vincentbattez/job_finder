@@ -71,8 +71,8 @@ export const LISTS_EN = {
       '{{label}}: stopped at “{{step}}”, Job Descriptions read: {{readCount}}. {{count}} new Posting saved before.',
     failedWatch_other:
       '{{label}}: stopped at “{{step}}”, Job Descriptions read: {{readCount}}. {{count}} new Postings saved before.',
-    nearMisses_one: '{{count}} title narrowly left out',
-    nearMisses_other: '{{count}} titles narrowly left out',
+    nearMisses_one: '{{count}} Near Miss',
+    nearMisses_other: '{{count}} Near Misses',
     fold: 'Fold the Detection',
     unfold: 'Unfold the Detection',
     close: 'Close the Detection',

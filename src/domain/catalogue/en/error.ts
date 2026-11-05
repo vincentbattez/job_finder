@@ -47,10 +47,10 @@ export const ERROR_EN = {
     'Several Postings have the reference {{reference}}, for different Candidates: their Watches follow the same Source, and the tool cannot choose between them yet. Report it so that it tells them apart.',
 
   // Watches and Sources
-  unknownWatch: '{{candidateName}} has no Watch {{watchId}}: reload the page of their Profile.',
-  unknownSource: 'Unknown Source: {{sourceId}}. Choose one of {{knownList}} in the Watches of the Profile.',
+  unknownWatch: '{{candidateName}} has no Watch {{watchId}}: reload the Watches page.',
+  unknownSource: 'Unknown Source: {{sourceId}}. Choose one of {{knownList}} on the Watches page.',
   unknownSourceOfWatch:
-    'Unknown Source for the Watch {{watchId}}: {{sourceId}}. Choose one of {{knownList}} in the Watches of the Profile.',
+    'Unknown Source for the Watch {{watchId}}: {{sourceId}}. Choose one of {{knownList}} on the Watches page.',
   watchParameters:
     'The Watch {{watchId}} does not give the {{sourceName}} Source the Parameters it expects: correct {{labels}} in the Profile of its Candidate.',
   sourceParameters: 'The {{sourceName}} Source expects other Parameters: fill in {{labels}}.',

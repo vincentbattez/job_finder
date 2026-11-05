@@ -53,13 +53,18 @@ test('starts from the header, then tells a Detection of no new Posting, its Near
   await expect(verdict).toContainText('lancée depuis le bouton');
   await expect(verdict).toContainText('Greffier placé : la Source a listé 81 Offres, toutes déjà connues.');
   await expect(verdict.locator('time')).toHaveAttribute('datetime', /^\d{4}-/);
-  await expect(verdict.getByRole('link', { name: '1 titre écarté de peu' })).toHaveAttribute(
-    'href',
-    '/watches#near-misses',
-  );
   // The Watch goes by its label, never by its identifier
   await expect(page.locator('main')).not.toContainText('lou-1');
+  // The Near Misses wait on the Watches page, under the Watch they could widen
+  await verdict.getByRole('link', { name: '1 titre écarté de peu' }).click();
+  await expect(page).toHaveURL(/\/watches#near-misses$/);
+  const nearMisses = page.getByRole('region', { name: 'Titres écartés de peu' });
+  await expect(nearMisses).toBeInViewport();
+  await expect(nearMisses.getByRole('heading', { level: 3 })).toHaveText(['Greffier placé']);
+  await expect(nearMisses).toContainText('Greffier placé adjoint');
+  await expect(nearMisses).toContainText('lou-near');
 
+  await openPage('/');
   await verdict.getByRole('button', { name: 'Fermer la Détection' }).click();
   await expect(verdict).toBeHidden();
   await page.reload();

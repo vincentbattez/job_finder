@@ -92,16 +92,39 @@ export const SETTINGS_FR: typeof SETTINGS_EN = {
     drop: 'Déposer une Pièce',
   },
   watches: {
+    pageTitle: 'Veilles · Job Finder',
     heading: 'Veilles',
+    description: 'Ce que la Détection cherche pour toi, Source par Source.',
     intro:
-      'Chaque Veille cherche en permanence les nouvelles Offres d’une Source. Une Veille créée ou modifiée importe d’abord les Offres déjà en ligne, sans rien lancer ; ensuite, chaque nouvelle Offre vous est notifiée, à trier. Supprimer une Veille garde ses Offres.',
+      'Une Veille créée ou modifiée importe d’abord les Offres déjà en ligne, sans te les signaler ; ensuite, chaque nouvelle Offre arrive dans Nouvelles, à trier. Supprimer une Veille garde ses Offres.',
+    noCandidate: 'Choisis ton nom en tête du menu pour voir tes Veilles.',
+    noWatch: 'Aucune Veille pour l’instant : la Détection ne cherche rien pour toi. Crée la première ci-dessous.',
     newWatch: 'Nouvelle Veille',
-    watch: 'Veille {{watchId}}',
+    newWatchDescription: 'Choisis une Source, puis ce qu’elle doit chercher.',
     source: 'Source',
+    lastDetection:
+      'Dernière Détection le {{date, datetime(dateStyle: medium; timeStyle: short; timeZone: Europe/Paris)}}',
+    firstLaunch: 'Pas encore détectée : sa première Détection importera les Offres déjà en ligne.',
+    nearMissCount_one: '{{count}} titre écarté de peu',
+    nearMissCount_other: '{{count}} titres écartés de peu',
     create: 'Créer la Veille',
     save: 'Enregistrer',
-    delete: 'Supprimer la Veille',
+    delete: 'Supprimer',
+    deleteOf: 'Supprimer la Veille « {{label}} »',
+    deleteTitle: 'Supprimer la Veille « {{label}} » ?',
+    deleteDescription:
+      'La Détection ne cherchera plus ces Offres. Celles qu’elle a déjà trouvées restent dans tes listes.',
+    keep: 'Garder la Veille',
+    confirmDelete: 'Supprimer la Veille',
+    created: 'Veille créée.',
     saved: 'Veille enregistrée.',
+    deleted: 'Veille supprimée.',
+    nearMisses: {
+      heading: 'Titres écartés de peu',
+      description:
+        'Les titres que la dernière Détection de chaque Veille a vus sans les retenir, proches du titre cherché. Si l’un d’eux te parle, élargis le titre de sa Veille.',
+      none: 'La dernière Détection de tes Veilles n’a écarté aucun titre de peu.',
+    },
   },
   notificationChannel: {
     heading: 'Notifications',

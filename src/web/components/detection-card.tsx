@@ -8,6 +8,7 @@ import type { Actions } from '#/actions/index.ts';
 import { Button } from '#/web/components/ui/button.tsx';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '#/web/components/ui/collapsible.tsx';
 import { Progress } from '#/web/components/ui/progress.tsx';
+import { NEAR_MISSES_ANCHOR } from '#/web/components/watches.tsx';
 
 export type DetectionOverview = Awaited<ReturnType<Actions['followDetection']>>;
 type RecordedDetection = NonNullable<DetectionOverview['last']>;
@@ -15,8 +16,6 @@ type DetectionWatch = RecordedDetection['watchList'][number];
 type ListsT = ReturnType<typeof useTranslation<'lists'>>['t'];
 type CardState = 'running' | 'done' | 'failed';
 
-// Where the Near Misses of each Watch are read (spec #125 « Watches »)
-const NEAR_MISSES_PATH = '/watches#near-misses';
 const SECOND_MS = 1000;
 const MINUTE_MS = 60 * SECOND_MS;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -212,7 +211,7 @@ function WatchVerdict({ watch }: Readonly<{ watch: DetectionWatch }>) {
         <p className="max-w-none">{watchLineOf(watch, t)}</p>
         {nearMissList.length > 0 && (
           <Link
-            to={NEAR_MISSES_PATH}
+            to={{ pathname: '/watches', hash: NEAR_MISSES_ANCHOR }}
             className="text-xs text-primary underline-offset-4 hover:underline focus-visible:underline"
           >
             {t('detection.nearMisses', { count: nearMissList.length })}
