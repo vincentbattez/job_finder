@@ -25,7 +25,9 @@ import {
 } from 'lucide-react';
 import {
   Children,
+  createContext,
   isValidElement,
+  useContext,
   useState,
   type ComponentProps,
   type ComponentType,
@@ -122,6 +124,9 @@ function Callout({ type = 'note', title, children }: Readonly<{ type?: string; t
   );
 }
 
+// Comparing with the Original unfolds what a component hides, so that every changed passage shows
+export const UNFOLD_CONTEXT = createContext(false);
+
 // Tab, AccordionItem, Step and Event only carry their attributes to the component around them
 function Part({ children }: Readonly<IWithChildren>) {
   return <>{children}</>;
@@ -130,8 +135,21 @@ function Part({ children }: Readonly<IWithChildren>) {
 function Tabs({ children }: Readonly<IWithChildren>) {
   const { t } = useTranslation('mdx');
   const tabList = elementsOf<{ title?: string }>(children);
+  const isUnfolded = useContext(UNFOLD_CONTEXT);
   if (tabList.length === 0) {
     return null;
+  }
+  if (isUnfolded) {
+    return (
+      <div className="my-6 space-y-4">
+        {tabList.map((tab, index) => (
+          <div key={index} className={cn('border-l pl-4 text-base', FLOW)}>
+            <p className="not-prose mb-2 text-sm font-semibold">{tab.props.title ?? t('tab', { number: index + 1 })}</p>
+            {tab.props.children}
+          </div>
+        ))}
+      </div>
+    );
   }
   return (
     <UiTabs defaultValue="0" className="my-6 gap-0">
@@ -153,9 +171,15 @@ function Tabs({ children }: Readonly<IWithChildren>) {
 
 function Accordion({ children }: Readonly<IWithChildren>) {
   const { t } = useTranslation('mdx');
+  const isUnfolded = useContext(UNFOLD_CONTEXT);
+  const itemList = elementsOf<{ title?: string }>(children);
   return (
-    <UiAccordion type="multiple" className="my-6 rounded-xl border px-4 [&_h3]:my-0">
-      {elementsOf<{ title?: string }>(children).map((item, index) => (
+    <UiAccordion
+      type="multiple"
+      defaultValue={isUnfolded ? itemList.keys().toArray().map(String) : []}
+      className="my-6 rounded-xl border px-4 [&_h3]:my-0"
+    >
+      {itemList.map((item, index) => (
         <UiAccordionItem key={index} value={String(index)}>
           <AccordionTrigger className="not-prose py-3.5 leading-6 font-semibold text-foreground hover:no-underline">
             {item.props.title ?? t('accordionItem', { number: index + 1 })}

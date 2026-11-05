@@ -26,6 +26,7 @@ import { composeEditPrompt } from '#/edit/prompt.ts';
 import { hasBeenApplied } from '#/status/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
+import { runBroughtConversion, runCustomConversion } from './brought.ts';
 import {
   defaultKeysOf,
   findChosenVersion,
@@ -436,6 +437,25 @@ export function createArtifacts({
         workspace.writeVersionDocument(posting, versionOf(number), fileName, markdown);
       },
 
+      // A Version the Candidate brings lands as a Draft of theirs, with no Original (ADR-0019); never on a
+      // Letter frozen once sent. Nothing runs, so it needs none of the Artifacts a run requires.
+      async bring(markdown: string): Promise<Version> {
+        refuse(freeze, locale);
+        if (markdown.trim() === '') {
+          throw codedError('empty_brought_version', { reference }, { locale });
+        }
+        const version = await workspace.createBroughtVersion(posting, artifact, interview);
+        workspace.writeVersionDocument(posting, version, aiModule.fileName, markdown);
+        return version;
+      },
+
+      // A PDF brought is converted like an Upload, by the worker (ADR-0003), into a Version of the Candidate's
+      bringPdf(content: Uint8Array): Promise<Job> {
+        refuse(freeze, locale);
+        const upload = workspace.saveBroughtPdf(posting, content);
+        return workspace.createJob(posting, artifact, { interview, upload });
+      },
+
       // jf edit, on the Chosen Version, its read-only files out of reach of the session
       openForEdition(): void {
         refuse(editRefusal, locale);
@@ -464,9 +484,22 @@ export function createArtifacts({
       key: `custom:${String(version.customArtifact?.id)}`,
       title: version.customArtifact?.title,
       interviewNumber: version.interview?.number ?? null,
+      state: version.state,
       text: workspace.readVersionFile(posting, version, CUSTOM_ARTIFACT_FILE_NAME) ?? '',
       createdAt: version.createdAt,
     });
+  }
+
+  async function customInterviewOf(posting: Posting, interviewNumber: number | undefined): Promise<Interview | null> {
+    if (interviewNumber === undefined) {
+      return null;
+    }
+    const interview = await workspace.findInterview(posting, interviewNumber);
+    if (interview === null) {
+      const { locale } = await candidateOf(posting);
+      throw codedError('unknown_interview', { reference: posting.reference, number: interviewNumber }, { locale });
+    }
+    return interview;
   }
 
   return {
@@ -500,14 +533,33 @@ export function createArtifacts({
       title: string;
       text: string;
     }): Promise<CustomArtifact> {
-      const { locale } = await candidateOf(posting);
-      const interview = interviewNumber === undefined ? null : await workspace.findInterview(posting, interviewNumber);
-      if (interview === null && interviewNumber !== undefined) {
-        throw codedError('unknown_interview', { reference: posting.reference, number: interviewNumber }, { locale });
-      }
+      const interview = await customInterviewOf(posting, interviewNumber);
       const version = await workspace.createCustomArtifact(posting, interview, title);
       workspace.writeVersionDocument(posting, version, CUSTOM_ARTIFACT_FILE_NAME, text);
       return customArtifactOf(posting, version);
+    },
+
+    // A Custom Artifact from a PDF: listed at once, its text written by the worker's conversion (ADR-0003)
+    async createCustomFromPdf({
+      posting,
+      interview: interviewNumber,
+      title,
+      content,
+    }: {
+      posting: Posting;
+      interview?: number | undefined;
+      title: string;
+      content: Uint8Array;
+    }): Promise<CustomArtifact> {
+      const interview = await customInterviewOf(posting, interviewNumber);
+      const upload = workspace.saveBroughtPdf(posting, content);
+      return customArtifactOf(posting, await workspace.createCustomArtifact(posting, interview, title, upload));
+    },
+
+    async runCustomConversion(
+      job: Job & { version: Version; upload: string },
+    ): Promise<{ job: Job; version: Version; failure: JobFailure | undefined }> {
+      return runCustomConversion({ workspace, aiSession }, job, await candidateOf(job.posting));
     },
 
     // Those of the Posting and of its Interviews, in the order they were added
@@ -539,8 +591,13 @@ export function createArtifacts({
     async run(
       job: Job & { module: Artifact },
     ): Promise<{ job: Job; version: Version; failure: JobFailure | undefined }> {
-      const { posting, interview, module, inputKeyList } = job;
+      const { posting, interview, module, inputKeyList, upload } = job;
       const candidate = await candidateOf(posting);
+      // A PDF the Candidate brought only waits for its conversion, unless the Letter was sent meanwhile
+      if (upload !== null) {
+        refuse(freezeOf(posting, module), candidate.locale);
+        return runBroughtConversion({ workspace, aiSession }, { ...job, upload }, candidate);
+      }
       const target = { posting, interview };
       refuse(await findRunRefusalOf(target, module, candidate.locale), candidate.locale);
       // An Input checked at queueing may be gone since, such as an Annex deleted; a job queued before the

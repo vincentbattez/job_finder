@@ -3,7 +3,7 @@ import { TriangleAlertIcon } from 'lucide-react';
 import { createElement, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { MDX_CATALOGUE } from './catalogue.tsx';
+import { MDX_CATALOGUE, UNFOLD_CONTEXT } from './catalogue.tsx';
 import { compileArtifactText, UNKNOWN_COMPONENT_NAME, type ArtifactTextFormat } from './compile.ts';
 
 export type { ArtifactTextFormat } from './compile.ts';
@@ -42,7 +42,14 @@ export function ArtifactText({
   text,
   format,
   className,
-}: Readonly<{ text: string; format: ArtifactTextFormat; className?: string }>) {
+  isUnfolded = false,
+}: Readonly<{
+  text: string;
+  format: ArtifactTextFormat;
+  className?: string;
+  // Every Tab and Accordion item shown, as comparing needs
+  isUnfolded?: boolean;
+}>) {
   const { t } = useTranslation('mdx');
   const { content, hasFailed } = useMemo(() => compileArtifactText(text, format, COMPONENT_NAME_SET), [text, format]);
   return (
@@ -56,7 +63,7 @@ export function ArtifactText({
           {t('notCompiled')}
         </p>
       ) : null}
-      {createElement(content, { components: COMPONENTS })}
+      <UNFOLD_CONTEXT value={isUnfolded}>{createElement(content, { components: COMPONENTS })}</UNFOLD_CONTEXT>
     </div>
   );
 }

@@ -140,6 +140,8 @@ export const ERROR_CATALOGUE = {
   no_chosen_version_to_edit: 'error:noChosenVersionToEdit',
   // The Original of a Version is asked to be edited, while it keeps what the AI wrote
   original_not_editable: 'error:originalNotEditable',
+  // A Version the Candidate brings has no text
+  empty_brought_version: 'error:emptyBroughtVersion',
   // An Artifact has no Version with this number
   unknown_version: 'error:unknownVersion',
   // A failed Version is chosen

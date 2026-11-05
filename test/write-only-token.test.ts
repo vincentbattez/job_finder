@@ -41,11 +41,14 @@ const RUN_BY_MODULE = {
 
 // What an action needs beyond the shared input of the check, such as an Upload, named in .pdf
 const UPLOAD = { fileName: 'cv.pdf' };
+const PDF = {
+  ...UPLOAD,
+  content: new Uint8Array(readFileSync(path.join(import.meta.dirname, 'fixtures/profile/cv.pdf'))),
+};
 const INPUT_BY_ACTION: Record<string, object> = {
-  saveUpload: {
-    ...UPLOAD,
-    content: new Uint8Array(readFileSync(path.join(import.meta.dirname, 'fixtures/profile/cv.pdf'))),
-  },
+  saveUpload: PDF,
+  bringPdf: PDF,
+  addCustomArtifactPdf: { ...PDF, title: 'Appel en PDF' },
   convertUpload: UPLOAD,
   deleteUpload: UPLOAD,
   createCandidate: { id: 'camille', name: 'Camille' },

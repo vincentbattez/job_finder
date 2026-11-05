@@ -52,7 +52,7 @@ async function openArtifacts(...plannedRunList: PlannedRunList) {
 
   async function runNextJob() {
     const job = await workspace.claimNextJob();
-    return job === null || job.module === 'conversion' || job.module === 'extraction'
+    return job === null || job.module === 'conversion' || job.module === 'extraction' || job.module === 'custom'
       ? expect.unreachable('an Artifact job is queued')
       : artifacts.run({ ...job, module: job.module });
   }

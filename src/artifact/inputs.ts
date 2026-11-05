@@ -167,10 +167,11 @@ async function listPreviousInterviews(workspace: Workspace, { posting, interview
 }
 
 // The Custom Artifacts of the Posting, and those of the Interview the run is for: every run of their
-// Posting, or of their Interview, reads them by default (spec #125)
+// Posting, or of their Interview, reads them by default (spec #125), once their PDF is converted
 async function listCustomInputs(workspace: Workspace, { posting, interview }: ITarget): Promise<IInput[]> {
   const versionList = await workspace.listCustomVersions(posting);
   return versionList
+    .filter(({ state }) => state === 'ready')
     .filter((version) => version.interview === null || version.interview.number === interview?.number)
     .flatMap((version) =>
       version.customArtifact === null

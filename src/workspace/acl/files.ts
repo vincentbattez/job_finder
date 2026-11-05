@@ -67,6 +67,12 @@ export function writeUpload(directory: string, fileName: UploadFileName, content
   writeFileSync(path.join(directory, fileName), content);
 }
 
+// A document's bytes, written as received, its folder created first
+export function writeBinaryFile(filePath: string, content: Uint8Array): void {
+  mkdirSync(path.dirname(filePath), { recursive: true });
+  writeFileSync(filePath, content);
+}
+
 export function createDirectory(directory: string): void {
   mkdirSync(directory, { recursive: true });
 }
@@ -97,6 +103,12 @@ export function deleteFile(filePath: string, { isMissingAllowed = false } = {}):
 // A folder and all it holds; one that does not exist is already the outcome
 export function deleteDirectory(directory: string): void {
   rmSync(directory, { recursive: true, force: true });
+}
+
+// A file moved within the data folder, its own folder created first
+export function moveFile(from: string, to: string): void {
+  mkdirSync(path.dirname(to), { recursive: true });
+  renameSync(from, to);
 }
 
 export function moveDirectory(from: string, to: string): void {

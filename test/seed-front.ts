@@ -21,7 +21,8 @@ import { createRecordedFetch } from './recorded-http.ts';
 // Applied, Archived and To Apply; Camille has no Watch, hence no Posting. The tests
 // that change data work on Postings of their own: Bastia 2026-2426147 (a Research and a Letter to
 // correct), Versailles 2026-2409178 (two Research), Rennes 2026-2420931 (a Research, ready for
-// its Letter) and Narbonne 2026-2412591 (a failed Research). Léa's Béthune Posting 2026-2445609 has a Research
+// its Letter), Narbonne 2026-2412591 (a failed Research), 2026-2402432 (a Validated Research with a component to
+// correct) and 2026-2400177 (a Draft Letter to correct and compare). Léa's Béthune Posting 2026-2445609 has a Research
 // ready whose notification failed, which e2e/launch.test.ts only reads. Sacha, Noé, Inès, Malo and Rose, without
 // Watch either, each have their Profile changed by one e2e test only, which writes it first; Sacha
 // also has the Instructions the e2e tests change. Léa, Camille and Sacha have their Notification Channel
@@ -46,6 +47,10 @@ const RENNES_REFERENCE = '2026-2420931';
 const NARBONNE_REFERENCE = '2026-2412591';
 const INSTRUCTIONS_REFERENCE = '2026-2409247';
 const NOTIFICATION_FAILED_REFERENCE = '2026-2445609';
+// Corrected in MDXEditor (e2e/artifact-view.test.ts): a Validated Research with a component of the catalogue,
+// and a Draft Letter long enough for Compare to fold what is identical
+const CORRECTED_RESEARCH_REFERENCE = '2026-2402432';
+const COMPARED_LETTER_REFERENCE = '2026-2400177';
 // Where playwright.config.ts started the fake Home Assistant
 const FAKE_HOME_ASSISTANT_URL = process.env.FAKE_HOME_ASSISTANT_URL ?? '';
 // Without a Watch, beside Léa (test/lea.ts)
@@ -123,6 +128,20 @@ const RUN_BY_VERSION: Record<string, Parameters<typeof createFakeAiSession>[numb
   [`${NARBONNE_REFERENCE} research v1`]: {
     isSuccess: false,
     log: 'Claude Code a atteint la limite de son abonnement.',
+  },
+  [`${CORRECTED_RESEARCH_REFERENCE} research v1`]: {
+    fileByName: {
+      'research.md':
+        '# Recherche à corriger\n\nLe tribunal recrute deux attachés.\n\n<Callout type="warning">\nDate à vérifier.\n</Callout>\n\n## Sources\n\n- https://www.justice.fr/\n',
+    },
+  },
+  [`${COMPARED_LETTER_REFERENCE} research v1`]: researchRun('Recherche : la Lettre à comparer'),
+  [`${COMPARED_LETTER_REFERENCE} letter v1`]: {
+    fileByName: {
+      'letter.md':
+        'Madame la Présidente,\n\nPremier paragraphe.\n\nDeuxième paragraphe.\n\nTroisième paragraphe.\n\nParagraphe à corriger.\n\nCordialement,\n',
+      'recipients.json': BASTIA_LETTER.fileByName['recipients.json'],
+    },
   },
   [`${NOTIFICATION_FAILED_REFERENCE} research v1`]: researchRun('Recherche : l’instruction du TJ de Béthune'),
   [`${INSTRUCTIONS_REFERENCE} research v1`]: researchRun('Recherche par défaut : le TJ de Pontoise'),
@@ -205,6 +224,13 @@ await actions.runModule({ module: 'research', reference: RENNES_REFERENCE });
 await actions.runModule({ module: 'research', reference: NARBONNE_REFERENCE });
 await actions.runQueuedJobs();
 await actions.validateVersion({ reference: RENNES_REFERENCE, artifact: 'research', number: 1 });
+await actions.runModule({ module: 'research', reference: CORRECTED_RESEARCH_REFERENCE });
+await actions.runModule({ module: 'research', reference: COMPARED_LETTER_REFERENCE });
+await actions.runQueuedJobs();
+await actions.validateVersion({ reference: CORRECTED_RESEARCH_REFERENCE, artifact: 'research', number: 1 });
+await actions.validateVersion({ reference: COMPARED_LETTER_REFERENCE, artifact: 'research', number: 1 });
+await actions.runModule({ module: 'letter', reference: COMPARED_LETTER_REFERENCE });
+await actions.runQueuedJobs();
 
 // Ready while Home Assistant refused the token Léa saved for a while: its notification failed
 // (e2e/launch.test.ts)

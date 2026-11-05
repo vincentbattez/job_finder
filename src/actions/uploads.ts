@@ -6,6 +6,7 @@ import {
   UPLOAD_CONVERSION_SCHEMA,
   UPLOAD_FILE_NAME_SCHEMA,
   type Candidate,
+  type Locale,
   type ProfileJob,
   type UploadConversion,
   type UploadFileName,
@@ -39,8 +40,8 @@ function parseUploadFileName(fileName: string, candidate: Candidate): UploadFile
   return result.data;
 }
 
-function assertIsAcceptedPdf(fileName: string, content: Uint8Array, candidate: Candidate): void {
-  const { locale } = candidate;
+// An Upload, or a Version the Candidate brings as a PDF
+export function assertIsAcceptedPdf(fileName: string, content: Uint8Array, locale: Locale): void {
   if (new TextDecoder().decode(content.subarray(0, PDF_SIGNATURE.length)) !== PDF_SIGNATURE) {
     throw codedError('not_a_pdf', { fileName }, { locale });
   }
@@ -141,7 +142,7 @@ export function createUploadActions(context: ActionContext) {
       const candidate = await findCandidate(rawInput);
       const input = UPLOAD_INPUT_SCHEMA.parse(rawInput);
       const fileName = parseUploadFileName(input.fileName, candidate);
-      assertIsAcceptedPdf(fileName, input.content, candidate);
+      assertIsAcceptedPdf(fileName, input.content, candidate.locale);
       workspace.saveUpload(candidate.id, fileName, input.content);
       await queueConversion(candidate, fileName);
     },
