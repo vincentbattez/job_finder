@@ -41,6 +41,17 @@ async function runModule(actions: Actions, module: string) {
   return runAndValidate(actions, { module, reference: REFERENCE });
 }
 
+// A Draft on top of an older Chosen Version: the Candidate's answer decides which Letter counts as sent
+async function openDraftOverChosen() {
+  const actions = await detectPostings(researchRun('Recherche'), LETTER_RUN, LETTER_RUN);
+  await runModule(actions, 'research');
+  await runModule(actions, 'letter');
+  await actions.runModule({ module: 'letter', reference: REFERENCE });
+  await actions.runQueuedJobs();
+  await actions.keep({ reference: REFERENCE });
+  return actions;
+}
+
 // Each Version's text and Original, as the Posting page reads them
 async function readTexts(actions: Actions, artifact: string) {
   const { artifactList } = await actions.readPosting({ reference: REFERENCE });
@@ -153,6 +164,38 @@ describe('saving a correction', () => {
     expect(await actions.listVersions({ reference: REFERENCE, artifact: 'letter' })).toEqual([
       expect.objectContaining({ number: 1, validation: 'validated', isChosen: true }),
     ]);
+  });
+
+  it('marks the Posting Applied without a Letter, so the older Chosen Version does not count as sent', async () => {
+    const actions = await openDraftOverChosen();
+
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied', isWithoutLetter: 'true' });
+
+    const { posting } = await actions.readPosting({ reference: REFERENCE });
+    expect(posting.status).toBe('applied');
+    expect(await actions.listVersions({ reference: REFERENCE, artifact: 'letter' })).toEqual([
+      expect.objectContaining({ number: 1, validation: 'validated', isChosen: false }),
+      expect.objectContaining({ number: 2, validation: 'draft', isChosen: false }),
+    ]);
+  });
+
+  it('refuses to mark Applied over a Draft Letter the Candidate did not answer for', async () => {
+    const actions = await openDraftOverChosen();
+
+    await expect(actions.changeStatus({ reference: REFERENCE, status: 'applied' })).rejects.toMatchObject({
+      code: 'letter_still_draft',
+    });
+
+    const { posting } = await actions.readPosting({ reference: REFERENCE });
+    expect(posting.status).toBe('to_apply');
+  });
+
+  it('refuses both a Letter to validate and no Letter at all', async () => {
+    const actions = await openDraftOverChosen();
+
+    await expect(
+      actions.changeStatus({ reference: REFERENCE, status: 'applied', letterNumber: '2', isWithoutLetter: 'true' }),
+    ).rejects.toMatchObject({ code: 'invalid_input' });
   });
 
   it('refuses a Letter to validate with any other Status', async () => {

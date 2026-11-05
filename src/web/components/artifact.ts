@@ -57,3 +57,19 @@ export interface IArtifactVersions {
 export function summaryOf({ versionList }: Pick<IArtifactVersions, 'versionList'>): Validation | 'none' {
   return versionList.findLast(({ version }) => version.state === 'ready')?.version.validation ?? 'none';
 }
+
+// Where the Letter stands before marking Applied: its latest Version still a Draft, and its Chosen Version,
+// the one recorded as sent
+export interface ILetterStanding {
+  draftNumber: number | null;
+  chosenNumber: number | null;
+}
+
+export function letterStandingOf(letter: Pick<IArtifactVersions, 'versionList'> | undefined): ILetterStanding {
+  const versionList = letter?.versionList ?? [];
+  const latest = versionList.findLast(({ version }) => version.state === 'ready');
+  return {
+    draftNumber: latest?.version.validation === 'draft' && latest.isValidatable ? latest.version.number : null,
+    chosenNumber: versionList.find(({ version }) => version.isChosen)?.version.number ?? null,
+  };
+}

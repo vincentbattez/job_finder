@@ -720,6 +720,13 @@ export function openDatabase(databasePath: string) {
       ]);
     },
 
+    async clearChosenVersion(posting: Posting, artifact: Artifact, interview: Interview | null): Promise<void> {
+      await prisma.version.updateMany({
+        where: { postingId: posting.id, artifact, interviewId: interview?.id ?? null, isChosen: true },
+        data: { isChosen: false },
+      });
+    },
+
     // Every ready Version the AI produced, with its Posting, which keeps an Original (ADR-0019)
     async listReadyAiVersions(): Promise<{ posting: Posting; version: Version }[]> {
       const versionList = await prisma.version.findMany({

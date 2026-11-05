@@ -175,6 +175,9 @@ test.describe('The Posting Sheet', () => {
 
     // To Apply → Applied: the outcomes come
     await sheet.getByRole('button', { name: 'Marquer Postulée' }).click();
+    // No Validated Letter: the Sheet asks, as the Posting page does
+    const dialog = page.getByRole('alertdialog', { name: 'Marquer l’Offre Postulée ?' });
+    await dialog.getByRole('button', { name: 'Marquer Postulée sans Lettre de motivation' }).click();
     await expect(sheet.locator('[data-step]')).toHaveText('Postulée');
     await expect(findRow(page, 'Dijon')).toHaveCount(0);
     await sheet.getByRole('button', { name: 'Refusée' }).click();

@@ -5,7 +5,7 @@ import { localeOf, tFor } from '#/actions/i18n.ts';
 import { hasTakenPlace } from '#/actions/interview-time.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
-import { summaryOf, type IArtifactVersions } from '#/web/components/artifact.ts';
+import { letterStandingOf, summaryOf, type IArtifactVersions } from '#/web/components/artifact.ts';
 import { PageHeader } from '#/web/components/page-header.tsx';
 import { PostingFacts } from '#/web/components/posting-facts.tsx';
 import { POSTING_TAB_LIST, PostingTabs, type PostingTab, type TabSummary } from '#/web/components/posting-tabs.tsx';
@@ -73,8 +73,6 @@ export default function Posting() {
   const artifactOf = (artifact: string) => detail.artifactList.find((entry) => entry.artifact === artifact);
   const research = artifactOf('research');
   const letter = artifactOf('letter');
-  const letterList = letter?.versionList ?? [];
-  const latestLetter = letterList.findLast(({ version }) => version.state === 'ready');
   const now = new Date();
   const nextInterview = interviewList.find((interview) => !hasTakenPlace(interview, now)) ?? interviewList.at(-1);
   const description = [
@@ -140,13 +138,7 @@ export default function Posting() {
               repostOf={posting.repostOf}
               nextInterviewNumber={nextInterview?.number ?? null}
               posting={posting}
-              letter={{
-                draftNumber:
-                  latestLetter?.version.validation === 'draft' && latestLetter.isValidatable
-                    ? latestLetter.version.number
-                    : null,
-                hasChosen: letterList.some(({ version }) => version.isChosen),
-              }}
+              letter={letterStandingOf(letter)}
             />
           </>
         }

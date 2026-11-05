@@ -270,6 +270,7 @@ export const POSTING_EN = {
     draftDescription:
       'Your Letter is still a Draft (Version {{number}}). Validate it so the Letter you sent is the one recorded.',
     noLetterDescription: 'This Posting has no Validated Letter. Mark it Applied anyway if you applied another way.',
+    olderChosenDescription: 'Without a Letter, Version {{number}}, chosen so far, no longer counts as sent.',
     validateAndApply: 'Validate the Letter and mark Applied',
     applyWithoutLetter: 'Mark Applied without a Letter',
     cancel: 'Cancel',

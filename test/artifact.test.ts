@@ -87,9 +87,9 @@ async function openArtifacts(...plannedRunList: PlannedRunList) {
     runNextJob,
     draft,
     produce,
-    apply: async (reference = REFERENCE) => {
+    apply: async (reference = REFERENCE, letterAnswer = {}) => {
       await statusActions.keep({ reference });
-      await statusActions.changeStatus({ reference, status: 'applied' });
+      await statusActions.changeStatus({ reference, status: 'applied', ...letterAnswer });
     },
     // An Interview needs an Application
     addInterview: async () => {
@@ -497,11 +497,11 @@ describe('validating a Version', () => {
     await expect(handle.validate(1)).rejects.toMatchObject({ code: 'version_running' });
   });
 
-  it('refuses any Letter once the Posting is Applied, even an unknown one: the Letter sent stays chosen', async () => {
+  it('refuses any Letter once the Posting is Applied, even an unknown one', async () => {
     const { artifacts, produce, draft, apply } = await openArtifacts(RESEARCH_RUN, LETTER_RUN, LETTER_RUN);
     await produce({ reference: REFERENCE, artifact: 'research' }, { reference: REFERENCE, artifact: 'letter' });
     await draft({ reference: REFERENCE, artifact: 'letter' });
-    await apply();
+    await apply(REFERENCE, { isWithoutLetter: true });
     const handle = await artifacts.find({ reference: REFERENCE, artifact: 'letter' });
 
     await expect(handle.validate(2)).rejects.toMatchObject({ code: 'letter_frozen' });

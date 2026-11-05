@@ -8,18 +8,17 @@ import {
   TrophyIcon,
   XIcon,
 } from 'lucide-react';
-import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useFetcher, useSearchParams } from 'react-router';
+import { useSearchParams } from 'react-router';
 
 import type { Actions } from '#/actions/index.ts';
+import { AppliedDialog } from '#/web/components/applied-dialog.tsx';
+import { letterStandingOf, type ILetterStanding } from '#/web/components/artifact.ts';
 import { PostingSheet as PostingSheetView } from '#/web/components/posting-sheet.tsx';
-import type { Status } from '#/web/components/step-badge.tsx';
 import { Button } from '#/web/components/ui/button.tsx';
-import type { IRefusal } from '#/web/failure.ts';
 
 import { Notes } from './notes.tsx';
-import { useFeedback } from './use-feedback.ts';
+import { IN_PROGRESS_STEP_LIST, usePostingMutations } from './use-posting-mutations.ts';
 
 type SheetPosting = Awaited<ReturnType<Actions['readPosting']>>;
 
@@ -54,55 +53,21 @@ export function useSheetSelection() {
   };
 }
 
-const IN_PROGRESS_STATUS_LIST = new Set<string>(['applied', 'invited', 'interviewed']);
-
 // The actions of the Posting's Step (spec #125 « The Sheet »): keep or dismiss when New, mark Applied
 // when To Apply, the outcomes when In progress, put back In progress once closed, and archive always.
 // Each posts through its route; archiving acts at once and offers its undo in the toast.
-function SheetActions({ posting, statusChoiceList }: Readonly<Pick<SheetPosting, 'posting' | 'statusChoiceList'>>) {
+function SheetActions({
+  posting,
+  statusChoiceList,
+  letter,
+}: Readonly<Pick<SheetPosting, 'posting' | 'statusChoiceList'> & { letter: ILetterStanding }>) {
   const { t } = useTranslation('posting');
   const { reference, step } = posting;
   const isArchived = posting.archivedAt !== null;
   const isNew = step === 'new';
-  const statusFetcher = useFetcher<IRefusal>();
-  const archiveFetcher = useFetcher<IRefusal>();
-  const keepFetcher = useFetcher<IRefusal>();
-  const submittedStatus = useRef<Status>('applied');
-  useFeedback(keepFetcher, () => t('page.kept'));
-  useFeedback(statusFetcher, () =>
-    t('page.statusChanged', { statusLabel: t(`statusLabelByStatus.${submittedStatus.current}`, { ns: 'common' }) }),
-  );
-  const submitArchive = (intent: 'archive' | 'unarchive') => {
-    void archiveFetcher.submit(
-      { intent },
-      { method: 'post', action: `/postings/${reference}/archive`, preventScrollReset: true },
-    );
-  };
-  // The toast tells what was just done, read once it settled: the Posting is then Archived, or no longer
-  useFeedback(
-    archiveFetcher,
-    () => {
-      if (!isArchived) {
-        return t('page.unarchived');
-      }
-      return isNew ? t('page.dismissed') : t('page.archived');
-    },
-    () => ({
-      label: t('page.undo'),
-      onClick: () => {
-        submitArchive(isArchived ? 'unarchive' : 'archive');
-      },
-    }),
-  );
-  const changeStatus = (status: Status) => {
-    submittedStatus.current = status;
-    void statusFetcher.submit(
-      { status },
-      { method: 'post', action: `/postings/${reference}/status`, preventScrollReset: true },
-    );
-  };
-  const isStatusPending = (status: Status) => statusFetcher.state !== 'idle' && submittedStatus.current === status;
-  const isArchivePending = archiveFetcher.state !== 'idle';
+  const mutations = usePostingMutations({ reference, step, isArchived, letter });
+  const { keep, submitArchive, changeStatus, markApplied, isStatusPending, isKeepPending, isArchivePending } =
+    mutations;
 
   if (isArchived) {
     return (
@@ -121,15 +86,7 @@ function SheetActions({ posting, statusChoiceList }: Readonly<Pick<SheetPosting,
   if (isNew) {
     return (
       <>
-        <Button
-          isPending={keepFetcher.state !== 'idle'}
-          onClick={() => {
-            void keepFetcher.submit(
-              {},
-              { method: 'post', action: `/postings/${reference}/keep`, preventScrollReset: true },
-            );
-          }}
-        >
+        <Button isPending={isKeepPending} onClick={keep}>
           <CheckIcon />
           {t('page.keep')}
         </Button>
@@ -150,17 +107,12 @@ function SheetActions({ posting, statusChoiceList }: Readonly<Pick<SheetPosting,
   return (
     <>
       {step === 'to_apply' && (
-        <Button
-          isPending={isStatusPending('applied')}
-          onClick={() => {
-            changeStatus('applied');
-          }}
-        >
+        <Button isPending={isStatusPending('applied')} onClick={markApplied}>
           <SendIcon />
           {t('page.markApplied')}
         </Button>
       )}
-      {IN_PROGRESS_STATUS_LIST.has(step) &&
+      {IN_PROGRESS_STEP_LIST.has(step) &&
         outcomeList.map((status) => (
           <Button
             key={status}
@@ -197,6 +149,7 @@ function SheetActions({ posting, statusChoiceList }: Readonly<Pick<SheetPosting,
         <ArchiveIcon />
         {t('archive')}
       </Button>
+      <AppliedDialog {...mutations.appliedDialog} />
     </>
   );
 }
@@ -214,6 +167,7 @@ export function PostingSheet({ detail, onClose }: Readonly<{ detail: SheetPostin
             key={detail.posting.reference}
             posting={detail.posting}
             statusChoiceList={detail.statusChoiceList}
+            letter={letterStandingOf(detail.artifactList.find(({ artifact }) => artifact === 'letter'))}
           />
         )
       }

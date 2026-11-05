@@ -34,7 +34,13 @@ interface ICommand {
   run: (
     actions: Actions,
     argumentList: string[],
-    option: { isWaiting: boolean; isAutomation: boolean; interview: IInterviewOption; origin: string | undefined },
+    option: {
+      isWaiting: boolean;
+      isAutomation: boolean;
+      isWithoutLetter: boolean;
+      interview: IInterviewOption;
+      origin: string | undefined;
+    },
   ) => Promise<void>;
 }
 
@@ -272,11 +278,11 @@ async function printInterviews(actions: Actions, reference: string, t: Cli): Pro
 function changeStatusCommand(status: Posting['status'], name: string, describe: (t: Cli) => string): ICommand {
   return {
     describe: (t) => t('statusCommandDescription', { description: describe(t), name }),
-    run: async (actions, [reference]) => {
+    run: async (actions, [reference], { isWithoutLetter }) => {
       if (reference === undefined) {
         throw codedError('status_usage', { name });
       }
-      await actions.changeStatus({ reference, status });
+      await actions.changeStatus({ reference, status, isWithoutLetter });
       const t = await cliOfPosting(actions, reference);
       const statusLabel = t(`statusLabelByStatus.${status}`, { ns: 'common' });
       process.stdout.write(t('statusChanged', { reference, statusLabel }));
@@ -623,6 +629,8 @@ async function run(): Promise<void> {
       help: { type: 'boolean', short: 'h' },
       wait: { type: 'boolean' },
       automation: { type: 'boolean' },
+      // jf apply: no Letter was sent, not even an older Chosen Version
+      'without-letter': { type: 'boolean' },
       // The fields of an Interview, for jf interviews
       start: { type: 'string' },
       duration: { type: 'string' },
@@ -651,6 +659,7 @@ async function run(): Promise<void> {
   await command.run(actions, argumentList, {
     isWaiting: values.wait === true,
     isAutomation: values.automation === true,
+    isWithoutLetter: values['without-letter'] === true,
     origin: values.origin,
     // Only those given: an edit keeps the others
     interview: Object.fromEntries(

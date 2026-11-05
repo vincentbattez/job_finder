@@ -90,6 +90,8 @@ export const ERROR_CATALOGUE = {
   new_not_sorted: 'error:newNotSorted',
   // Only a New Posting is kept: one already sorted is not sorted again
   not_new: 'error:notNew',
+  // Marking Applied over a Draft Letter takes an answer: validate it, or apply without a Letter (spec #125)
+  letter_still_draft: 'error:letterStillDraft',
   // A Hired or Rejected Posting cannot go back to To Apply: only In progress is undone, Archived or not
   to_apply_after_outcome: 'error:toApplyAfterOutcome',
   // An Applied Posting with an Interview cannot go back to To Apply: the Interview proves its Letter was sent

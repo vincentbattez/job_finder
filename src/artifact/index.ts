@@ -430,6 +430,12 @@ export function createArtifacts({
         await workspace.validateVersion(versionOf(number));
       },
 
+      // No Version is Chosen any more, each keeping its validation: the Candidate says none of them counts
+      async clearChosen(): Promise<void> {
+        refuse(freeze, locale);
+        await workspace.clearChosenVersion(posting, artifact, interview);
+      },
+
       // A correction by the Candidate changes a Version in place, Draft or Validated, without creating another
       // one: a Validated Version stays Validated
       saveDocument(number: number, fileName: string, markdown: string): void {

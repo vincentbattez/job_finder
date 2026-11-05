@@ -258,6 +258,8 @@ export const POSTING_FR: typeof POSTING_EN = {
       'Ta Lettre de motivation est encore un Brouillon (Version {{number}}). Valide-la pour garder trace de celle que tu as envoyée.',
     noLetterDescription:
       'Cette Offre n’a pas de Lettre de motivation validée. Marque-la Postulée quand même si tu as postulé autrement.',
+    olderChosenDescription:
+      'Sans Lettre de motivation, la Version {{number}}, retenue jusqu’ici, ne comptera plus comme envoyée.',
     validateAndApply: 'Valider la Lettre de motivation et marquer Postulée',
     applyWithoutLetter: 'Marquer Postulée sans Lettre de motivation',
     cancel: 'Annuler',
