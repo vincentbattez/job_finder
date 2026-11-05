@@ -5,7 +5,7 @@ import { z } from 'zod/v4';
 
 import { expect, test } from './candidate.ts';
 import { openGeneration } from './generation.ts';
-import { findDataDirectory, openDatabase } from './harness.ts';
+import { findDataDirectory, openDatabase, READY_TIMEOUT_MS } from './harness.ts';
 
 const ANNEX_FILE_NAME = 'annex-releve-de-notes.md';
 
@@ -88,4 +88,45 @@ test('adds a text from the generation panel, checked at once for this run', asyn
 
   await expect(dialog).toBeHidden();
   await expect(panel.getByRole('checkbox', { name: 'Document · Organigramme du greffe' })).toBeChecked();
+});
+
+test('adds a PDF as a document, readable once converted', async ({ page, asCandidate, openPage }) => {
+  const reference = resetCleo('greffier-cleo-tarbes.md');
+  await asCandidate('cleo');
+  await openPage(`/postings/${reference}`);
+  const documents = page.getByRole('region', { name: 'Documents' });
+  const dialog = page.getByRole('dialog', { name: 'Ajouter un document' });
+
+  await documents.getByRole('button', { name: 'Ajouter un document' }).click();
+  await dialog.getByLabel('Titre').fill('Organigramme');
+  await dialog
+    .getByLabel(/choisir un fichier/)
+    .setInputFiles(path.join(import.meta.dirname, '../test/fixtures/profile/cv.pdf'));
+  await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click();
+
+  const toasts = page.getByRole('region', { name: 'Notifications alt+T' });
+  await expect(toasts).toContainText('PDF envoyé, conversion en cours : Organigramme');
+  await expect(documents.getByRole('listitem')).toContainText('Conversion…');
+  await documents.getByRole('button', { name: 'Lire Organigramme' }).click({ timeout: READY_TIMEOUT_MS });
+  const reader = page.getByRole('dialog', { name: 'Organigramme' });
+  await expect(reader.getByRole('heading', { name: 'Document converti' })).toBeVisible();
+});
+
+test('says when the conversion of a PDF added as a document failed', async ({ page, asCandidate, openPage }) => {
+  const reference = resetCleo('greffier-cleo-nantes.md');
+  await asCandidate('cleo');
+  await openPage(`/postings/${reference}`);
+  const documents = page.getByRole('region', { name: 'Documents' });
+  const dialog = page.getByRole('dialog', { name: 'Ajouter un document' });
+
+  await documents.getByRole('button', { name: 'Ajouter un document' }).click();
+  await dialog.getByLabel('Titre').fill('Scan illisible');
+  await dialog
+    .getByLabel(/choisir un fichier/)
+    .setInputFiles(path.join(import.meta.dirname, '../test/fixtures/profile/unreadable.pdf'));
+  await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click();
+
+  const failed = documents.getByRole('listitem').filter({ hasText: 'Scan illisible' });
+  await expect(failed).toContainText('Conversion échouée. Ajoute-le à nouveau.', { timeout: READY_TIMEOUT_MS });
+  await expect(failed.getByRole('button')).toHaveCount(0);
 });

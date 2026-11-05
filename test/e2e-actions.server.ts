@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout } from 'node:timers/promises';
@@ -5,6 +6,7 @@ import { setTimeout } from 'node:timers/promises';
 import { createActions } from '#/actions/index.ts';
 import { SOURCE_LIST } from '#/actions/modules.ts';
 import type { IHeadlessSession } from '#/ai-session/acl/claude-code.ts';
+import { BROUGHT_PDF_FILE_NAME } from '#/workspace/index.ts';
 
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { defineSlowSource } from './fake-slow-source.ts';
@@ -63,22 +65,28 @@ const FILE_BY_NAME_BY_MODULE: Record<string, Record<string, string>> = {
   },
   // The CV that e2e/profile.test.ts drops, test/fixtures/profile/cv.pdf
   conversion: { 'cv.md': '# CV converti\n\n## Formation\n\n- Master 2 droit public\n' },
+  // A Custom Artifact brought as a PDF
+  custom: { 'document.mdx': '# Document converti\n\nLe greffe compte douze agents.\n' },
 };
+
+// What test/fixtures/profile/unreadable.pdf holds: the fake conversion gets nothing from it, as Claude may from a scan
+const UNREADABLE_PDF_MARK = 'e2e-unreadable';
 
 // Long enough for the front to show the Artifact in progress before it is ready
 const SESSION_DURATION_MS = 300;
-// e2e/profile.test.ts reads the status of a conversion in progress, on a page that has to come back first
+// e2e tests read the status of a conversion in progress, on a page that has to come back first
 const CONVERSION_DURATION_MS = 1000;
 // A test that needs a Detection in progress holds it (test/fake-slow-source.ts), so these only spread its
 // steps: e2e/detection.test.ts keeps within its time budget
-const SLOW_SOURCE_DELAYS = {
+const SLOW_SOURCE_OPTION = {
   searchMs: 100,
   readMs: 5,
   holdFilePath: process.env.E2E_DETECTION_HOLD_PATH,
 };
 
 // A session's module is the Artifact its Version folder belongs to: <posting>/<artifact>/v<n>, or
-// <posting>/interviews/<number>/<artifact>/v<n> for an Artifact of an Interview. The
+// <posting>/interviews/<number>/<artifact>/v<n> for an Artifact of an Interview, or
+// <...>/custom/<id>/v<n> for a Custom Artifact. The
 // extraction of an imported Posting writes in a folder of its own, <posting>/extraction
 // (src/modules/source-import), and the conversion of an Upload in profile/uploads/.conversion/<upload>
 // (src/workspace).
@@ -86,16 +94,28 @@ function moduleOf({ outputDirectory }: IHeadlessSession): string {
   if (path.basename(outputDirectory) === 'extraction') {
     return 'extraction';
   }
-  const parentName = path.basename(path.dirname(outputDirectory));
+  const parentDirectory = path.dirname(outputDirectory);
+  if (path.basename(path.dirname(parentDirectory)) === 'custom') {
+    return 'custom';
+  }
+  const parentName = path.basename(parentDirectory);
   return parentName === '.conversion' ? 'conversion' : parentName;
+}
+
+// The PDF the Candidate brought, in the folder of its Version (src/workspace), if that is what the session converts
+function broughtPdfOf({ outputDirectory }: IHeadlessSession): string | null {
+  const pdfPath = path.join(outputDirectory, BROUGHT_PDF_FILE_NAME);
+  return existsSync(pdfPath) ? readFileSync(pdfPath, 'latin1') : null;
 }
 
 const aiSession = {
   ...createFakeAiSession(),
   async runHeadless(session: IHeadlessSession) {
     const module = moduleOf(session);
-    await setTimeout(module === 'conversion' ? CONVERSION_DURATION_MS : SESSION_DURATION_MS);
-    return createFakeAiSession({ fileByName: FILE_BY_NAME_BY_MODULE[module] ?? {} }).runHeadless(session);
+    const broughtPdf = broughtPdfOf(session);
+    await setTimeout(module === 'conversion' || broughtPdf !== null ? CONVERSION_DURATION_MS : SESSION_DURATION_MS);
+    const fileByName = broughtPdf?.includes(UNREADABLE_PDF_MARK) === true ? {} : FILE_BY_NAME_BY_MODULE[module];
+    return createFakeAiSession({ fileByName: fileByName ?? {} }).runHeadless(session);
   },
 };
 
@@ -104,5 +124,5 @@ export const ACTIONS = await createActions({
   aiSession,
   fetch: createRecordedFetch().fetch,
   // The slow fake Source beside the registry: the Watches of e2e/detection.test.ts follow it
-  sourceFactoryList: [...SOURCE_LIST, defineSlowSource(SLOW_SOURCE_DELAYS)],
+  sourceFactoryList: [...SOURCE_LIST, defineSlowSource(SLOW_SOURCE_OPTION)],
 });

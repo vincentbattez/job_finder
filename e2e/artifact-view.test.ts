@@ -1,8 +1,11 @@
 import { globSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
+import type { Page } from '@playwright/test';
+import { z } from 'zod/v4';
+
 import { expect, test } from './candidate.ts';
-import { findDataDirectory, openDatabase } from './harness.ts';
+import { findDataDirectory, openDatabase, READY_TIMEOUT_MS } from './harness.ts';
 
 // These journeys change data, each on its own Posting that test/seed-front.ts prepared: Versailles has a
 // Chosen Research v1 and a Draft v2, Bastia a Validated Research and a Draft Letter
@@ -207,4 +210,56 @@ test('brings a Letter from a Markdown file, then validates it', async ({ page, o
   await letter.getByRole('button', { name: /^Valider la Version/ }).click();
 
   await expect(letter.getByText('Validée · retenue')).toBeVisible();
+});
+
+// One of Cleo's Postings of test/seed-front.ts without any Letter, whatever a previous run brought; its
+// reference comes back for the page
+function resetLetterOfCleo(city: string): string {
+  const database = openDatabase();
+  const { id, reference } = z
+    .object({ id: z.number(), reference: z.string() })
+    .parse(
+      database
+        .prepare('SELECT "id", "reference" FROM "Posting" WHERE "candidateId" = \'cleo\' AND "title" = ?')
+        .get(`greffier-cleo-${city}.md`),
+    );
+  database.prepare('DELETE FROM "Version" WHERE "artifact" = \'letter\' AND "postingId" = ?').run(id);
+  database.close();
+  return reference;
+}
+
+async function bringPdf(page: Page, filePath: string): Promise<void> {
+  const letter = page.getByRole('region', { name: 'Lettre de motivation' });
+  await letter.getByRole('button', { name: 'Ajouter la mienne' }).click();
+  const dialog = page.getByRole('dialog', { name: /Ajouter ta propre Version/ });
+  await dialog.getByRole('tab', { name: 'PDF' }).click();
+  await dialog.getByLabel('Choisir un fichier').setInputFiles(filePath);
+  await dialog.getByRole('button', { name: 'Ajouter en Brouillon' }).click();
+  await expect(page.getByText('PDF reçu : son texte arrive en Brouillon une fois converti')).toBeVisible();
+}
+
+test('brings a Letter from a PDF: a Draft with no Original once converted', async ({ page, asCandidate, openPage }) => {
+  const reference = resetLetterOfCleo('vannes');
+  await asCandidate('cleo');
+  await openPage(`/postings/${reference}?tab=letter`);
+  const letter = page.getByRole('region', { name: 'Lettre de motivation' });
+
+  await bringPdf(page, path.join(import.meta.dirname, '../test/fixtures/profile/cv.pdf'));
+
+  await expect(letter.getByText(/je souhaite rejoindre votre juridiction/)).toBeVisible({ timeout: READY_TIMEOUT_MS });
+  await expect(letter.getByText('Brouillon', { exact: true })).toBeVisible();
+  await expect(letter.getByRole('button', { name: 'Comparer à l’Original' })).toBeDisabled();
+});
+
+test('says when the conversion of a brought PDF failed', async ({ page, asCandidate, openPage }) => {
+  const reference = resetLetterOfCleo('nevers');
+  await asCandidate('cleo');
+  await openPage(`/postings/${reference}?tab=letter`);
+  const letter = page.getByRole('region', { name: 'Lettre de motivation' });
+
+  await bringPdf(page, path.join(import.meta.dirname, '../test/fixtures/profile/unreadable.pdf'));
+
+  await expect(letter.getByText('Cette Version a échoué : elle n’a pas de texte à lire.')).toBeVisible({
+    timeout: READY_TIMEOUT_MS,
+  });
 });

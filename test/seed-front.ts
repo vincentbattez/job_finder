@@ -486,9 +486,10 @@ await actions.runQueuedJobs();
 await actions.validateVersion({ reference: ruthPosting.reference, artifact: 'research', number: 1 });
 
 // Cleo, without Watch, adds documents in e2e/documents.test.ts: to one imported Posting from its Documents
-// section, to the other from the generation panel of its Research
+// section, to another from the generation panel of its Research, to two others as PDFs; and brings her Letter
+// as a PDF to the others (e2e/artifact-view.test.ts)
 await actions.createCandidate({ id: 'cleo', name: 'Cleo' });
-for (const city of ['Douai', 'Laval']) {
+for (const city of ['Douai', 'Laval', 'Tarbes', 'Nantes', 'Vannes', 'Nevers']) {
   await actions.importJobDescription({
     candidateId: 'cleo',
     fileName: `greffier-cleo-${city.toLowerCase()}.md`,
