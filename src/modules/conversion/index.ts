@@ -4,7 +4,12 @@ import type { IAiSession } from '#/ai-session/acl/claude-code.ts';
 import { codedError } from '#/domain/coded-error.ts';
 import type { Candidate, SessionResult, UploadFileName } from '#/domain/index.ts';
 
-import { composeConversionPrompt, CONVERSION_REQUEST } from './prompt.ts';
+import {
+  BROUGHT_CONVERSION_REQUEST,
+  composeBroughtConversionPrompt,
+  composeConversionPrompt,
+  CONVERSION_REQUEST,
+} from './prompt.ts';
 
 // The CV, a past letter named after its employer and its year, or an Annex named after its subject: a
 // name of the Profile, so it never leads out of its folder
@@ -50,4 +55,22 @@ export function createUploadConversion(aiSession: IAiSession) {
       return session;
     },
   };
+}
+
+// The conversion of a PDF the Candidate brought as their own Version: a headless Claude session, in the
+// Version's folder, where it reads the PDF and writes the Version's text file
+export async function convertBroughtPdf(
+  aiSession: IAiSession,
+  candidate: Candidate,
+  { directory, pdfFileName, outputFileName }: { directory: string; pdfFileName: string; outputFileName: string },
+): Promise<SessionResult> {
+  return aiSession.runHeadless({
+    fixedPrompt: composeBroughtConversionPrompt(candidate, { pdfFileName, outputFileName }),
+    message: BROUGHT_CONVERSION_REQUEST,
+    directory,
+    outputDirectory: directory,
+    isReadingDirectory: true,
+    isSearchingWeb: false,
+    locale: candidate.locale,
+  });
 }

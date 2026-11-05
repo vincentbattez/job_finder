@@ -101,6 +101,8 @@ export const ERROR_EN = {
     'Posting {{reference}} has no Chosen Version of {{artifact}} to edit: “{{command}}” produces one.',
   originalNotEditable:
     "The Original is never edited: it keeps what the AI wrote. Correct the Version's text, on Posting {{reference}}.",
+  emptyBroughtVersion:
+    'The Version brought for Posting {{reference}} has no text. Paste or drop its text, then add it again.',
   unknownVersion:
     'Unknown Version: {{artifact}} v{{number}} of Posting {{reference}}. “{{command}}” lists its Versions.',
   versionFailed:

@@ -45,6 +45,7 @@ import {
   type Status,
   type UploadFileName,
   type Version,
+  type VersionOrigin,
   type Watch,
 } from '#/domain/index.ts';
 import { findAppliedAt, findStep, isExpired } from '#/status/index.ts';
@@ -425,7 +426,14 @@ export function openDatabase(databasePath: string) {
         isAutomatic = false,
         interview = null,
         inputKeyList = null,
-      }: { isAutomatic?: boolean; interview?: Interview | null; inputKeyList?: string[] | null } = {},
+        upload = null,
+      }: {
+        isAutomatic?: boolean;
+        interview?: Interview | null;
+        inputKeyList?: string[] | null;
+        // The PDF a Candidate brought, which the job converts into their Version
+        upload?: string | null;
+      } = {},
     ): Promise<Job> {
       return JOB_READ_SCHEMA.parse(
         await prisma.job.create({
@@ -435,6 +443,7 @@ export function openDatabase(databasePath: string) {
             interviewId: interview?.id ?? null,
             isAutomatic,
             inputKeyList: inputKeyList ?? Prisma.DbNull,
+            upload,
           },
           include: JOB_INCLUDE,
         }),
@@ -460,9 +469,12 @@ export function openDatabase(databasePath: string) {
         instructions,
         hasCandidateInstructions,
         inputList,
+        origin = 'ai',
       }: {
         instructions: string;
         hasCandidateInstructions: boolean;
+        // The conversion of a PDF the Candidate brought makes a Version of theirs (ADR-0019)
+        origin?: VersionOrigin;
         // Each Input it reads, with the Version read for an Artifact Input
         inputList: { key: string; version: Version | null }[];
       },
@@ -483,6 +495,7 @@ export function openDatabase(databasePath: string) {
             artifact: module,
             number: (max.number ?? 0) + 1,
             state: 'running',
+            origin,
             instructions,
             hasCandidateInstructions,
             jobId: id,
@@ -516,6 +529,29 @@ export function openDatabase(databasePath: string) {
           await prisma.version.findUniqueOrThrow({ where: { id: version.id }, include: VERSION_INCLUDE }),
         ),
       };
+    },
+
+    // A Version the Candidate brought, ready at once: a Draft of theirs, with no run, no Inputs, no Original
+    async createBroughtVersion(posting: Posting, artifact: Artifact, interview: Interview | null): Promise<Version> {
+      const interviewId = interview?.id ?? null;
+      const { _max: max } = await prisma.version.aggregate({
+        where: { postingId: posting.id, interviewId, artifact },
+        _max: { number: true },
+      });
+      return VERSION_SCHEMA.parse(
+        await prisma.version.create({
+          data: {
+            postingId: posting.id,
+            interviewId,
+            artifact,
+            number: (max.number ?? 0) + 1,
+            state: 'ready',
+            origin: 'candidate',
+            instructions: '',
+          },
+          include: VERSION_INCLUDE,
+        }),
+      );
     },
 
     // A job that ran without a Version, such as an extraction, is done

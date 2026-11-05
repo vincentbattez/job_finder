@@ -118,6 +118,9 @@ const ARTIFACT_WRITE_NAME_SET = new Set([
   'startJob',
   'finishJob',
   'keepOriginal',
+  'createBroughtVersion',
+  'saveBroughtPdf',
+  'moveBroughtPdf',
   'validateVersion',
   'writeVersionDocument',
 ]);

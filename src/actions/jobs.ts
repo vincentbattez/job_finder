@@ -48,7 +48,8 @@ export function createJobActions(context: ActionContext) {
   // A notification not sent stays on the job, which the Posting page shows (CODING_STANDARDS
   // “Visible failure”)
   async function notifyFinished(job: QueuedJob, failure: JobFailure | undefined): Promise<QueuedJob> {
-    if (job.module !== 'research') {
+    // A Research the Candidate brought as a PDF is theirs: no one needs telling it is ready
+    if (job.module !== 'research' || job.upload !== null) {
       return job;
     }
     const composeNotification = composeFinishedNotification(job, failure);

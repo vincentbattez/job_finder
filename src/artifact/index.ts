@@ -23,6 +23,7 @@ import { composeEditPrompt } from '#/edit/prompt.ts';
 import { hasBeenApplied } from '#/status/index.ts';
 import type { Workspace } from '#/workspace/index.ts';
 
+import { runBroughtConversion } from './brought.ts';
 import {
   defaultKeysOf,
   findChosenVersion,
@@ -431,6 +432,25 @@ export function createArtifacts({
         workspace.writeVersionDocument(posting, versionOf(number), fileName, markdown);
       },
 
+      // A Version the Candidate brings lands as a Draft of theirs, with no Original (ADR-0019); never on a
+      // Letter frozen once sent. Nothing runs, so it needs none of the Artifacts a run requires.
+      async bring(markdown: string): Promise<Version> {
+        refuse(freeze, locale);
+        if (markdown.trim() === '') {
+          throw codedError('empty_brought_version', { reference }, { locale });
+        }
+        const version = await workspace.createBroughtVersion(posting, artifact, interview);
+        workspace.writeVersionDocument(posting, version, aiModule.fileName, markdown);
+        return version;
+      },
+
+      // A PDF brought is converted like an Upload, by the worker (ADR-0003), into a Version of the Candidate's
+      bringPdf(content: Uint8Array): Promise<Job> {
+        refuse(freeze, locale);
+        const upload = workspace.saveBroughtPdf(posting, content);
+        return workspace.createJob(posting, artifact, { interview, upload });
+      },
+
       // jf edit, on the Chosen Version, its read-only files out of reach of the session
       openForEdition(): void {
         refuse(editRefusal, locale);
@@ -494,8 +514,13 @@ export function createArtifacts({
     async run(
       job: Job & { module: Artifact },
     ): Promise<{ job: Job; version: Version; failure: JobFailure | undefined }> {
-      const { posting, interview, module, inputKeyList } = job;
+      const { posting, interview, module, inputKeyList, upload } = job;
       const candidate = await candidateOf(posting);
+      // A PDF the Candidate brought only waits for its conversion, unless the Letter was sent meanwhile
+      if (upload !== null) {
+        refuse(freezeOf(posting, module), candidate.locale);
+        return runBroughtConversion({ workspace, aiSession }, { ...job, upload }, candidate);
+      }
       const target = { posting, interview };
       refuse(await findRunRefusalOf(target, module, candidate.locale), candidate.locale);
       // An Input checked at queueing may be gone since, such as an Annex deleted; a job queued before the

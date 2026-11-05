@@ -303,6 +303,11 @@ const READ_VERSION_SCHEMA = z.object({
 // An Input a Version's run read, by its key, with the Version it read for an Artifact Input
 const RECORDED_INPUT_SCHEMA = z.object({ key: z.string(), readVersion: READ_VERSION_SCHEMA.nullable() });
 
+// Produced by the AI, which keeps its Original, or brought by the Candidate, with none (ADR-0019)
+const VERSION_ORIGIN_SCHEMA = z.enum(['ai', 'candidate']);
+
+export type VersionOrigin = z.infer<typeof VERSION_ORIGIN_SCHEMA>;
+
 // Each launch of a module creates a new Version, which keeps the Instructions it was produced with
 // and the Inputs it read. Its number counts the Versions of its Artifact on its Interview, for an
 // Artifact attached to one, else on its Posting.
@@ -317,7 +322,7 @@ export const VERSION_SCHEMA = z
     // A Draft until the Candidate validates it, which makes it the Chosen Version (ADR-0019)
     validation: z.enum(['draft', 'validated']),
     // The AI's, which keeps its Original, or the Candidate's own, with none
-    origin: z.enum(['ai', 'candidate']),
+    origin: VERSION_ORIGIN_SCHEMA,
     instructions: z.string(),
     hasCandidateInstructions: z.boolean(),
     // The Inputs its run read, by key, with the Version read for an Artifact Input (ADR-0021)
@@ -355,6 +360,8 @@ export const JOB_SCHEMA = z
     sessionId: z.string().nullable(),
     // The keys of the Inputs checked for an Artifact job; null for the default Inputs of its type
     inputKeyList: z.array(z.string()).nullable(),
+    // The PDF the Candidate brought, which an Artifact job converts into their Version; null for a run
+    upload: z.string().nullable(),
     // When the worker claimed it, null while it is queued
     startedAt: z.date().nullable(),
     version: VERSION_SCHEMA.nullable(),

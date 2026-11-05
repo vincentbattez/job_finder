@@ -27,7 +27,10 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
     const handle = await artifacts.find({ posting, artifact: 'letter' });
     const latestReady = handle.versionList.findLast(({ version }) => version.state === 'ready')?.version;
     const version = handle.chosenVersion ?? (isDraftRead ? latestReady : undefined);
-    return version === undefined ? null : LETTER_MODULE.readRecipients(handle.directoryOf(version));
+    // A Letter the Candidate brought comes with no recommended recipients
+    return version === undefined || version.origin === 'candidate'
+      ? null
+      : LETTER_MODULE.readRecipients(handle.directoryOf(version));
   }
 
   // The earlier Postings of its Position, the latest first, each the one the next publishes again
