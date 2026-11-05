@@ -20,7 +20,8 @@ const CORRECTED_BRIEF = `# Fiche d’entretien factice
 Titulaire d’un master 2 de droit privé, je souhaite rejoindre votre juridiction.
 `;
 
-// Both tests go through the one Posting of this file: one after the other
+// These tests go through the one Posting of this file: one after the other, the last going on from
+// the Interview Brief the one before leaves
 test.describe.configure({ mode: 'serial' });
 
 test('refuses the Interview Brief of an Interview until the Posting has a Chosen Research', async ({ page }) => {
@@ -43,7 +44,7 @@ test('refuses the Interview Brief of an Interview until the Posting has a Chosen
   await expect(brief).not.toContainText("n'a pas de Recherche validée");
 });
 
-test('launches the Interview Brief of an Interview, then corrects it', async ({ page }) => {
+test('launches the Interview Brief of an Interview, then validates it', async ({ page }) => {
   forgetResearch(REFERENCE);
   await prepareInterview(page, REFERENCE);
   await runVersion(page, { module: 'research', reference: REFERENCE, number: 1 });
@@ -62,8 +63,13 @@ test('launches the Interview Brief of an Interview, then corrects it', async ({ 
   await brief.getByRole('button', { name: 'Valider la Version 1' }).click();
   await expect(brief.getByText('Validée · retenue')).toBeVisible();
   await expect(findInterviews(page).getByRole('tab', { name: 'Fiche d’entretien (Validée)' })).toBeVisible();
-  // By the keyboard: the toast of the validation covers this button until it leaves
-  await brief.getByRole('button', { name: 'Modifier' }).press('Enter');
+});
+
+test('corrects the Validated Interview Brief, which still fits a phone', async ({ page }) => {
+  await page.goto(`/postings/${REFERENCE}?tab=interviews&interview=1`);
+  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
+  const brief = findInterviews(page).getByRole('region', { name: 'Fiche d’entretien' });
+  await brief.getByRole('button', { name: 'Modifier' }).click();
   const textbox = brief.getByRole('textbox', { name: 'Texte de la Version 1' });
   await expect(textbox).toBeEnabled();
   await textbox.fill(CORRECTED_BRIEF);
