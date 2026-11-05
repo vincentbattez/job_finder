@@ -17,8 +17,8 @@ function codeRangeListOf(node: IMarkdownNode): [number, number][] {
 }
 
 // A Markdown text as MDX reads it as written: each `{` and `<` outside code escaped, so that MDX does not
-// read it as an expression or a tag (ADR-0020). Markdown renders an escaped one the same, and a text
-// escaped already stays as it is.
+// read it as an expression or a tag (ADR-0020). Markdown renders an escaped character as that character, so raw HTML such as `<br>` shows as
+// literal text instead of being interpreted; a text escaped already stays as it is.
 export function escapeMdxSyntax(markdown: string): string {
   const codeRangeList = codeRangeListOf(fromMarkdown(markdown));
   return markdown.replaceAll(/(?<!\\)[{<]/gu, (character: string, offset: number) =>
