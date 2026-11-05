@@ -910,13 +910,14 @@ describe('the Versions of an older data folder', () => {
   it('leave whole the text the other launch is copying while rewriting it', () => {
     const directory = mkdtempSync(path.join(tmpdir(), 'jf-original-'));
     const textPath = path.join(directory, 'research.md');
-    writeFileSync(textPath, RESEARCH);
+    writeFileSync(textPath, RESEARCH, { mode: 0o600 });
     const textBeingCopied = openSync(textPath, 'r');
 
     writeTextFile(textPath, '# Escaped\n');
 
     expect(readFileSync(textBeingCopied, 'utf8')).toBe(RESEARCH);
     expect(readFileSync(textPath, 'utf8')).toBe('# Escaped\n');
+    expect(statSync(textPath).mode & 0o777).toBe(0o600);
     closeSync(textBeingCopied);
   });
 

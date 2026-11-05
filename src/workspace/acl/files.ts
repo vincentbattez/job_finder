@@ -85,11 +85,12 @@ export function emptyDirectory(directory: string): void {
 }
 
 // Its folder is created first, so a file is written wherever the workspace places it. Written beside it
-// then renamed over it: another process reads or copies the old text or the new one, never half of it
+// then renamed over it, with its mode: another process reads or copies the old text or the new one, never half of it
 export function writeTextFile(filePath: string, text: string): void {
   mkdirSync(path.dirname(filePath), { recursive: true });
   const temporaryPath = `${filePath}.${String(process.pid)}.tmp`;
-  writeFileSync(temporaryPath, text);
+  const existingFile = statSync(filePath, { throwIfNoEntry: false });
+  writeFileSync(temporaryPath, text, existingFile === undefined ? {} : { mode: existingFile.mode });
   renameSync(temporaryPath, filePath);
 }
 
