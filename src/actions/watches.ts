@@ -3,9 +3,10 @@ import { isDeepStrictEqual } from 'node:util';
 import { z } from 'zod/v4';
 
 import { codedError } from '#/domain/coded-error.ts';
-import type { Candidate, Watch } from '#/domain/index.ts';
+import type { Candidate, DetectedPosting, Watch } from '#/domain/index.ts';
 
 import { PARAMETERS_INPUT_SCHEMA, type ActionContext } from './context.ts';
+import { watchNamesOf } from './watch-label.ts';
 
 const WATCH_INPUT_SCHEMA = z.object({ watchId: z.string() });
 
@@ -24,7 +25,9 @@ const SAVE_INPUT_SCHEMA = z.object({
 
 // Each Candidate sets their Watches in their Profile: the Source they follow and the Parameters it asks
 // for, the form built from its descriptor (ADR-0010, ADR-0011)
-export function createWatchActions({ workspace, findCandidate, findSource }: ActionContext) {
+export function createWatchActions({ workspace, sourceList, findCandidate, findSource }: ActionContext) {
+  const { labelOf } = watchNamesOf(sourceList);
+
   async function findWatch(candidate: Candidate, rawInput: unknown): Promise<Watch> {
     const { watchId } = WATCH_INPUT_SCHEMA.parse(rawInput);
     const watchList = await workspace.listWatches(candidate.id);
@@ -47,9 +50,17 @@ export function createWatchActions({ workspace, findCandidate, findSource }: Act
   }
 
   return {
-    async listWatches(rawInput: unknown): Promise<Watch[]> {
+    // Each with what tells it apart, when a Detection last went through it and the Near Misses it found then
+    async listWatches(rawInput: unknown): Promise<(Watch & { label: string; nearMissList: DetectedPosting[] })[]> {
       const candidate = await findCandidate(rawInput);
-      return workspace.listWatches(candidate.id);
+      const watchList = await workspace.listWatches(candidate.id);
+      return Promise.all(
+        watchList.map(async (watch) => ({
+          ...watch,
+          label: labelOf(watch),
+          nearMissList: await workspace.listNearMisses(watch),
+        })),
+      );
     },
 
     // Creates a Watch, or changes the one named: it starts its first launch again once its Source or

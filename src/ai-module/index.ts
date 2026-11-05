@@ -6,6 +6,30 @@ export function describeArtifactLanguage(artifactName: string): string {
   return `Write the ${artifactName} in the language of the Job Description, whatever the language of this prompt and of the Candidate's Instructions.`;
 }
 
+// The closed catalogue of the MDX Artifacts (ADR-0020), one line per component as the Fixed Part teaches it.
+// The front renders each (src/web/components/mdx/catalogue.tsx): a component goes into both, or neither.
+const MDX_CATALOGUE_LINE_LIST = [
+  '`<Callout type="note|info|tip|warning|danger" title="…">…</Callout>`: a point to stand out',
+  '`<Tabs><Tab title="…">…</Tab>…</Tabs>`: views of one subject side by side',
+  '`<Accordion><AccordionItem title="…">…</AccordionItem>…</Accordion>`: details folded until opened',
+  '`<Cards><Card title="…" description="…">…</Card>…</Cards>`: a grid of cards; a `<Card>` also stands alone',
+  '`<Badge tone="default|secondary|outline">…</Badge>`: a short label, within a line',
+  '`<Table caption="…">` around a Markdown table, to caption it; every Markdown table is styled anyway',
+  '`<Steps><Step title="…">…</Step>…</Steps>`: an ordered procedure',
+  '`<Timeline><Event date="…" title="…">…</Event>…</Timeline>`: dated events',
+  '`<Quote author="…" source="…">…</Quote>`: a quotation and who said it',
+  '`<Checklist title="…">` around a Markdown list: items the Candidate ticks while revising',
+  '`<Diagram title="…">` around a ` ```mermaid ` fence: a Mermaid diagram; a bare mermaid fence draws too',
+];
+
+// What a Fixed Part says of the MDX it expects: Markdown, plus the catalogue and nothing else (ADR-0020)
+export function describeMdxFormat(): string {
+  return `The file is MDX: Markdown, plus these components and no other, each written with plain string attributes and Markdown inside:
+${MDX_CATALOGUE_LINE_LIST.map((line) => `- ${line}`).join('\n')}
+
+No import, export or JavaScript expression: they are stripped. In the text, write \`\\{\` for a brace and \`\\<\` for a less-than sign, which MDX would read as code.`;
+}
+
 // The headings of the message that follows the Fixed Part, its Inputs inlined (ADR-0021); each Input's own
 // starts with its prefix, which the headings inside its content do not
 export const INPUTS_HEADING = 'Inputs';

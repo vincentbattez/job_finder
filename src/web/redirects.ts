@@ -9,6 +9,7 @@ import { ARTIFACT_RENAME_LIST } from '#/actions/index.ts';
 export const REDIRECT_LIST = [
   { from: 'candidat', to: 'candidate' },
   { from: 'profil', to: 'profile' },
+  { from: 'veilles', to: 'watches' },
   { from: 'candidats', to: 'settings' },
   { from: 'candidates', to: 'settings' },
   { from: 'consignes', to: 'settings' },

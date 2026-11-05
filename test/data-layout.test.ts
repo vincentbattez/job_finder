@@ -3,10 +3,15 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { I18nextProvider } from 'react-i18next';
 import { describe, expect, it } from 'vitest';
 
 import { openContext } from '#/actions/context.ts';
+import { i18nOf } from '#/actions/i18n.ts';
 import { createActions, type Actions } from '#/actions/index.ts';
+import { ArtifactText } from '#/web/components/mdx/artifact-text.tsx';
 
 import { createFakeNotificationChannel, LEA_TARGET } from './fake-notification-channel.ts';
 import { writeOlderDatabase } from './older-database.ts';
@@ -168,6 +173,8 @@ describe('the French data folder', () => {
         source: 'pep',
         parameters: { title: 'attaché de justice' },
         detectedAt: DETECTED_AT,
+        label: 'attaché de justice',
+        nearMissList: [],
       },
     ]);
     expect(await actions.readDefaultDeadlinePeriod()).toEqual({ months: 6 });
@@ -367,7 +374,15 @@ describe('the French data folder', () => {
 
     expect(await actions.listCandidates()).toEqual([{ id: 'lea', name: 'Léa', locale: 'fr' }]);
     expect(await actions.listWatches({ candidateId: 'lea' })).toEqual([
-      { id: 'lea-1', candidateId: 'lea', source: 'pep', parameters: WATCH_PARAMETERS, detectedAt: null },
+      {
+        id: 'lea-1',
+        candidateId: 'lea',
+        source: 'pep',
+        parameters: WATCH_PARAMETERS,
+        detectedAt: null,
+        label: WATCH_PARAMETERS.title,
+        nearMissList: [],
+      },
     ]);
   });
 
@@ -672,10 +687,36 @@ describe('the Zone of an older database', () => {
 });
 
 const AI_LETTER = '# Lettre telle que l’IA l’a écrite\n';
-const CORRECTED_LETTER = '# Lettre corrigée par Léa\n';
+// A Letter stays plain Markdown: what MDX reads as syntax stays as she wrote it
+const CORRECTED_LETTER = '# Lettre corrigée par Léa\n\nMoins de <5 ans {sic}.\n';
 const BROUGHT_LETTER = '# Lettre apportée par Léa\n';
 const PORTRAIT = '# Portrait du jury\n';
-const BRIEF = '# Fiche d’entretien\n';
+// A Markdown Brief holding what MDX reads as syntax, in its text and in code, which keeps it as is
+const BRIEF = [
+  '# Fiche d’entretien',
+  '',
+  'Un délai {raisonnable}, moins de <5 ans, un <b>mot</b>, déjà \\{échappé}.',
+  '',
+  'Le code `a{b}<c>` reste tel quel.',
+  '',
+  '```',
+  '{ "rôle": "<juge>" }',
+  '```',
+  '',
+].join('\n');
+// The same Brief as MDX reads it, escaped by hand
+const ESCAPED_BRIEF = [
+  '# Fiche d’entretien',
+  '',
+  'Un délai \\{raisonnable}, moins de \\<5 ans, un \\<b>mot\\</b>, déjà \\{échappé}.',
+  '',
+  'Le code `a{b}<c>` reste tel quel.',
+  '',
+  '```',
+  '{ "rôle": "<juge>" }',
+  '```',
+  '',
+].join('\n');
 
 // Léa's Versions as the jf before the Draft left them: a Research regenerated after its Chosen Version
 // then failed once, another Posting's Research never chosen, a Letter she corrected beside one she
@@ -781,7 +822,7 @@ describe('the Versions of an older data folder', () => {
       'letter v1': { text: CORRECTED_LETTER, original: AI_LETTER },
       'letter v2': { text: BROUGHT_LETTER, original: null },
       'portrait v1': { text: PORTRAIT, original: PORTRAIT },
-      'interview_brief v1': { text: BRIEF, original: BRIEF },
+      'interview_brief v1': { text: ESCAPED_BRIEF, original: ESCAPED_BRIEF },
     });
     expect(await readVersionTexts(actions, '2026-2')).toEqual({
       'research v1': { text: RESEARCH, original: RESEARCH },
@@ -791,6 +832,28 @@ describe('the Versions of an older data folder', () => {
       'candidates/lea/postings/2026-1-greffier/interviews/1/portrait/v1/original.md',
     );
     expect(statSync(portraitOriginalPath).mode & 0o777).toBe(0o444);
+  });
+
+  it('escape, in their text and Original, what MDX reads as syntax, so that each compiles as written', async () => {
+    const dataDirectory = writeChosenDataDirectory();
+
+    const actions = await createActions({ dataDirectory });
+
+    const { interviewList } = await actions.readPosting({ reference: '2026-1' });
+    const brief = interviewList[0]?.artifactList.find(({ artifact }) => artifact === 'interview_brief');
+    const html = renderToStaticMarkup(
+      createElement(
+        I18nextProvider,
+        { i18n: i18nOf('en') },
+        createElement(ArtifactText, { text: brief?.versionList[0]?.text ?? '', format: 'mdx' }),
+      ),
+    );
+    expect(html).toContain(
+      '<p>Un délai {raisonnable}, moins de &lt;5 ans, un &lt;b&gt;mot&lt;/b&gt;, déjà {échappé}.</p>',
+    );
+    expect(html).toContain('<code>a{b}&lt;c&gt;</code>');
+    expect(html).not.toContain('does not compile as MDX');
+    expect(html).not.toContain('Unknown component');
   });
 
   it('changes nothing when opened again', async () => {

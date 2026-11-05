@@ -230,7 +230,10 @@ export type DetectionOrigin = z.infer<typeof DETECTION_ORIGIN_SCHEMA>;
 // Watch at the step it stopped at (#63)
 const DETECTION_STEP_SCHEMA = z.enum(['waiting', 'searching', 'reading', 'notifying', 'done']);
 
-const DETECTED_POSTING_SCHEMA = z.object({ reference: z.string(), title: z.string() });
+// A Posting a Detection found, or a Near Miss, as it records them: its reference and its title
+export const DETECTED_POSTING_SCHEMA = z.object({ reference: z.string(), title: z.string() });
+
+export type DetectedPosting = z.infer<typeof DETECTED_POSTING_SCHEMA>;
 
 // A Watch as a Detection records it: its label rather than its identifier, its step, then its verdict
 const DETECTION_WATCH_SCHEMA = z
