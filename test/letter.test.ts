@@ -182,13 +182,25 @@ describe('letter', () => {
       { key: 'job_description', readVersion: null },
       {
         key: 'artifact:research',
-        readVersion: { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
+        readVersion: {
+          artifact: 'research',
+          number: 1,
+          posting: { reference: REFERENCE },
+          interview: null,
+          customArtifact: null,
+        },
       },
       { key: 'profile:cv.md', readVersion: null },
       { key: 'profile:letter-tj-lille-2025.md', readVersion: null },
       {
         key: `posting:${SENT_REFERENCE}/letter`,
-        readVersion: { artifact: 'letter', number: 1, posting: { reference: SENT_REFERENCE }, interview: null },
+        readVersion: {
+          artifact: 'letter',
+          number: 1,
+          posting: { reference: SENT_REFERENCE },
+          interview: null,
+          customArtifact: null,
+        },
       },
     ]);
   });

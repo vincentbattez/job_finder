@@ -309,7 +309,13 @@ describe('the French data folder', () => {
         inputList: [
           {
             key: 'artifact:research',
-            readVersion: { artifact: 'research', number: 2, posting: { reference: '2026-1' }, interview: null },
+            readVersion: {
+              artifact: 'research',
+              number: 2,
+              posting: { reference: '2026-1' },
+              interview: null,
+              customArtifact: null,
+            },
           },
         ],
       }),

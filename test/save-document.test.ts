@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { type Actions } from '#/actions/index.ts';
 
-import { applyTo } from './apply.ts';
 import { detectPostings as detectRecordedPostings } from './data-directory.ts';
 import { createFakeAiSession } from './fake-ai-session.ts';
 import { runAndValidate } from './run-module.ts';
@@ -137,7 +136,8 @@ describe('saving a correction', () => {
     await actions.runQueuedJobs();
     const beforeAppliedList = await readOffers(actions);
 
-    await applyTo(actions, REFERENCE);
+    await actions.keep({ reference: REFERENCE });
+    await actions.changeStatus({ reference: REFERENCE, status: 'applied', letterNumber: '2' });
 
     expect(beforeAppliedList).toEqual([
       { artifact: 'research', correctable: [1, 2], validatable: [1] },
