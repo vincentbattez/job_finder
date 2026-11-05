@@ -53,7 +53,7 @@ const HOLD_LIMIT_MS = 15_000;
 
 // How long each search and each Job Description read take, the seed of test/seed-front.ts not at all,
 // and the file that holds the Detection, for the front's Source
-interface ISlowSourceDelays {
+interface ISlowSourceOption {
   searchMs: number;
   readMs: number;
   holdFilePath?: string | undefined;
@@ -69,7 +69,7 @@ async function waitWhileExists(filePath: string): Promise<void> {
 // Stands in for a Source, an external boundary, in the e2e tests: a slow module of the family, without
 // network, declared as a real one (ADR-0010). Each search lists Postings never seen before, or always
 // the same ones given referencePrefix, and one near-miss Posting; given failAfter, reading fails once that many Job Descriptions are read.
-export function defineSlowSource({ searchMs, readMs, holdFilePath }: ISlowSourceDelays): SourceFactory {
+export function defineSlowSource({ searchMs, readMs, holdFilePath }: ISlowSourceOption): SourceFactory {
   return defineSource({
     id: 'slow',
     name: 'Slow Source',

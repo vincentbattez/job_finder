@@ -10,6 +10,7 @@ import { Button } from '#/web/components/ui/button.tsx';
 import { useIsHydrated } from '#/web/components/use-is-hydrated.ts';
 import type { IRefusal } from '#/web/failure.ts';
 
+import { useFeedback } from './use-feedback.ts';
 import { useRevalidateWhile } from './use-revalidate-while.ts';
 
 // The worker runs the extraction in its own process (ADR-0003), so its state is read again until done,
@@ -31,7 +32,7 @@ export function ExtractionLaunch({
   const isHydrated = useIsHydrated();
   const labelId = useId();
   const isRunning = isPending(state);
-  const error = fetcher.data?.error ?? workerFailure?.message;
+  useFeedback(fetcher, () => t('extractionRelaunched'));
   useRevalidateWhile(isRunning);
   return (
     <fetcher.Form method="post" action="/run" aria-labelledby={labelId} className="grid gap-2">
@@ -52,9 +53,9 @@ export function ExtractionLaunch({
         )}
       </div>
       {state === 'failed' && <p className="text-sm text-destructive">{log}</p>}
-      {error != null && (
+      {workerFailure !== null && (
         <p role="alert" className="text-sm text-destructive">
-          {error}
+          {workerFailure.message}
         </p>
       )}
     </fetcher.Form>

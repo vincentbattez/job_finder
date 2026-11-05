@@ -1,34 +1,21 @@
 import { rmSync } from 'node:fs';
 import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 
-import { z } from 'zod/v4';
+import type { Page } from '@playwright/test';
 
 import { expect, test } from './candidate.ts';
 import { openGeneration } from './generation.ts';
-
-// How long a raw write waits for the server's own writes to release the database
-const BUSY_TIMEOUT_MS = 5000;
+import { findDataDirectory, findPostingOfCleo, openDatabase, READY_TIMEOUT_MS } from './harness.ts';
 
 const ANNEX_FILE_NAME = 'annex-releve-de-notes.md';
-
-function dataDirectoryOf(): string {
-  return z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata).dataDirectory;
-}
 
 // One of Cleo's Postings of test/seed-front.ts without any Custom Artifact, and her Profile without the
 // Annex a test adds, whatever a previous run left; its reference comes back for the page
 function resetCleo(fileName: string): string {
-  const dataDirectory = dataDirectoryOf();
+  const dataDirectory = findDataDirectory();
   rmSync(path.join(dataDirectory, 'candidates', 'cleo', 'profile', ANNEX_FILE_NAME), { force: true });
-  const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
-  const { id, reference } = z
-    .object({ id: z.number(), reference: z.string() })
-    .parse(
-      database
-        .prepare('SELECT "id", "reference" FROM "Posting" WHERE "candidateId" = \'cleo\' AND "title" = ?')
-        .get(fileName),
-    );
+  const database = openDatabase();
+  const { id, reference } = findPostingOfCleo(database, fileName);
   database.exec('BEGIN IMMEDIATE');
   database
     .prepare(
@@ -95,4 +82,43 @@ test('adds a text from the generation panel, checked at once for this run', asyn
 
   await expect(dialog).toBeHidden();
   await expect(panel.getByRole('checkbox', { name: 'Document · Organigramme du greffe' })).toBeChecked();
+});
+
+async function addPdfDocument(page: Page, title: string, fixture: string): Promise<void> {
+  const dialog = page.getByRole('dialog', { name: 'Ajouter un document' });
+  await page.getByRole('region', { name: 'Documents' }).getByRole('button', { name: 'Ajouter un document' }).click();
+  await dialog.getByLabel('Titre').fill(title);
+  await dialog
+    .getByLabel(/choisir un fichier/)
+    .setInputFiles(path.join(import.meta.dirname, '../test/fixtures/profile', fixture));
+  await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click();
+}
+
+test('adds a PDF as a document, readable once converted', async ({ page, asCandidate, openPage }) => {
+  const reference = resetCleo('greffier-cleo-tarbes.md');
+  await asCandidate('cleo');
+  await openPage(`/postings/${reference}`);
+  const documents = page.getByRole('region', { name: 'Documents' });
+
+  await addPdfDocument(page, 'Organigramme', 'cv.pdf');
+
+  const toasts = page.getByRole('region', { name: 'Notifications alt+T' });
+  await expect(toasts).toContainText('PDF envoyé, conversion en cours : Organigramme');
+  await expect(documents.getByRole('listitem')).toContainText('Conversion…');
+  await documents.getByRole('button', { name: 'Lire Organigramme' }).click({ timeout: READY_TIMEOUT_MS });
+  const reader = page.getByRole('dialog', { name: 'Organigramme' });
+  await expect(reader.getByRole('heading', { name: 'Document converti' })).toBeVisible();
+});
+
+test('says when the conversion of a PDF added as a document failed', async ({ page, asCandidate, openPage }) => {
+  const reference = resetCleo('greffier-cleo-nantes.md');
+  await asCandidate('cleo');
+  await openPage(`/postings/${reference}`);
+  const documents = page.getByRole('region', { name: 'Documents' });
+
+  await addPdfDocument(page, 'Scan illisible', 'unreadable.pdf');
+
+  const failed = documents.getByRole('listitem').filter({ hasText: 'Scan illisible' });
+  await expect(failed).toContainText('Conversion échouée. Ajoute-le à nouveau.', { timeout: READY_TIMEOUT_MS });
+  await expect(failed.getByRole('button')).toHaveCount(0);
 });

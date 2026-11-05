@@ -235,6 +235,35 @@ describe('actions', () => {
     ]);
   });
 
+  // No Source of its own: a Job Description pasted from one keeps that Source's format, a free one says nothing
+  it('fills the Start Date of the imported Postings too, whichever Source wrote their Job Description', async () => {
+    const dataDirectory = createEmptyDataDirectory();
+    const database = new DatabaseSync(writeOlderDatabase(dataDirectory, BEFORE_START_DATE_MIGRATION));
+    database.exec(`INSERT INTO Candidate (id, name) VALUES ('lea', 'Léa');
+      INSERT INTO Posting (candidateId, source, reference, title, isInZone) VALUES ('lea', 'import', 'i-1', 'Greffier', 1);
+      INSERT INTO Posting (candidateId, source, reference, title, isInZone) VALUES ('lea', 'import', 'i-2', 'Greffier', 1);`);
+    database.close();
+    const postingsDirectory = path.join(dataDirectory, 'candidates', 'lea', 'postings');
+    writeJobDescription(
+      path.join(postingsDirectory, 'i-1-greffier'),
+      // cspell:disable-next-line
+      "### Date de vacance de l'emploi\n\n01/12/2026\n",
+    );
+    writeJobDescription(path.join(postingsDirectory, 'i-2-greffier'), 'Registry officer, as soon as possible.\n');
+
+    const actions = await createActions({ dataDirectory });
+
+    const postingList = await actions.listPostings({ candidateId: 'lea' });
+    expect(
+      postingList
+        .map(({ reference, startDate }) => ({ reference, startDate }))
+        .toSorted((first, second) => first.reference.localeCompare(second.reference)),
+    ).toEqual([
+      { reference: 'i-1', startDate: new Date('2026-12-01T00:00:00Z') },
+      { reference: 'i-2', startDate: null },
+    ]);
+  });
+
   it('refuses to list the Postings of an unknown Candidate', async () => {
     const actions = await createActions({ dataDirectory: createDataDirectory() });
 

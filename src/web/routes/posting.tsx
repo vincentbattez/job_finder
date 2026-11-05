@@ -2,9 +2,10 @@ import { useTranslation } from 'react-i18next';
 import { useLoaderData, useSearchParams, type LoaderFunctionArgs, type MetaArgs } from 'react-router';
 
 import { localeOf, tFor } from '#/actions/i18n.ts';
+import { hasTakenPlace } from '#/actions/interview-time.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
-import { summaryOf, type IArtifactVersions } from '#/web/components/artifact.ts';
+import { letterStandingOf, summaryOf, type IArtifactVersions } from '#/web/components/artifact.ts';
 import { PageHeader } from '#/web/components/page-header.tsx';
 import { PostingFacts } from '#/web/components/posting-facts.tsx';
 import { POSTING_TAB_LIST, PostingTabs, type PostingTab, type TabSummary } from '#/web/components/posting-tabs.tsx';
@@ -16,8 +17,6 @@ import { Interviews } from '#/web/containers/interviews.tsx';
 import { Notes } from '#/web/containers/notes.tsx';
 import { PostingActions } from '#/web/containers/posting-actions.tsx';
 import { relayLoader } from '#/web/relay-action.server.ts';
-
-const MINUTE_MS = 60_000;
 
 export function loader({ params, request }: LoaderFunctionArgs) {
   return relayLoader(request, async () => {
@@ -74,12 +73,8 @@ export default function Posting() {
   const artifactOf = (artifact: string) => detail.artifactList.find((entry) => entry.artifact === artifact);
   const research = artifactOf('research');
   const letter = artifactOf('letter');
-  const letterList = letter?.versionList ?? [];
-  const latestLetter = letterList.findLast(({ version }) => version.state === 'ready');
-  const now = Date.now();
-  const nextInterview =
-    interviewList.find(({ startAt, durationMinutes }) => startAt.getTime() + durationMinutes * MINUTE_MS > now) ??
-    interviewList.at(-1);
+  const now = new Date();
+  const nextInterview = interviewList.find((interview) => !hasTakenPlace(interview, now)) ?? interviewList.at(-1);
   const description = [
     posting.employer,
     posting.city,
@@ -143,13 +138,7 @@ export default function Posting() {
               repostOf={posting.repostOf}
               nextInterviewNumber={nextInterview?.number ?? null}
               posting={posting}
-              letter={{
-                draftNumber:
-                  latestLetter?.version.validation === 'draft' && latestLetter.isValidatable
-                    ? latestLetter.version.number
-                    : null,
-                hasChosen: letterList.some(({ version }) => version.isChosen),
-              }}
+              letter={letterStandingOf(letter)}
             />
           </>
         }

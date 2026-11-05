@@ -1,5 +1,5 @@
 import { APPLICATION_SCHEMA, type Application, type Posting } from '#/domain/index.ts';
-import { hasTakenPlace } from '#/status/index.ts';
+import { hasTakenPlace } from '#/domain/interview-time.ts';
 
 import { LIST_INPUT_SCHEMA, type ActionContext } from './context.ts';
 

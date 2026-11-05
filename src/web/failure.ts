@@ -5,6 +5,11 @@ export interface IRefusal {
   error?: string | null;
 }
 
+// Whether the action of a form's fetcher was refused rather than went through
+export function isRefused(answer: IRefusal | undefined): answer is { error: string } {
+  return typeof answer?.error === 'string';
+}
+
 // What relayLoader throws for the error page: the code of the failure, and its message in the
 // Candidate's locale. Plain data, since an Error crosses to the browser with its message only.
 export interface ILoaderFailure {

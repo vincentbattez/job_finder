@@ -2,9 +2,9 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import type { Page } from '@playwright/test';
-import { z } from 'zod/v4';
 
 import { expect, test, type AsCandidate, type IFront } from './candidate.ts';
+import { findDataDirectory } from './harness.ts';
 
 const HEADING_LIST = ['CV', 'Faits', 'Lettres de motivation passées', 'Annexes', 'Pièces', 'Nouveau fichier'] as const;
 
@@ -43,7 +43,7 @@ async function openFreshProfileOf(
   { id, name }: Readonly<{ id: string; name: string }>,
   { hasCv = true }: Readonly<{ hasCv?: boolean }> = {},
 ) {
-  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
+  const dataDirectory = findDataDirectory();
   const candidateDirectory = path.join(dataDirectory, 'candidates', id);
   const profileDirectory = path.join(candidateDirectory, 'profile');
   rmSync(profileDirectory, { recursive: true, force: true });

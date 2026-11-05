@@ -11,6 +11,9 @@ const PARIS_FORMAT = new Intl.DateTimeFormat('sv-SE', {
   hourCycle: 'h23',
 });
 
+// A calendar day in France, as « 2026-11-20 », so that two days compare as strings
+export const PARIS_DAY_FORMAT = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' });
+
 const MINUTE_LENGTH = 'YYYY-MM-DDTHH:mm'.length;
 
 // The instant as Paris reads it, « 2026-11-19T14:00:05 »

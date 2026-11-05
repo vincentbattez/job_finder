@@ -147,7 +147,7 @@ describe('the prompt of the Portrait', () => {
     expect(session?.fixedPrompt).not.toMatch(/research\.md|job-description\.md/);
     expect(session).toMatchObject({ isReadingDirectory: false, isSearchingWeb: true });
     expect(readVersionsOf(version)).toEqual([
-      { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
+      { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null, customArtifact: null },
     ]);
   });
 
@@ -229,8 +229,14 @@ describe('the Interview Brief and the Portrait', () => {
     expect(message).toContain(`## Input: Chosen Portrait of Interview 1\n\n${PORTRAIT.trim()}\n\n`);
     expect(message).not.toContain('# Autre portrait');
     expect(readVersionsOf(version)).toEqual([
-      { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
-      { artifact: 'portrait', number: 1, posting: { reference: REFERENCE }, interview: { number: 1 } },
+      { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null, customArtifact: null },
+      {
+        artifact: 'portrait',
+        number: 1,
+        posting: { reference: REFERENCE },
+        interview: { number: 1 },
+        customArtifact: null,
+      },
     ]);
   });
 
@@ -245,7 +251,7 @@ describe('the Interview Brief and the Portrait', () => {
     expect(fixedPrompt).toContain('No Portrait of the Interviewers');
     expect(fixedPrompt).not.toContain('portrait.md');
     expect(readVersionsOf(version)).toEqual([
-      { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
+      { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null, customArtifact: null },
     ]);
   });
 

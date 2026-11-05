@@ -3,10 +3,10 @@ import { rmSync } from 'node:fs';
 import path from 'node:path';
 
 import type { Page } from '@playwright/test';
-import { z } from 'zod/v4';
 
 import { expect, test } from './candidate.ts';
 import { openGeneration } from './generation.ts';
+import { findDataDirectory } from './harness.ts';
 
 // Ugo's one Posting, which test/seed-front.ts imports and only this file opens; the import names it from
 // its Markdown (src/modules/source-import)
@@ -15,7 +15,7 @@ const UGO_REFERENCE = `import-${createHash('sha256').update(UGO_JOB_DESCRIPTION)
 
 // Back to the default Instructions, as an earlier run may have left the Candidate's own
 function deleteInstructionsOf(candidateId: string): void {
-  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
+  const dataDirectory = findDataDirectory();
   rmSync(path.join(dataDirectory, 'candidates', candidateId, 'instructions'), { recursive: true, force: true });
 }
 

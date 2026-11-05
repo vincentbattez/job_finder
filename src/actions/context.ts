@@ -7,6 +7,7 @@ import { createArtifacts, keepMissingOriginals } from '#/artifact/index.ts';
 import { localeOf } from '#/domain/catalogue/i18n.ts';
 import { codedError, type CodedError } from '#/domain/coded-error.ts';
 import {
+  IMPORT_SOURCE_ID,
   JOB_DESCRIPTION_FILE_NAME,
   LOCATION_SCHEMA,
   type Candidate,
@@ -52,17 +53,25 @@ export interface IActionsOption {
   sourceFactoryList?: readonly SourceFactory[];
 }
 
-// The data migration of the Start Date (spec #125): a Posting saved before it existed gets the one its
-// stored Job Description gives, read by its Source. Safe on every launch: only the Postings still
-// without one are read, and one whose Job Description says nothing, or is missing, stays without.
+// The data migration of the Start Date (spec #125), safe on every launch: an imported Posting has no Source
+// of its own, but a Job Description pasted from one keeps its format, so each Source tries.
 async function fillStartDates(workspace: Workspace, sourceList: ISource[]): Promise<void> {
-  const postingList = await workspace.listPostingsWithoutStartDate(sourceList.map(({ description: { id } }) => id));
+  const postingList = await workspace.listPostingsWithoutStartDate([
+    ...sourceList.map(({ description: { id } }) => id),
+    IMPORT_SOURCE_ID,
+  ]);
   for (const posting of postingList) {
-    const source = sourceList.find(({ description: { id } }) => id === posting.source);
+    const readerList =
+      posting.source === IMPORT_SOURCE_ID
+        ? sourceList
+        : sourceList.filter(({ description: { id } }) => id === posting.source);
     const jobDescription = workspace.readTextFile(
       path.join(workspace.postingDirectoryOf(posting), JOB_DESCRIPTION_FILE_NAME),
     );
-    const startDate = jobDescription === null ? null : (source?.readStartDate(jobDescription) ?? null);
+    const startDate =
+      jobDescription === null
+        ? null
+        : (readerList.map((source) => source.readStartDate(jobDescription)).find((date) => date !== null) ?? null);
     if (startDate !== null) {
       await workspace.setStartDate(posting, startDate);
     }

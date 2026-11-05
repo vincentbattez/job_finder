@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { toast } from 'sonner';
 
-import type { IRefusal } from '#/web/failure.ts';
+import { isRefused, type IRefusal } from '#/web/failure.ts';
 
 import { useSettled, type IFetcherState } from './use-settled.ts';
 
@@ -20,7 +20,7 @@ export function useFeedback(
   const actionReference = useRef(action);
   actionReference.current = action;
   useSettled(fetcher, (answer) => {
-    if (typeof answer?.error === 'string') {
+    if (isRefused(answer)) {
       toast.error(answer.error);
     } else {
       toast.success(successMessageReference.current(), { action: actionReference.current?.() });

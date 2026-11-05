@@ -21,6 +21,7 @@ import { useSidebar } from '#/web/components/ui/sidebar.tsx';
 import { ArtifactReader, LetterPage } from './artifact-reader.tsx';
 import type { IArtifactVersions, IVersionDetail } from './artifact.ts';
 import { CompareView } from './compare-view.tsx';
+import { inputLabelOf } from './input-label.ts';
 import type { IRecipients } from './recipients.tsx';
 
 export type ArtifactMode = 'read' | 'edit' | 'compare';
@@ -331,6 +332,7 @@ interface IArtifactViewSlots {
 // bar for a frozen Letter, a running generation's card, then the Version's text, read or corrected
 export function ArtifactView({
   artifact,
+  reference,
   state,
   format,
   isFrozen,
@@ -348,6 +350,7 @@ export function ArtifactView({
 }: Readonly<
   Pick<IArtifactVersions, 'artifact' | 'state' | 'format' | 'isFrozen' | 'versionList'> &
     IArtifactViewSlots & {
+      reference: string;
       selectedNumber: number | null;
       mode: ArtifactMode;
       // The Letter's recommended To and Cc, shown above its page
@@ -395,6 +398,13 @@ export function ArtifactView({
                 date: detail.version.createdAt,
               })}
             </p>
+            {detail.version.origin === 'ai' && detail.inputList.length > 0 && (
+              <p className="max-w-[72ch] text-xs text-muted-foreground">
+                {t('artifactView.producedFrom', {
+                  inputs: detail.inputList.map((input) => inputLabelOf(t, reference, input)).join(', '),
+                })}
+              </p>
+            )}
             {detail.version.origin === 'ai' && <VersionInstructions version={detail.version} />}
           </div>
           {failure}

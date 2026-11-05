@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '#/web/components/ui/dialog.tsx';
-import type { IRefusal } from '#/web/failure.ts';
+import { isRefused, type IRefusal } from '#/web/failure.ts';
 
 import { useFeedback } from './use-feedback.ts';
 import { useSettled } from './use-settled.ts';
@@ -58,7 +58,7 @@ function InterviewForm({
   );
   // Once its answer is in: an addition turns the Dialog into its Interview-added step, an edit closes it
   useSettled(fetcher, (answer) => {
-    if (typeof answer?.error === 'string') {
+    if (isRefused(answer)) {
       return;
     }
     if (answer?.added === undefined) {

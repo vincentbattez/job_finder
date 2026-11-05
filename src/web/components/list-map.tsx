@@ -45,7 +45,7 @@ const TILE_CLASS =
   '[filter:saturate(0.45)_contrast(0.95)] dark:[filter:invert(1)_hue-rotate(180deg)_brightness(0.85)_contrast(0.9)_saturate(0.4)]';
 // The point is a span inside the marker, which Leaflet positions with a transform of its own
 const POINT_CLASS =
-  'block size-full rounded-full border-2 border-white shadow-marker transition-[scale,box-shadow] duration-150 ease-out group-data-[highlight=hover]/marker:scale-150 group-data-[highlight=hover]/marker:shadow-[var(--shadow-marker),0_0_0_4px_color-mix(in_oklch,var(--foreground)_22%,transparent)] group-data-[highlight=active]/marker:scale-[1.7] group-data-[highlight=active]/marker:shadow-[var(--shadow-marker),0_0_0_5px_color-mix(in_oklch,var(--primary)_40%,transparent)] dark:border-neutral-900';
+  'block size-full rounded-full border-2 border-background shadow-marker transition-[scale,box-shadow] duration-150 ease-out group-data-[highlight=hover]/marker:scale-150 group-data-[highlight=hover]/marker:shadow-[var(--shadow-marker),0_0_0_4px_color-mix(in_oklch,var(--foreground)_22%,transparent)] group-data-[highlight=active]/marker:scale-[1.7] group-data-[highlight=active]/marker:shadow-[var(--shadow-marker),0_0_0_5px_color-mix(in_oklch,var(--primary)_40%,transparent)]';
 const TOOLTIP_CLASS =
   'w-max max-w-72 rounded-md border-border bg-popover px-2 py-1 font-sans text-label font-medium whitespace-normal text-popover-foreground shadow-md before:hidden';
 const CONTROL_CLASS =

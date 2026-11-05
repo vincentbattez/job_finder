@@ -106,7 +106,8 @@ export const CLI_EN = {
   statusCommandDescription: '{{description}}: jf {{name}} <posting>',
   statusUsage: 'Usage: jf {{name}} <posting>. “jf list <candidate>” lists the Postings.',
   statusChanged: '{{reference}}: {{statusLabel}}\n',
-  applyDescription: 'Moves a Posting to Applied, with or without a Letter, which freezes its Letter',
+  applyDescription:
+    'Moves a Posting to Applied, which freezes its Letter; over a Draft Letter, validate it first or add --without-letter',
   toApplyDescription:
     'Puts an Applied Posting whose Letter was never sent, without an Interview, back to To Apply, its Letter free again',
   hiredDescription: 'Marks an Application Hired: the Candidate gets the job',

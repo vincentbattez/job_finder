@@ -11,6 +11,11 @@ export type Validation = 'draft' | 'validated';
 export type Generation = Awaited<ReturnType<Actions['readGeneration']>>;
 export type GenerationInput = Generation['inputList'][number];
 
+// An Input a Version read, among those it shows it was produced from (spec #125)
+export type RecordedInput = Awaited<
+  ReturnType<Actions['readPosting']>
+>['artifactList'][number]['versionList'][number]['inputList'][number];
+
 // A Version with its text, null while it runs or once it failed, and the AI's Original, null for a Version
 // the Candidate brought (ADR-0019)
 export interface IVersionDetail {
@@ -24,6 +29,7 @@ export interface IVersionDetail {
     instructions: string;
     createdAt: Date;
   };
+  inputList: RecordedInput[];
   // Given by the action: a Draft to validate, or an older Validated Version to choose again
   isValidatable: boolean;
   isCorrectable: boolean;
@@ -56,4 +62,20 @@ export interface IArtifactVersions {
 // latest ready Version's validation, none before any
 export function summaryOf({ versionList }: Pick<IArtifactVersions, 'versionList'>): Validation | 'none' {
   return versionList.findLast(({ version }) => version.state === 'ready')?.version.validation ?? 'none';
+}
+
+// Where the Letter stands before marking Applied: its latest Version still a Draft, and its Chosen Version,
+// the one recorded as sent
+export interface ILetterStanding {
+  draftNumber: number | null;
+  chosenNumber: number | null;
+}
+
+export function letterStandingOf(letter: Pick<IArtifactVersions, 'versionList'> | undefined): ILetterStanding {
+  const versionList = letter?.versionList ?? [];
+  const latest = versionList.findLast(({ version }) => version.state === 'ready');
+  return {
+    draftNumber: latest?.version.validation === 'draft' && latest.isValidatable ? latest.version.number : null,
+    chosenNumber: versionList.find(({ version }) => version.isChosen)?.version.number ?? null,
+  };
 }

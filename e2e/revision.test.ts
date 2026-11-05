@@ -1,15 +1,10 @@
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-
 import type { Page } from '@playwright/test';
 import { z } from 'zod/v4';
 
 import { expect, test } from './candidate.ts';
+import { openDatabase } from './harness.ts';
 import { prepareApplication, runVersion } from './interview.ts';
 import { findOverflowing } from './overflow.ts';
-
-// How long a raw read waits for the server's own writes to release the database
-const BUSY_TIMEOUT_MS = 5000;
 
 // The Interview Brief the fake Claude writes, its last section renamed by the Candidate
 // (test/e2e-actions.server.ts)
@@ -20,11 +15,6 @@ const RENAMED_BRIEF = [
   '## Présentez-vous\n\nTitulaire d’un master 2, je souhaite rejoindre votre juridiction.',
   '## Questions attendues\n\n- Pourquoi ce poste ?\n',
 ].join('\n\n');
-
-function openDatabase(): DatabaseSync {
-  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
-  return new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
-}
 
 // Ruth's one Posting of test/seed-front.ts, which only this test touches
 function findReference(): string {
@@ -78,6 +68,27 @@ test('keeps notes and Mastered marks across reloads', async ({ page, openPage })
 
   await expect(note).toHaveValue('Parler du stage au greffe.');
   await expect(margin.getByRole('button', { name: 'Maîtrisée · À réviser' })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('ticks a Checklist of the Interview Brief while revising only', async ({ page, openPage }) => {
+  const reference = findReference();
+  const revisionPath = await prepareRevision(page, reference);
+  await post(page, `/postings/${reference}/interview_brief/document`, {
+    number: '1',
+    interview: '1',
+    fileName: 'interview-brief.md',
+    markdown: '# Fiche\n\n<Checklist title="À emporter">\n\n- Pièce d’identité\n- Diplôme\n\n</Checklist>\n',
+  });
+
+  await openPage(revisionPath);
+  await expect(page.getByText('0 sur 2 faits')).toBeVisible();
+  await page.getByRole('checkbox', { name: 'Diplôme' }).check();
+  await expect(page.getByText('1 sur 2 faits')).toBeVisible();
+
+  await openPage(`/postings/${reference}?tab=interviews`);
+  await page.getByRole('tab', { name: /^Fiche d’entretien/ }).click();
+  await expect(page.getByText('Pièce d’identité')).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: 'Diplôme' })).toHaveCount(0);
 });
 
 test('carries notes and Mastered marks over to a newer Chosen Interview Brief', async ({ page, openPage }) => {

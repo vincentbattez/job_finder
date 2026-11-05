@@ -199,7 +199,8 @@ export function ArtifactReader({
   text,
   format,
   margin,
-}: Readonly<{ text: string; format: ArtifactTextFormat; margin?: IReaderMargin }>) {
+  isRevising = false,
+}: Readonly<{ text: string; format: ArtifactTextFormat; margin?: IReaderMargin; isRevising?: boolean }>) {
   const { t } = useTranslation('posting');
   const articleReference = useRef<HTMLElement>(null);
   const sectionList = useSections(articleReference, text);
@@ -250,7 +251,7 @@ export function ArtifactReader({
             {marginContent !== undefined && <MarginSheet>{marginContent}</MarginSheet>}
           </div>
           <article ref={articleReference}>
-            <ArtifactText text={text} format={format} className={READING_PROSE} />
+            <ArtifactText text={text} format={format} className={READING_PROSE} isRevising={isRevising} />
           </article>
         </div>
         {marginContent !== undefined && (

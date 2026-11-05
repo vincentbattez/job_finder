@@ -2,7 +2,7 @@ import { readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
 import { expect, test } from './candidate.ts';
-import { findDataDirectory, openDatabase } from './interview.ts';
+import { findDataDirectory, openDatabase, READY_TIMEOUT_MS } from './harness.ts';
 
 // The fake Claude of test/e2e-actions.server.ts extracts this Job Description, in Grenoble
 const JOB_DESCRIPTION = readFileSync(
@@ -24,10 +24,6 @@ function forgetPostingsOf(candidateId: string): void {
   database.close();
   rmSync(path.join(findDataDirectory(), 'candidates', candidateId, 'postings'), { recursive: true, force: true });
 }
-
-// The worker takes the extraction, then the Research, each with its session, and the Posting page reads
-// the state again
-const READY_TIMEOUT_MS = 15_000;
 
 // Hugo and Lina, whose Postings these tests alone add (test/seed-front.ts): until the worker reads its
 // city, an imported Posting has no point on the map, which another test would see on Léa's
@@ -103,6 +99,40 @@ test.describe('a dropped Job Description', () => {
     await expect(
       page.getByRole('region', { name: 'Carte des Offres' }).getByRole('button', { name: `Grenoble · ${TITLE}` }),
     ).toHaveCount(1);
+  });
+
+  test('runs a failed extraction again, and says so', async ({ page, asCandidate, openPage }) => {
+    await asCandidate(DROPPING_CANDIDATE);
+    await openPage('/to-apply');
+    const imported = await page.request.post('/import', { form: { fileName: FILE_NAME, markdown: JOB_DESCRIPTION } });
+    expect(imported.ok()).toBe(true);
+    await openPage('/to-apply');
+    const name = new RegExp(`${FILE_NAME}|${TITLE}`);
+    await page
+      .getByRole('complementary')
+      .getByRole('listitem')
+      .filter({ hasText: name })
+      .getByRole('link', { name })
+      .click();
+    const extraction = page.getByRole('form', { name: 'Champs relevés par Claude' });
+    await expect(extraction.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
+
+    // The fake Claude never fails an extraction: its job is marked as if it had
+    const database = openDatabase();
+    database
+      .prepare(
+        `UPDATE "Job" SET "state" = 'failed', "log" = 'Claude n’a rien écrit.' WHERE "module" = 'extraction'
+          AND "postingId" IN (SELECT "id" FROM "Posting" WHERE "candidateId" = ?)`,
+      )
+      .run(DROPPING_CANDIDATE);
+    database.close();
+    await page.reload();
+    await expect(extraction.getByRole('status')).toHaveText('En échec');
+
+    await extraction.getByRole('button', { name: 'Relancer l’extraction' }).click();
+
+    await expect(page.getByRole('region', { name: 'Notifications alt+T' })).toContainText('Extraction relancée');
+    await expect(extraction.getByRole('status')).toHaveText('Prêt', { timeout: READY_TIMEOUT_MS });
   });
 });
 

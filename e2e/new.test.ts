@@ -1,13 +1,8 @@
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-
 import type { Locator, Page } from '@playwright/test';
 import { z } from 'zod/v4';
 
 import { expect, test, type IFront } from './candidate.ts';
-
-// How long a raw write waits for the server's own writes to release the database
-const BUSY_TIMEOUT_MS = 5000;
+import { openDatabase } from './harness.ts';
 
 // Ana, Eli and Tom each have one Posting of test/seed-front.ts, which only one test here sorts
 type Sorter = 'ana' | 'eli' | 'tom';
@@ -19,8 +14,7 @@ function titleOf(candidateId: Sorter): string {
 // The Candidate's one Posting back New, followed, whatever a previous run left: keeping it is never
 // undone through the front. Its reference comes back for the page.
 function resetToNew(candidateId: Sorter): string {
-  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
-  const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
+  const database = openDatabase();
   database
     .prepare(`UPDATE "Posting" SET "status" = 'new', "archivedAt" = NULL WHERE "candidateId" = ?`)
     .run(candidateId);

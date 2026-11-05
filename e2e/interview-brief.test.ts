@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { generate } from './generation.ts';
+import { READY_TIMEOUT_MS } from './harness.ts';
 import { findInterviews, forgetResearch, prepareInterview, runVersion } from './interview.ts';
 import { findOverflowing } from './overflow.ts';
 
@@ -8,9 +9,6 @@ import { findOverflowing } from './overflow.ts';
 // test marks it Applied, gives it an Interview and produces its Research first. The e2e worker runs
 // the jobs with the fake Claude (test/e2e-actions.server.ts).
 const REFERENCE = '2026-2416437';
-
-// The worker takes the job, its session runs, and the Posting page reads the state again
-const READY_TIMEOUT_MS = 15_000;
 
 // The Interview Brief the fake Claude writes, its « [à compléter : …] » filled in by the Candidate
 const CORRECTED_BRIEF = `# Fiche d’entretien factice

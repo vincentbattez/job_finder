@@ -45,6 +45,8 @@ export const ERROR_FR: typeof ERROR_EN = {
   notificationsNotSent: '{{failures}}',
 
   notNew: "L'Offre {{reference}} n'est plus Nouvelle : elle a déjà été triée.",
+  letterStillDraft:
+    "L'Offre {{reference}} a encore une Lettre de motivation en Brouillon : valide-la, ou marque l'Offre Postulée sans Lettre de motivation.",
   newNotSorted: "L'Offre {{reference}} est Nouvelle : garde-la ou écarte-la d'abord.",
   statusChange: "L'Offre {{reference}} est {{statusLabel}} : elle ne peut passer qu'en {{nextLabels}}.",
   toApplyAfterOutcome:

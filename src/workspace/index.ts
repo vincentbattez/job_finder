@@ -43,7 +43,7 @@ const CONVERSION_FOLDER = '.conversion';
 // The PDFs a Candidate brought for a Posting, until the worker converts each into a Version's folder
 const BROUGHT_FOLDER = '.brought';
 // A brought PDF's name in the folder of the Version it became
-const BROUGHT_PDF_FILE_NAME = 'brought.pdf';
+export const BROUGHT_PDF_FILE_NAME = 'brought.pdf';
 
 function slugify(text: string): string {
   return wordListOf(text).join('-');

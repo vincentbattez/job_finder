@@ -25,7 +25,6 @@ export type Actions = Awaited<ReturnType<typeof createActions>>;
 
 // The CLI, the front and the worker reach nothing but the actions (ADR-0003)
 export { messageOf } from '#/text/index.ts';
-export { profileDocumentKindOf } from '#/domain/index.ts';
 export { codedError, codedErrorOf, formatError, formatFailure } from '#/domain/coded-error.ts';
 export type { ErrorCode } from '#/domain/error.ts';
 export type { Artifact } from '#/domain/index.ts';

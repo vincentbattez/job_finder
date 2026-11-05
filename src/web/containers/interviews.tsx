@@ -3,13 +3,13 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useFetcher, useSearchParams } from 'react-router';
 
+import { hasTakenPlace } from '#/actions/interview-time.ts';
 import { summaryOf, type IArtifactVersions } from '#/web/components/artifact.ts';
 import {
   INTERVIEW_DOCUMENT_LIST,
   InterviewList,
   InterviewsEmpty,
   InterviewSummary,
-  isPast,
   revisionPathOf,
   type IInterview,
   type InterviewDocument,
@@ -43,7 +43,7 @@ function isInterviewDocument(value: string | null): value is InterviewDocument {
 function selectedOf(interviewList: InterviewDetail[], requested: number, now: number): InterviewDetail | undefined {
   return (
     interviewList.find(({ number }) => number === requested) ??
-    interviewList.find((interview) => !isPast(interview, now)) ??
+    interviewList.find((interview) => !hasTakenPlace(interview, new Date(now))) ??
     interviewList.at(-1)
   );
 }

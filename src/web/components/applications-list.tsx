@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { Actions } from '#/actions/index.ts';
 import { Tabs, TabsList, TabsTrigger } from '#/web/components/ui/tabs.tsx';
+import { useShortDate } from '#/web/components/use-short-date.ts';
 import {
   APPLICATION_TAB_LIST,
   countByApplicationTab,
@@ -79,8 +80,7 @@ export function ApplicationsList({
     nextInterviewAt,
     lastInterviewAt,
   }));
-  const shortDate = (date: Date) =>
-    date.getUTCFullYear() === now.getUTCFullYear() ? t('shortDate', { date }) : t('shortDateWithYear', { date });
+  const shortDate = useShortDate(now);
   const groupList = groupApplications(rowList, tab).map(({ key, itemList: groupItemList }) => ({
     key,
     label: t(`applications.group.${key}.label`),

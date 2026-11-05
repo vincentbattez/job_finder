@@ -2,6 +2,7 @@ import type { ActionFunctionArgs } from 'react-router';
 
 import { codedError } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
+import { readCandidate } from '#/web/candidate.server.ts';
 import { relayAction } from '#/web/relay-action.server.ts';
 
 // Archive and unarchive post here through a fetcher, beside the Status since Archived is a mark and not
@@ -20,7 +21,8 @@ export function action({ params, request }: ActionFunctionArgs) {
         break;
       }
       default: {
-        throw codedError('unknown_intent');
+        const { locale } = await readCandidate(request);
+        throw codedError('unknown_intent', {}, { locale });
       }
     }
     return null;

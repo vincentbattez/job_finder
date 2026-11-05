@@ -15,23 +15,15 @@ import {
   TrophyIcon,
   XIcon,
 } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useFetcher } from 'react-router';
+import { Link } from 'react-router';
 
+import { AppliedDialog } from '#/web/components/applied-dialog.tsx';
+import type { ILetterStanding } from '#/web/components/artifact.ts';
 import { revisionPathOf } from '#/web/components/interviews.tsx';
 import { HeaderActionLabel } from '#/web/components/page-header.tsx';
 import type { Status, Step } from '#/web/components/step-badge.tsx';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '#/web/components/ui/alert-dialog.tsx';
 import { Button } from '#/web/components/ui/button.tsx';
 import {
   DropdownMenu,
@@ -40,10 +32,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '#/web/components/ui/dropdown-menu.tsx';
-import type { IRefusal } from '#/web/failure.ts';
 
 import { InterviewDialog, type IInterviewPosting } from './interview-dialog.tsx';
-import { useFeedback } from './use-feedback.ts';
+import { IN_PROGRESS_STEP_LIST, usePostingMutations } from './use-posting-mutations.ts';
 
 interface IPostingActions {
   reference: string;
@@ -57,62 +48,8 @@ interface IPostingActions {
   nextInterviewNumber: number | null;
   // What the Interview Dialog reads, which its add-an-Interview action opens here
   posting: IInterviewPosting;
-  // Where the Letter stands before marking Applied: its latest Version still a Draft, and whether it has a
-  // Chosen Version, the one recorded as sent
-  letter: { draftNumber: number | null; hasChosen: boolean };
+  letter: ILetterStanding;
 }
-
-// Marking Applied while the Letter is not validated asks first (spec #125, « The Posting page »): validate the
-// Draft and mark Applied at once, or mark Applied without a Letter
-function AppliedDialog({
-  isOpen,
-  onOpenChange,
-  draftNumber,
-  onApply,
-}: Readonly<{
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  draftNumber: number | null;
-  onApply: (letterNumber: number | null) => void;
-}>) {
-  const { t } = useTranslation('posting');
-  return (
-    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t('appliedDialog.title')}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {draftNumber === null
-              ? t('appliedDialog.noLetterDescription')
-              : t('appliedDialog.draftDescription', { number: draftNumber })}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter className="sm:flex-wrap">
-          <AlertDialogCancel>{t('appliedDialog.cancel')}</AlertDialogCancel>
-          <AlertDialogAction
-            variant={draftNumber === null ? 'default' : 'outline'}
-            onClick={() => {
-              onApply(null);
-            }}
-          >
-            {t('appliedDialog.applyWithoutLetter')}
-          </AlertDialogAction>
-          {draftNumber !== null && (
-            <AlertDialogAction
-              onClick={() => {
-                onApply(draftNumber);
-              }}
-            >
-              {t('appliedDialog.validateAndApply')}
-            </AlertDialogAction>
-          )}
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
-const IN_PROGRESS_STEP_LIST: Set<Step> = new Set(['applied', 'invited', 'interviewed']);
 
 const OUTCOME_ICON_BY_STATUS = { hired: <TrophyIcon />, rejected: <ThumbsDownIcon /> };
 
@@ -132,57 +69,20 @@ export function PostingActions({
   letter,
 }: Readonly<IPostingActions>) {
   const { t } = useTranslation('posting');
-  const statusFetcher = useFetcher<IRefusal>();
-  const archiveFetcher = useFetcher<IRefusal>();
-  const keepFetcher = useFetcher<IRefusal>();
-  const submittedStatus = useRef<Status>('applied');
-  useFeedback(keepFetcher, () => t('page.kept'));
-  // Archiving a New Posting is dismissing it: the menu and the toast say so
+  const mutations = usePostingMutations({ reference, step, isArchived, letter });
+  const {
+    keep,
+    submitArchive,
+    changeStatus,
+    markApplied,
+    isStatusPending,
+    isAnyStatusPending,
+    isKeepPending,
+    isArchivePending,
+  } = mutations;
   const isNew = step === 'new';
-  useFeedback(statusFetcher, () =>
-    t('page.statusChanged', { statusLabel: t(`statusLabelByStatus.${submittedStatus.current}`, { ns: 'common' }) }),
-  );
   const archiveIntent = isArchived ? 'unarchive' : 'archive';
-  const submitArchive = (intent: 'archive' | 'unarchive') => {
-    void archiveFetcher.submit(
-      { intent },
-      { method: 'post', action: `/postings/${reference}/archive`, preventScrollReset: true },
-    );
-  };
-  useFeedback(
-    archiveFetcher,
-    () => {
-      if (isNew) {
-        return isArchived ? t('page.dismissed') : t('page.unarchived');
-      }
-      return isArchived ? t('page.archived') : t('page.unarchived');
-    },
-    () => ({
-      label: t('page.undo'),
-      onClick: () => {
-        submitArchive(archiveIntent);
-      },
-    }),
-  );
-  const [isAppliedDialogOpen, setIsAppliedDialogOpen] = useState(false);
-  const changeStatus = (status: Status, letterNumber: number | null = null) => {
-    submittedStatus.current = status;
-    void statusFetcher.submit(letterNumber === null ? { status } : { status, letterNumber }, {
-      method: 'post',
-      action: `/postings/${reference}/status`,
-      preventScrollReset: true,
-    });
-  };
-  // The Letter sent is the one recorded: Applied waits for the Candidate's word on a Letter not validated
-  const markApplied = () => {
-    if (letter.draftNumber === null && letter.hasChosen) {
-      changeStatus('applied');
-    } else {
-      setIsAppliedDialogOpen(true);
-    }
-  };
-  // Applied is what both To Apply and an outcome move to: its button alone spins while it is sent
-  const isApplying = statusFetcher.state !== 'idle' && submittedStatus.current === 'applied';
+  const isApplying = isStatusPending('applied');
   const isInProgress = IN_PROGRESS_STEP_LIST.has(step) && !isArchived;
   const outcomeList = (['hired', 'rejected'] as const).filter((status) => statusChoiceList.includes(status));
   const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false);
@@ -201,7 +101,7 @@ export function PostingActions({
       return (
         <Button
           size="sm"
-          isPending={archiveFetcher.state !== 'idle'}
+          isPending={isArchivePending}
           onClick={() => {
             submitArchive('unarchive');
           }}
@@ -214,16 +114,7 @@ export function PostingActions({
     switch (step) {
       case 'new': {
         return (
-          <Button
-            size="sm"
-            isPending={keepFetcher.state !== 'idle'}
-            onClick={() => {
-              void keepFetcher.submit(
-                {},
-                { method: 'post', action: `/postings/${reference}/keep`, preventScrollReset: true },
-              );
-            }}
-          >
+          <Button size="sm" isPending={isKeepPending} onClick={keep}>
             <CheckIcon />
             <HeaderActionLabel>{t('page.keep')}</HeaderActionLabel>
           </Button>
@@ -259,7 +150,7 @@ export function PostingActions({
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" isPending={statusFetcher.state !== 'idle'}>
+              <Button size="sm" isPending={isAnyStatusPending}>
                 <FlagIcon />
                 <HeaderActionLabel>{t('page.recordOutcome')}</HeaderActionLabel>
                 <ChevronDownIcon />
@@ -303,14 +194,7 @@ export function PostingActions({
   return (
     <>
       {renderPrimary()}
-      <AppliedDialog
-        isOpen={isAppliedDialogOpen}
-        onOpenChange={setIsAppliedDialogOpen}
-        draftNumber={letter.draftNumber}
-        onApply={(letterNumber) => {
-          changeStatus('applied', letterNumber);
-        }}
-      />
+      <AppliedDialog {...mutations.appliedDialog} />
       <InterviewDialog
         posting={posting}
         interview={null}
@@ -374,7 +258,7 @@ export function PostingActions({
           )}
           {(url !== null || repostOf !== null) && <DropdownMenuSeparator />}
           <DropdownMenuItem
-            disabled={archiveFetcher.state !== 'idle'}
+            disabled={isArchivePending}
             onSelect={() => {
               submitArchive(archiveIntent);
             }}

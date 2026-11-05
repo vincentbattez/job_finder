@@ -3,37 +3,17 @@ import { useLoaderData, type LoaderFunctionArgs, type MetaArgs, type ShouldReval
 
 import { localeOf, tFor } from '#/actions/i18n.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
-import { readCandidate } from '#/web/candidate.server.ts';
 import { PageHeader } from '#/web/components/page-header.tsx';
 import { ToApplyList } from '#/web/components/to-apply-list.tsx';
 import { useListFilters } from '#/web/containers/list-filters.tsx';
 import { PostingSheet, useSheetSelection } from '#/web/containers/posting-sheet.tsx';
-import { isPlaceChangeOnly, readListFilters } from '#/web/list-model.ts';
-import { readSheetPosting } from '#/web/posting-sheet.server.ts';
+import { isPlaceChangeOnly } from '#/web/list-model.ts';
+import { readListPage } from '#/web/list-page.server.ts';
 import { relayLoader } from '#/web/relay-action.server.ts';
 
 // The To Apply Postings the Candidate follows, or under the Archived filter the Archived ones
 export function loader({ request }: LoaderFunctionArgs) {
-  return relayLoader(request, async () => {
-    const { isArchived } = readListFilters(new URL(request.url).searchParams);
-    const { candidate, locale } = await readCandidate(request);
-    const listOf = async (isArchivedList: boolean) =>
-      candidate === null ? [] : ACTIONS.listToApply({ candidateId: candidate.id, isArchived: isArchivedList });
-    const itemList = await listOf(isArchived);
-    // Under Archived, the list holds them already
-    const archivedList = isArchived ? itemList : await listOf(true);
-    return {
-      candidate,
-      // meta runs outside React: it translates in the locale the loader gives it (ADR-0012)
-      locale,
-      itemList,
-      archivedCount: archivedList.length,
-      // The Posting of the Sheet the URL opens
-      sheetPosting: await readSheetPosting(request, candidate?.id ?? null),
-      // The day the groups are counted from, the same for the server's render and the browser's
-      now: new Date(),
-    };
-  });
+  return relayLoader(request, () => readListPage(request, (input) => ACTIONS.listToApply(input)));
 }
 
 // The City and the Region filter what the page holds already

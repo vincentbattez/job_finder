@@ -16,12 +16,13 @@ import {
   RevisionHeader,
   RevisionHero,
   RevisionSideSheet,
-  useNow,
+  TICK_MS,
   VanishedSections,
   type RevisionSide,
 } from '#/web/components/revision.tsx';
 import { Button } from '#/web/components/ui/button.tsx';
 import { Textarea } from '#/web/components/ui/textarea.tsx';
+import { useNow } from '#/web/components/use-now.ts';
 import type { IRefusal } from '#/web/failure.ts';
 
 import { useValidation } from './artifact-view.tsx';
@@ -146,7 +147,7 @@ export function Revision({
   now: loadedAt,
 }: Readonly<{ detail: PostingDetail; number: number; savedList: IRevisionSection[]; now: number }>) {
   const { t } = useTranslation('posting');
-  const now = useNow(loadedAt);
+  const now = useNow(TICK_MS, loadedAt);
   const [side, setSide] = useState<RevisionSide | null>(null);
   const [titleList, setTitleList] = useState<string[]>([]);
   const [readDraftNumber, setReadDraftNumber] = useState<number | null>(null);
@@ -178,7 +179,9 @@ export function Revision({
 
   function renderReader() {
     if (isReadingDraft) {
-      return <ArtifactReader key={`draft-${String(draft.version.number)}`} text={draft.text ?? ''} format="mdx" />;
+      return (
+        <ArtifactReader key={`draft-${String(draft.version.number)}`} text={draft.text ?? ''} format="mdx" isRevising />
+      );
     }
     if (chosen === undefined) {
       return <RevisionEmpty backTo={backTo} />;
@@ -188,6 +191,7 @@ export function Revision({
         key={`chosen-${String(chosen.version.number)}`}
         text={chosen.text ?? ''}
         format={brief?.format ?? 'mdx'}
+        isRevising
         margin={{
           onTitleListChange: setTitleList,
           render: ({ activeIndex }) => (

@@ -1,10 +1,8 @@
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-
 import type { Locator, Page } from '@playwright/test';
 import { z } from 'zod/v4';
 
 import { expect, test, type AsCandidate, type IFront } from './candidate.ts';
+import { openDatabase } from './harness.ts';
 import { findOverflowing } from './overflow.ts';
 
 // The lists on a phone (spec #125 stories 37 and 38): the map fills the screen and the list is a bottom
@@ -15,8 +13,6 @@ const HEADER_HEIGHT = 56;
 const PEEK_HEIGHT = 152;
 // How far from a snap point the drawer's top may settle, in pixels
 const SNAP_TOLERANCE = 4;
-// How long a raw write waits for the server's own writes to release the database
-const BUSY_TIMEOUT_MS = 5000;
 const DAY_MS = 86_400_000;
 
 // Max's Postings, in the order the seed imported them (test/seed-front.ts)
@@ -33,8 +29,7 @@ function dayFromToday(days: number): string {
 
 // Max's Postings placed, dated and To Apply, whatever a previous run left; their employer tells them apart
 function resetMax() {
-  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
-  const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
+  const database = openDatabase();
   const referenceList = z
     .array(z.object({ reference: z.string() }))
     .parse(database.prepare('SELECT "reference" FROM "Posting" WHERE "candidateId" = ? ORDER BY "id"').all('max'));

@@ -308,6 +308,8 @@ const READ_VERSION_SCHEMA = z.object({
   number: z.int(),
   posting: z.object({ reference: z.string() }),
   interview: VERSION_INTERVIEW_SCHEMA,
+  // The Custom Artifact it is the single Version of
+  customArtifact: z.object({ title: z.string() }).nullable(),
 });
 
 // An Input a Version's run read, by its key, with the Version it read for an Artifact Input
@@ -404,25 +406,15 @@ export const RECIPIENTS_SCHEMA = z
 
 export type Recipients = z.infer<typeof RECIPIENTS_SCHEMA>;
 
+// The source of a Posting the Candidate imported, which no Source of the registry lists
+export const IMPORT_SOURCE_ID = 'import';
+
 // A Markdown file of the data folder: of the Profile of a Candidate, such as facts.md or cv.md
 const MARKDOWN_FILE_SHAPE = { fileName: z.string(), markdown: z.string() };
 
 export const MARKDOWN_FILE_SCHEMA = z.object(MARKDOWN_FILE_SHAPE).brand<'Domain'>();
 
 export type MarkdownFile = z.infer<typeof MARKDOWN_FILE_SCHEMA>;
-
-// A document of the Profile, told apart by its name (spec #125): any other name is an Annex
-type ProfileDocumentKind = 'annex' | 'cv' | 'facts' | 'past_letter';
-
-export function profileDocumentKindOf(fileName: string): ProfileDocumentKind {
-  if (fileName === 'cv.md') {
-    return 'cv';
-  }
-  if (fileName === 'facts.md') {
-    return 'facts';
-  }
-  return /^letter-.*\.md$/u.test(fileName) ? 'past_letter' : 'annex';
-}
 
 // A Markdown file dated by its last write: a document of the Profile, whose Past Letters are dated by
 // the day they were added
@@ -481,11 +473,32 @@ const PROMPT_SCHEMA = z
   })
   .brand<'Domain'>();
 
+// A Past Letter is one of the Profile's or the Chosen Letter of another Applied Posting: one set either way
+const INPUT_KIND_SCHEMA = z.enum([
+  'job_description',
+  'artifact',
+  'custom_artifact',
+  'notes',
+  'profile_document',
+  'past_letter',
+]);
+
+// An Input a Version read, with what the front needs to name it among the Inputs it was produced from
+const RECORDED_INPUT_DETAIL_SCHEMA = z.object({
+  key: z.string(),
+  kind: INPUT_KIND_SCHEMA,
+  fileName: z.string().nullable(),
+  title: z.string().nullable(),
+  artifact: ARTIFACT_SCHEMA.nullable(),
+  readVersion: PROMPT_READ_VERSION_SCHEMA.nullable(),
+});
+
 // A Version with its text and its Original (ADR-0019): whether the Candidate may validate it, making it the
 // Chosen Version, and correct its text; the text is null while it runs or once it failed, the Original null
 // for a Version the Candidate brought
 const VERSION_DETAIL_SCHEMA = z.object({
   version: VERSION_SCHEMA,
+  inputList: z.array(RECORDED_INPUT_DETAIL_SCHEMA),
   isValidatable: z.boolean(),
   isCorrectable: z.boolean(),
   text: z.string().nullable(),
@@ -615,15 +628,6 @@ export type PostingDetail = z.infer<typeof POSTING_DETAIL_SCHEMA>;
 const INPUT_MODE_SCHEMA = z.enum(['required', 'default', 'optional']);
 // Why an Input cannot be unchecked, which the front words
 const INPUT_REASON_SCHEMA = z.enum(['job_description', 'required_artifact', 'profile_core']);
-// A Past Letter is one of the Profile's or the Chosen Letter of another Applied Posting: one set either way
-const INPUT_KIND_SCHEMA = z.enum([
-  'job_description',
-  'artifact',
-  'custom_artifact',
-  'notes',
-  'profile_document',
-  'past_letter',
-]);
 
 export type InputMode = z.infer<typeof INPUT_MODE_SCHEMA>;
 export type InputReason = z.infer<typeof INPUT_REASON_SCHEMA>;

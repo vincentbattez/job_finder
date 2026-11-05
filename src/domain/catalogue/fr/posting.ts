@@ -90,6 +90,7 @@ export const POSTING_FR: typeof POSTING_EN = {
   // Every Artifact is feminine in French: la Recherche, la Lettre, la Fiche d’entretien, la Visualisation
   extractionLabel: 'Champs relevés par Claude',
   relaunchExtraction: 'Relancer l’extraction',
+  extractionRelaunched: 'Extraction relancée',
 
   versionNumber: 'v{{versionNumber}}',
   validationLabelByValidation: { draft: 'Brouillon', validated: 'Validée' },
@@ -134,6 +135,7 @@ export const POSTING_FR: typeof POSTING_EN = {
     modeRead: 'Lire',
     modeEdit: 'Modifier',
     producedOn: 'Produite par l’IA le {{date, datetime(dateStyle: long; timeZone: Europe/Paris)}}',
+    producedFrom: 'Produite à partir de : {{inputs}}',
     broughtOn: 'Apportée par toi le {{date, datetime(dateStyle: long; timeZone: Europe/Paris)}} · pas d’Original',
     textLabel: 'Texte de la Version {{number}}',
     instructionsSummary: '{{originLabel}} · Consignes de cette Version',
@@ -258,6 +260,8 @@ export const POSTING_FR: typeof POSTING_EN = {
       'Ta Lettre de motivation est encore un Brouillon (Version {{number}}). Valide-la pour garder trace de celle que tu as envoyée.',
     noLetterDescription:
       'Cette Offre n’a pas de Lettre de motivation validée. Marque-la Postulée quand même si tu as postulé autrement.',
+    olderChosenDescription:
+      'Sans Lettre de motivation, la Version {{number}}, retenue jusqu’ici, ne comptera plus comme envoyée.',
     validateAndApply: 'Valider la Lettre de motivation et marquer Postulée',
     applyWithoutLetter: 'Marquer Postulée sans Lettre de motivation',
     cancel: 'Annuler',
@@ -288,6 +292,7 @@ export const POSTING_FR: typeof POSTING_EN = {
       cv: 'CV',
       facts: 'Faits',
       customArtifact: 'Document · {{title}}',
+      customArtifactGone: 'Document supprimé',
       annex: 'Annexe · {{name}}',
       pastLetter: 'Lettre passée · {{name}}',
       sentLetter: 'Lettre de motivation envoyée · {{title}}',

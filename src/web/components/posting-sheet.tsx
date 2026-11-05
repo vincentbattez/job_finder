@@ -16,9 +16,9 @@ import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import { Link } from 'react-router';
-import remarkGfm from 'remark-gfm';
 
 import type { Actions } from '#/actions/index.ts';
+import { REMARK_PLUGIN_LIST } from '#/web/components/markdown-plugins.ts';
 import { Button } from '#/web/components/ui/button.tsx';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '#/web/components/ui/sheet.tsx';
 
@@ -53,7 +53,6 @@ const LINE_STATE_CLASS: Record<ArtifactLineState, string> = {
 
 // The titles of the Job Description sit below the Sheet's own sections
 const COMPONENT_BY_ELEMENT: Components = { h1: 'h4', h2: 'h4', h3: 'h5', h4: 'h6' };
-const REMARK_PLUGIN_LIST = [remarkGfm];
 
 function Section({ title, action, children }: Readonly<{ title: string; action?: ReactNode; children: ReactNode }>) {
   const headingId = useId();

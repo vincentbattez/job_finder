@@ -5,10 +5,11 @@ import type { Actions } from '#/actions/index.ts';
 export async function applyTo(
   actions: Pick<Actions, 'readPosting' | 'keep' | 'changeStatus'>,
   reference: unknown,
+  letterAnswer: { isWithoutLetter?: boolean } = {},
 ): Promise<void> {
   const { posting } = await actions.readPosting({ reference });
   if (posting.status === 'new') {
     await actions.keep({ reference });
   }
-  await actions.changeStatus({ reference, status: 'applied' });
+  await actions.changeStatus({ reference, status: 'applied', ...letterAnswer });
 }

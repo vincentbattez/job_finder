@@ -1,9 +1,10 @@
+import { PARIS_DAY_FORMAT } from '#/actions/paris-time.ts';
+import type { Status, Step } from '#/web/components/step-badge.tsx';
+
 // The groups of the lists, attention first (spec #125 « Lists »): a Posting joins the first group that
 // takes it, and each group has its own order. Days are counted in Paris time, 0 meaning today.
 
 const DAY_MS = 86_400_000;
-// A calendar day in France, as « 2026-11-20 »
-const PARIS_DAY_FORMAT = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' });
 // The last day of the week group, then of the month group
 const WEEK_LAST_DAY = 7;
 const MONTH_LAST_DAY = 31;
@@ -172,8 +173,8 @@ export const APPLICATION_TAB_LIST: ApplicationTab[] = ['in_progress', 'hired', '
 export type ApplicationGroupKey = 'interviewed' | 'invited' | 'applied' | 'hired' | 'rejected';
 
 interface IApplicationDated {
-  step: string;
-  status: string;
+  step: Step;
+  status: Status;
   deadline: Date | null;
   appliedAt: Date | null;
   nextInterviewAt: Date | null;

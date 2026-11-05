@@ -1,15 +1,14 @@
 import { tFor } from '#/domain/catalogue/i18n.ts';
 import { codedError } from '#/domain/coded-error.ts';
 import type { Interview, Locale, Posting, Status, Step } from '#/domain/index.ts';
+import { hasTakenPlace } from '#/domain/interview-time.ts';
+import { PARIS_DAY_FORMAT } from '#/domain/paris-time.ts';
 
 // What the status rules read of a Posting
 type PostingStatus = Pick<Posting, 'reference' | 'status' | 'appliedAt'>;
 
 // What the Status choices read of a Posting: an Interview proves its Letter was sent
 type PostingWithInterview = Pick<Posting, 'status' | 'appliedAt'> & { hasInterview: boolean };
-
-// A calendar day in France, as « 2026-11-20 », so that two days compare as strings
-const FRANCE_DAY_FORMAT = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' });
 
 // The last day to apply: the Deadline, else the publication date plus the default delay of the
 // config (GLOSSARY.md « Deadline »). The Source gives the Deadline as a day, at midnight UTC.
@@ -25,7 +24,7 @@ function findLastDay(
   }
   const lastDay = new Date(publishedAt);
   lastDay.setUTCMonth(lastDay.getUTCMonth() + defaultDelayMonths);
-  return FRANCE_DAY_FORMAT.format(lastDay);
+  return PARIS_DAY_FORMAT.format(lastDay);
 }
 
 // Computed, never stored, since it depends on the day; a Posting without any date never expires
@@ -35,19 +34,7 @@ export function isExpired(
   defaultDelayMonths: number,
 ): boolean {
   const lastDay = findLastDay(posting, defaultDelayMonths);
-  return lastDay !== undefined && FRANCE_DAY_FORMAT.format(now) > lastDay;
-}
-
-const MINUTE_MS = 60_000;
-
-// When an Interview ends, its start plus its duration
-export function findInterviewEnd({ startAt, durationMinutes }: Pick<Interview, 'startAt' | 'durationMinutes'>): Date {
-  return new Date(startAt.getTime() + durationMinutes * MINUTE_MS);
-}
-
-// Taken place once its start plus its duration has passed: an Interview in progress is still to come
-export function hasTakenPlace(interview: Pick<Interview, 'startAt' | 'durationMinutes'>, now: Date): boolean {
-  return findInterviewEnd(interview).getTime() <= now.getTime();
+  return lastDay !== undefined && PARIS_DAY_FORMAT.format(now) > lastDay;
 }
 
 // Computed, never stored, since it depends on the time (ADR-0009): an outcome wins over the Interviews,

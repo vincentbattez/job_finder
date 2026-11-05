@@ -11,9 +11,10 @@ import {
   type Posting,
 } from '#/domain/index.ts';
 import { DEFAULT_DURATION_MINUTES } from '#/domain/interview-duration.ts';
+import { findInterviewEnd } from '#/domain/interview-time.ts';
 import { dateOfParisDateTime } from '#/domain/paris-time.ts';
 import { formatCalendar } from '#/ical/index.ts';
-import { findInterviewEnd, hasBeenApplied } from '#/status/index.ts';
+import { hasBeenApplied } from '#/status/index.ts';
 
 import { REFERENCE_INPUT_SCHEMA, type ActionContext } from './context.ts';
 

@@ -2,6 +2,7 @@ import { z } from 'zod/v4';
 
 import { expect, test } from './candidate.ts';
 import { goToRecap, openGeneration } from './generation.ts';
+import { READY_TIMEOUT_MS } from './harness.ts';
 import { forgetResearch, runVersion } from './interview.ts';
 
 // Each test launches modules on a Posting of its own, which test/seed-front.ts prepares: the data
@@ -9,9 +10,6 @@ import { forgetResearch, runVersion } from './interview.ts';
 // sessions are short (test/e2e-actions.server.ts).
 const FAILED_RESEARCH_REFERENCE = '2026-2412591';
 const NOTIFICATION_FAILED_REFERENCE = '2026-2445609';
-
-// The worker takes the job, its session runs, and the Posting page reads the state again
-const READY_TIMEOUT_MS = 15_000;
 
 const RECEIVED_NOTIFICATION_LIST_SCHEMA = z.array(
   z.object({ service: z.string(), title: z.string(), message: z.string() }),

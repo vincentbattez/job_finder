@@ -2,6 +2,7 @@ import type { ActionFunctionArgs } from 'react-router';
 
 import { codedError } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
+import { readCandidate } from '#/web/candidate.server.ts';
 import { relayAction } from '#/web/relay-action.server.ts';
 
 // The Interview Dialog and the Interviews tab post here through a fetcher, which revalidates the page;
@@ -34,7 +35,8 @@ export function action({ params, request }: ActionFunctionArgs) {
         break;
       }
       default: {
-        throw codedError('unknown_intent');
+        const { locale } = await readCandidate(request);
+        throw codedError('unknown_intent', {}, { locale });
       }
     }
     return null;

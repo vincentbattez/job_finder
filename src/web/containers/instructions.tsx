@@ -5,7 +5,7 @@ import { useFetcher } from 'react-router';
 import type { Actions } from '#/actions/index.ts';
 import { InstructionsEditor } from '#/web/components/instructions-editor.tsx';
 import { SettingsSection } from '#/web/components/settings-section.tsx';
-import type { IRefusal } from '#/web/failure.ts';
+import { isRefused, type IRefusal } from '#/web/failure.ts';
 
 import { useFeedback } from './use-feedback.ts';
 import { useSettled } from './use-settled.ts';
@@ -26,7 +26,7 @@ export function useInstructions(instructions: ModuleInstructions | null) {
   );
   // Once saved or restored, the editor shows the Instructions in effect again; a refusal keeps the edit
   useSettled(fetcher, (answer) => {
-    if (typeof answer?.error !== 'string') {
+    if (!isRefused(answer)) {
       setDraft(null);
     }
   });

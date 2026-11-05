@@ -59,6 +59,8 @@ export const ERROR_EN = {
 
   // Statuses
   notNew: 'Posting {{reference}} is no longer New: it was already sorted.',
+  letterStillDraft:
+    'Posting {{reference}} still has a Draft Letter: validate it, or mark the Posting Applied without a Letter.',
   newNotSorted: 'Posting {{reference}} is New: keep it or dismiss it first.',
   statusChange: 'Posting {{reference}} is {{statusLabel}}: it can only move to {{nextLabels}}.',
   toApplyAfterOutcome:

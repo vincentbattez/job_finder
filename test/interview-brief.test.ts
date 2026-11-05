@@ -217,9 +217,9 @@ describe('interview brief', () => {
     expect(session).toMatchObject({ isReadingDirectory: false, isSearchingWeb: false });
     expect(session?.fixedPrompt).toContain('The Inputs hold the Chosen Letter');
     expect(readVersionsOf(version)).toEqual([
-      { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
-      { artifact: 'letter', number: 1, posting: { reference: REFERENCE }, interview: null },
-      { artifact: 'letter', number: 1, posting: { reference: SENT_REFERENCE }, interview: null },
+      { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null, customArtifact: null },
+      { artifact: 'letter', number: 1, posting: { reference: REFERENCE }, interview: null, customArtifact: null },
+      { artifact: 'letter', number: 1, posting: { reference: SENT_REFERENCE }, interview: null, customArtifact: null },
     ]);
   });
 
@@ -234,7 +234,7 @@ describe('interview brief', () => {
     expect(session?.fixedPrompt).toContain('The Candidate has no Letter for this Posting');
     expect(session?.message).not.toContain('Letter');
     expect(readVersionsOf(version)).toEqual([
-      { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null },
+      { artifact: 'research', number: 1, posting: { reference: REFERENCE }, interview: null, customArtifact: null },
     ]);
   });
 });

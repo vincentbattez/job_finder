@@ -10,7 +10,7 @@ import type { IArtifactVersions, IVersionDetail } from '#/web/components/artifac
 import { BringDialog, type Brought } from '#/web/components/bring-dialog.tsx';
 import type { IRecipients } from '#/web/components/recipients.tsx';
 import { Button } from '#/web/components/ui/button.tsx';
-import type { IRefusal } from '#/web/failure.ts';
+import { isRefused, type IRefusal } from '#/web/failure.ts';
 
 import { useGeneration } from './generation.tsx';
 import { InterviewField } from './interview-field.tsx';
@@ -80,7 +80,7 @@ function VersionEditor({
   const [draft, setDraft] = useState(text);
   useFeedback(fetcher, () => t('artifactView.saved', { number }));
   useSettled(fetcher, (answer) => {
-    if (typeof answer?.error !== 'string') {
+    if (!isRefused(answer)) {
       onDone();
     }
   });
@@ -214,6 +214,7 @@ export function ArtifactView({
       {generation.panel}
       <ArtifactViewView
         {...artifactVersions}
+        reference={reference}
         recipients={recipients}
         selectedNumber={current.number}
         mode={current.mode}

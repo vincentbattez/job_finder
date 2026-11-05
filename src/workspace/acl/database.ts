@@ -73,6 +73,7 @@ const VERSION_INCLUDE = {
           number: true,
           posting: { select: { reference: true } },
           interview: VERSION_INTERVIEW_SELECT,
+          customArtifact: { select: { title: true } },
         },
       },
     },
@@ -718,6 +719,13 @@ export function openDatabase(databasePath: string) {
         prisma.version.update({ where: { id: version.id }, data: { validation: 'validated' } }),
         ...chooseStatementList(version),
       ]);
+    },
+
+    async clearChosenVersion(posting: Posting, artifact: Artifact, interview: Interview | null): Promise<void> {
+      await prisma.version.updateMany({
+        where: { postingId: posting.id, artifact, interviewId: interview?.id ?? null, isChosen: true },
+        data: { isChosen: false },
+      });
     },
 
     // Every ready Version the AI produced, with its Posting, which keeps an Original (ADR-0019)

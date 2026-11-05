@@ -3,6 +3,7 @@ import { CheckIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import type { Actions } from '#/actions/index.ts';
+import { useShortDate } from '#/web/components/use-short-date.ts';
 import { daysUntil, groupByDeadline, type DeadlineGroupKey } from '#/web/list-model.ts';
 
 import { MapList, type IMapListFiltering, type ISheetSelection } from './map-list.tsx';
@@ -33,12 +34,6 @@ const CHIP_CLASS_BY_VALIDATION: Record<Validation, string> = {
 
 type ListItem = Awaited<ReturnType<Actions['listToApply']>>[number];
 type Validation = ListItem['research'];
-
-function useShortDate() {
-  const { t } = useTranslation('lists');
-  return (date: Date, now: Date) =>
-    date.getUTCFullYear() === now.getUTCFullYear() ? t('shortDate', { date }) : t('shortDateWithYear', { date });
-}
 
 function Countdown({ deadline, group, now }: Readonly<{ deadline: Date; group: DeadlineGroupKey; now: Date }>) {
   const { t } = useTranslation('lists');
@@ -95,7 +90,7 @@ export function ToApplyList({
 }: Readonly<{ itemList: ListItem[]; now: Date; filtering?: IMapListFiltering | undefined } & ISheetSelection>) {
   type Row = ListItem['posting'] & { research: Validation; letter: Validation };
   const { t } = useTranslation('lists');
-  const shortDate = useShortDate();
+  const shortDate = useShortDate(now);
   const rowList: Row[] = itemList.map(({ posting, research, letter }) => ({ ...posting, research, letter }));
   const groupList = groupByDeadline(rowList, now).map(({ key, itemList: groupItemList }) => ({
     key,
@@ -125,12 +120,12 @@ export function ToApplyList({
         <>
           {row.deadline !== null && (
             <span className="flex items-baseline gap-1.5">
-              <span className="tabular-nums">{shortDate(row.deadline, now)}</span>
+              <span className="tabular-nums">{shortDate(row.deadline)}</span>
               <Countdown deadline={row.deadline} group={groupByReference.get(row.reference) ?? 'none'} now={now} />
             </span>
           )}
           {row.startDate !== null && (
-            <span className="text-muted-foreground">{t('startDate', { date: shortDate(row.startDate, now) })}</span>
+            <span className="text-muted-foreground">{t('startDate', { date: shortDate(row.startDate) })}</span>
           )}
           <span className="flex items-center gap-1">
             <ValidationChip artifact="research" validation={row.research} />

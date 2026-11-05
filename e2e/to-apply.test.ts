@@ -1,15 +1,12 @@
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-
 import type { Locator, Page } from '@playwright/test';
 import { z } from 'zod/v4';
 
-import { expect, test, type IFront } from './candidate.ts';
+import { PARIS_DAY_FORMAT } from '#/domain/paris-time.ts';
 
-// How long a raw write waits for the server's own writes to release the database
-const BUSY_TIMEOUT_MS = 5000;
+import { expect, test, type IFront } from './candidate.ts';
+import { openDatabase } from './harness.ts';
+
 const DAY_MS = 86_400_000;
-const PARIS_DAY_FORMAT = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' });
 
 // Mila's six imported Postings (test/seed-front.ts), in the order the seed imported them, as this file
 // places and dates them: a Deadline counted in days from today in Paris, null for none
@@ -31,8 +28,7 @@ function dayFromToday(days: number): string {
 // Mila's Postings as this file needs them, To Apply and followed, whatever a previous run left. Their
 // title, which names their folder, stays the seed's: their employer tells them apart
 function resetMila() {
-  const { dataDirectory } = z.object({ dataDirectory: z.string() }).parse(test.info().config.metadata);
-  const database = new DatabaseSync(path.join(dataDirectory, 'job_finder.sqlite'), { timeout: BUSY_TIMEOUT_MS });
+  const database = openDatabase();
   const referenceList = z
     .array(z.object({ reference: z.string() }))
     .parse(database.prepare('SELECT "reference" FROM "Posting" WHERE "candidateId" = ? ORDER BY "id"').all('mila'));

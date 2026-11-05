@@ -1,6 +1,6 @@
 import { cn } from 'cn';
 import { CheckCircle2Icon, ChevronDownIcon, CircleAlertIcon, Loader2Icon, XIcon } from 'lucide-react';
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
@@ -8,6 +8,7 @@ import type { Actions } from '#/actions/index.ts';
 import { Button } from '#/web/components/ui/button.tsx';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '#/web/components/ui/collapsible.tsx';
 import { Progress } from '#/web/components/ui/progress.tsx';
+import { useNow } from '#/web/components/use-now.ts';
 import { NEAR_MISSES_ANCHOR } from '#/web/components/watches.tsx';
 
 export type DetectionOverview = Awaited<ReturnType<Actions['followDetection']>>;
@@ -26,20 +27,6 @@ const ICON_BY_STATE: Record<CardState, ReactNode> = {
   done: <CheckCircle2Icon aria-hidden className="size-4 shrink-0 text-validated-foreground" />,
   failed: <CircleAlertIcon aria-hidden className="size-4 shrink-0 text-destructive" />,
 };
-
-// The time now, read again at each interval: the elapsed time and the relative date move on their own
-function useNow(intervalMs: number): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(Date.now());
-    }, intervalMs);
-    return () => {
-      clearInterval(interval);
-    };
-  }, [intervalMs]);
-  return now;
-}
 
 // "2 hours ago", in the unit that fits, in the locale of the page
 function formatRelative(date: Date, now: number, language: string): string {
