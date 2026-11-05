@@ -38,7 +38,7 @@ const SLOW_FILE_LIST: ISlowFile[] = [
     budgetMs: 10_000,
     reason: 'migrates an older layout with the Prisma CLI (ADR-0004)',
   },
-  { file: 'test/architecture.test.ts', budgetMs: 12_000, reason: 'builds the archunit graph of the whole project' },
+  { file: 'test/architecture.test.ts', budgetMs: 8000, reason: 'builds the archunit graph of the whole project' },
   {
     file: 'test/time-budget.test.ts',
     budgetMs: 15_000,

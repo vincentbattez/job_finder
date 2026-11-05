@@ -65,8 +65,8 @@ export default defineConfig({
       wait: { stdout: /Fake Home Assistant ready/ },
     },
     {
-      // The e2e mode serves the actions with the fakes of the external boundaries (vite.config.ts)
-      command: `node test/seed-front.ts && react-router dev --mode e2e --port ${PORT} --strictPort`,
+      // The e2e mode builds the actions with the fakes of the external boundaries (vite.config.ts)
+      command: `node test/seed-front.ts && react-router build --mode e2e && node test/e2e-server.ts ${PORT}`,
       env: ENV,
       url: `${BASE_URL}/`,
       // A server already running on the port may read data/: always start the one seeded above
