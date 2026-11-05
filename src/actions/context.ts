@@ -3,7 +3,7 @@ import path from 'node:path';
 import { z } from 'zod/v4';
 
 import { CLAUDE_CODE, type IAiSession } from '#/ai-session/acl/claude-code.ts';
-import { createArtifacts } from '#/artifact/index.ts';
+import { createArtifacts, keepMissingOriginals } from '#/artifact/index.ts';
 import { localeOf } from '#/domain/catalogue/i18n.ts';
 import { codedError, type CodedError } from '#/domain/coded-error.ts';
 import {
@@ -82,6 +82,7 @@ export async function openContext({
   const apiGeo = createApiGeo(fetch);
   const sourceList = sourceFactoryList.map((createSource) => createSource(fetch));
   await fillStartDates(workspace, sourceList);
+  await keepMissingOriginals(workspace);
 
   async function findCandidate(rawInput: unknown): Promise<Candidate> {
     const { candidateId } = CANDIDATE_INPUT_SCHEMA.parse(rawInput);
