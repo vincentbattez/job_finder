@@ -1,6 +1,17 @@
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  closeSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -14,7 +25,7 @@ import { openContext } from '#/actions/context.ts';
 import { i18nOf } from '#/actions/i18n.ts';
 import { createActions, type Actions } from '#/actions/index.ts';
 import { ArtifactText } from '#/web/components/mdx/artifact-text.tsx';
-import { copyAsReadOnly } from '#/workspace/acl/files.ts';
+import { copyAsReadOnly, writeTextFile } from '#/workspace/acl/files.ts';
 
 import { createFakeNotificationChannel, LEA_TARGET } from './fake-notification-channel.ts';
 import { writeOlderDatabase } from './older-database.ts';
@@ -888,6 +899,33 @@ describe('the Versions of an older data folder', () => {
     writeFileSync(textPath, RESEARCH);
     copyAsReadOnly(textPath, originalPath);
     writeFileSync(textPath, '# Corrected\n');
+
+    copyAsReadOnly(textPath, originalPath);
+
+    expect(readFileSync(originalPath, 'utf8')).toBe(RESEARCH);
+    expect(statSync(originalPath).mode & 0o777).toBe(0o444);
+  });
+
+  // Rewritten in place, the text the other launch is copying would freeze as a truncated Original
+  it('leave whole the text the other launch is copying while rewriting it', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'jf-original-'));
+    const textPath = path.join(directory, 'research.md');
+    writeFileSync(textPath, RESEARCH);
+    const textBeingCopied = openSync(textPath, 'r');
+
+    writeTextFile(textPath, '# Escaped\n');
+
+    expect(readFileSync(textBeingCopied, 'utf8')).toBe(RESEARCH);
+    expect(readFileSync(textPath, 'utf8')).toBe('# Escaped\n');
+    closeSync(textBeingCopied);
+  });
+
+  it('close an Original the other launch has copied but not closed yet', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'jf-original-'));
+    const textPath = path.join(directory, 'research.md');
+    const originalPath = path.join(directory, 'original.md');
+    writeFileSync(textPath, '# Corrected\n');
+    writeFileSync(originalPath, RESEARCH, { mode: 0o644 });
 
     copyAsReadOnly(textPath, originalPath);
 
