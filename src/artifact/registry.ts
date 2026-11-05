@@ -1,7 +1,15 @@
 import type { IAiModule } from '#/ai-module/index.ts';
 import { tFor } from '#/domain/catalogue/i18n.ts';
 import { codedError } from '#/domain/coded-error.ts';
-import { ARTIFACT_SCHEMA, type Artifact, type Candidate, type Interview, type Locale } from '#/domain/index.ts';
+import {
+  ARTIFACT_SCHEMA,
+  CUSTOM_ARTIFACT_FILE_NAME,
+  type Artifact,
+  type Candidate,
+  type Interview,
+  type Locale,
+  type Version,
+} from '#/domain/index.ts';
 import { INTERVIEW_BRIEF_MODULE } from '#/modules/interview-brief/index.ts';
 import { LETTER_MODULE } from '#/modules/letter/index.ts';
 import { PORTRAIT_MODULE } from '#/modules/portrait/index.ts';
@@ -15,6 +23,11 @@ export const AI_MODULE_BY_ARTIFACT: Record<Artifact, IAiModule> = {
   portrait: PORTRAIT_MODULE,
   interview_brief: INTERVIEW_BRIEF_MODULE,
 };
+
+// The file of a Version holding its text: its module's, or a Custom Artifact's
+export function versionFileNameOf({ artifact }: Pick<Version, 'artifact'>): string {
+  return artifact === 'custom' ? CUSTOM_ARTIFACT_FILE_NAME : AI_MODULE_BY_ARTIFACT[artifact].fileName;
+}
 
 // Whether its Versions are attached to an Interview rather than to the Posting, as its module declares
 export function isAttachedToInterview(artifact: Artifact): boolean {

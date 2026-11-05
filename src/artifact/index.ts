@@ -7,10 +7,13 @@ import type { ErrorCode } from '#/domain/error.ts';
 import {
   ARTIFACT_SCHEMA,
   ARTIFACT_STATE_SCHEMA,
+  CUSTOM_ARTIFACT_FILE_NAME,
+  CUSTOM_ARTIFACT_SCHEMA,
   ORIGINAL_FILE_NAME,
   type Artifact,
   type ArtifactState,
   type Candidate,
+  type CustomArtifact,
   type Interview,
   type Job,
   type Locale,
@@ -355,6 +358,7 @@ export function createArtifacts({
           artifact,
           refusal: run.refusal === null ? null : wordForFront(run.refusal),
           isSearchingWeb: aiModule.isSearchingWeb === true,
+          isReadingProfile: aiModule.isReadingProfile === true,
           nextNumber: (versionList.at(-1)?.number ?? 0) + 1,
           chosenNumber: chosenVersion?.number ?? null,
           inputList: inputList.map(({ readVersion, ...input }) => ({
@@ -474,6 +478,17 @@ export function createArtifacts({
     return findCandidate({ candidateId: posting.candidateId });
   }
 
+  // As the Documents section lists it, the key its Input goes by in a run
+  function customArtifactOf(posting: Posting, version: Version): CustomArtifact {
+    return CUSTOM_ARTIFACT_SCHEMA.parse({
+      key: `custom:${String(version.customArtifact?.id)}`,
+      title: version.customArtifact?.title,
+      interviewNumber: version.interview?.number ?? null,
+      text: workspace.readVersionFile(posting, version, CUSTOM_ARTIFACT_FILE_NAME) ?? '',
+      createdAt: version.createdAt,
+    });
+  }
+
   return {
     // Checked in the order jf and the front tell them: the Posting, the Artifact (or its module, under jf run,
     // whose unknown name has its own code), then its Interview
@@ -490,6 +505,35 @@ export function createArtifacts({
           : parseArtifactName(name.module, candidate.locale, 'unknown_module');
       const target = await findTarget(posting, artifact, name.interview, candidate.locale);
       return handleOf(target, artifact, candidate, jobListReaderOf(posting));
+    },
+
+    // A Custom Artifact of the Posting, or of one of its Interviews: its single Version, Validated and Chosen
+    // from creation, is the Candidate's text (spec #125)
+    async createCustom({
+      posting,
+      interview: interviewNumber,
+      title,
+      text,
+    }: {
+      posting: Posting;
+      interview?: number | undefined;
+      title: string;
+      text: string;
+    }): Promise<CustomArtifact> {
+      const { locale } = await candidateOf(posting);
+      const interview = interviewNumber === undefined ? null : await workspace.findInterview(posting, interviewNumber);
+      if (interview === null && interviewNumber !== undefined) {
+        throw codedError('unknown_interview', { reference: posting.reference, number: interviewNumber }, { locale });
+      }
+      const version = await workspace.createCustomArtifact(posting, interview, title);
+      workspace.writeVersionDocument(posting, version, CUSTOM_ARTIFACT_FILE_NAME, text);
+      return customArtifactOf(posting, version);
+    },
+
+    // Those of the Posting and of its Interviews, in the order they were added
+    async listCustomOf(posting: Posting): Promise<CustomArtifact[]> {
+      const versionList = await workspace.listCustomVersions(posting);
+      return versionList.map((version) => customArtifactOf(posting, version));
     },
 
     // In the order the Posting page and jf edit list them: the Posting's, then each Interview's, by date

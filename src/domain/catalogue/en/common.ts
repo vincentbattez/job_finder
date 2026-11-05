@@ -1,4 +1,4 @@
-import type { Artifact, Locale, Step } from '#/domain/index.ts';
+import type { Locale, Step, Version } from '#/domain/index.ts';
 
 // The copy several screens, the CLI and the messages share, named as GLOSSARY.md names them
 export const COMMON_EN = {
@@ -24,7 +24,9 @@ export const COMMON_EN = {
     letter: 'Letter',
     portrait: 'Portrait',
     interview_brief: 'Interview Brief',
-  } satisfies Record<Artifact, string>,
+    // A Custom Artifact, the Candidate's own document
+    custom: 'Document',
+  } satisfies Record<Version['artifact'], string>,
   // The Candidates live in France: a date is that of Paris, whatever the locale
   date: '{{date, datetime(dateStyle: medium; timeZone: Europe/Paris)}}',
   // A date and its time, such as the start of an Interview, in Paris as well

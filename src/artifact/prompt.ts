@@ -18,13 +18,17 @@ const ARTIFACT_NAME_BY_ARTIFACT: Record<Artifact, string> = {
 };
 
 // The heading of an Input in the Prompt: what it is, and whose, when it is not of the run's own Posting
-function headingOf({ kind, readVersion, fileName }: IInput, posting: Posting): string {
+function headingOf({ kind, readVersion, fileName, title }: IInput, posting: Posting): string {
+  if (kind === 'custom_artifact') {
+    return `Custom Artifact: ${title ?? ''}`;
+  }
   if (readVersion !== null) {
     const { posting: readPosting, version } = readVersion;
     if (kind === 'past_letter') {
       return `Letter sent for Posting ${readPosting.reference}`;
     }
-    const name = `Chosen ${ARTIFACT_NAME_BY_ARTIFACT[version.artifact]}`;
+    const name =
+      version.artifact === 'custom' ? 'Custom Artifact' : `Chosen ${ARTIFACT_NAME_BY_ARTIFACT[version.artifact]}`;
     if (readPosting.id !== posting.id) {
       return `${name} of Posting ${readPosting.reference}`;
     }

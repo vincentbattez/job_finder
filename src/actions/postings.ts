@@ -138,6 +138,7 @@ export function createPostingActions({ workspace, artifacts, findCandidate, find
                 },
         },
         artifactList: artifactListOf(null),
+        customArtifactList: await artifacts.listCustomOf(posting),
         recipients: await findRecipients(posting, { isDraftRead: true }),
         extraction:
           extractionJob === undefined

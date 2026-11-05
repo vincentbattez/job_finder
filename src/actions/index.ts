@@ -4,6 +4,7 @@ import type { DomainValue } from '#/domain/index.ts';
 import { createApplicationActions } from './applications.ts';
 import { createCandidateActions } from './candidates.ts';
 import { openContext, type IActionsOption } from './context.ts';
+import { createCustomArtifactActions } from './custom-artifacts.ts';
 import { createDetectActions } from './detect.ts';
 import { createEditionActions } from './edition.ts';
 import { createFactsActions } from './facts.ts';
@@ -50,6 +51,7 @@ export async function createActions(option: IActionsOption) {
     ...createFactsActions(context),
     ...createInstructionsActions(context),
     ...createEditionActions(context),
+    ...createCustomArtifactActions(context),
     ...createJobActions(context),
   } satisfies Record<string, (rawInput: unknown) => Promise<void> | Promise<DomainValue | DomainValue[]>>);
 }

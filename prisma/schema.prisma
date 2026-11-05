@@ -62,47 +62,48 @@ model Watch {
 }
 
 model Posting {
-  id               Int           @id @default(autoincrement())
-  candidate        Candidate     @relation(fields: [candidateId], references: [id])
-  candidateId      String
-  source           String
-  reference        String
-  title            String
-  url              String?
-  publishedAt      DateTime?
-  deadline         DateTime?
+  id                 Int              @id @default(autoincrement())
+  candidate          Candidate        @relation(fields: [candidateId], references: [id])
+  candidateId        String
+  source             String
+  reference          String
+  title              String
+  url                String?
+  publishedAt        DateTime?
+  deadline           DateTime?
   // The day its Position is to be filled, when its Job Description says so
-  startDate        DateTime?
-  employer         String?
-  workplace        String?
-  city             String?
-  region           String?
-  latitude         Float?
-  longitude        Float?
-  applicationEmail String?
-  contact1         String?
-  contact2         String?
-  status           PostingStatus @default(to_apply)
+  startDate          DateTime?
+  employer           String?
+  workplace          String?
+  city               String?
+  region             String?
+  latitude           Float?
+  longitude          Float?
+  applicationEmail   String?
+  contact1           String?
+  contact2           String?
+  status             PostingStatus    @default(to_apply)
   // When the Posting was first marked Applied: its Chosen Letter, the one sent, stays frozen even
   // once it is Archived
-  appliedAt        DateTime?
+  appliedAt          DateTime?
   // When its stored Status last changed, null if never: it sorts the Applications
-  statusChangedAt  DateTime?
+  statusChangedAt    DateTime?
   // When the Candidate archived it, null while they follow it: a mark beside the Status, which
   // unarchiving leaves as it was (ADR-0007)
-  archivedAt       DateTime?
+  archivedAt         DateTime?
   // When a Detection found its Source no longer publishes it, null while online: a mark beside the
   // Status, which the Detection removes once the Source publishes it again (ADR-0001)
-  unpublishedAt    DateTime?
+  unpublishedAt      DateTime?
   // Free Markdown the Candidate keeps on it, whatever its Status, and rewrites at will
-  notes            String        @default("")
-  repostOf         Posting?      @relation("Repost", fields: [repostOfId], references: [id])
-  repostOfId       Int?
-  repostList       Posting[]     @relation("Repost")
-  detectedAt       DateTime      @default(now())
-  versionList      Version[]
-  jobList          Job[]
-  interviewList    Interview[]
+  notes              String           @default("")
+  repostOf           Posting?         @relation("Repost", fields: [repostOfId], references: [id])
+  repostOfId         Int?
+  repostList         Posting[]        @relation("Repost")
+  detectedAt         DateTime         @default(now())
+  versionList        Version[]
+  jobList            Job[]
+  interviewList      Interview[]
+  customArtifactList CustomArtifact[]
 
   @@unique([candidateId, source, reference])
 }
@@ -122,9 +123,10 @@ model Interview {
   interviewers        String
   // Grows at each edit: the SEQUENCE of its iCal event, so a calendar updates the event
   editCount           Int               @default(0)
-  // Its Artifacts, and the jobs that make them: deleted with it
+  // Its Artifacts, its Custom Artifacts, and the jobs that make them: deleted with it
   versionList         Version[]
   jobList             Job[]
+  customArtifactList  CustomArtifact[]
   // The Candidate's Revision of it, section by section: deleted with it
   revisionSectionList RevisionSection[]
 
@@ -181,10 +183,27 @@ model Version {
   // The job that produced this Version, so a job can be followed to its Version
   job                      Job?              @relation(fields: [jobId], references: [id])
   jobId                    Int?              @unique
+  // The single Version of a Custom Artifact, numbered 1 like the first of any Artifact
+  customArtifact           CustomArtifact?   @relation(fields: [customArtifactId], references: [id], onDelete: Cascade)
+  customArtifactId         Int?              @unique
 
-  // SQLite tells two NULLs apart: the Versions of a Posting, without an Interview, need their own index
-  @@unique([postingId, interviewId, artifact, number])
-  @@unique([postingId, artifact, number], where: { interviewId: null })
+  // SQLite tells two NULLs apart: the Versions of a Posting, without an Interview, need their own index.
+  // A Custom Artifact's Version is unique on it instead.
+  @@unique([postingId, interviewId, artifact, number], where: { customArtifactId: null })
+  @@unique([postingId, artifact, number], where: { interviewId: null, customArtifactId: null })
+}
+
+// A document the Candidate adds for a Posting, or for one of its Interviews, which the runs of its
+// Posting, or of its Interview, read by default (spec #125). Its single Version is Validated and Chosen
+// from creation, written only through the Artifact module (ADR-0016).
+model CustomArtifact {
+  id          Int        @id @default(autoincrement())
+  posting     Posting    @relation(fields: [postingId], references: [id])
+  postingId   Int
+  interview   Interview? @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  interviewId Int?
+  title       String
+  version     Version?
 }
 
 // An Input a Version's run read, named by its key as the Artifact module resolves it: `job_description`,
@@ -206,6 +225,7 @@ enum Artifact {
   letter
   portrait
   interview_brief
+  custom
 }
 
 enum VersionState {
