@@ -1,5 +1,6 @@
 import {
   chmodSync,
+  constants,
   copyFileSync,
   existsSync,
   mkdirSync,
@@ -83,15 +84,28 @@ export function emptyDirectory(directory: string): void {
   mkdirSync(directory, { recursive: true });
 }
 
-// Its folder is created first, so a file is written wherever the workspace places it
+// Its folder is created first, so a file is written wherever the workspace places it. Written beside it
+// then renamed over it, with its mode: another process reads or copies the old text or the new one, never half of it
 export function writeTextFile(filePath: string, text: string): void {
   mkdirSync(path.dirname(filePath), { recursive: true });
-  writeFileSync(filePath, text);
+  const temporaryPath = `${filePath}.${String(process.pid)}.tmp`;
+  const existingFile = statSync(filePath, { throwIfNoEntry: false });
+  writeFileSync(temporaryPath, text, existingFile === undefined ? {} : { mode: existingFile.mode });
+  renameSync(temporaryPath, filePath);
 }
 
-// A copy no one may write, not even the session of jf edit
+const EXISTING_FILE_ERROR_SCHEMA = z.object({ code: z.literal('EEXIST') });
+
+// A copy no one may write, not even the session of jf edit. The first copy stays: the worker and the web
+// starting together may both keep the same Original (ADR-0004), and the second only closes it too.
 export function copyAsReadOnly(fromPath: string, toPath: string): void {
-  copyFileSync(fromPath, toPath);
+  try {
+    copyFileSync(fromPath, toPath, constants.COPYFILE_EXCL);
+  } catch (error) {
+    if (!EXISTING_FILE_ERROR_SCHEMA.safeParse(error).success) {
+      throw error;
+    }
+  }
   chmodSync(toPath, 0o444);
 }
 
