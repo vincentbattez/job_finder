@@ -61,6 +61,8 @@ const INPUT_BY_ACTION: Record<string, object> = {
   // Before deleteInterview: on the Interview the check's setup adds
   writeRevisionNote: { title: 'Questions probables', note: 'Parler du stage.' },
   markMastered: { title: 'Questions probables', isMastered: true },
+  addCustomArtifact: { title: 'Appel', text: 'Rappeler lundi.' },
+  addAnnex: { title: 'Relevé de notes', markdown: 'Licence.' },
   // The Posting of the check was kept before it was Applied: another one, still New
   keep: { reference: '2026-2445609' },
 };

@@ -39,11 +39,13 @@ function composeSession(
         posting,
         interview,
         outputDirectory: path.relative(postingDirectory, outputDirectory),
-        readVersionList: inputList.map(({ posting: readPosting, version }) => ({
-          reference: readPosting.reference,
-          artifact: version.artifact,
-          interviewNumber: version.interview?.number ?? null,
-        })),
+        // A Custom Artifact's heading names it in the message: the composers describe the AI's Artifacts only
+        readVersionList: inputList.flatMap(
+          ({ posting: readPosting, version: { artifact, interview: readInterview } }) =>
+            artifact === 'custom'
+              ? []
+              : { reference: readPosting.reference, artifact, interviewNumber: readInterview?.number ?? null },
+        ),
         mark,
       }),
   };

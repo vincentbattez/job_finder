@@ -15,6 +15,10 @@ const FIRST_DRAFT_ARTIFACT: Artifact = 'letter';
 export async function keepMissingOriginals(workspace: Workspace): Promise<void> {
   const versionList = await workspace.listReadyAiVersions();
   for (const { posting, version } of versionList) {
+    // A Custom Artifact is the Candidate's own text: it has no Original
+    if (version.artifact === 'custom') {
+      continue;
+    }
     const { fileName, format } = AI_MODULE_BY_ARTIFACT[version.artifact];
     if (workspace.readVersionFile(posting, version, ORIGINAL_FILE_NAME) !== null) {
       continue;
