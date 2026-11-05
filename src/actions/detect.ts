@@ -29,10 +29,22 @@ import { watchNamesOf } from './watch-label.ts';
 
 // The Postings a Detection found, outside a Watch's first launch, whose Postings already online are only
 // imported: New's « found » group until the next one (spec #125 « Lists »)
-export function foundReferencesOf(detection: RecordedDetection | null): string[] {
+function foundReferencesOf(detection: RecordedDetection | null): string[] {
   return (detection?.watchList ?? [])
     .filter(({ isFirstLaunch }) => !isFirstLaunch)
     .flatMap(({ newPostingList }) => newPostingList.map(({ reference }) => reference));
+}
+
+// What New's « found » group shows: the running Detection's Postings as it finds them, or those of the
+// last one while no Detection runs on the Candidate's Watches, another Candidate's holding none of them
+export function currentFoundReferencesOf({
+  running,
+  last,
+}: {
+  running: RecordedDetection | null;
+  last: RecordedDetection | null;
+}): string[] {
+  return foundReferencesOf(running !== null && running.watchList.length > 0 ? running : last);
 }
 
 // Every Watch, started from jf detect unless the daily automation says so

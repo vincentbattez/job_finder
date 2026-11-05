@@ -5,8 +5,6 @@ import { localeOf, tFor } from '#/actions/i18n.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
 import { readCandidate } from '#/web/candidate.server.ts';
 import { PostingList } from '#/web/components/posting-list.tsx';
-import { Detection } from '#/web/containers/detection.tsx';
-import { JobDescriptionImport } from '#/web/containers/job-description-import.tsx';
 import { relayLoader } from '#/web/relay-action.server.ts';
 
 export function loader({ request }: LoaderFunctionArgs) {
@@ -43,8 +41,6 @@ export default function Postings() {
     <main className="container page">
       <div className="page__head">
         <h1>{t('heading', { candidateName: candidate.name })}</h1>
-        <Detection overview={detection} />
-        <JobDescriptionImport />
       </div>
       <PostingList
         postingList={postingList.filter(({ archivedAt }) => archivedAt === null)}
