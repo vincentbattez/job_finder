@@ -819,8 +819,10 @@ export function openDatabase(databasePath: string) {
       await prisma.posting.update({ where: { id }, data: { startDate } });
     },
 
-    async setLocation({ id }: Posting, location: Location): Promise<void> {
-      await prisma.posting.update({ where: { id }, data: location });
+    // Only over the place of work the location was asked for: the worker's extraction may have filled the
+    // Posting since a Detection listed it unlocated, and it knows better than that stale read
+    async setLocation({ id, city, workplace }: Posting, location: Location): Promise<void> {
+      await prisma.posting.updateMany({ where: { id, city, workplace, latitude: null }, data: location });
     },
 
     // The fields read in its Job Description replace those of the Posting, its title included
