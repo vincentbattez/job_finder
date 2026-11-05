@@ -30,23 +30,28 @@ jobs:
       - name: Seed
         run: mise run db:seed
 
+  # Two shards once the suite reached its time budget of 180 s, at 182 s on a loaded runner (#156)
   unit:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ['1/2', '2/2']
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Vitest
-        run: mise run test:unit
+        run: mise run test:unit -- --shard=${{ matrix.shard }}
 
-  # Two shards once the e2e became the slowest job (#115): each VM seeds its own data folder and
-  # starts its own servers, so each shard has its own Detection lock (ADR-0014). Playwright shards
+  # Three shards, each within the 180 s of a run: two reached 3.5 min (#115, #156). Each VM seeds its
+  # own data folder and starts its own servers, so each shard has its own Detection lock (ADR-0014). Playwright shards
   # by test under fullyParallel, a serial describe counting as one: the Detection group stays whole
   e2e:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: ['1/2', '2/2']
+        shard: ['1/3', '2/3', '3/3']
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
