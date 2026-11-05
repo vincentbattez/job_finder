@@ -2,6 +2,7 @@ import type { ActionFunctionArgs } from 'react-router';
 
 import { codedError } from '#/actions/index.ts';
 import { ACTIONS } from '#/web/acl/actions.server.ts';
+import { readCandidate } from '#/web/candidate.server.ts';
 import { relayAction } from '#/web/relay-action.server.ts';
 
 // The add-a-document form of the Documents section and of the generation panel posts here through a
@@ -36,7 +37,8 @@ export function action({ params, request }: ActionFunctionArgs) {
         return { added: { key: `profile:${fileName}` } };
       }
       default: {
-        throw codedError('unknown_intent');
+        const { locale } = await readCandidate(request);
+        throw codedError('unknown_intent', {}, { locale });
       }
     }
   });

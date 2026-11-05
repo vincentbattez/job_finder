@@ -100,7 +100,8 @@ export async function action({ request }: ActionFunctionArgs) {
         break;
       }
       default: {
-        throw codedError('unknown_intent');
+        const { locale } = await readCandidate(request);
+        throw codedError('unknown_intent', {}, { locale });
       }
     }
     // A new answer each time, by which the feedback of the fetcher tells that its mutation settled

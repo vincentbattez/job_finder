@@ -50,7 +50,8 @@ export function action({ params, request }: ActionFunctionArgs) {
         break;
       }
       default: {
-        throw codedError('unknown_intent');
+        const { locale } = await readCandidate(request);
+        throw codedError('unknown_intent', {}, { locale });
       }
     }
     return null;
