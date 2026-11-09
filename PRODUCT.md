@@ -12,7 +12,7 @@ web
 
 - **Primary: any Candidate.** A job seeker who uses the tool to find Postings and apply, then to prepare their Interviews. The product is designed for a generic Candidate, not for one person: no screen may assume who the Candidate is, their field or their Locale.
 - **Operator.** A role, not an account: the person who manages the Watches, the Instructions, the Candidates and the global settings, such as the Default Deadline Period. The front has no authentication: the Candidate is picked from a menu and any visitor can do the operator's work (ADR-0002, ADR-0011).
-- Today the install serves two people on one private network; the first Candidate prepares public-sector applications in France (README, ADR-0002, ADR-0017).
+- Today the install serves two people on one private network; the first Candidate prepares public-sector applications in France (docs/reference.md, ADR-0002, ADR-0017).
 
 ## Product Purpose
 
@@ -34,8 +34,8 @@ The app is also the Candidate's revision space before an Interview: pleasant, cl
 
 - **Where it runs.** A web front served from a Mac mini on the home network, reached remotely through WireGuard, never exposed to the internet (ADR-0002). The Candidate opens it in a modern browser.
 - **Devices.** Desktop-first; mobile stays usable for occasional consultation (ADR-0017).
-- **AI runs.** Each Artifact is produced by a headless Claude Code session on the operator's subscription (`claude -p`, no API key), one at a time through the worker's queue (ADR-0003, README). A run takes minutes: the front queues it and follows its state.
-- **Rhythm.** A Detection runs every day at 18:00 and can be started by hand; each Candidate then receives one Detection Summary on their phone or by e-mail, linking to the Postings (README).
+- **AI runs.** Each Artifact is produced by a headless Claude Code session on the operator's subscription (`claude -p`, no API key), one at a time through the worker's queue (ADR-0003, docs/reference.md). A run takes minutes: the front queues it and follows its state.
+- **Rhythm.** A Detection runs every day at 18:00 and can be started by hand; each Candidate then receives one Detection Summary on their phone or by e-mail, linking to the Postings (docs/reference.md).
 - **Sources.** Today, one public job site (the PEP, ADR-0001) and Job Descriptions imported by hand as Markdown.
 - **Interviews.** The Candidate records each Interview (start, duration, place, Interviewers) and revises its Brief in the days before it.
 
@@ -57,7 +57,7 @@ The app is also the Candidate's revision space before an Interview: pleasant, cl
 
 ## Evidence on Hand
 
-- **Real data.** The live checkout's `data/` holds the first Candidate's real Postings, Artifacts, Interviews and Profile; `dev-data/` and the test seeds hold fake ones (README).
+- **Real data.** The live checkout's `data/` holds the first Candidate's real Postings, Artifacts, Interviews and Profile; `dev-data/` and the test seeds hold fake ones (docs/reference.md).
 - **The validated prototype.** Branch `prototype/v1-ux` (never merged) shows the V1 on a snapshot of the real data; its `src/web/prototype/DECISIONS.md` records the workflows and the product owner's verdicts of 2026-11-02, including one Research and one Interview Brief hand-written in MDX to show the target rendering.
 - **Absent.** No testimonials, no usage metrics, no public audience: the product is private. Never fabricate any of them.
 
